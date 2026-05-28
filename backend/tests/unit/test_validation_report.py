@@ -9,6 +9,7 @@ def _report(**overrides: object) -> ValidationReport:
         "observed_sharpe": 1.2,
         "deflated_sharpe": 0.4,
         "pbo": 0.2,
+        "parameter_stability_score": 0.8,
         "n_walk_forward_splits": 5,
         "n_purged_folds": 5,
     }
@@ -31,6 +32,11 @@ def test_report_fails_on_non_positive_deflated_sharpe() -> None:
 def test_report_rejects_pbo_out_of_unit_interval() -> None:
     with pytest.raises(ValueError, match="pbo"):
         _report(pbo=1.5)
+
+
+def test_report_rejects_stability_out_of_unit_interval() -> None:
+    with pytest.raises(ValueError, match="parameter_stability_score"):
+        _report(parameter_stability_score=1.5)
 
 
 def test_report_round_trips_json() -> None:

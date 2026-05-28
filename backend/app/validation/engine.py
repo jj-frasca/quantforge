@@ -4,6 +4,7 @@ import pandas as pd
 from app.research.backtesting.engine import BacktestEngine
 from app.research.strategies.base import BaseStrategy
 from app.validation.deflated_sharpe import deflated_sharpe
+from app.validation.parameter_stability import parameter_stability
 from app.validation.pbo import probability_of_backtest_overfitting
 from app.validation.purged_cv import purged_kfold_splits
 from app.validation.report import ValidationReport
@@ -56,6 +57,7 @@ class ValidationEngine:
         observed_sharpe = float(sharpes[best])
         sr_std = max(float(np.std(sharpes, ddof=1)), 1e-6)
         deflated = deflated_sharpe(observed_sharpe, n_trials=len(configs), sr_std=sr_std)
+        stability = parameter_stability(sharpes).stability_score
 
         n_obs = len(data)
         flags: list[str] = []
@@ -69,6 +71,7 @@ class ValidationEngine:
             observed_sharpe=observed_sharpe,
             deflated_sharpe=deflated,
             pbo=pbo,
+            parameter_stability_score=stability,
             n_walk_forward_splits=len(walk_forward_splits(n_obs, self._walk_forward_count)),
             n_purged_folds=len(purged_kfold_splits(n_obs, self._purged_folds, self._embargo)),
             flags=flags,

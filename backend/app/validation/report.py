@@ -16,15 +16,16 @@ class ValidationReport(BaseModel):
     observed_sharpe: float
     deflated_sharpe: float
     pbo: float
+    parameter_stability_score: float
     n_walk_forward_splits: int
     n_purged_folds: int
     flags: list[str] = Field(default_factory=list)
 
-    @field_validator("pbo")
+    @field_validator("pbo", "parameter_stability_score")
     @classmethod
-    def _pbo_in_unit_interval(cls, v: float) -> float:
+    def _in_unit_interval(cls, v: float) -> float:
         if not 0.0 <= v <= 1.0:
-            raise ValueError("pbo must be in [0, 1]")
+            raise ValueError("must be in [0, 1]")
         return v
 
     @computed_field  # type: ignore[prop-decorator]
