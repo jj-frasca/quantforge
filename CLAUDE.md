@@ -55,6 +55,10 @@ Working on PBO, walk-forward, purged CV, deflated Sharpe, regime analysis
 Working on FastAPI endpoints, response schemas, API versioning
   → read .claude/context/api-contracts.md
 
+Working on the frontend (React/TS dashboard, components, charts, frontend tests)
+  → invoke frontend-engineer agent
+  → read .claude/context/api-contracts.md
+
 Commit ready             → use commit-writer skill
 New function/class       → use tdd-cycle skill
 New architecture choice  → use the ADR template (adr-creator skill is deferred)
