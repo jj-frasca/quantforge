@@ -17,8 +17,9 @@ quality are the primary goals. See docs/ARCHITECTURE.md for full context.
 
 ## Commands
 make dev          → start docker-compose environment (TimescaleDB + Redis + backend)
-make test         → tests with coverage; SYNTHETIC fixtures only (excludes -m live)
+make test         → tests with coverage; excludes -m live and -m integration (DB)
 make test-live    → live-data tests (pytest -m live); local only, never in CI
+make test-integration → DB-backed tests (pytest -m integration); needs Docker, not in CI
 make lint         → ruff + mypy (+ eslint once frontend exists)
 make migrate      → run alembic migrations
 make check        → lint + test + coverage (run before every commit)

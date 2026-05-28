@@ -18,11 +18,14 @@ dev: ## Start the docker-compose stack (TimescaleDB + Redis + backend)
 down: ## Stop the docker-compose stack
 	docker compose down
 
-test: ## Run tests with coverage — synthetic fixtures only (excludes -m live)
-	$(BE) pytest -m "not live" --cov=app --cov-report=term-missing --cov-fail-under=$(COV_MIN)
+test: ## Run tests with coverage — excludes live + integration (DB) tests
+	$(BE) pytest -m "not live and not integration" --cov=app --cov-report=term-missing --cov-fail-under=$(COV_MIN)
 
 test-live: ## Run live-data tests (yfinance). Local only — never in CI.
 	$(BE) pytest -m live
+
+test-integration: ## Run DB-backed integration tests (needs Docker). Local only — not in CI.
+	$(BE) pytest -m integration
 
 coverage: ## Coverage report (synthetic only), HTML + terminal
 	$(BE) pytest -m "not live" --cov=app --cov-report=term-missing --cov-report=html
