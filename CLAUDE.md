@@ -25,7 +25,7 @@ make migrate      → run alembic migrations
 make check        → lint + test + coverage (run before every commit)
 
 ## Architecture (one paragraph)
-FastAPI backend (Python 3.12) in /backend. React 18 + TypeScript in /frontend.
+FastAPI backend (Python 3.12) in /backend. React 19 + TypeScript in /frontend (Vite + Vitest).
 TimescaleDB (PostgreSQL) + Redis. SYNCHRONOUS stack: SQLAlchemy 2.0 sync on the psycopg
 (psycopg3) driver; FastAPI DB routes are sync `def` (threadpooled) — see ADR-009. Backtesting
 is vectorized pandas/numpy, NOT vectorbt — see ADR-007. All data flows: DataSourceAdapter →

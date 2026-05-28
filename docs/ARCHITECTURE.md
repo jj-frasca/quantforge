@@ -48,6 +48,11 @@ affect a section below, the section has been edited inline to match.
    (threadpooled). Rationale: localhost DB + low concurrency + blocking yfinance mean async
    adds complexity for no real gain (async wins on *remote* I/O under *high* concurrency).
    This supersedes the "async" detail of ADR-002; psycopg3 keeps an async migration path open.
+9. **Frontend = React 19** (Phase 5, 2026-05-28): the spec said React 18, but `npm create vite`
+   and the current stable ecosystem are on **React 19** (with TS strict, Vite + Vitest, Tanstack
+   Query 5, Zustand 5, Recharts 3, Zod 4). Component code is materially identical; using the
+   current stable is the better engineering choice. Frontend tests run on Vitest + RTL + MSW;
+   coverage gate ≥ 75%.
 
 ---
 
@@ -363,8 +368,8 @@ quantforge/
 ### Frontend
 | Library | Purpose |
 |---|---|
-| React 18 + TypeScript 5 | UI + type safety |
-| Vite | Build tool |
+| React 19 + TypeScript (strict) | UI + type safety (spec said React 18; bumped to 19 — see §0.5 #9) |
+| Vite + Vitest | Build tool + test runner |
 | Tanstack Query | Server state |
 | Zustand | Client state |
 | Recharts | Financial charts (equity curves, distributions) |
