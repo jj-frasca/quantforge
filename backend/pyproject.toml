@@ -30,3 +30,12 @@ dev = [
 [tool.uv]
 # This is an application, not a distributable package — don't build/install it.
 package = false
+
+[tool.coverage.report]
+# Don't count non-executed stubs against coverage.
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "^\\s*\\.\\.\\.$",
+    "@(abc\\.)?abstractmethod",
+]
