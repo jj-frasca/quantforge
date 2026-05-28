@@ -36,8 +36,10 @@ affect a section below, the section has been edited inline to match.
    24 Feb 2026; 283 sessions, 19 agents, 34 cold-memory docs; ">50% domain knowledge"
    from the paper body) is real. Path-scoped `.claude/rules/*.md` (YAML `paths:`
    frontmatter) is a native Claude Code feature — build as designed.
-6. **vectorbt** remains [UNCERTAIN] on Python 3.12 + numpy 2.x. Do not commit to it until
-   Phase 3 starts; verify install then. Fallback: plain vectorized pandas/numpy.
+6. **vectorbt** — RESOLVED 2026-05-28: rejected. It fails to install on Python 3.12 here
+   (numba → llvmlite 0.47.0 native build fails). The backtest engine uses plain vectorized
+   pandas/numpy instead (ADR-007). The buy-and-hold oracle test uses an analytic closed-form
+   baseline, not a vectorbt comparison.
 7. **MVP milestone**: Phases 1–4 + a minimal frontend that renders a real
    `ValidationReport`. Do not build breadth inside a phase before advancing. First
    working ValidationReport is the milestone that matters.
@@ -345,7 +347,7 @@ quantforge/
 | Redis (redis-py) | Cache | Low-latency price cache |
 | Pandas 2.x + Polars | Data manipulation | Industry standard + high-perf alternative |
 | NumPy + SciPy | Numerical computing | Foundation of all quant computation |
-| vectorbt | Vectorized backtesting | NumPy-vectorized; fast for parameter sweeps. [UNCERTAIN] on 3.12/numpy2.x — verify at Phase 3; fallback plain vectorized pandas/numpy |
+| ~~vectorbt~~ | ~~Vectorized backtesting~~ | REJECTED (ADR-007): fails to build on 3.12 (numba/llvmlite). Backtesting uses plain vectorized pandas/numpy instead |
 | statsmodels | Econometrics | Stationarity tests, regression |
 | scikit-learn | ML base | Purged CV base classes |
 | XGBoost | Gradient boosting (Phase 7+) | Standard quant factor model |
