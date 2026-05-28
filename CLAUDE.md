@@ -26,8 +26,10 @@ make check        → lint + test + coverage (run before every commit)
 
 ## Architecture (one paragraph)
 FastAPI backend (Python 3.12) in /backend. React 18 + TypeScript in /frontend.
-TimescaleDB (PostgreSQL) + Redis. All data flows: DataSourceAdapter → canonical
-schema → DataQualityEngine before any research or validation component uses it.
+TimescaleDB (PostgreSQL) + Redis. SYNCHRONOUS stack: SQLAlchemy 2.0 sync on the psycopg
+(psycopg3) driver; FastAPI DB routes are sync `def` (threadpooled) — see ADR-009. Backtesting
+is vectorized pandas/numpy, NOT vectorbt — see ADR-007. All data flows: DataSourceAdapter →
+canonical schema → DataQualityEngine before any research or validation component uses it.
 Monte Carlo lives in research/simulation/. BenchmarkComparator in research/benchmarks/.
 Full diagram: docs/diagrams/c4-context.md.
 
@@ -68,7 +70,7 @@ New architecture choice  → use the ADR template (adr-creator skill is deferred
 ## Hard Constraints
 - Never write production code without a test
 - Never write a vague commit message
-- Never use sync DB calls in async FastAPI routes
+- DB access is sync (psycopg3, ADR-009); use sync `def` routes for DB work — never call a blocking driver inside an `async def`
 - Never skip type annotations (mypy strict enforced in CI)
 - Never start a new phase until the current phase is fully passing and committed
 - Never put module-specific content in this file — it belongs in agents or context docs

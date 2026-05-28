@@ -39,6 +39,23 @@ Implemented strategies (see research-papers.md):
 
 ## 3. BacktestEngine (vectorized, ADR-007)
 
+**Why hand-rolled, not a library (2026 landscape — don't relitigate without new info):**
+The engine is intentionally a ~50-line pure pandas/numpy kernel, guarded by the §8 oracle tests.
+The library options were researched and rejected for *this* project:
+- **vectorbt (OSS)** — fails to build on Python 3.12 (numba → llvmlite native build); OSS is
+  effectively frozen behind the paid **vectorbt PRO** (closed-source, $20/mo) — unusable in a
+  public portfolio repo a reviewer must clone and run.
+- **backtrader** — active development stopped ~2018; 3.10+ friction; event-driven realism we
+  explicitly don't need (ADR-001).
+- **zipline-reloaded** — heavy, data-bundle ceremony, US-equity/factor oriented; overkill.
+- **backtesting.py** — maintained + lightweight but **single-asset**; doesn't fit the
+  `(T × N)` multi-config returns matrix that PBO/CSCV needs. (Possible *dev-only cross-check*, not the core.)
+- **NautilusTrader** — execution-realism/live-parity focus; out of scope (ADR-001).
+There is no maintained, free, OSS, 3.12-friendly *vectorized-sweep* library that fits — and
+hand-rolling the correct math (look-ahead avoided, cost-on-turnover) is on-thesis for a project
+whose whole signal is methodological rigor. Revisit only if sweeps hit 10^5–10^6 combos
+(numpy-broadcast first; vectorbt PRO as a private research-only tool, never in the public repo).
+
 `app/research/backtesting/engine.py`. Pure pandas/numpy. Given `prices` (close series) and
 `signals` (position weights), `initial_capital`, and `cost_rate` (fraction per unit turnover):
 

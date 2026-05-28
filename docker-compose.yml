@@ -36,7 +36,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://quantforge:password@timescaledb:5432/quantforge
+      DATABASE_URL: postgresql+psycopg://quantforge:password@timescaledb:5432/quantforge  # sync, ADR-009
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: development
       LOG_LEVEL: INFO

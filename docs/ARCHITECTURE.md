@@ -43,6 +43,11 @@ affect a section below, the section has been edited inline to match.
 7. **MVP milestone**: Phases 1–4 + a minimal frontend that renders a real
    `ValidationReport`. Do not build breadth inside a phase before advancing. First
    working ValidationReport is the milestone that matters.
+8. **Storage access** — RESOLVED 2026-05-28 (ADR-009): **synchronous** stack on the psycopg
+   (psycopg3) driver — SQLAlchemy 2.0 sync engine/sessions, FastAPI DB routes as sync `def`
+   (threadpooled). Rationale: localhost DB + low concurrency + blocking yfinance mean async
+   adds complexity for no real gain (async wins on *remote* I/O under *high* concurrency).
+   This supersedes the "async" detail of ADR-002; psycopg3 keeps an async migration path open.
 
 ---
 
@@ -342,7 +347,7 @@ quantforge/
 | Python 3.12+ | Core language | Standard at quant firms; full type hints |
 | FastAPI | REST API | Async-native, auto OpenAPI docs, Pydantic v2 |
 | Pydantic v2 | Schema validation | Runtime contracts; used in prod quant systems |
-| SQLAlchemy 2.0 async | ORM | Async support, industry standard |
+| SQLAlchemy 2.0 (sync) | ORM | Industry standard. Used SYNC on psycopg3 (ADR-009): localhost DB + low concurrency + blocking yfinance ⇒ async adds complexity for no gain; psycopg3 keeps async migration open |
 | TimescaleDB (psycopg3) | Time-series storage | Postgres hypertables; no InfluxDB lock-in |
 | Redis (redis-py) | Cache | Low-latency price cache |
 | Pandas 2.x + Polars | Data manipulation | Industry standard + high-perf alternative |

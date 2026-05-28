@@ -37,7 +37,7 @@ C4Container
     System_Ext(vendors, "yfinance / Polygon", "Market data vendors")
     Rel(researcher, spa, "Uses", "HTTPS")
     Rel(spa, api, "Calls", "JSON / HTTPS /api/v1")
-    Rel(api, tsdb, "Reads & writes", "SQLAlchemy async / asyncpg")
+    Rel(api, tsdb, "Reads & writes", "SQLAlchemy 2.0 sync / psycopg3 (ADR-009)")
     Rel(api, redis, "Caches prices", "redis-py")
     Rel(api, vendors, "Ingests (normalize at ingestion)", "HTTPS")
 ```
