@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend lint + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies (Python pinned via .python-version)
+        working-directory: backend
+        run: uv sync
+
+      - name: Lint (ruff + mypy strict)
+        run: make lint
+
+      # Synthetic fixtures only. Live-data tests (@pytest.mark.live) are excluded
+      # from CI by design — they run locally via `make test-live`. (ARCHITECTURE.md §0.5)
+      - name: Test + coverage gate (>=85%)
+        run: make test
