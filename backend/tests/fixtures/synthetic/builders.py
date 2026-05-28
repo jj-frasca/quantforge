@@ -52,6 +52,39 @@ def clean_series(
     return bars
 
 
+def regime_shift_series(
+    symbol: str = "AAPL",
+    bull: int = 60,
+    crash: int = 10,
+    recovery: int = 40,
+    start: datetime = _START,
+    start_price: float = 100.0,
+) -> list[PriceBar]:
+    """Bull market, then a ~40% crash, then a recovery — exercises the RegimeAnalyzer."""
+    prices: list[float] = []
+    price = start_price
+    for _ in range(bull):
+        price *= 1.005
+        prices.append(price)
+    crash_factor = 0.6 ** (1.0 / crash)  # ~40% drawdown over `crash` bars
+    for _ in range(crash):
+        price *= crash_factor
+        prices.append(price)
+    for _ in range(recovery):
+        price *= 1.004
+        prices.append(price)
+
+    bars: list[PriceBar] = []
+    day = start
+    i = 0
+    while i < len(prices):
+        if day.weekday() < 5:
+            bars.append(_bar(symbol, day, Decimal(str(round(prices[i], 6)))))
+            i += 1
+        day += timedelta(days=1)
+    return bars
+
+
 def with_missing_bars(
     bars: list[PriceBar], start_index: int = 10, length: int = 3
 ) -> list[PriceBar]:

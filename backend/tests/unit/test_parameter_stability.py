@@ -31,7 +31,13 @@ def test_requires_at_least_two_configs() -> None:
 
 @given(
     sharpes=st.lists(
-        st.floats(min_value=-5.0, max_value=5.0, allow_nan=False, allow_infinity=False),
+        st.floats(
+            min_value=-10.0,
+            max_value=10.0,
+            allow_nan=False,
+            allow_infinity=False,
+            allow_subnormal=False,
+        ),
         min_size=2,
         max_size=30,
     )
@@ -40,4 +46,5 @@ def test_scores_are_bounded(sharpes: list[float]) -> None:
     result = parameter_stability(sharpes)
     assert 0.0 <= result.stability_score <= 1.0
     assert 0.0 <= result.fraction_profitable <= 1.0
-    assert result.min_sharpe <= result.mean_sharpe <= result.max_sharpe
+    # mean lies within [min, max] (tiny tolerance for float rounding)
+    assert result.min_sharpe - 1e-9 <= result.mean_sharpe <= result.max_sharpe + 1e-9
