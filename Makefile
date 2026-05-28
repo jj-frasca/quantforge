@@ -27,8 +27,8 @@ test-live: ## Run live-data tests (yfinance). Local only — never in CI.
 coverage: ## Coverage report (synthetic only), HTML + terminal
 	$(BE) pytest -m "not live" --cov=app --cov-report=term-missing --cov-report=html
 
-lint: ## ruff + mypy (eslint added in Phase 5)
-	cd backend && uv run ruff check . && uv run mypy app
+lint: ## ruff lint + format check + mypy (eslint added in Phase 5)
+	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app
 
 format: ## Auto-format with ruff
 	cd backend && uv run ruff format . && uv run ruff check --fix .

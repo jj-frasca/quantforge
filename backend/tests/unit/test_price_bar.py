@@ -96,7 +96,12 @@ _valid_price = st.decimals(
 )
 
 
-@given(p1=_valid_price, p2=_valid_price, vol=st.integers(min_value=0, max_value=10**12), adj=_valid_price)
+@given(
+    p1=_valid_price,
+    p2=_valid_price,
+    vol=st.integers(min_value=0, max_value=10**12),
+    adj=_valid_price,
+)
 def test_price_bar_valid_ohlc_prices_are_finite_and_positive(
     p1: Decimal, p2: Decimal, vol: int, adj: Decimal
 ) -> None:
