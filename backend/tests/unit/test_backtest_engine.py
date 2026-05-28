@@ -97,16 +97,25 @@ def test_metrics_handle_empty_series() -> None:
 
 
 @given(
-    closes=st.lists(
-        st.floats(min_value=1.0, max_value=1000.0, allow_nan=False, allow_infinity=False),
+    # realistic bounded daily returns (the quality gate flags >20% moves); a price path
+    # built from these keeps long-only net > -1, so equity stays strictly positive
+    bar_returns=st.lists(
+        st.floats(min_value=-0.2, max_value=0.2, allow_nan=False, allow_infinity=False),
         min_size=3,
         max_size=60,
     ),
     longs=st.lists(st.sampled_from([0.0, 1.0]), min_size=3, max_size=60),
 )
-def test_long_only_equity_is_finite_and_positive(closes: list[float], longs: list[float]) -> None:
-    n = min(len(closes), len(longs))
-    prices = _prices(closes[:n])
+def test_long_only_equity_is_finite_and_positive(
+    bar_returns: list[float], longs: list[float]
+) -> None:
+    n = min(len(bar_returns), len(longs))
+    price = 100.0
+    closes = []
+    for r in bar_returns[:n]:
+        price *= 1 + r
+        closes.append(price)
+    prices = _prices(closes)
     signals = pd.Series(longs[:n], index=prices.index)
     result = BacktestEngine(cost_rate=0.001).run(prices, signals)
     eq = result.equity_curve.to_numpy()
