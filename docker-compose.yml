@@ -1,0 +1,50 @@
+# QuantForge local dev stack. Frontend is intentionally absent until Phase 5.
+# `version:` is omitted (obsolete under Compose v2).
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16   # TODO(phase2): pin exact version once the schema lands
+    environment:
+      POSTGRES_USER: quantforge
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: quantforge
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quantforge -d quantforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: ./backend
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://quantforge:password@timescaledb:5432/quantforge
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  timescale_data:
