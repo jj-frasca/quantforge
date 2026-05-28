@@ -7,9 +7,9 @@ self-contained: it gives everything needed for its subsystem.
 | Doc | Covers | Status |
 |---|---|---|
 | `data-contracts.md` | PriceBar/FundamentalData/DataQualityReport schemas, SQL patterns, mandatory TimescaleDB query filters | **Written** (Phase 2) |
-| `backtesting-spec.md` | BacktestEngine, Portfolio, Metrics, BenchmarkComparator, ExperimentManifest | Not yet written — authored at the start of **Phase 3** |
+| `backtesting-spec.md` | BacktestEngine, Portfolio, Metrics, BenchmarkComparator, ExperimentManifest | **Written** (Phase 3) |
 | `validation-methodology.md` | PBO, purged CV, walk-forward, Deflated Sharpe, parameter stability, regime analysis | Not yet written — authored at the start of **Phase 4** |
-| `research-papers.md` | Citations with implementation summaries (Bailey et al. 2015, López de Prado 2018, etc.) | Not yet written — authored alongside Phase 3/4 |
+| `research-papers.md` | Citations with implementation summaries (Bailey et al. 2015, López de Prado 2018, etc.) | **Written** (Phase 3) |
 | `api-contracts.md` | Full FastAPI endpoint specifications, response schemas, versioning | Not yet written — authored at the start of **Phase 5** |
 
 ## Rule
