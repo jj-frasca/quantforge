@@ -31,6 +31,12 @@ def test_invalid_params_raise() -> None:
         walk_forward_splits(n_obs=100, n_splits=0)
     with pytest.raises(ValueError):
         walk_forward_splits(n_obs=2, n_splits=5)
+    # min_train too large would leave the final test fold empty -> rejected
+    with pytest.raises(ValueError, match="min_train"):
+        walk_forward_splits(n_obs=100, n_splits=4, min_train=95)
+    # min_train below 1 is invalid
+    with pytest.raises(ValueError, match="min_train"):
+        walk_forward_splits(n_obs=100, n_splits=4, min_train=0)
 
 
 @given(

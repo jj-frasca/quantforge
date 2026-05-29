@@ -21,6 +21,13 @@ def walk_forward_splits(
 
     fold = n_obs // (n_splits + 1)  # >= 1 given the n_obs >= n_splits + 1 guard above
     base = min_train if min_train is not None else fold
+    if base < 1:
+        raise ValueError("min_train must be >= 1")
+    # The last split trains on [0, base + (n_splits-1)*fold); leave room for a non-empty test.
+    if base + (n_splits - 1) * fold >= n_obs:
+        raise ValueError(
+            "min_train too large for n_obs / n_splits (would leave an empty test fold)"
+        )
 
     splits: list[tuple[IntArray, IntArray]] = []
     for i in range(n_splits):
