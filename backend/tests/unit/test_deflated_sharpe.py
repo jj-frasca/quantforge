@@ -1,3 +1,5 @@
+"""Deflated Sharpe: no haircut at n_trials==1, more trials deflate more, invalid params; Hypothesis invariant that DSR ≤ observed Sharpe."""
+
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st

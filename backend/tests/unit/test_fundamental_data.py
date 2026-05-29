@@ -1,3 +1,5 @@
+"""FundamentalData model: nullable ratios never coerced to 0, negative income/PE allowed, market_cap must be > 0 when present, symbol normalization."""
+
 from datetime import date
 from decimal import Decimal
 

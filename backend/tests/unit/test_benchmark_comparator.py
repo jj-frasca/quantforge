@@ -1,3 +1,5 @@
+"""BenchmarkComparator: SPY-vs-SPY is neutral (excess≈0, IR≈0, alpha≈0, beta≈1), excess captures constant outperformance, 2x leverage → beta 2 / alpha 0, constant benchmark is division-safe."""
+
 import numpy as np
 import pandas as pd
 import pytest

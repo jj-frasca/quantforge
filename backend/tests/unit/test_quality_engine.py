@@ -1,3 +1,5 @@
+"""DataQualityEngine: clean series passes (survivorship info only), empty fails, and missing-bars / price-anomaly / stale / split-jump heuristics each flag without blocking."""
+
 from tests.fixtures.synthetic import builders
 
 from app.data.quality.engine import DataQualityEngine, QualityConfig

@@ -1,3 +1,5 @@
+"""OHLCVNormalizer: adj_factor = adj_close/close applied once, split scaling, UTC preserved, non-positive close rejected, empty input."""
+
 from datetime import UTC, datetime
 from decimal import Decimal
 

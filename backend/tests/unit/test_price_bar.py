@@ -1,3 +1,5 @@
+"""PriceBar model: UTC coercion (naive rejected), positive prices, OHLC ordering, and the Hypothesis invariant that valid prices are finite and positive."""
+
 from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal
 

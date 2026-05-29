@@ -1,3 +1,5 @@
+"""MeanReversionStrategy: real citation, param validation, shorts a price spike above the rolling mean; Hypothesis invariant that signals stay in [-1,1]."""
+
 import pandas as pd
 import pytest
 from hypothesis import given

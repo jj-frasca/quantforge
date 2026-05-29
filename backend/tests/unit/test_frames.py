@@ -1,3 +1,5 @@
+"""bars_to_frame: PriceBars -> a tz-aware UTC, float-OHLCV DataFrame; sorted; empty case."""
+
 import pandas as pd
 from tests.fixtures.synthetic import builders
 

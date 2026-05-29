@@ -1,3 +1,5 @@
+"""Phase 3 capstone (integration): every strategy runs end-to-end through the engine with costs, a benchmark comparison, and a reproducible ExperimentManifest."""
+
 import pytest
 from tests.fixtures.synthetic import builders
 

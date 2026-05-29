@@ -1,3 +1,5 @@
+"""PBO via CSCV: result in [0,1], random configs average ~0.5 over many draws (the headline calibration), a dominant config gives low PBO, invalid inputs raise."""
+
 import numpy as np
 import pytest
 

@@ -1,3 +1,5 @@
+"""Health endpoint: returns 200 with status 'ok' and the configured environment."""
+
 from fastapi.testclient import TestClient
 
 from app.main import app

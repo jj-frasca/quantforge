@@ -1,3 +1,5 @@
+"""DataQualityIssue / DataQualityReport models: severity validation, UTC checked_at, and that `passed` is computed (False iff any error-severity issue)."""
+
 from datetime import UTC, datetime
 
 import pytest

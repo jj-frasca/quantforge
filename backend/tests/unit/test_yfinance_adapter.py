@@ -1,3 +1,5 @@
+"""YFinanceAdapter: normalizes injected raw rows (no network), uppercases symbol, exposes source/version; plus a live yfinance fetch test (excluded from CI)."""
+
 from datetime import UTC, datetime
 
 import pytest

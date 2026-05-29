@@ -1,3 +1,5 @@
+"""Parameter stability: identical Sharpes are maximally stable, erratic less so, fraction-profitable reflects signs; Hypothesis invariant that scores are bounded in [0,1]."""
+
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st

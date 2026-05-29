@@ -1,3 +1,5 @@
+"""DataSourceAdapter ABC: not directly instantiable; a concrete adapter returns canonical PriceBars and exposes source/adapter_version."""
+
 from datetime import UTC, datetime
 from decimal import Decimal
 

@@ -1,3 +1,5 @@
+"""RegimeAnalyzer: bull/bear regimes separate and partition every bar; an all-bull market yields only the bull regime."""
+
 from tests.fixtures.synthetic import builders
 
 from app.research.frames import bars_to_frame

@@ -1,3 +1,5 @@
+"""ValidationReport model: pass/fail logic, pbo and stability bounded to [0,1], JSON round-trip."""
+
 import pytest
 
 from app.validation.report import ValidationReport

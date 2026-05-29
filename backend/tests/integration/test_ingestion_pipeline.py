@@ -1,3 +1,5 @@
+"""DataIngestionPipeline (integration): a clean series ingests end-to-end and is queryable back; a failing quality gate blocks storage but still persists the report."""
+
 from datetime import UTC, datetime
 
 from tests.fixtures.synthetic import builders

@@ -1,3 +1,5 @@
+"""ValidationEngine (integration): produces a full ValidationReport for a config grid, flags short samples, requires ≥2 configs, and flags overfitting on noise."""
+
 import numpy as np
 import pandas as pd
 import pytest

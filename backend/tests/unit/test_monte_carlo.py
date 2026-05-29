@@ -1,3 +1,5 @@
+"""MonteCarloSimulator (GBM): output shape, first column == s0, deterministic per seed, zero-vol drift, invalid params; Hypothesis invariant that paths are always positive."""
+
 import numpy as np
 import pytest
 from hypothesis import given

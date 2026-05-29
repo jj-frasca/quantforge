@@ -1,3 +1,5 @@
+"""Purged K-fold CV: folds partition all indices once, embargo removes neighbours, invalid params; Hypothesis invariant that no train index lies within the embargo of any test index."""
+
 import numpy as np
 import pytest
 from hypothesis import given

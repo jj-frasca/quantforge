@@ -1,3 +1,5 @@
+"""BacktestEngine + metrics: the §8 oracle tests (buy-and-hold matches the analytic closed form, zero signal flat, long/short symmetry, monotonic cost impact) plus drawdown bounds and the Hypothesis invariant that long-only equity stays finite and positive."""
+
 from itertools import pairwise
 
 import numpy as np

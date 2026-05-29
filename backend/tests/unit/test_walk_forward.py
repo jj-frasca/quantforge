@@ -1,3 +1,5 @@
+"""Walk-forward splits: requested count, expanding train window, invalid params; Hypothesis invariant that train never precedes/overlaps test (no future data)."""
+
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st

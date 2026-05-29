@@ -1,3 +1,5 @@
+"""POST /api/v1/validate (integration): returns a report for each strategy (DI-injected synthetic data), 422 on unknown strategy or insufficient data."""
+
 from datetime import datetime
 
 import pytest

@@ -1,3 +1,5 @@
+"""SMAStrategy: non-empty citation, param validation (fast<slow, fast>=1), signals indexed like data and in [-1,1], flat warmup + long in an uptrend; Hypothesis invariant signals in [-1,1]."""
+
 import pandas as pd
 import pytest
 from hypothesis import given

@@ -1,3 +1,5 @@
+"""ExperimentManifest: JSON round-trips with all lineage fields preserved; parameter hash is order-independent and distinct for different params."""
+
 from datetime import date
 from uuid import uuid4
 

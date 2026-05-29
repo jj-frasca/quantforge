@@ -1,3 +1,5 @@
+"""InMemoryPriceBarRepository: save/get round-trip, symbol filtering, half-open time-range query, quality-report retention."""
+
 from datetime import UTC, datetime
 
 from tests.fixtures.synthetic import builders

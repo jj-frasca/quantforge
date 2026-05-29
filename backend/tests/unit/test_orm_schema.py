@@ -1,3 +1,5 @@
+"""ORM schema: compiled PostgreSQL DDL matches data-contracts.md (NUMERIC precisions, TIMESTAMPTZ, JSONB, UUID pk, composite primary keys)."""
+
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
