@@ -442,6 +442,11 @@ If you find yourself writing rules in cold memory, move them to CLAUDE.md.
 
 ### 6.1 CLAUDE.md (Tier 1 — Constitution)
 
+> **This is the ORIGINAL spec snapshot.** The live `/CLAUDE.md` has since evolved (sync DB
+> stack per ADR-009, React 19, frontend routing, the `make` targets). For current rules read
+> the actual `CLAUDE.md`; for the deltas see §0.5/§0.6. The §11 first-session prompt below is
+> likewise a historical artifact.
+
 Create in Phase 1. Under 200 lines. Every line must answer "yes" to:
 "Would removing this cause Claude to make a mistake?"
 
