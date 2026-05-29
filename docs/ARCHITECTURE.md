@@ -54,6 +54,42 @@ affect a section below, the section has been edited inline to match.
    current stable is the better engineering choice. Frontend tests run on Vitest + RTL + MSW;
    coverage gate ≥ 75%.
 
+## 0.6 Implementation Status (as of 2026-05-28)
+
+The §4 tree below is the **target** layout; not all of it is built yet. Authoritative reality:
+
+**BUILT & tested (100% backend coverage; frontend ≥75%):**
+- Data layer: PriceBar / FundamentalData / quality models; `DataSourceAdapter` ABC +
+  `YFinanceAdapter` + `OHLCVNormalizer`; `DataQualityEngine` (6 active heuristic checks — see
+  below); `DataIngestionPipeline` + **in-memory** `PriceBarRepository`; SQLAlchemy ORM models.
+- Research: vectorized `BacktestEngine` + metrics + §8 oracle tests; `SMAStrategy`,
+  `MomentumStrategy`, `MeanReversionStrategy`; `BenchmarkComparator`; `MonteCarloSimulator`;
+  `ExperimentManifest`.
+- Validation: `deflated_sharpe`, `pbo` (CSCV), `walk_forward`, `purged_cv`,
+  `parameter_stability`, `regime_analysis`; `ValidationEngine` → `ValidationReport`.
+- API: `GET /health`, `POST /api/v1/validate` (+ CORS, DI). Frontend: scaffold + the
+  **ValidationReport page** end-to-end; CI gates backend + frontend.
+
+**DEFERRED / NOT YET BUILT (documented in the target tree but absent in code):**
+- **TimescaleDB repository + Alembic migration** (`create_hypertable`, `make migrate`) — needs
+  Docker; ADR-009 decided the approach (sync psycopg3). The live store is the in-memory repo.
+- **Redis cache** — only a `redis_url` config field exists; no client/cache code.
+- **`experiment_store.py`** — not built; `ExperimentManifest` lives in `backtesting/manifest.py`.
+- **Polygon adapter** — Phase 3+; only the `Source` enum value exists, so **vendor
+  cross-validation** (check #8) cannot run. **Corporate-action detection** (check #3) is also
+  not implemented yet. Active `DataQualityEngine` checks: `insufficient_data` (error),
+  `survivorship_risk` (info), `missing_bars`, `price_anomaly`, `stale_data`,
+  `split_dividend_consistency` (warnings). Timezone (#7) is enforced at the PriceBar boundary
+  (raises), not as a soft flag.
+- **Frontend pages**: only `validation-report` is built; Data Explorer / Strategy Config /
+  Backtest Results are empty dirs.
+- **`Portfolio`** is NOT a separate class — position/cost/equity math lives in `BacktestEngine`.
+- Deferred skills (`adr-creator`, `validation-runner`) and the `database-migrations.md` rule
+  are listed in §4 but intentionally not created yet.
+
+Synthetic fixtures are a **single `tests/fixtures/synthetic/builders.py`** module (functions
+like `clean_series`, `with_split`, `regime_shift_series`), not the per-file layout in §4/§8.
+
 ---
 
 ## 0. What QuantForge Is
@@ -218,6 +254,11 @@ RULE: Survivorship bias: we flag the risk in universe selection. We do not solve
 ---
 
 ## 4. Repository Structure
+
+> **This is the TARGET layout.** Some entries are deferred or not yet built (e.g.
+> `experiment_store.py`, Redis, the TimescaleDB repo/migrations, the per-file synthetic
+> fixtures, three of the four frontend pages). See **§0.6 Implementation Status** for what
+> actually exists in the codebase today.
 
 ```
 quantforge/
@@ -885,7 +926,7 @@ Reddit (PRAW) + NewsAPI + FinBERT. Implements DataSourceAdapter — zero downstr
 
 # --- Required (Phases 1–6) ---
 # yfinance is the primary data source and needs NO API key.
-DATABASE_URL=postgresql+asyncpg://quantforge:password@localhost:5432/quantforge
+DATABASE_URL=postgresql+psycopg://quantforge:password@localhost:5432/quantforge  # sync, ADR-009
 REDIS_URL=redis://localhost:6379/0
 ENVIRONMENT=development
 LOG_LEVEL=INFO

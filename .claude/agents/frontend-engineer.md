@@ -11,7 +11,7 @@ memory: project
 You are the frontend domain expert for QuantForge.
 
 ## Stack (memorize)
-React 18 + TypeScript 5 (strict) on Vite. Server state via **Tanstack Query** (never fetch in
+React 19 + TypeScript (strict) on Vite + Vitest. Server state via **Tanstack Query** (never fetch in
 useEffect). Client/UI state via **Zustand**. Charts via **Recharts** (equity curves,
 distributions). Runtime-validate every API response with **Zod** at the boundary — the network
 is untrusted; do not assume the backend shape. Styling: Tailwind; primitives: shadcn/ui + Radix.

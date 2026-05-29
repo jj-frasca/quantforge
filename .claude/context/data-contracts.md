@@ -100,6 +100,12 @@ but are recorded. Wording is always "flags potential X" (CLAUDE.md rule 6).
 Run by `DataQualityEngine` (`app/data/quality/`). All thresholds are configurable; defaults
 shown. Checks FLAG potential issues — they do not guarantee correctness.
 
+> **Build status:** implemented today = #1 survivorship (info), #2 split/dividend, #4
+> missing_bars, #5 price_anomaly, #6 stale_data (warnings), plus an `insufficient_data` error;
+> #7 timezone is enforced at the PriceBar boundary. **NOT yet implemented:** #3 corporate_action
+> and #8 vendor_cross_validation (the latter needs the Polygon adapter, Phase 3+). See
+> ARCHITECTURE.md §0.6.
+
 | # | Check id | What it flags | Default threshold | Severity |
 |---|---|---|---|---|
 | 1 | `survivorship_risk` | universe may exclude delisted symbols — **risk flag only, not solved** | n/a (always informational when universe is yfinance-sourced) | info |

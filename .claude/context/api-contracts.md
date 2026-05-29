@@ -17,7 +17,7 @@ Liveness probe. → `200 {"status": "ok", "environment": "<env>"}`. No DB depend
 Run the full validation suite for a strategy on a symbol; returns a `ValidationReport`.
 
 **Why sync**: the handler is a plain `def`, so FastAPI runs it in a threadpool — the blocking
-yfinance fetch does not stall the event loop (provisional pending ADR-009; see ADR-009).
+yfinance fetch does not stall the event loop (ADR-009, ratified: synchronous stack on psycopg3).
 
 **Request** (`ValidateRequest`):
 ```json

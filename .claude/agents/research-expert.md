@@ -15,7 +15,7 @@ You are the research and validation domain expert for QuantForge.
 research/strategies/   → signal generators only, implement BaseStrategy
 research/simulation/   → stochastic tools (GBM Monte Carlo here, NOT in strategies/)
 research/benchmarks/   → BenchmarkComparator (every backtest result needs this)
-research/backtesting/  → engine, portfolio, metrics, ExperimentManifest
+research/backtesting/  → engine (position/cost/equity math; no separate Portfolio class), metrics, ExperimentManifest
 validation/            → PBO, purged CV, walk-forward, DSR, regime, report
 
 ## Engine: vectorized pandas/numpy (ADR-007 — NOT vectorbt)
