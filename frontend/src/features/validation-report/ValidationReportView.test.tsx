@@ -1,3 +1,5 @@
+// ValidationReportView: renders the pass vs fail verdict, the metric values, and surfaces
+// flags (a failing report must read clearly as "does not pass").
 import { render, screen } from '@testing-library/react'
 
 import { failingReport, passingReport } from '../../test/utils'

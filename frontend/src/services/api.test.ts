@@ -1,3 +1,5 @@
+// requestValidation: returns a Zod-parsed report on 200; on a non-2xx response throws an
+// error that includes the status and the backend's `detail`. Backend mocked with MSW.
 import { http, HttpResponse } from 'msw'
 
 import { server } from '../test/server'

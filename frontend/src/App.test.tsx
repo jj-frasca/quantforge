@@ -1,3 +1,5 @@
+// App: renders the shell + run button; running validation shows the report; a failed
+// request surfaces an error alert. Backend is mocked with MSW.
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'

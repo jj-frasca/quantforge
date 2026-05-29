@@ -1,3 +1,5 @@
+// Zod schemas: parse a valid report; reject out-of-range pbo, a missing field, and an
+// unknown strategy (boundary validation of the API contract).
 import { validateRequestSchema, validationReportSchema } from './validation'
 
 const valid = {
