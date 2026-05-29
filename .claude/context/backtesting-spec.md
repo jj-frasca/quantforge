@@ -98,7 +98,9 @@ and `benchmark` returns (aligned):
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)
 - `tracking_error = sqrt(252) * std(excess)`
-- `benchmark_relative_drawdown`: max drawdown of the excess equity curve.
+- `benchmark_relative_drawdown`: max drawdown of the **relative** equity curve
+  `(1+strat).cumprod() / (1+bench).cumprod()` (a ratio — always positive). Do NOT compound the
+  return *difference* (`strat - bench`); it can fall ≤ −1 and produce a meaningless curve.
 
 **Oracle**: SPY vs SPY → excess≈0, IR≈0, alpha≈0, beta≈1.0 (ARCHITECTURE.md §8).
 Never report an absolute Sharpe without benchmark context.

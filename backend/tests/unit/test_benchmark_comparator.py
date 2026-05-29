@@ -38,6 +38,18 @@ def test_leveraged_strategy_has_double_beta_and_zero_alpha() -> None:
     assert comparison.alpha == pytest.approx(0.0, abs=1e-9)
 
 
+def test_relative_drawdown_is_bounded_when_strategy_underperforms() -> None:
+    # Strategy declines while the benchmark rises -> the relative-equity (ratio) drawdown is
+    # in [-1, 0] and finite. The old return-difference compounding could fall below -1 here.
+    index = pd.date_range("2024-01-01", periods=120, freq="D", tz="UTC")
+    bench = pd.Series(0.001, index=index)
+    strat = pd.Series(-0.002, index=index)
+    comparison = BenchmarkComparator().compare(strat, bench)
+    drawdown = comparison.benchmark_relative_drawdown
+    assert np.isfinite(drawdown)
+    assert -1.0 <= drawdown < 0.0
+
+
 def test_constant_benchmark_does_not_divide_by_zero() -> None:
     index = pd.date_range("2024-01-01", periods=10, freq="D", tz="UTC")
     flat_bench = pd.Series(0.0, index=index)

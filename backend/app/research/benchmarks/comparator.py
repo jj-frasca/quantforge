@@ -41,7 +41,10 @@ class BenchmarkComparator:
         sqrt_t = np.sqrt(TRADING_DAYS)
         information_ratio = float(sqrt_t * excess.mean() / excess_std) if excess_std > 0 else 0.0
         tracking_error = float(sqrt_t * excess_std)
-        excess_equity = (1.0 + excess).cumprod()
+        # Relative drawdown = drawdown of the strategy's equity RELATIVE to the benchmark's
+        # (a ratio of compounded curves, always positive). Compounding the return *difference*
+        # (strat - bench) is invalid — it can fall to <= -1 and yield a meaningless curve.
+        relative_equity = (1.0 + strat).cumprod() / (1.0 + bench).cumprod()
 
         return BenchmarkComparison(
             excess_returns=excess,
@@ -49,5 +52,5 @@ class BenchmarkComparator:
             alpha=alpha,
             beta=beta,
             tracking_error=tracking_error,
-            benchmark_relative_drawdown=max_drawdown(excess_equity),
+            benchmark_relative_drawdown=max_drawdown(relative_equity),
         )
