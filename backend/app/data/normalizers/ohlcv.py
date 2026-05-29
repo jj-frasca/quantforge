@@ -49,14 +49,21 @@ class OHLCVNormalizer:
             if row.close <= 0:
                 raise ValueError("raw close must be > 0 to compute the adjustment factor")
             factor = (_to_decimal(row.adj_close) / _to_decimal(row.close)).quantize(_Q6)
+            open_ = _scaled(row.open, factor)
+            close_ = _to_decimal(row.adj_close).quantize(_Q6)
+            # Derive high/low as the extremes of the bar so OHLC ordering always holds. Real
+            # vendor data (and the close==adj_close vs scaled-high rounding gap) can otherwise
+            # leave high < close or high < open and fail PriceBar validation.
+            high_ = max(_scaled(row.high, factor), open_, close_)
+            low_ = min(_scaled(row.low, factor), open_, close_)
             bars.append(
                 PriceBar(
                     symbol=symbol,
                     timestamp_utc=row.timestamp,
-                    open=_scaled(row.open, factor),
-                    high=_scaled(row.high, factor),
-                    low=_scaled(row.low, factor),
-                    close=_to_decimal(row.adj_close).quantize(_Q6),
+                    open=open_,
+                    high=high_,
+                    low=low_,
+                    close=close_,
                     volume=row.volume,
                     adj_factor=factor,
                     source=source,

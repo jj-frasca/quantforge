@@ -56,3 +56,18 @@ def test_normalizer_non_positive_close_raises() -> None:
 
 def test_normalizer_empty_input_returns_empty() -> None:
     assert OHLCVNormalizer().normalize([], "AAPL", "yfinance") == []
+
+
+def test_normalizer_clamps_high_low_to_bar_extremes() -> None:
+    # Real vendor data can have high < close (rounding / close==adj_close vs scaled-high gap),
+    # which naive scaling would turn into an invalid bar. The normalizer derives high/low as the
+    # bar's extremes so OHLC ordering always holds.
+    bars = OHLCVNormalizer().normalize(
+        [_raw(open=100.0, high=103.5, low=99.0, close=104.0, adj_close=104.0)],
+        "AAPL",
+        "yfinance",
+    )
+    bar = bars[0]
+    assert bar.high >= max(bar.open, bar.close)
+    assert bar.low <= min(bar.open, bar.close)
+    assert bar.high == Decimal("104")  # clamped up from the vendor's 103.5
