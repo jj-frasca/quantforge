@@ -17,6 +17,8 @@ dependencies = [
     "pandas>=2.2",
     "numpy>=2.0",
     "scipy>=1.13",
+    "psycopg[binary]>=3.3.4",
+    "alembic>=1.18.4",
 ]
 
 [dependency-groups]
@@ -34,6 +36,14 @@ dev = [
 [tool.uv]
 # This is an application, not a distributable package — don't build/install it.
 package = false
+
+[tool.coverage.run]
+# DB-glue modules are exercised by integration tests (`make test-integration`, needs Docker),
+# not the unit run — keep them out of the unit coverage gate rather than count them as missed.
+omit = [
+    "app/data/storage/db.py",
+    "app/data/storage/timescale.py",
+]
 
 [tool.coverage.report]
 # Don't count non-executed stubs against coverage.
