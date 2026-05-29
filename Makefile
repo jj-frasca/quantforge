@@ -1,7 +1,9 @@
-.PHONY: help install dev down test test-live lint format migrate check coverage
+.PHONY: help install dev down test test-live test-integration lint format migrate check coverage \
+        frontend-install frontend-lint frontend-test frontend-check check-all
 
 # backend is a uv project living in ./backend
 BE := cd backend && uv run
+FE := cd frontend &&
 COV_MIN := 85
 
 help:
@@ -30,7 +32,7 @@ test-integration: ## Run DB-backed integration tests (needs Docker). Local only 
 coverage: ## Coverage report (synthetic only), HTML + terminal
 	$(BE) pytest -m "not live" --cov=app --cov-report=term-missing --cov-report=html
 
-lint: ## ruff lint + format check + mypy (eslint added in Phase 5)
+lint: ## Backend lint: ruff lint + format check + mypy
 	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app
 
 format: ## Auto-format with ruff
@@ -39,4 +41,18 @@ format: ## Auto-format with ruff
 migrate: ## Run alembic migrations (Phase 2+)
 	$(BE) alembic upgrade head
 
-check: lint test ## Lint + tests + coverage gate — run before every commit
+check: lint test ## Backend gate: lint + tests + coverage — run before every backend commit
+
+# --- frontend (React/TS, ./frontend) ---
+frontend-install: ## Install frontend deps from package-lock (npm ci)
+	$(FE) npm ci
+
+frontend-lint: ## Frontend eslint + tsc typecheck
+	$(FE) npm run lint && npm run typecheck
+
+frontend-test: ## Frontend tests with coverage gate (>=75%)
+	$(FE) npm run coverage
+
+frontend-check: frontend-lint frontend-test ## Frontend gate: lint + typecheck + tests
+
+check-all: check frontend-check ## Full gate: backend + frontend

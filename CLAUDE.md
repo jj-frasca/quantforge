@@ -20,9 +20,11 @@ make dev          → start docker-compose environment (TimescaleDB + Redis + ba
 make test         → tests with coverage; excludes -m live and -m integration (DB)
 make test-live    → live-data tests (pytest -m live); local only, never in CI
 make test-integration → DB-backed tests (pytest -m integration); needs Docker, not in CI
-make lint         → ruff + mypy (+ eslint once frontend exists)
+make lint         → backend ruff + format-check + mypy
 make migrate      → run alembic migrations
-make check        → lint + test + coverage (run before every commit)
+make check        → backend gate: lint + test + coverage (run before every backend commit)
+make frontend-check → frontend gate: eslint + tsc + vitest coverage (>=75%); run before frontend commits
+make check-all    → backend + frontend gates together
 
 ## Architecture (one paragraph)
 FastAPI backend (Python 3.12) in /backend. React 19 + TypeScript in /frontend (Vite + Vitest).
