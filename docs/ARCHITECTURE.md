@@ -61,7 +61,10 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
 **BUILT & tested (100% backend coverage; frontend ≥75%):**
 - Data layer: PriceBar / FundamentalData / quality models; `DataSourceAdapter` ABC +
   `YFinanceAdapter` + `OHLCVNormalizer`; `DataQualityEngine` (6 active heuristic checks — see
-  below); `DataIngestionPipeline` + **in-memory** `PriceBarRepository`; SQLAlchemy ORM models.
+  below); `DataIngestionPipeline` + in-memory `PriceBarRepository`; SQLAlchemy ORM models;
+  **TimescaleDB sync repository (psycopg3) + Alembic migration** (hypertable + index),
+  integration-tested via Docker (`make migrate`, `make test-integration`) — not yet wired to an
+  HTTP endpoint (no ingestion endpoint exists; `/validate` fetches yfinance live, in memory).
 - Research: vectorized `BacktestEngine` + metrics + §8 oracle tests; `SMAStrategy`,
   `MomentumStrategy`, `MeanReversionStrategy`; `BenchmarkComparator`; `MonteCarloSimulator`;
   `ExperimentManifest`.
@@ -71,8 +74,8 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   **ValidationReport page** end-to-end; CI gates backend + frontend.
 
 **DEFERRED / NOT YET BUILT (documented in the target tree but absent in code):**
-- **TimescaleDB repository + Alembic migration** (`create_hypertable`, `make migrate`) — needs
-  Docker; ADR-009 decided the approach (sync psycopg3). The live store is the in-memory repo.
+- **Ingestion HTTP endpoint** — the TimescaleDB repo exists and is tested, but nothing wires it
+  into a route yet; ingestion runs only via the pipeline in code/tests.
 - **Redis cache** — only a `redis_url` config field exists; no client/cache code.
 - **`experiment_store.py`** — not built; `ExperimentManifest` lives in `backtesting/manifest.py`.
 - **Polygon adapter** — Phase 3+; only the `Source` enum value exists, so **vendor
@@ -256,9 +259,8 @@ RULE: Survivorship bias: we flag the risk in universe selection. We do not solve
 ## 4. Repository Structure
 
 > **This is the TARGET layout.** Some entries are deferred or not yet built (e.g.
-> `experiment_store.py`, Redis, the TimescaleDB repo/migrations, the per-file synthetic
-> fixtures, three of the four frontend pages). See **§0.6 Implementation Status** for what
-> actually exists in the codebase today.
+> `experiment_store.py`, Redis, the per-file synthetic fixtures, three of the four frontend
+> pages). See **§0.6 Implementation Status** for what actually exists in the codebase today.
 
 ```
 quantforge/
