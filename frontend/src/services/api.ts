@@ -14,7 +14,18 @@ export async function requestValidation(body: ValidateRequest): Promise<Validati
     body: JSON.stringify(body),
   })
   if (!response.ok) {
-    throw new Error(`Validation request failed (${response.status})`)
+    // Surface the backend's `detail` (e.g. "insufficient data") when present.
+    const detail = await response.json().then(
+      (body: unknown) => {
+        if (body && typeof body === 'object' && 'detail' in body) {
+          const value = (body as { detail?: unknown }).detail
+          return typeof value === 'string' ? `: ${value}` : ''
+        }
+        return ''
+      },
+      () => '',
+    )
+    throw new Error(`Validation request failed (${response.status})${detail}`)
   }
   // Validate the response shape at the boundary — never trust the network.
   return validationReportSchema.parse(await response.json())

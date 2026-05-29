@@ -18,9 +18,11 @@ test('requestValidation returns a parsed report on success', async () => {
   expect(report).toEqual(passingReport)
 })
 
-test('requestValidation throws on a non-2xx response', async () => {
+test('requestValidation throws on a non-2xx response, surfacing the backend detail', async () => {
   server.use(
-    http.post('/api/v1/validate', () => HttpResponse.json({ detail: 'bad' }, { status: 422 })),
+    http.post('/api/v1/validate', () =>
+      HttpResponse.json({ detail: 'insufficient data' }, { status: 422 }),
+    ),
   )
-  await expect(requestValidation(request)).rejects.toThrow(/422/)
+  await expect(requestValidation(request)).rejects.toThrow(/422.*insufficient data/)
 })
