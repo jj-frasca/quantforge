@@ -5,6 +5,12 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    // Dev: forward /api to the local FastAPI backend so the SPA is same-origin.
+    proxy: {
+      '/api': { target: 'http://localhost:8000', changeOrigin: true },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

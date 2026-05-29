@@ -10,8 +10,11 @@ class Settings(BaseSettings):
 
     environment: str = "development"
     log_level: str = "INFO"
-    database_url: str = "postgresql+asyncpg://quantforge:password@localhost:5432/quantforge"
+    # Sync psycopg3 driver (ADR-009).
+    database_url: str = "postgresql+psycopg://quantforge:password@localhost:5432/quantforge"
     redis_url: str = "redis://localhost:6379/0"
+    # Browser origins allowed to call the API (Vite dev server by default).
+    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 
 @lru_cache
