@@ -54,7 +54,7 @@ affect a section below, the section has been edited inline to match.
    current stable is the better engineering choice. Frontend tests run on Vitest + RTL + MSW;
    coverage gate ≥ 75%.
 
-## 0.6 Implementation Status (as of 2026-05-28)
+## 0.6 Implementation Status (as of 2026-05-29)
 
 The §4 tree below is the **target** layout; not all of it is built yet. Authoritative reality:
 
@@ -63,20 +63,20 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   `YFinanceAdapter` + `OHLCVNormalizer`; `DataQualityEngine` (6 active heuristic checks — see
   below); `DataIngestionPipeline` + in-memory `PriceBarRepository`; SQLAlchemy ORM models;
   **TimescaleDB sync repository (psycopg3) + Alembic migration** (hypertable + index),
-  integration-tested via Docker (`make migrate`, `make test-integration`) — not yet wired to an
-  HTTP endpoint (no ingestion endpoint exists; `/validate` fetches yfinance live, in memory).
+  integration-tested via Docker (`make migrate`, `make test-integration`).
 - Research: vectorized `BacktestEngine` + metrics + §8 oracle tests; `SMAStrategy`,
   `MomentumStrategy`, `MeanReversionStrategy`; `BenchmarkComparator`; `MonteCarloSimulator`;
   `ExperimentManifest`.
 - Validation: `deflated_sharpe`, `pbo` (CSCV), `walk_forward`, `purged_cv`,
   `parameter_stability`, `regime_analysis`; `ValidationEngine` → `ValidationReport`.
-- API: `GET /health`, `POST /api/v1/validate` (+ CORS, DI). Frontend: scaffold + the
+- API: `GET /health`, `POST /api/v1/ingest` (runs `DataIngestionPipeline` behind DI),
+  `POST /api/v1/validate` (**cache-aside**: reads bars from the repository first; on miss
+  runs the ingestion pipeline, then re-reads). Frontend: scaffold + the
   **ValidationReport page** end-to-end; CI gates backend + frontend.
 
 **DEFERRED / NOT YET BUILT (documented in the target tree but absent in code):**
-- **Ingestion HTTP endpoint** — the TimescaleDB repo exists and is tested, but nothing wires it
-  into a route yet; ingestion runs only via the pipeline in code/tests.
-- **Redis cache** — only a `redis_url` config field exists; no client/cache code.
+- **Redis cache** — only a `redis_url` config field exists; no client/cache code. The
+  cache-aside store today is TimescaleDB itself; Redis is for hot-path/intra-request memoization.
 - **`experiment_store.py`** — not built; `ExperimentManifest` lives in `backtesting/manifest.py`.
 - **Polygon adapter** — Phase 3+; only the `Source` enum value exists, so **vendor
   cross-validation** (check #8) cannot run. **Corporate-action detection** (check #3) is also
