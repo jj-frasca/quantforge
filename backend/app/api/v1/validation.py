@@ -4,8 +4,10 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from app.data.pipelines.ingestion import DataIngestionPipeline
 from app.data.sources.base import DataSourceAdapter
-from app.dependencies import get_data_adapter
+from app.data.storage.repository import PriceBarRepository
+from app.dependencies import get_data_adapter, get_repository
 from app.research.frames import bars_to_frame
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.mean_reversion import MeanReversionStrategy
@@ -45,13 +47,21 @@ def _config_grid(strategy: StrategyName) -> list[BaseStrategy]:
 
 
 # Sync endpoint on purpose: FastAPI runs `def` handlers in a threadpool, so the blocking
-# yfinance fetch doesn't stall the event loop (sidesteps ADR-009 for the request path).
+# yfinance fetch and DB calls don't stall the event loop (ADR-009 sync stack).
 @router.post("/validate", response_model=ValidationReport)
 def validate(
     request: ValidateRequest,
     adapter: Annotated[DataSourceAdapter, Depends(get_data_adapter)],
+    repository: Annotated[PriceBarRepository, Depends(get_repository)],
 ) -> ValidationReport:
-    bars = adapter.fetch_price_bars(request.symbol, request.start_date, request.end_date)
+    bars = repository.get_bars(request.symbol, request.start_date, request.end_date)
+    if len(bars) < _MIN_BARS:
+        # Cache miss: run the ingestion pipeline (quality gate persists either way; bars
+        # are stored only if the gate passes), then re-read from the repo.
+        DataIngestionPipeline(adapter, repository).ingest(
+            request.symbol, request.start_date, request.end_date
+        )
+        bars = repository.get_bars(request.symbol, request.start_date, request.end_date)
     frame = bars_to_frame(bars)
     if len(frame) < _MIN_BARS:
         raise HTTPException(
