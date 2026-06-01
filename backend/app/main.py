@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1.bars import router as bars_router
 from app.api.v1.ingest import router as ingest_router
 from app.api.v1.validation import router as validation_router
 from app.config import get_settings
@@ -14,6 +15,7 @@ app.add_middleware(
 )
 app.include_router(validation_router, prefix="/api/v1")
 app.include_router(ingest_router, prefix="/api/v1")
+app.include_router(bars_router, prefix="/api/v1")
 
 
 @app.get("/health")
