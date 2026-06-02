@@ -18,8 +18,21 @@ function App() {
   return (
     <main className="app-shell">
       <header>
-        <h1>QuantForge</h1>
-        <p>Quantitative research &amp; validation platform.</p>
+        <div className="brand-row">
+          <h1>QuantForge</h1>
+          <a
+            className="repo-link"
+            href="https://github.com/jj-frasca/quantforge"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub ↗
+          </a>
+        </div>
+        <p>
+          AI-native quantitative research platform. Ingest market data, run honest backtests,
+          and validate strategies with PBO, Deflated Sharpe, walk-forward, and purged CV.
+        </p>
         <nav aria-label="primary" className="primary-nav">
           {PAGES.map((p) => (
             <button
@@ -37,6 +50,13 @@ function App() {
       {page === 'validation' && <ValidationReportPage />}
       {page === 'data-explorer' && <DataExplorerPage />}
       {page === 'backtest-results' && <BacktestResultsPage />}
+
+      <footer className="app-footer">
+        <small>
+          Built with React 19 + TypeScript + FastAPI + TimescaleDB. Methodology:{' '}
+          López de Prado &amp; Bailey (2014–2017).
+        </small>
+      </footer>
     </main>
   )
 }
