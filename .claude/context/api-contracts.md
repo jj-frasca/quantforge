@@ -80,6 +80,54 @@ stall the event loop (ADR-009).
 
 ---
 
+## POST /api/v1/backtest
+Run a **single** strategy backtest against a (symbol, config, range); returns the equity
+curve and the metrics from `BacktestMetrics`. Intended for "what does this one config do?"
+iteration — fast feedback before paying for the full /validate suite.
+
+**Why sync**: plain `def`, threadpooled; yfinance + DB blocking work doesn't stall the loop.
+
+**Cache-aside read path**: same as /validate. Repo first; on miss runs the ingestion pipeline,
+then re-reads. Same `MIN_BARS=30` backstop.
+
+**Request** (`BacktestRequest`):
+```json
+{
+  "symbol": "AAPL",
+  "strategy": { "name": "sma" | "momentum" | "mean_reversion", "...params": "..." },
+  "start_date": "2024-01-01T00:00:00Z",
+  "end_date":   "2024-12-01T00:00:00Z"
+}
+```
+`strategy` is a Pydantic discriminated union (`Field(discriminator="name")`):
+- `sma`: `{ name: "sma", fast: int, slow: int }`
+- `momentum`: `{ name: "momentum", lookback: int, skip: int }`
+- `mean_reversion`: `{ name: "mean_reversion", window: int, k: float }`
+
+An unknown `name` is a 422 from Pydantic — never reaches the handler.
+
+**Responses**:
+- `200` → `BacktestResponse`:
+  ```json
+  {
+    "symbol": "AAPL",
+    "strategy_name": "sma_crossover",
+    "parameters": { "fast": 5, "slow": 20 },
+    "n_trades": 12,
+    "cost_rate": 0.001,
+    "metrics": {
+      "sharpe": 1.5, "max_drawdown": -0.18, "total_return": 0.42,
+      "annualized_return": 0.18, "annualized_vol": 0.12
+    },
+    "equity_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."]
+  }
+  ```
+- `422` → insufficient data after the cache-miss ingest, or an unknown strategy discriminator.
+
+**DI**: `get_data_adapter` + `get_repository`. Same overrides as /validate in tests.
+
+---
+
 ## POST /api/v1/validate
 Run the full validation suite for a strategy on a symbol; returns a `ValidationReport`.
 

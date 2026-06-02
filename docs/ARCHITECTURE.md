@@ -70,12 +70,13 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
 - Validation: `deflated_sharpe`, `pbo` (CSCV), `walk_forward`, `purged_cv`,
   `parameter_stability`, `regime_analysis`; `ValidationEngine` → `ValidationReport`.
 - API: `GET /health`, `POST /api/v1/ingest` (runs `DataIngestionPipeline` behind DI),
-  `POST /api/v1/validate` (**cache-aside**: reads bars from the repository first; on miss
-  runs the ingestion pipeline, then re-reads), `GET /api/v1/bars` (read-only projection of
-  cached bars — float `ChartBar` for charting). Frontend: scaffold + the
-  **ValidationReport page** + the **Data Explorer page** (form → `/ingest` →
-  `IngestResultView` + Recharts price chart from `/bars`) end-to-end, with a primary nav
-  switching between the two; CI gates backend + frontend.
+  `POST /api/v1/validate` (**cache-aside** through the repo), `GET /api/v1/bars` (read-only
+  projection of cached bars — float `ChartBar` for charting), `POST /api/v1/backtest`
+  (single-config backtest, cache-aside; equity curve + metrics; discriminated `StrategyConfig`).
+  Frontend: scaffold + **Data Explorer** (form → `/ingest` → `IngestResultView` + Recharts
+  price chart from `/bars`), **Backtest Results** (per-strategy param form → `/backtest` →
+  metrics + equity curve), **Validation Report** (symbol/strategy/range form → `/validate` →
+  `ValidationReportView`); 3-way primary nav between them; CI gates backend + frontend.
 
 **DEFERRED / NOT YET BUILT (documented in the target tree but absent in code):**
 - **Redis cache** — only a `redis_url` config field exists; no client/cache code. The
@@ -87,8 +88,9 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   `survivorship_risk` (info), `missing_bars`, `price_anomaly`, `stale_data`,
   `split_dividend_consistency` (warnings). Timezone (#7) is enforced at the PriceBar boundary
   (raises), not as a soft flag.
-- **Frontend pages**: `validation-report` and `data-explorer` are built; Strategy Config /
-  Backtest Results are empty dirs.
+- **Frontend pages**: `validation-report`, `data-explorer`, and `backtest-results` are built;
+  `strategy-config` is still an empty dir (Backtest Results already takes per-strategy params
+  via its discriminated form — the separate page may be unnecessary).
 - **`Portfolio`** is NOT a separate class — position/cost/equity math lives in `BacktestEngine`.
 - Deferred skills (`adr-creator`, `validation-runner`) and the `database-migrations.md` rule
   are listed in §4 but intentionally not created yet.
