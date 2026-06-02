@@ -24,6 +24,10 @@ const validResponse = {
     { timestamp_utc: '2024-01-02T00:00:00Z', equity: 100_200 },
   ],
   buy_and_hold_total_return: 0.32,
+  drawdown_curve: [
+    { timestamp_utc: '2024-01-01T00:00:00Z', drawdown: 0 },
+    { timestamp_utc: '2024-01-02T00:00:00Z', drawdown: -0.05 },
+  ],
 }
 
 test('backtestResponseSchema parses a valid response', () => {

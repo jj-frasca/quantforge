@@ -27,6 +27,11 @@ const winning: BacktestResponse = {
     { timestamp_utc: '2024-12-01T00:00:00Z', equity: 120_000 },
   ],
   buy_and_hold_total_return: 0.2,
+  drawdown_curve: [
+    { timestamp_utc: '2024-01-01T00:00:00Z', drawdown: 0 },
+    { timestamp_utc: '2024-06-01T00:00:00Z', drawdown: -0.15 },
+    { timestamp_utc: '2024-12-01T00:00:00Z', drawdown: -0.05 },
+  ],
 }
 
 const losing: BacktestResponse = {

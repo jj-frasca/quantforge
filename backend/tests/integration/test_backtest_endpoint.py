@@ -58,6 +58,10 @@ def test_backtest_endpoint_returns_equity_curve_and_metrics() -> None:
         # Buy-and-hold reference is the same length as the strategy curve
         assert len(body["buy_and_hold_curve"]) == len(body["equity_curve"])
         assert isinstance(body["buy_and_hold_total_return"], float)
+        # Drawdown is in [-1, 0] and same length as the equity curve
+        assert len(body["drawdown_curve"]) == len(body["equity_curve"])
+        for point in body["drawdown_curve"]:
+            assert -1.0 <= point["drawdown"] <= 0.0
     finally:
         app.dependency_overrides.clear()
 

@@ -34,6 +34,10 @@ const successResponse: BacktestResponse = {
     { timestamp_utc: '2024-01-02T00:00:00Z', equity: 100_150 },
   ],
   buy_and_hold_total_return: 0.15,
+  drawdown_curve: [
+    { timestamp_utc: '2024-01-01T00:00:00Z', drawdown: 0 },
+    { timestamp_utc: '2024-01-02T00:00:00Z', drawdown: -0.02 },
+  ],
 }
 
 test('requestBacktest returns a parsed response on success', async () => {

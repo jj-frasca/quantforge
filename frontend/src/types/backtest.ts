@@ -44,6 +44,13 @@ export const equityPointSchema = z.object({
 
 export type EquityPoint = z.infer<typeof equityPointSchema>
 
+export const drawdownPointSchema = z.object({
+  timestamp_utc: z.string(),
+  drawdown: z.number().min(-1).max(0),
+})
+
+export type DrawdownPoint = z.infer<typeof drawdownPointSchema>
+
 export const backtestMetricsSchema = z.object({
   sharpe: z.number(),
   max_drawdown: z.number(),
@@ -64,6 +71,7 @@ export const backtestResponseSchema = z.object({
   equity_curve: z.array(equityPointSchema),
   buy_and_hold_curve: z.array(equityPointSchema),
   buy_and_hold_total_return: z.number(),
+  drawdown_curve: z.array(drawdownPointSchema),
 })
 
 export type BacktestResponse = z.infer<typeof backtestResponseSchema>

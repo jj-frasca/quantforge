@@ -65,6 +65,11 @@ class BacktestMetricsView(BaseModel):
     annualized_vol: float
 
 
+class DrawdownPoint(BaseModel):
+    timestamp_utc: datetime
+    drawdown: float  # in [-1, 0]; 0 == at peak
+
+
 class BacktestResponse(BaseModel):
     symbol: str
     strategy_name: str
@@ -77,6 +82,8 @@ class BacktestResponse(BaseModel):
     # check. Same time index as `equity_curve`; same `initial_capital` starting point.
     buy_and_hold_curve: list[EquityPoint]
     buy_and_hold_total_return: float
+    # Drawdown series (equity / cummax - 1) for the underwater plot. Same time index.
+    drawdown_curve: list[DrawdownPoint]
 
 
 def _build_strategy(config: StrategyConfig) -> BaseStrategy:
@@ -89,6 +96,11 @@ def _build_strategy(config: StrategyConfig) -> BaseStrategy:
 
 def _series_to_curve(series: "pd.Series") -> list[EquityPoint]:
     return [EquityPoint(timestamp_utc=ts, equity=float(value)) for ts, value in series.items()]
+
+
+def _equity_to_drawdown(equity: "pd.Series") -> list[DrawdownPoint]:
+    dd = equity / equity.cummax() - 1.0
+    return [DrawdownPoint(timestamp_utc=ts, drawdown=float(value)) for ts, value in dd.items()]
 
 
 def _to_response(
@@ -118,6 +130,7 @@ def _to_response(
         equity_curve=_series_to_curve(result.equity_curve),
         buy_and_hold_curve=_series_to_curve(bh_equity),
         buy_and_hold_total_return=bh_total_return,
+        drawdown_curve=_equity_to_drawdown(result.equity_curve),
     )
 
 

@@ -1,4 +1,5 @@
 import type { BacktestResponse } from '../../types/backtest'
+import { DrawdownChart } from './DrawdownChart'
 import { EquityCurveChart } from './EquityCurveChart'
 
 const asPercent = (value: number): string => `${(value * 100).toFixed(1)}%`
@@ -55,6 +56,7 @@ export function BacktestResultView({ result }: Props) {
         benchmark={result.buy_and_hold_curve}
         benchmarkLabel={`Buy & hold ${result.symbol}`}
       />
+      <DrawdownChart data={result.drawdown_curve} />
     </section>
   )
 }
