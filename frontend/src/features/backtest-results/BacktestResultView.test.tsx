@@ -22,6 +22,11 @@ const winning: BacktestResponse = {
     { timestamp_utc: '2024-01-01T00:00:00Z', equity: 100_000 },
     { timestamp_utc: '2024-12-01T00:00:00Z', equity: 142_000 },
   ],
+  buy_and_hold_curve: [
+    { timestamp_utc: '2024-01-01T00:00:00Z', equity: 100_000 },
+    { timestamp_utc: '2024-12-01T00:00:00Z', equity: 120_000 },
+  ],
+  buy_and_hold_total_return: 0.2,
 }
 
 const losing: BacktestResponse = {
@@ -35,6 +40,7 @@ test('renders the heading, the metrics, and the equity curve summary', () => {
   expect(screen.getByText('1.50')).toBeInTheDocument() // sharpe
   expect(screen.getByText('18.0%')).toBeInTheDocument() // annualized_return
   expect(screen.getByRole('status')).toHaveTextContent(/total return 42\.0%/i)
+  expect(screen.getByRole('status')).toHaveTextContent(/buy & hold 20\.0%/i)
   expect(screen.getByLabelText('equity curve')).toBeInTheDocument()
 })
 

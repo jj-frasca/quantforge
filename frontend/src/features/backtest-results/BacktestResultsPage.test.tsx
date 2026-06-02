@@ -26,6 +26,11 @@ const successResponse: BacktestResponse = {
     { timestamp_utc: '2020-01-01T00:00:00Z', equity: 100_000 },
     { timestamp_utc: '2024-01-01T00:00:00Z', equity: 118_000 },
   ],
+  buy_and_hold_curve: [
+    { timestamp_utc: '2020-01-01T00:00:00Z', equity: 100_000 },
+    { timestamp_utc: '2024-01-01T00:00:00Z', equity: 130_000 },
+  ],
+  buy_and_hold_total_return: 0.3,
 }
 
 test('renders the form with sensible defaults', () => {

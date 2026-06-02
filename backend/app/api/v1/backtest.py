@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
+import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -72,6 +73,10 @@ class BacktestResponse(BaseModel):
     cost_rate: float
     metrics: BacktestMetricsView
     equity_curve: list[EquityPoint]
+    # Buy-and-hold of the SAME symbol: the canonical "is the strategy doing anything?"
+    # check. Same time index as `equity_curve`; same `initial_capital` starting point.
+    buy_and_hold_curve: list[EquityPoint]
+    buy_and_hold_total_return: float
 
 
 def _build_strategy(config: StrategyConfig) -> BaseStrategy:
@@ -82,11 +87,21 @@ def _build_strategy(config: StrategyConfig) -> BaseStrategy:
     return MeanReversionStrategy(window=config.window, k=config.k)
 
 
-def _to_response(symbol: str, strategy: BaseStrategy, result: BacktestResult) -> BacktestResponse:
-    equity_curve = [
-        EquityPoint(timestamp_utc=ts, equity=float(value))
-        for ts, value in result.equity_curve.items()
-    ]
+def _series_to_curve(series: "pd.Series") -> list[EquityPoint]:
+    return [EquityPoint(timestamp_utc=ts, equity=float(value)) for ts, value in series.items()]
+
+
+def _to_response(
+    symbol: str,
+    strategy: BaseStrategy,
+    result: BacktestResult,
+    prices: "pd.Series",
+    initial_capital: float,
+) -> BacktestResponse:
+    # Buy-and-hold equity: a 100% long position from t=0, same starting capital, no costs.
+    bh_returns = prices.pct_change().fillna(0.0)
+    bh_equity = (1.0 + bh_returns).cumprod() * initial_capital
+    bh_total_return = float(bh_equity.iloc[-1] / bh_equity.iloc[0] - 1.0)
     return BacktestResponse(
         symbol=symbol,
         strategy_name=strategy.name,
@@ -100,7 +115,9 @@ def _to_response(symbol: str, strategy: BaseStrategy, result: BacktestResult) ->
             annualized_return=result.metrics.annualized_return,
             annualized_vol=result.metrics.annualized_vol,
         ),
-        equity_curve=equity_curve,
+        equity_curve=_series_to_curve(result.equity_curve),
+        buy_and_hold_curve=_series_to_curve(bh_equity),
+        buy_and_hold_total_return=bh_total_return,
     )
 
 
@@ -125,5 +142,6 @@ def backtest(
             detail=f"insufficient data: {len(frame)} bars (need >= {_MIN_BARS})",
         )
     strategy = _build_strategy(request.strategy)
-    result = BacktestEngine().run_strategy(frame, strategy)
-    return _to_response(request.symbol, strategy, result)
+    engine = BacktestEngine()
+    result = engine.run_strategy(frame, strategy)
+    return _to_response(request.symbol, strategy, result, frame["close"], engine.initial_capital)

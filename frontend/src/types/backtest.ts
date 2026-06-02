@@ -62,6 +62,8 @@ export const backtestResponseSchema = z.object({
   cost_rate: z.number().nonnegative(),
   metrics: backtestMetricsSchema,
   equity_curve: z.array(equityPointSchema),
+  buy_and_hold_curve: z.array(equityPointSchema),
+  buy_and_hold_total_return: z.number(),
 })
 
 export type BacktestResponse = z.infer<typeof backtestResponseSchema>

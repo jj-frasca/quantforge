@@ -20,7 +20,7 @@ export function BacktestResultView({ result }: Props) {
       </h2>
       <p role="status" className="verdict">
         Total return {asPercent(result.metrics.total_return)} over {result.equity_curve.length}{' '}
-        bars
+        bars; buy &amp; hold {asPercent(result.buy_and_hold_total_return)}
       </p>
 
       <dl className="metrics">
@@ -50,7 +50,11 @@ export function BacktestResultView({ result }: Props) {
         </div>
       </dl>
 
-      <EquityCurveChart data={result.equity_curve} />
+      <EquityCurveChart
+        data={result.equity_curve}
+        benchmark={result.buy_and_hold_curve}
+        benchmarkLabel={`Buy & hold ${result.symbol}`}
+      />
     </section>
   )
 }
