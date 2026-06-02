@@ -13,6 +13,39 @@ Liveness probe. → `200 {"status": "ok", "environment": "<env>"}`. No DB depend
 
 ---
 
+## GET /api/v1/bars
+Return cached price bars for a `(symbol, range)` — pure read, **does not trigger ingestion**.
+Powers the Data Explorer chart and any future "show what's stored" UIs.
+
+**Why sync**: plain `def` threadpooled by FastAPI; the blocking repository read is in the
+threadpool (ADR-009).
+
+**Query parameters**:
+- `symbol` (string, ≥1 char)
+- `start_date` (ISO-8601 datetime)
+- `end_date` (ISO-8601 datetime)
+
+**Responses**:
+- `200` → `BarsResponse`:
+  ```json
+  {
+    "symbol": "AAPL",
+    "n_bars": 2,
+    "bars": [
+      { "timestamp_utc": "2024-01-01T00:00:00Z",
+        "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 1000000 }
+    ]
+  }
+  ```
+  Empty array + `n_bars=0` when nothing is cached (not a 404 — "no data" is a normal answer).
+- `ChartBar` is a slim float projection of the canonical `PriceBar`. Decimal precision is
+  preserved in storage / backtesting; the API boundary converts because charts don't need it.
+
+**DI**: `get_repository` only. The data adapter is intentionally NOT injected — this endpoint
+must never silently call out to a vendor.
+
+---
+
 ## POST /api/v1/ingest
 Run the `DataIngestionPipeline` for a `(symbol, range)` and return the result + quality
 report. Bars are stored in the `PriceBarRepository` (TimescaleDB in prod) only when the

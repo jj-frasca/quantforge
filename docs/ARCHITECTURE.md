@@ -71,8 +71,11 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   `parameter_stability`, `regime_analysis`; `ValidationEngine` → `ValidationReport`.
 - API: `GET /health`, `POST /api/v1/ingest` (runs `DataIngestionPipeline` behind DI),
   `POST /api/v1/validate` (**cache-aside**: reads bars from the repository first; on miss
-  runs the ingestion pipeline, then re-reads). Frontend: scaffold + the
-  **ValidationReport page** end-to-end; CI gates backend + frontend.
+  runs the ingestion pipeline, then re-reads), `GET /api/v1/bars` (read-only projection of
+  cached bars — float `ChartBar` for charting). Frontend: scaffold + the
+  **ValidationReport page** + the **Data Explorer page** (form → `/ingest` →
+  `IngestResultView` + Recharts price chart from `/bars`) end-to-end, with a primary nav
+  switching between the two; CI gates backend + frontend.
 
 **DEFERRED / NOT YET BUILT (documented in the target tree but absent in code):**
 - **Redis cache** — only a `redis_url` config field exists; no client/cache code. The
@@ -84,7 +87,7 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   `survivorship_risk` (info), `missing_bars`, `price_anomaly`, `stale_data`,
   `split_dividend_consistency` (warnings). Timezone (#7) is enforced at the PriceBar boundary
   (raises), not as a soft flag.
-- **Frontend pages**: only `validation-report` is built; Data Explorer / Strategy Config /
+- **Frontend pages**: `validation-report` and `data-explorer` are built; Strategy Config /
   Backtest Results are empty dirs.
 - **`Portfolio`** is NOT a separate class — position/cost/equity math lives in `BacktestEngine`.
 - Deferred skills (`adr-creator`, `validation-runner`) and the `database-migrations.md` rule
