@@ -19,6 +19,8 @@ from app.research.strategies.sma import SMAStrategy
 router = APIRouter(tags=["backtest"])
 
 _MIN_BARS = 30
+_ROLLING_SHARPE_WINDOW = 60
+_TRADING_DAYS = 252
 
 
 class SMAConfig(BaseModel):
@@ -70,6 +72,11 @@ class DrawdownPoint(BaseModel):
     drawdown: float  # in [-1, 0]; 0 == at peak
 
 
+class RollingSharpePoint(BaseModel):
+    timestamp_utc: datetime
+    sharpe: float
+
+
 class BacktestResponse(BaseModel):
     symbol: str
     strategy_name: str
@@ -84,6 +91,10 @@ class BacktestResponse(BaseModel):
     buy_and_hold_total_return: float
     # Drawdown series (equity / cummax - 1) for the underwater plot. Same time index.
     drawdown_curve: list[DrawdownPoint]
+    # Rolling Sharpe (annualized, window = ROLLING_SHARPE_WINDOW bars). Before the window
+    # fills, sharpe is 0.0. Shows whether the strategy's edge is stable or concentrated.
+    rolling_sharpe_curve: list[RollingSharpePoint]
+    rolling_sharpe_window: int
 
 
 def _build_strategy(config: StrategyConfig) -> BaseStrategy:
@@ -103,12 +114,30 @@ def _equity_to_drawdown(equity: "pd.Series") -> list[DrawdownPoint]:
     return [DrawdownPoint(timestamp_utc=ts, drawdown=float(value)) for ts, value in dd.items()]
 
 
+def _rolling_sharpe(returns: "pd.Series", window: int) -> list[RollingSharpePoint]:
+    """Annualized rolling Sharpe with a fixed window.
+
+    Notes:
+        Before the window fills, sharpe is 0.0 (not NaN — keeps the wire JSON-clean).
+        std==0 is also 0.0 (a degenerate window).
+    """
+    import math
+
+    mean = returns.rolling(window).mean()
+    std = returns.rolling(window).std()
+    sqrt_t = math.sqrt(_TRADING_DAYS)
+    sharpe = sqrt_t * (mean / std.where(std > 0))
+    sharpe = sharpe.fillna(0.0)
+    return [RollingSharpePoint(timestamp_utc=ts, sharpe=float(v)) for ts, v in sharpe.items()]
+
+
 def _to_response(
     symbol: str,
     strategy: BaseStrategy,
     result: BacktestResult,
     prices: "pd.Series",
     initial_capital: float,
+    strategy_returns: "pd.Series",
 ) -> BacktestResponse:
     # Buy-and-hold equity: a 100% long position from t=0, same starting capital, no costs.
     bh_returns = prices.pct_change().fillna(0.0)
@@ -131,6 +160,8 @@ def _to_response(
         buy_and_hold_curve=_series_to_curve(bh_equity),
         buy_and_hold_total_return=bh_total_return,
         drawdown_curve=_equity_to_drawdown(result.equity_curve),
+        rolling_sharpe_curve=_rolling_sharpe(strategy_returns, _ROLLING_SHARPE_WINDOW),
+        rolling_sharpe_window=_ROLLING_SHARPE_WINDOW,
     )
 
 
@@ -157,4 +188,11 @@ def backtest(
     strategy = _build_strategy(request.strategy)
     engine = BacktestEngine()
     result = engine.run_strategy(frame, strategy)
-    return _to_response(request.symbol, strategy, result, frame["close"], engine.initial_capital)
+    return _to_response(
+        request.symbol,
+        strategy,
+        result,
+        frame["close"],
+        engine.initial_capital,
+        result.returns,
+    )

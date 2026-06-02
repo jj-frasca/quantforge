@@ -32,6 +32,12 @@ const winning: BacktestResponse = {
     { timestamp_utc: '2024-06-01T00:00:00Z', drawdown: -0.15 },
     { timestamp_utc: '2024-12-01T00:00:00Z', drawdown: -0.05 },
   ],
+  rolling_sharpe_curve: [
+    { timestamp_utc: '2024-01-01T00:00:00Z', sharpe: 0 },
+    { timestamp_utc: '2024-06-01T00:00:00Z', sharpe: 1.5 },
+    { timestamp_utc: '2024-12-01T00:00:00Z', sharpe: 1.2 },
+  ],
+  rolling_sharpe_window: 60,
 }
 
 const losing: BacktestResponse = {

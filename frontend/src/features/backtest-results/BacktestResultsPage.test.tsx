@@ -35,6 +35,11 @@ const successResponse: BacktestResponse = {
     { timestamp_utc: '2020-01-01T00:00:00Z', drawdown: 0 },
     { timestamp_utc: '2024-01-01T00:00:00Z', drawdown: -0.08 },
   ],
+  rolling_sharpe_curve: [
+    { timestamp_utc: '2020-01-01T00:00:00Z', sharpe: 0 },
+    { timestamp_utc: '2024-01-01T00:00:00Z', sharpe: 1.1 },
+  ],
+  rolling_sharpe_window: 60,
 }
 
 test('renders the form with sensible defaults', () => {

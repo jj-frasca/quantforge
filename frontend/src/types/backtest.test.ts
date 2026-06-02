@@ -28,6 +28,11 @@ const validResponse = {
     { timestamp_utc: '2024-01-01T00:00:00Z', drawdown: 0 },
     { timestamp_utc: '2024-01-02T00:00:00Z', drawdown: -0.05 },
   ],
+  rolling_sharpe_curve: [
+    { timestamp_utc: '2024-01-01T00:00:00Z', sharpe: 0 },
+    { timestamp_utc: '2024-01-02T00:00:00Z', sharpe: 1.2 },
+  ],
+  rolling_sharpe_window: 60,
 }
 
 test('backtestResponseSchema parses a valid response', () => {

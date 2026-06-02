@@ -1,6 +1,7 @@
 import type { BacktestResponse } from '../../types/backtest'
 import { DrawdownChart } from './DrawdownChart'
 import { EquityCurveChart } from './EquityCurveChart'
+import { RollingSharpeChart } from './RollingSharpeChart'
 
 const asPercent = (value: number): string => `${(value * 100).toFixed(1)}%`
 const asRatio = (value: number): string => value.toFixed(2)
@@ -57,6 +58,10 @@ export function BacktestResultView({ result }: Props) {
         benchmarkLabel={`Buy & hold ${result.symbol}`}
       />
       <DrawdownChart data={result.drawdown_curve} />
+      <RollingSharpeChart
+        data={result.rolling_sharpe_curve}
+        window={result.rolling_sharpe_window}
+      />
     </section>
   )
 }

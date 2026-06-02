@@ -62,6 +62,10 @@ def test_backtest_endpoint_returns_equity_curve_and_metrics() -> None:
         assert len(body["drawdown_curve"]) == len(body["equity_curve"])
         for point in body["drawdown_curve"]:
             assert -1.0 <= point["drawdown"] <= 0.0
+        # Rolling Sharpe shares the same length; the window is exposed; warmup is 0.0
+        assert len(body["rolling_sharpe_curve"]) == len(body["equity_curve"])
+        assert body["rolling_sharpe_window"] == 60
+        assert body["rolling_sharpe_curve"][0]["sharpe"] == 0.0
     finally:
         app.dependency_overrides.clear()
 
