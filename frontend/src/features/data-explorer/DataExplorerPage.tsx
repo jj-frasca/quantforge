@@ -1,8 +1,12 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 
+import type { BarsQuery } from '../../types/bars'
 import type { IngestRequest } from '../../types/ingest'
 import { IngestResultView } from './IngestResultView'
+import { PriceChart } from './PriceChart'
 import { useIngest } from './useIngest'
+import { usePriceBars } from './usePriceBars'
 
 const DEFAULTS = {
   symbol: 'AAPL',
@@ -14,10 +18,14 @@ const DEFAULTS = {
 const toIsoStartOfDay = (date: string): string => `${date}T00:00:00Z`
 
 export function DataExplorerPage() {
+  const queryClient = useQueryClient()
   const ingest = useIngest()
   const [symbol, setSymbol] = useState(DEFAULTS.symbol)
   const [startDate, setStartDate] = useState(DEFAULTS.startDate)
   const [endDate, setEndDate] = useState(DEFAULTS.endDate)
+  // committedQuery is set on submit so the chart's useQuery doesn't fire on mount.
+  const [committedQuery, setCommittedQuery] = useState<BarsQuery | null>(null)
+  const priceBars = usePriceBars(committedQuery)
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -26,7 +34,11 @@ export function DataExplorerPage() {
       start_date: toIsoStartOfDay(startDate),
       end_date: toIsoStartOfDay(endDate),
     }
-    ingest.mutate(body)
+    setCommittedQuery(body)
+    ingest.mutate(body, {
+      // Force the chart to refetch — the ingest just changed what's cached.
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['bars'] }),
+    })
   }
 
   return (
@@ -73,6 +85,7 @@ export function DataExplorerPage() {
         <p role="alert">Ingest failed — {(ingest.error as Error).message}</p>
       )}
       {ingest.data && <IngestResultView result={ingest.data} />}
+      {priceBars.data && <PriceChart data={priceBars.data} />}
     </section>
   )
 }
