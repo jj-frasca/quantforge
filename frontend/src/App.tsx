@@ -1,17 +1,19 @@
 import { useState } from 'react'
 
+import { BacktestResultsPage } from './features/backtest-results/BacktestResultsPage'
 import { DataExplorerPage } from './features/data-explorer/DataExplorerPage'
 import { ValidationReportPage } from './features/validation-report/ValidationReportPage'
 
-type PageId = 'validation' | 'data-explorer'
+type PageId = 'validation' | 'data-explorer' | 'backtest-results'
 
 const PAGES: { id: PageId; label: string }[] = [
-  { id: 'validation', label: 'Validation' },
   { id: 'data-explorer', label: 'Data Explorer' },
+  { id: 'backtest-results', label: 'Backtest Results' },
+  { id: 'validation', label: 'Validation' },
 ]
 
 function App() {
-  const [page, setPage] = useState<PageId>('validation')
+  const [page, setPage] = useState<PageId>('data-explorer')
 
   return (
     <main className="app-shell">
@@ -34,6 +36,7 @@ function App() {
 
       {page === 'validation' && <ValidationReportPage />}
       {page === 'data-explorer' && <DataExplorerPage />}
+      {page === 'backtest-results' && <BacktestResultsPage />}
     </main>
   )
 }
