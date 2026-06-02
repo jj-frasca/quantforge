@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 
+import { Field } from '../../components/ui/Field'
 import { STRATEGIES, type ValidateRequest } from '../../types/validation'
 import { useValidation } from './useValidation'
 import { ValidationReportView } from './ValidationReportView'
@@ -39,17 +40,15 @@ export function ValidationReportPage() {
       </header>
 
       <form onSubmit={onSubmit} className="validate-form">
-        <label>
-          Symbol
+        <Field label="Symbol">
           <input
             type="text"
             value={symbol}
             onChange={(event) => setSymbol(event.target.value)}
             required
           />
-        </label>
-        <label>
-          Strategy
+        </Field>
+        <Field label="Strategy">
           <select
             value={strategy}
             onChange={(event) => setStrategy(event.target.value as (typeof STRATEGIES)[number])}
@@ -60,25 +59,23 @@ export function ValidationReportPage() {
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          Start date
+        </Field>
+        <Field label="Start date">
           <input
             type="date"
             value={startDate}
             onChange={(event) => setStartDate(event.target.value)}
             required
           />
-        </label>
-        <label>
-          End date
+        </Field>
+        <Field label="End date">
           <input
             type="date"
             value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
             required
           />
-        </label>
+        </Field>
         <button type="submit" disabled={validation.isPending}>
           {validation.isPending ? 'Validating…' : 'Run validation'}
         </button>

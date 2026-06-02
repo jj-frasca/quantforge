@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 
+import { Field } from '../../components/ui/Field'
 import type { BacktestRequest, StrategyConfig } from '../../types/backtest'
 import { BacktestResultView } from './BacktestResultView'
 import { useBacktest } from './useBacktest'
@@ -46,17 +47,15 @@ export function BacktestResultsPage() {
       </header>
 
       <form onSubmit={onSubmit} className="ingest-form">
-        <label>
-          Symbol
+        <Field label="Symbol">
           <input
             type="text"
             value={symbol}
             onChange={(event) => setSymbol(event.target.value)}
             required
           />
-        </label>
-        <label>
-          Strategy
+        </Field>
+        <Field label="Strategy">
           <select
             value={strategy.name}
             onChange={(event) => onStrategyChange(event.target.value as StrategyConfig['name'])}
@@ -65,28 +64,26 @@ export function BacktestResultsPage() {
             <option value="momentum">momentum</option>
             <option value="mean_reversion">mean_reversion</option>
           </select>
-        </label>
+        </Field>
 
         <StrategyParamFields config={strategy} onChange={setStrategy} />
 
-        <label>
-          Start date
+        <Field label="Start date">
           <input
             type="date"
             value={startDate}
             onChange={(event) => setStartDate(event.target.value)}
             required
           />
-        </label>
-        <label>
-          End date
+        </Field>
+        <Field label="End date">
           <input
             type="date"
             value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
             required
           />
-        </label>
+        </Field>
         <button type="submit" disabled={backtest.isPending}>
           {backtest.isPending ? 'Running…' : 'Run backtest'}
         </button>
@@ -109,32 +106,29 @@ function StrategyParamFields({ config, onChange }: ParamFieldsProps) {
   if (config.name === 'sma') {
     return (
       <>
-        <label>
-          Fast
+        <Field label="Fast">
           <input
             type="number"
             min={1}
             value={config.fast}
             onChange={(event) => onChange({ ...config, fast: Number(event.target.value) })}
           />
-        </label>
-        <label>
-          Slow
+        </Field>
+        <Field label="Slow">
           <input
             type="number"
             min={2}
             value={config.slow}
             onChange={(event) => onChange({ ...config, slow: Number(event.target.value) })}
           />
-        </label>
+        </Field>
       </>
     )
   }
   if (config.name === 'momentum') {
     return (
       <>
-        <label>
-          Lookback
+        <Field label="Lookback">
           <input
             type="number"
             min={1}
@@ -143,32 +137,29 @@ function StrategyParamFields({ config, onChange }: ParamFieldsProps) {
               onChange({ ...config, lookback: Number(event.target.value) })
             }
           />
-        </label>
-        <label>
-          Skip
+        </Field>
+        <Field label="Skip">
           <input
             type="number"
             min={0}
             value={config.skip}
             onChange={(event) => onChange({ ...config, skip: Number(event.target.value) })}
           />
-        </label>
+        </Field>
       </>
     )
   }
   return (
     <>
-      <label>
-        Window
+      <Field label="Window">
         <input
           type="number"
           min={2}
           value={config.window}
           onChange={(event) => onChange({ ...config, window: Number(event.target.value) })}
         />
-      </label>
-      <label>
-        k
+      </Field>
+      <Field label="k">
         <input
           type="number"
           min={0.1}
@@ -176,7 +167,7 @@ function StrategyParamFields({ config, onChange }: ParamFieldsProps) {
           value={config.k}
           onChange={(event) => onChange({ ...config, k: Number(event.target.value) })}
         />
-      </label>
+      </Field>
     </>
   )
 }

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 
+import { Field } from '../../components/ui/Field'
 import type { BarsQuery } from '../../types/bars'
 import type { IngestRequest } from '../../types/ingest'
 import { IngestResultView } from './IngestResultView'
@@ -49,33 +50,30 @@ export function DataExplorerPage() {
       </header>
 
       <form onSubmit={onSubmit} className="ingest-form">
-        <label>
-          Symbol
+        <Field label="Symbol">
           <input
             type="text"
             value={symbol}
             onChange={(event) => setSymbol(event.target.value)}
             required
           />
-        </label>
-        <label>
-          Start date
+        </Field>
+        <Field label="Start date">
           <input
             type="date"
             value={startDate}
             onChange={(event) => setStartDate(event.target.value)}
             required
           />
-        </label>
-        <label>
-          End date
+        </Field>
+        <Field label="End date">
           <input
             type="date"
             value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
             required
           />
-        </label>
+        </Field>
         <button type="submit" disabled={ingest.isPending}>
           {ingest.isPending ? 'Ingesting…' : 'Ingest data'}
         </button>
