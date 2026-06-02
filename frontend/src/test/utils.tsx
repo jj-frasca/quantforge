@@ -20,6 +20,19 @@ export const passingReport: ValidationReport = {
   n_walk_forward_splits: 5,
   n_purged_folds: 5,
   flags: [],
+  interpretations: [
+    { metric: 'pbo', message: 'PBO 20% — overfitting risk is low.', verdict: 'good' },
+    {
+      metric: 'deflated_sharpe',
+      message: 'Deflated Sharpe 0.40 — survives the multiple-testing penalty.',
+      verdict: 'good',
+    },
+    {
+      metric: 'parameter_stability_score',
+      message: 'Parameter stability 85% — robust.',
+      verdict: 'good',
+    },
+  ],
   passed: true,
 }
 
@@ -32,5 +45,22 @@ export const failingReport: ValidationReport = {
   n_walk_forward_splits: 5,
   n_purged_folds: 5,
   flags: ['high overfitting risk (PBO >= 0.5)'],
+  interpretations: [
+    {
+      metric: 'pbo',
+      message: 'PBO 89% — high probability the strategy is overfit.',
+      verdict: 'bad',
+    },
+    {
+      metric: 'deflated_sharpe',
+      message: "Deflated Sharpe -0.30 — plausibly attributable to luck.",
+      verdict: 'bad',
+    },
+    {
+      metric: 'parameter_stability_score',
+      message: 'Parameter stability 30% — high model fragility.',
+      verdict: 'bad',
+    },
+  ],
   passed: false,
 }

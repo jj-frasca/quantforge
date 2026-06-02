@@ -1,4 +1,23 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+
+Verdict = Literal["good", "warning", "bad"]
+
+
+class Interpretation(BaseModel):
+    """Plain-English reading of one validation metric, with a verdict.
+
+    Notes:
+        Backend-authored so a non-quant reading the UI sees *what* a number means
+        without knowing the methodology by heart. Verdict drives color in the frontend.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    metric: str
+    message: str
+    verdict: Verdict
 
 
 class ValidationReport(BaseModel):
@@ -20,6 +39,7 @@ class ValidationReport(BaseModel):
     n_walk_forward_splits: int
     n_purged_folds: int
     flags: list[str] = Field(default_factory=list)
+    interpretations: list[Interpretation] = Field(default_factory=list)
 
     @field_validator("pbo", "parameter_stability_score")
     @classmethod

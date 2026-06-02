@@ -11,6 +11,7 @@ const valid = {
   n_walk_forward_splits: 5,
   n_purged_folds: 5,
   flags: [],
+  interpretations: [],
   passed: true,
 }
 

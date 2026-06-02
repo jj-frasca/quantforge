@@ -1,5 +1,13 @@
 import { z } from 'zod'
 
+export const interpretationSchema = z.object({
+  metric: z.string(),
+  message: z.string(),
+  verdict: z.enum(['good', 'warning', 'bad']),
+})
+
+export type Interpretation = z.infer<typeof interpretationSchema>
+
 // Mirrors the backend ValidationReport (api-contracts.md / app/validation/report.py).
 // `passed` is server-computed and authoritative — render the verdict from it.
 export const validationReportSchema = z.object({
@@ -11,6 +19,7 @@ export const validationReportSchema = z.object({
   n_walk_forward_splits: z.number().int(),
   n_purged_folds: z.number().int(),
   flags: z.array(z.string()),
+  interpretations: z.array(interpretationSchema),
   passed: z.boolean(),
 })
 

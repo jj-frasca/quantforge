@@ -7,10 +7,115 @@ from app.validation.deflated_sharpe import deflated_sharpe
 from app.validation.parameter_stability import parameter_stability
 from app.validation.pbo import probability_of_backtest_overfitting
 from app.validation.purged_cv import purged_kfold_splits
-from app.validation.report import ValidationReport
+from app.validation.report import Interpretation, ValidationReport
 from app.validation.walk_forward import walk_forward_splits
 
 _SHORT_SAMPLE = 100
+
+
+def _interpret(pbo: float, dsr: float, stability: float) -> list[Interpretation]:
+    """Plain-English thresholds for the headline metrics.
+
+    Notes:
+        Thresholds are intentionally simple and visible — a non-quant reader of the
+        UI should see *what* each number means without having to know the methodology.
+        Sources for the cutoffs: Bailey & López de Prado (2014) on PBO interpretation,
+        Bailey & López de Prado (2014) DSR > 0 as the multiple-testing-survival bar,
+        and a parameter-stability rule-of-thumb (>0.7 = robust, <0.4 = fragile).
+    """
+    items: list[Interpretation] = []
+
+    if pbo < 0.3:
+        items.append(
+            Interpretation(
+                metric="pbo",
+                message=(
+                    f"PBO {pbo:.0%} — overfitting risk is low; the strategy's edge is "
+                    "unlikely to be a backtest artifact."
+                ),
+                verdict="good",
+            )
+        )
+    elif pbo < 0.5:
+        items.append(
+            Interpretation(
+                metric="pbo",
+                message=(
+                    f"PBO {pbo:.0%} — moderate overfitting risk; treat the result with caution."
+                ),
+                verdict="warning",
+            )
+        )
+    else:
+        items.append(
+            Interpretation(
+                metric="pbo",
+                message=(
+                    f"PBO {pbo:.0%} — high probability the strategy is overfit to the "
+                    "parameter grid; do not trust this result."
+                ),
+                verdict="bad",
+            )
+        )
+
+    if dsr > 0:
+        items.append(
+            Interpretation(
+                metric="deflated_sharpe",
+                message=(
+                    f"Deflated Sharpe {dsr:.2f} — survives the multiple-testing penalty for "
+                    "the number of configurations tried."
+                ),
+                verdict="good",
+            )
+        )
+    else:
+        items.append(
+            Interpretation(
+                metric="deflated_sharpe",
+                message=(
+                    f"Deflated Sharpe {dsr:.2f} — observed Sharpe doesn't survive the "
+                    "multiple-testing penalty; plausibly attributable to luck."
+                ),
+                verdict="bad",
+            )
+        )
+
+    if stability > 0.7:
+        items.append(
+            Interpretation(
+                metric="parameter_stability_score",
+                message=(
+                    f"Parameter stability {stability:.0%} — results are robust to small "
+                    "parameter perturbations."
+                ),
+                verdict="good",
+            )
+        )
+    elif stability > 0.4:
+        items.append(
+            Interpretation(
+                metric="parameter_stability_score",
+                message=(
+                    f"Parameter stability {stability:.0%} — moderate sensitivity to parameter "
+                    "choice; some fragility."
+                ),
+                verdict="warning",
+            )
+        )
+    else:
+        items.append(
+            Interpretation(
+                metric="parameter_stability_score",
+                message=(
+                    f"Parameter stability {stability:.0%} — small parameter changes flip the "
+                    "result; high model fragility."
+                ),
+                verdict="bad",
+            )
+        )
+
+    return items
 
 
 class ValidationEngine:
@@ -75,4 +180,5 @@ class ValidationEngine:
             n_walk_forward_splits=len(walk_forward_splits(n_obs, self._walk_forward_count)),
             n_purged_folds=len(purged_kfold_splits(n_obs, self._purged_folds, self._embargo)),
             flags=flags,
+            interpretations=_interpret(pbo, deflated, stability),
         )
