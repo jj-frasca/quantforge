@@ -70,13 +70,16 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
 - Validation: `deflated_sharpe`, `pbo` (CSCV), `walk_forward`, `purged_cv`,
   `parameter_stability`, `regime_analysis`; `ValidationEngine` → `ValidationReport`.
 - API: `GET /health`, `POST /api/v1/ingest` (runs `DataIngestionPipeline` behind DI),
-  `POST /api/v1/validate` (**cache-aside** through the repo), `GET /api/v1/bars` (read-only
-  projection of cached bars — float `ChartBar` for charting), `POST /api/v1/backtest`
-  (single-config backtest, cache-aside; equity curve + metrics; discriminated `StrategyConfig`).
-  Frontend: scaffold + **Data Explorer** (form → `/ingest` → `IngestResultView` + Recharts
-  price chart from `/bars`), **Backtest Results** (per-strategy param form → `/backtest` →
-  metrics + equity curve), **Validation Report** (symbol/strategy/range form → `/validate` →
-  `ValidationReportView`); 3-way primary nav between them; CI gates backend + frontend.
+  `POST /api/v1/validate` (**cache-aside** through the repo; returns plain-English
+  `Interpretation`s per metric), `GET /api/v1/bars` (read-only projection of cached bars —
+  float `ChartBar` for charting), `POST /api/v1/backtest` (single-config backtest,
+  cache-aside; equity curve + buy-and-hold curve + drawdown curve + metrics; discriminated
+  `StrategyConfig`). Frontend: **Data Explorer** (form → `/ingest` → `IngestResultView` +
+  Recharts price chart from `/bars`), **Backtest Results** (per-strategy param form →
+  `/backtest` → metrics + equity curve with buy-and-hold overlay + underwater plot),
+  **Validation Report** (symbol/strategy/range form → `/validate` → metrics +
+  Interpretations panel + flags); 3-way primary nav (Data Explorer default); CI gates
+  backend + frontend.
 
 **DEFERRED / NOT YET BUILT (documented in the target tree but absent in code):**
 - **Redis cache** — only a `redis_url` config field exists; no client/cache code. The

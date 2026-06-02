@@ -119,9 +119,16 @@ An unknown `name` is a 422 from Pydantic — never reaches the handler.
       "sharpe": 1.5, "max_drawdown": -0.18, "total_return": 0.42,
       "annualized_return": 0.18, "annualized_vol": 0.12
     },
-    "equity_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."]
+    "equity_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."],
+    "buy_and_hold_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."],
+    "buy_and_hold_total_return": 0.30,
+    "drawdown_curve": [{ "timestamp_utc": "...", "drawdown": -0.05 }, "..."]
   }
   ```
+  - `buy_and_hold_curve` is a 100% long position of the SAME symbol from t=0, same
+    `initial_capital`, no costs — the canonical "is the strategy doing anything?" check.
+  - `drawdown_curve` is `equity / cummax - 1` over the strategy curve; each `drawdown` is
+    in `[-1, 0]` with `0` meaning "at peak".
 - `422` → insufficient data after the cache-miss ingest, or an unknown strategy discriminator.
 
 **DI**: `get_data_adapter` + `get_repository`. Same overrides as /validate in tests.
@@ -162,9 +169,18 @@ for the chosen strategy through `ValidationEngine`, and returns the report.
     "n_walk_forward_splits": 5,
     "n_purged_folds": 5,
     "flags": [],
+    "interpretations": [
+      { "metric": "pbo", "message": "PBO 18% — overfitting risk is low.", "verdict": "good" },
+      { "metric": "deflated_sharpe", "message": "...", "verdict": "good" },
+      { "metric": "parameter_stability_score", "message": "...", "verdict": "good" }
+    ],
     "passed": true
   }
   ```
+  - `flags` are warning strings (e.g. "short sample" / "high PBO").
+  - `interpretations` are backend-authored plain-English readings per metric, with a
+    `verdict` of `good` / `warning` / `bad`. Thresholds: PBO ≥ 0.5 bad / 0.3–0.5 warning /
+    < 0.3 good; DSR ≤ 0 bad / > 0 good; stability ≤ 0.4 bad / 0.4–0.7 warning / > 0.7 good.
 - `422` → invalid `strategy` (not in the enum), or insufficient data (< 30 bars) even after
   the cache-miss ingest (e.g., the quality gate rejected the fetched bars).
 
