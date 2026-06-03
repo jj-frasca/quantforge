@@ -122,13 +122,25 @@ An unknown `name` is a 422 from Pydantic — never reaches the handler.
     "equity_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."],
     "buy_and_hold_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."],
     "buy_and_hold_total_return": 0.30,
-    "drawdown_curve": [{ "timestamp_utc": "...", "drawdown": -0.05 }, "..."]
+    "drawdown_curve": [{ "timestamp_utc": "...", "drawdown": -0.05 }, "..."],
+    "rolling_sharpe_curve": [{ "timestamp_utc": "...", "sharpe": 1.2 }, "..."],
+    "rolling_sharpe_window": 60,
+    "return_distribution": {
+      "bins": [{ "bin_center": 0.0, "frequency": 80 }, "..."],
+      "skewness": -0.42,
+      "kurtosis": 1.85
+    }
   }
   ```
   - `buy_and_hold_curve` is a 100% long position of the SAME symbol from t=0, same
     `initial_capital`, no costs — the canonical "is the strategy doing anything?" check.
   - `drawdown_curve` is `equity / cummax - 1` over the strategy curve; each `drawdown` is
     in `[-1, 0]` with `0` meaning "at peak".
+  - `rolling_sharpe_curve` is the annualized rolling Sharpe of the strategy returns over
+    `rolling_sharpe_window` bars (default 60); warmup values are `0.0` (not NaN).
+  - `return_distribution` is the histogram of daily strategy returns plus sample
+    `skewness` and **excess** `kurtosis` (Fisher convention — Gaussian == 0). Negative
+    skew + high excess kurtosis = small wins / occasional large losses.
 - `422` → insufficient data after the cache-miss ingest, or an unknown strategy discriminator.
 
 **DI**: `get_data_adapter` + `get_repository`. Same overrides as /validate in tests.
