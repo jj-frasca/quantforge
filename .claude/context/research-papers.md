@@ -21,7 +21,38 @@ docstring and `research_citations`. Read when implementing research or validatio
   large negative → long. Used by `MeanReversionStrategy`.
 
 **SMA crossover** — no external citation required (textbook). Fast SMA over slow SMA → long;
-under → short/flat.
+under → short/flat. Used by `SMAStrategy`.
+
+**Wilder, J. Welles (1978)** — *New Concepts in Technical Trading Systems*. Trend Research.
+- Relative Strength Index (RSI). Implementation: SMA-style averaging of gains and losses over
+  a trailing window (not Wilder's smoothed EMA — kept simple; switching to the smoothed variant
+  is the "more aggressive" knob). `signal = +1` when RSI < `oversold`, `-1` when RSI >
+  `overbought`, flat between. Edge cases: avg_loss == 0 with gains → RSI = 100 (pure uptrend);
+  both zero → RSI is undefined and we treat it as neutral 50 so the strategy stays flat. No
+  look-ahead via trailing `rolling(window).mean()`. Used by `RSIMeanReversionStrategy`.
+
+**Faith, Curtis M. (2007)** — *Way of the Turtle*. McGraw-Hill.
+- Donchian channel breakout (Dennis & Eckhardt's Turtle Trader rules, 1983–1988).
+  Implementation: at bar *t*, compute the high and low of the PRIOR `lookback` bars
+  (`close.shift(1).rolling(lookback).max()` and `.min()` — the shift is the no-look-ahead
+  guarantee). `signal = +1` on a breakout above the channel high, `-1` below the channel low.
+  Position carries forward between breakouts (`replace(0, NA).ffill()`) — the Turtle rule that
+  makes the strategy actually trade-able rather than just signal at the instant of breakout.
+  Used by `DonchianBreakoutStrategy`.
+
+**Bollinger, John (2001)** — *Bollinger on Bollinger Bands*. McGraw-Hill.
+- Bollinger Bands. Implementation: rolling mean +/- `num_std` * rolling sample std (ddof=1).
+  Discrete signal — `+1` when close < lower band, `-1` when close > upper band, `0` between.
+  Semantic cousin to the z-score `MeanReversionStrategy`: same hypothesis (price reverts to
+  the rolling mean), different signal shape (discrete band crossing vs continuous z-clip).
+  Constant-series degenerate case: rolling std collapses to 0 → bands collapse to the mean →
+  signal stays flat. No look-ahead via trailing rolling windows. Used by `BollingerBandsStrategy`.
+
+> The authoritative *list* of implemented strategies lives in `STRATEGY_CATALOG`
+> (`backend/app/research/strategies/catalog.py`) and is served by `GET /api/v1/strategies`.
+> This section is the *why* and the science — what each paper says and how we translated it
+> to code, including the implementation trade-offs (which RSI variant; whether positions carry
+> forward; what the degenerate cases are). See ADR-010 for the catalog pattern.
 
 ---
 
