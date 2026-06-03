@@ -30,10 +30,17 @@ type (PriceBar). The conversion happens once at `bars_to_frame`.
 - `research_citations: list[str]` — non-empty; cite the real paper.
 - `name: str`, `parameters: dict` (for the manifest's parameter hash).
 
-Implemented strategies (see research-papers.md):
-- `SMAStrategy` (fast/slow SMA crossover) — no external citation required.
-- `MomentumStrategy` — Jegadeesh & Titman (1993).
-- `MeanReversionStrategy` — Avellaneda & Lee (2010).
+### Strategy catalog (ADR-010)
+The authoritative list of strategies lives in `app/research/strategies/catalog.py` and is
+served to the frontend via `GET /api/v1/strategies`. **Don't maintain a copy here** — the
+list drifts. The catalog carries each strategy's UI label, description, citations, and
+parameter schema; the frontend renders the form generically from it.
+
+Adding a strategy is a 5-line backend-only change (subclass + Pydantic config + dispatch +
+catalog entry + consistency-test map). See ADR-010 "Pattern for adding a strategy". The
+consistency test (`tests/unit/test_strategy_catalog_consistency.py`) is load-bearing: it
+guarantees catalog ↔ Pydantic field-name parity and that every catalog default round-trips
+through API validation.
 
 ---
 
