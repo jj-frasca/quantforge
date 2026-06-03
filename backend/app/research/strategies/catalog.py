@@ -230,4 +230,44 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="macd_crossover",
+        label="MACD Crossover",
+        description=(
+            "Long when the MACD line (EMA fast - EMA slow) is above its signal line "
+            "(EMA of MACD); short when below. Conventional 12/26/9 trend-following filter."
+        ),
+        citations=[
+            "Appel, Gerald. Technical Analysis: Power Tools for Active Investors. FT Press, 2005."
+        ],
+        parameters=[
+            ParamSchema(
+                name="fast",
+                type="int",
+                default=12,
+                minimum=1,
+                maximum=200,
+                label="Fast EMA span",
+                description="Span of the fast exponential moving average",
+            ),
+            ParamSchema(
+                name="slow",
+                type="int",
+                default=26,
+                minimum=2,
+                maximum=500,
+                label="Slow EMA span",
+                description="Span of the slow EMA; must be > fast",
+            ),
+            ParamSchema(
+                name="signal",
+                type="int",
+                default=9,
+                minimum=1,
+                maximum=100,
+                label="Signal EMA span",
+                description="Span of the EMA applied to the MACD line",
+            ),
+        ],
+    ),
 ]

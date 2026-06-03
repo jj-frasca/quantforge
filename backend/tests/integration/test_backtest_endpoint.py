@@ -154,6 +154,20 @@ def test_backtest_endpoint_supports_bollinger_bands() -> None:
         app.dependency_overrides.clear()
 
 
+def test_backtest_endpoint_supports_macd_crossover() -> None:
+    body = {**_BODY, "strategy": {"name": "macd_crossover", "fast": 8, "slow": 21, "signal": 5}}
+    try:
+        response = _client(_FakeAdapter(), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=body
+        )
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["strategy_name"] == "macd_crossover"
+        assert result["parameters"] == {"fast": 8, "slow": 21, "signal": 5}
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_backtest_endpoint_rejects_unknown_strategy_name() -> None:
     # discriminated union: an unknown `name` is a 422 from Pydantic, never reaches our handler
     bad = {**_BODY, "strategy": {"name": "bogus", "fast": 5, "slow": 20}}

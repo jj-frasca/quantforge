@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from app.api.v1.backtest import (
     BollingerBandsConfig,
     DonchianBreakoutConfig,
+    MACDCrossoverConfig,
     MeanReversionConfig,
     MomentumConfig,
     RSIMeanReversionConfig,
@@ -21,6 +22,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "rsi_mean_reversion": RSIMeanReversionConfig,
     "donchian_breakout": DonchianBreakoutConfig,
     "bollinger_bands": BollingerBandsConfig,
+    "macd_crossover": MACDCrossoverConfig,
 }
 
 

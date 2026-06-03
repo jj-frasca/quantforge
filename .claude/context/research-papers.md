@@ -48,6 +48,16 @@ under → short/flat. Used by `SMAStrategy`.
   Constant-series degenerate case: rolling std collapses to 0 → bands collapse to the mean →
   signal stays flat. No look-ahead via trailing rolling windows. Used by `BollingerBandsStrategy`.
 
+**Appel, Gerald (2005)** — *Technical Analysis: Power Tools for Active Investors*. FT Press.
+- Moving Average Convergence Divergence (MACD). Implementation: MACD = EMA(close, fast) -
+  EMA(close, slow); signal line = EMA(MACD, signal). Trading rule = sign of the histogram
+  (`MACD - signal`): +1 when MACD above its signal line, -1 below. Implementation choice:
+  `ewm(span, adjust=False)` — the recursive EMA convention. `adjust=True` (the pandas default)
+  would use an equal-weighted formula until the window fills, which is NOT the conventional
+  MACD definition and would silently shift the signal in the warmup region. EMA is causal by
+  construction, so the no-look-ahead guarantee holds without an explicit `shift(1)`.
+  Conventional Appel defaults: 12/26/9. Used by `MACDCrossoverStrategy`.
+
 > The authoritative *list* of implemented strategies lives in `STRATEGY_CATALOG`
 > (`backend/app/research/strategies/catalog.py`) and is served by `GET /api/v1/strategies`.
 > This section is the *why* and the science — what each paper says and how we translated it

@@ -14,6 +14,7 @@ from app.research.frames import bars_to_frame
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.bollinger_bands import BollingerBandsStrategy
 from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
+from app.research.strategies.macd_crossover import MACDCrossoverStrategy
 from app.research.strategies.mean_reversion import MeanReversionStrategy
 from app.research.strategies.momentum import MomentumStrategy
 from app.research.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
@@ -63,13 +64,21 @@ class BollingerBandsConfig(BaseModel):
     num_std: float = Field(default=2.0, gt=0)
 
 
+class MACDCrossoverConfig(BaseModel):
+    name: Literal["macd_crossover"] = "macd_crossover"
+    fast: int = Field(default=12, ge=1)
+    slow: int = Field(default=26, ge=2)
+    signal: int = Field(default=9, ge=1)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
     | MeanReversionConfig
     | RSIMeanReversionConfig
     | DonchianBreakoutConfig
-    | BollingerBandsConfig,
+    | BollingerBandsConfig
+    | MACDCrossoverConfig,
     Field(discriminator="name"),
 ]
 
@@ -151,6 +160,8 @@ def _build_strategy(config: StrategyConfig) -> BaseStrategy:
         return DonchianBreakoutStrategy(lookback=config.lookback)
     if isinstance(config, BollingerBandsConfig):
         return BollingerBandsStrategy(window=config.window, num_std=config.num_std)
+    if isinstance(config, MACDCrossoverConfig):
+        return MACDCrossoverStrategy(fast=config.fast, slow=config.slow, signal=config.signal)
     return MeanReversionStrategy(window=config.window, k=config.k)
 
 
