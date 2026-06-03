@@ -66,6 +66,12 @@ def test_backtest_endpoint_returns_equity_curve_and_metrics() -> None:
         assert len(body["rolling_sharpe_curve"]) == len(body["equity_curve"])
         assert body["rolling_sharpe_window"] == 60
         assert body["rolling_sharpe_curve"][0]["sharpe"] == 0.0
+        # Return distribution has the configured bin count + skew + excess kurtosis
+        dist = body["return_distribution"]
+        assert len(dist["bins"]) == 30
+        assert sum(b["frequency"] for b in dist["bins"]) == len(body["equity_curve"])
+        assert isinstance(dist["skewness"], float)
+        assert isinstance(dist["kurtosis"], float)
     finally:
         app.dependency_overrides.clear()
 

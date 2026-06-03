@@ -21,6 +21,7 @@ router = APIRouter(tags=["backtest"])
 _MIN_BARS = 30
 _ROLLING_SHARPE_WINDOW = 60
 _TRADING_DAYS = 252
+_RETURN_HIST_BINS = 30
 
 
 class SMAConfig(BaseModel):
@@ -77,6 +78,17 @@ class RollingSharpePoint(BaseModel):
     sharpe: float
 
 
+class ReturnBin(BaseModel):
+    bin_center: float
+    frequency: int
+
+
+class ReturnDistribution(BaseModel):
+    bins: list[ReturnBin]
+    skewness: float
+    kurtosis: float  # excess kurtosis (Gaussian == 0)
+
+
 class BacktestResponse(BaseModel):
     symbol: str
     strategy_name: str
@@ -95,6 +107,9 @@ class BacktestResponse(BaseModel):
     # fills, sharpe is 0.0. Shows whether the strategy's edge is stable or concentrated.
     rolling_sharpe_curve: list[RollingSharpePoint]
     rolling_sharpe_window: int
+    # Distribution of daily returns (histogram bins + skew + excess kurtosis). Fat tails
+    # are the bug, not the feature — a sharp left tail is the most honest risk warning.
+    return_distribution: ReturnDistribution
 
 
 def _build_strategy(config: StrategyConfig) -> BaseStrategy:
@@ -112,6 +127,36 @@ def _series_to_curve(series: "pd.Series") -> list[EquityPoint]:
 def _equity_to_drawdown(equity: "pd.Series") -> list[DrawdownPoint]:
     dd = equity / equity.cummax() - 1.0
     return [DrawdownPoint(timestamp_utc=ts, drawdown=float(value)) for ts, value in dd.items()]
+
+
+def _return_distribution(returns: "pd.Series", bins: int) -> ReturnDistribution:
+    """Histogram + higher moments of the daily return series.
+
+    Notes:
+        Excess kurtosis (Fisher convention) — a Gaussian is 0. Positive means fatter
+        tails than normal; negative means thinner. Skewness < 0 (left-skew) is the most
+        dangerous shape: small wins, occasional large losses.
+    """
+    import numpy as np
+
+    values = returns.to_numpy()
+    if values.size == 0:
+        return ReturnDistribution(bins=[], skewness=0.0, kurtosis=0.0)
+    counts, edges = np.histogram(values, bins=bins)
+    centers = (edges[:-1] + edges[1:]) / 2.0
+    bin_list = [
+        ReturnBin(bin_center=float(c), frequency=int(n))
+        for c, n in zip(centers, counts, strict=True)
+    ]
+
+    mean = float(np.mean(values))
+    std = float(np.std(values, ddof=1)) if values.size > 1 else 0.0
+    if std == 0.0 or not np.isfinite(std):
+        return ReturnDistribution(bins=bin_list, skewness=0.0, kurtosis=0.0)
+    centered = values - mean
+    skew = float(np.mean(centered**3) / std**3)
+    kurt = float(np.mean(centered**4) / std**4 - 3.0)  # Fisher / excess
+    return ReturnDistribution(bins=bin_list, skewness=skew, kurtosis=kurt)
 
 
 def _rolling_sharpe(returns: "pd.Series", window: int) -> list[RollingSharpePoint]:
@@ -162,6 +207,7 @@ def _to_response(
         drawdown_curve=_equity_to_drawdown(result.equity_curve),
         rolling_sharpe_curve=_rolling_sharpe(strategy_returns, _ROLLING_SHARPE_WINDOW),
         rolling_sharpe_window=_ROLLING_SHARPE_WINDOW,
+        return_distribution=_return_distribution(strategy_returns, _RETURN_HIST_BINS),
     )
 
 

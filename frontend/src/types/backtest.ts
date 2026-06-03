@@ -58,6 +58,20 @@ export const rollingSharpePointSchema = z.object({
 
 export type RollingSharpePoint = z.infer<typeof rollingSharpePointSchema>
 
+export const returnBinSchema = z.object({
+  bin_center: z.number(),
+  frequency: z.number().int().nonnegative(),
+})
+
+export const returnDistributionSchema = z.object({
+  bins: z.array(returnBinSchema),
+  skewness: z.number(),
+  kurtosis: z.number(),
+})
+
+export type ReturnBin = z.infer<typeof returnBinSchema>
+export type ReturnDistribution = z.infer<typeof returnDistributionSchema>
+
 export const backtestMetricsSchema = z.object({
   sharpe: z.number(),
   max_drawdown: z.number(),
@@ -81,6 +95,7 @@ export const backtestResponseSchema = z.object({
   drawdown_curve: z.array(drawdownPointSchema),
   rolling_sharpe_curve: z.array(rollingSharpePointSchema),
   rolling_sharpe_window: z.number().int().positive(),
+  return_distribution: returnDistributionSchema,
 })
 
 export type BacktestResponse = z.infer<typeof backtestResponseSchema>

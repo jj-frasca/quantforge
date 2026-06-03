@@ -43,6 +43,13 @@ const successResponse: BacktestResponse = {
     { timestamp_utc: '2024-01-02T00:00:00Z', sharpe: 1.0 },
   ],
   rolling_sharpe_window: 60,
+  return_distribution: {
+    bins: [
+      { bin_center: 0, frequency: 100 },
+    ],
+    skewness: 0,
+    kurtosis: 0,
+  },
 }
 
 test('requestBacktest returns a parsed response on success', async () => {

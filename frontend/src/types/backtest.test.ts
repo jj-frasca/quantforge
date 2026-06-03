@@ -33,6 +33,15 @@ const validResponse = {
     { timestamp_utc: '2024-01-02T00:00:00Z', sharpe: 1.2 },
   ],
   rolling_sharpe_window: 60,
+  return_distribution: {
+    bins: [
+      { bin_center: -0.01, frequency: 3 },
+      { bin_center: 0.0, frequency: 50 },
+      { bin_center: 0.01, frequency: 12 },
+    ],
+    skewness: -0.2,
+    kurtosis: 1.1,
+  },
 }
 
 test('backtestResponseSchema parses a valid response', () => {

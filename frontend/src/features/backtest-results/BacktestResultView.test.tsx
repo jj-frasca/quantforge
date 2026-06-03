@@ -38,6 +38,15 @@ const winning: BacktestResponse = {
     { timestamp_utc: '2024-12-01T00:00:00Z', sharpe: 1.2 },
   ],
   rolling_sharpe_window: 60,
+  return_distribution: {
+    bins: [
+      { bin_center: -0.01, frequency: 5 },
+      { bin_center: 0.0, frequency: 200 },
+      { bin_center: 0.01, frequency: 45 },
+    ],
+    skewness: -0.3,
+    kurtosis: 1.4,
+  },
 }
 
 const losing: BacktestResponse = {

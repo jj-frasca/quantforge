@@ -1,6 +1,7 @@
 import type { BacktestResponse } from '../../types/backtest'
 import { DrawdownChart } from './DrawdownChart'
 import { EquityCurveChart } from './EquityCurveChart'
+import { ReturnDistributionChart } from './ReturnDistributionChart'
 import { RollingSharpeChart } from './RollingSharpeChart'
 
 const asPercent = (value: number): string => `${(value * 100).toFixed(1)}%`
@@ -62,6 +63,7 @@ export function BacktestResultView({ result }: Props) {
         data={result.rolling_sharpe_curve}
         window={result.rolling_sharpe_window}
       />
+      <ReturnDistributionChart data={result.return_distribution} />
     </section>
   )
 }
