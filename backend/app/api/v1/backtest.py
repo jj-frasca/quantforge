@@ -14,6 +14,7 @@ from app.research.frames import bars_to_frame
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.mean_reversion import MeanReversionStrategy
 from app.research.strategies.momentum import MomentumStrategy
+from app.research.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
 from app.research.strategies.sma import SMAStrategy
 
 router = APIRouter(tags=["backtest"])
@@ -42,8 +43,15 @@ class MeanReversionConfig(BaseModel):
     k: float = Field(default=2.0, gt=0)
 
 
+class RSIMeanReversionConfig(BaseModel):
+    name: Literal["rsi_mean_reversion"] = "rsi_mean_reversion"
+    window: int = Field(default=14, ge=2)
+    oversold: float = Field(default=30.0, gt=0, lt=100)
+    overbought: float = Field(default=70.0, gt=0, lt=100)
+
+
 StrategyConfig = Annotated[
-    SMAConfig | MomentumConfig | MeanReversionConfig,
+    SMAConfig | MomentumConfig | MeanReversionConfig | RSIMeanReversionConfig,
     Field(discriminator="name"),
 ]
 
@@ -117,6 +125,10 @@ def _build_strategy(config: StrategyConfig) -> BaseStrategy:
         return SMAStrategy(fast=config.fast, slow=config.slow)
     if isinstance(config, MomentumConfig):
         return MomentumStrategy(lookback=config.lookback, skip=config.skip)
+    if isinstance(config, RSIMeanReversionConfig):
+        return RSIMeanReversionStrategy(
+            window=config.window, oversold=config.oversold, overbought=config.overbought
+        )
     return MeanReversionStrategy(window=config.window, k=config.k)
 
 

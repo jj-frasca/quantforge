@@ -104,6 +104,28 @@ def test_backtest_endpoint_supports_mean_reversion() -> None:
         app.dependency_overrides.clear()
 
 
+def test_backtest_endpoint_supports_rsi_mean_reversion() -> None:
+    body = {
+        **_BODY,
+        "strategy": {
+            "name": "rsi_mean_reversion",
+            "window": 10,
+            "oversold": 25,
+            "overbought": 75,
+        },
+    }
+    try:
+        response = _client(_FakeAdapter(), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=body
+        )
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["strategy_name"] == "rsi_mean_reversion"
+        assert result["parameters"] == {"window": 10, "oversold": 25, "overbought": 75}
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_backtest_endpoint_rejects_unknown_strategy_name() -> None:
     # discriminated union: an unknown `name` is a 422 from Pydantic, never reaches our handler
     bad = {**_BODY, "strategy": {"name": "bogus", "fast": 5, "slow": 20}}

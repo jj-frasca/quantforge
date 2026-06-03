@@ -136,4 +136,46 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="rsi_mean_reversion",
+        label="RSI Mean Reversion",
+        description=(
+            "Long when the Relative Strength Index drops below `oversold`, short above "
+            "`overbought`, flat between. Classic Wilder RSI (1978)."
+        ),
+        citations=[
+            "Wilder, J. Welles. New Concepts in Technical Trading Systems. Trend Research, 1978."
+        ],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=14,
+                minimum=2,
+                maximum=100,
+                label="RSI window",
+                description="Bars used in the rolling RSI calculation",
+            ),
+            ParamSchema(
+                name="oversold",
+                type="float",
+                default=30.0,
+                minimum=1.0,
+                maximum=49.0,
+                step=1.0,
+                label="Oversold threshold",
+                description="Go long when RSI drops below this level",
+            ),
+            ParamSchema(
+                name="overbought",
+                type="float",
+                default=70.0,
+                minimum=51.0,
+                maximum=99.0,
+                step=1.0,
+                label="Overbought threshold",
+                description="Go short when RSI rises above this level",
+            ),
+        ],
+    ),
 ]
