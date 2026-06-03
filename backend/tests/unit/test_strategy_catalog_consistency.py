@@ -5,6 +5,7 @@ the frontend form silently drops the new param — CI catches it here."""
 from pydantic import BaseModel
 
 from app.api.v1.backtest import (
+    DonchianBreakoutConfig,
     MeanReversionConfig,
     MomentumConfig,
     RSIMeanReversionConfig,
@@ -17,6 +18,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "momentum": MomentumConfig,
     "mean_reversion": MeanReversionConfig,
     "rsi_mean_reversion": RSIMeanReversionConfig,
+    "donchian_breakout": DonchianBreakoutConfig,
 }
 
 

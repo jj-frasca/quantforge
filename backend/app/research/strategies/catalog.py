@@ -178,4 +178,25 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="donchian_breakout",
+        label="Donchian Channel Breakout",
+        description=(
+            "Long when the close breaks above the prior `lookback`-bar high; short "
+            "when it breaks below the prior low. Carries the last breakout forward "
+            "(Turtle Trader rule)."
+        ),
+        citations=["Faith, Curtis M. Way of the Turtle. McGraw-Hill, 2007."],
+        parameters=[
+            ParamSchema(
+                name="lookback",
+                type="int",
+                default=20,
+                minimum=2,
+                maximum=200,
+                label="Channel lookback",
+                description="Bars in the rolling high/low channel that defines a breakout",
+            ),
+        ],
+    ),
 ]

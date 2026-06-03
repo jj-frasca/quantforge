@@ -12,6 +12,7 @@ from app.dependencies import get_data_adapter, get_repository
 from app.research.backtesting.engine import BacktestEngine, BacktestResult
 from app.research.frames import bars_to_frame
 from app.research.strategies.base import BaseStrategy
+from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
 from app.research.strategies.mean_reversion import MeanReversionStrategy
 from app.research.strategies.momentum import MomentumStrategy
 from app.research.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
@@ -50,8 +51,17 @@ class RSIMeanReversionConfig(BaseModel):
     overbought: float = Field(default=70.0, gt=0, lt=100)
 
 
+class DonchianBreakoutConfig(BaseModel):
+    name: Literal["donchian_breakout"] = "donchian_breakout"
+    lookback: int = Field(default=20, ge=2)
+
+
 StrategyConfig = Annotated[
-    SMAConfig | MomentumConfig | MeanReversionConfig | RSIMeanReversionConfig,
+    SMAConfig
+    | MomentumConfig
+    | MeanReversionConfig
+    | RSIMeanReversionConfig
+    | DonchianBreakoutConfig,
     Field(discriminator="name"),
 ]
 
@@ -129,6 +139,8 @@ def _build_strategy(config: StrategyConfig) -> BaseStrategy:
         return RSIMeanReversionStrategy(
             window=config.window, oversold=config.oversold, overbought=config.overbought
         )
+    if isinstance(config, DonchianBreakoutConfig):
+        return DonchianBreakoutStrategy(lookback=config.lookback)
     return MeanReversionStrategy(window=config.window, k=config.k)
 
 

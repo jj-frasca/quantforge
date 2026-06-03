@@ -126,6 +126,20 @@ def test_backtest_endpoint_supports_rsi_mean_reversion() -> None:
         app.dependency_overrides.clear()
 
 
+def test_backtest_endpoint_supports_donchian_breakout() -> None:
+    body = {**_BODY, "strategy": {"name": "donchian_breakout", "lookback": 15}}
+    try:
+        response = _client(_FakeAdapter(), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=body
+        )
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["strategy_name"] == "donchian_breakout"
+        assert result["parameters"] == {"lookback": 15}
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_backtest_endpoint_rejects_unknown_strategy_name() -> None:
     # discriminated union: an unknown `name` is a 422 from Pydantic, never reaches our handler
     bad = {**_BODY, "strategy": {"name": "bogus", "fast": 5, "slow": 20}}
