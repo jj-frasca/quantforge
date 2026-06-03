@@ -1,5 +1,6 @@
-// BacktestResultsPage: form defaults; submit sends the discriminated strategy body;
-// changing the strategy swaps the visible param fields; success renders the result.
+// BacktestResultsPage: form renders from the strategy catalog (loaded via MSW); switching
+// strategy swaps params; submitting POSTs the discriminated body; failure surfaces the
+// backend `detail`. The catalog itself is the test/server.ts default.
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -41,17 +42,16 @@ const successResponse: BacktestResponse = {
   ],
   rolling_sharpe_window: 60,
   return_distribution: {
-    bins: [
-      { bin_center: 0, frequency: 1000 },
-    ],
+    bins: [{ bin_center: 0, frequency: 1000 }],
     skewness: 0,
     kurtosis: 0.5,
   },
 }
 
-test('renders the form with sensible defaults', () => {
+test('renders the form with catalog-driven defaults once strategies load', async () => {
   renderWithClient(<BacktestResultsPage />)
-  expect(screen.getByLabelText(/symbol/i)).toHaveValue('AAPL')
+  // Catalog fetch is async — wait for it to land.
+  expect(await screen.findByLabelText(/symbol/i)).toHaveValue('AAPL')
   expect(screen.getByLabelText(/^strategy$/i)).toHaveValue('sma')
   expect(screen.getByLabelText(/fast/i)).toHaveValue(20)
   expect(screen.getByLabelText(/slow/i)).toHaveValue(50)
@@ -59,12 +59,14 @@ test('renders the form with sensible defaults', () => {
 
 test('changing strategy swaps the visible param fields', async () => {
   renderWithClient(<BacktestResultsPage />)
-  await userEvent.selectOptions(screen.getByLabelText(/^strategy$/i), 'momentum')
+  const strategySelect = await screen.findByLabelText(/^strategy$/i)
+
+  await userEvent.selectOptions(strategySelect, 'momentum')
   expect(screen.queryByLabelText(/fast/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/lookback/i)).toHaveValue(60)
   expect(screen.getByLabelText(/skip/i)).toHaveValue(5)
 
-  await userEvent.selectOptions(screen.getByLabelText(/^strategy$/i), 'mean_reversion')
+  await userEvent.selectOptions(strategySelect, 'mean_reversion')
   expect(screen.queryByLabelText(/lookback/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/window/i)).toHaveValue(20)
 })
@@ -78,7 +80,7 @@ test('submitting sends the discriminated body and renders the result', async () 
     }),
   )
   renderWithClient(<BacktestResultsPage />)
-  await userEvent.click(screen.getByRole('button', { name: /run backtest/i }))
+  await userEvent.click(await screen.findByRole('button', { name: /run backtest/i }))
 
   expect(await screen.findByLabelText('backtest result')).toBeInTheDocument()
   expect(screen.getByLabelText('equity curve')).toBeInTheDocument()
@@ -90,7 +92,7 @@ test('submitting sends the discriminated body and renders the result', async () 
   })
 })
 
-test('typing into a strategy param field updates the form state', async () => {
+test('typing into a catalog-driven param field updates the form state', async () => {
   let body: unknown
   server.use(
     http.post('/api/v1/backtest', async ({ request }) => {
@@ -99,25 +101,26 @@ test('typing into a strategy param field updates the form state', async () => {
     }),
   )
   renderWithClient(<BacktestResultsPage />)
+  const strategySelect = await screen.findByLabelText(/^strategy$/i)
 
-  // SMA params
+  // SMA: tweak fast
   const fast = screen.getByLabelText(/fast/i)
   await userEvent.clear(fast)
   await userEvent.type(fast, '7')
 
   // Switch to momentum and tweak its params
-  await userEvent.selectOptions(screen.getByLabelText(/^strategy$/i), 'momentum')
+  await userEvent.selectOptions(strategySelect, 'momentum')
   const lookback = screen.getByLabelText(/lookback/i)
   await userEvent.clear(lookback)
   await userEvent.type(lookback, '30')
 
   // Switch to mean_reversion and tweak its params
-  await userEvent.selectOptions(screen.getByLabelText(/^strategy$/i), 'mean_reversion')
+  await userEvent.selectOptions(strategySelect, 'mean_reversion')
   const window = screen.getByLabelText(/window/i)
   await userEvent.clear(window)
   await userEvent.type(window, '15')
 
-  // Also flex the symbol + date onChange handlers
+  // Edit symbol too
   const symbol = screen.getByLabelText(/symbol/i)
   await userEvent.clear(symbol)
   await userEvent.type(symbol, 'msft')
@@ -131,6 +134,12 @@ test('typing into a strategy param field updates the form state', async () => {
   })
 })
 
+test('shows the selected strategy description and citations', async () => {
+  renderWithClient(<BacktestResultsPage />)
+  await screen.findByLabelText(/symbol/i)
+  expect(screen.getByText(/trend-following baseline/i)).toBeInTheDocument()
+})
+
 test('surfaces the backend detail when the backtest fails', async () => {
   server.use(
     http.post('/api/v1/backtest', () =>
@@ -138,7 +147,7 @@ test('surfaces the backend detail when the backtest fails', async () => {
     ),
   )
   renderWithClient(<BacktestResultsPage />)
-  await userEvent.click(screen.getByRole('button', { name: /run backtest/i }))
+  await userEvent.click(await screen.findByRole('button', { name: /run backtest/i }))
   await waitFor(() => {
     expect(screen.getByRole('alert')).toHaveTextContent(/insufficient data/i)
   })
