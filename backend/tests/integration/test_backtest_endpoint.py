@@ -140,6 +140,20 @@ def test_backtest_endpoint_supports_donchian_breakout() -> None:
         app.dependency_overrides.clear()
 
 
+def test_backtest_endpoint_supports_bollinger_bands() -> None:
+    body = {**_BODY, "strategy": {"name": "bollinger_bands", "window": 15, "num_std": 1.5}}
+    try:
+        response = _client(_FakeAdapter(), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=body
+        )
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["strategy_name"] == "bollinger_bands"
+        assert result["parameters"] == {"window": 15, "num_std": 1.5}
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_backtest_endpoint_rejects_unknown_strategy_name() -> None:
     # discriminated union: an unknown `name` is a 422 from Pydantic, never reaches our handler
     bad = {**_BODY, "strategy": {"name": "bogus", "fast": 5, "slow": 20}}

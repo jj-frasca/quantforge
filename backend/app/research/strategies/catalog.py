@@ -199,4 +199,35 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="bollinger_bands",
+        label="Bollinger Bands Mean Reversion",
+        description=(
+            "Long when the close drops below the lower band (mean - num_std * sigma); "
+            "short when it rises above the upper band. Flat between the bands. Discrete "
+            "signal -- cousin to the continuous z-score mean reversion."
+        ),
+        citations=["Bollinger, John. Bollinger on Bollinger Bands. McGraw-Hill, 2001."],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=20,
+                minimum=2,
+                maximum=200,
+                label="Window",
+                description="Bars in the rolling mean / std that define the bands",
+            ),
+            ParamSchema(
+                name="num_std",
+                type="float",
+                default=2.0,
+                minimum=0.5,
+                maximum=5.0,
+                step=0.1,
+                label="Band width (sigma)",
+                description="Number of standard deviations the bands sit from the mean",
+            ),
+        ],
+    ),
 ]

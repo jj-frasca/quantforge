@@ -12,6 +12,7 @@ from app.dependencies import get_data_adapter, get_repository
 from app.research.backtesting.engine import BacktestEngine, BacktestResult
 from app.research.frames import bars_to_frame
 from app.research.strategies.base import BaseStrategy
+from app.research.strategies.bollinger_bands import BollingerBandsStrategy
 from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
 from app.research.strategies.mean_reversion import MeanReversionStrategy
 from app.research.strategies.momentum import MomentumStrategy
@@ -56,12 +57,19 @@ class DonchianBreakoutConfig(BaseModel):
     lookback: int = Field(default=20, ge=2)
 
 
+class BollingerBandsConfig(BaseModel):
+    name: Literal["bollinger_bands"] = "bollinger_bands"
+    window: int = Field(default=20, ge=2)
+    num_std: float = Field(default=2.0, gt=0)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
     | MeanReversionConfig
     | RSIMeanReversionConfig
-    | DonchianBreakoutConfig,
+    | DonchianBreakoutConfig
+    | BollingerBandsConfig,
     Field(discriminator="name"),
 ]
 
@@ -141,6 +149,8 @@ def _build_strategy(config: StrategyConfig) -> BaseStrategy:
         )
     if isinstance(config, DonchianBreakoutConfig):
         return DonchianBreakoutStrategy(lookback=config.lookback)
+    if isinstance(config, BollingerBandsConfig):
+        return BollingerBandsStrategy(window=config.window, num_std=config.num_std)
     return MeanReversionStrategy(window=config.window, k=config.k)
 
 
