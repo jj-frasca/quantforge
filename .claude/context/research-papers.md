@@ -72,6 +72,21 @@ under → short/flat. Used by `SMAStrategy`.
   This is the project's first strategy that does explicit risk management — separates
   *what to trade* from *how much to trade*, which most retail strategies conflate.
 
+**Keltner, Chester W. (1960)** — *How To Make Money in Commodities*. Keltner Statistical
+Service.
+**Wilder, J. Welles (1978)** — *New Concepts in Technical Trading Systems*. Trend Research.
+- Keltner Channel with Wilder's Average True Range. Implementation: midline =
+  `close.ewm(span=ma_window, adjust=False).mean()` (modern EMA variant — Keltner's
+  original used SMA; EMA is the standard today); width = `multiplier * ATR`. ATR uses
+  the True Range definition from Wilder (1978): for each bar, the max of three
+  quantities — (high - low), |high - prev_close|, |low - prev_close|. The shift(1) on
+  prev_close is the no-look-ahead guarantee. ATR is the simple rolling mean of TR (the
+  Wilder RMA, EMA with alpha=1/N, would be more traditional; SMA is easier to reason
+  about and matches most charting platforms today). Signal: long on close > upper, short
+  on close < lower, flat between — explicitly NO carry-forward (unlike Donchian, exiting
+  a Keltner band is a normal occurrence). Used by `KeltnerChannelStrategy`. This is the
+  project's first OHLC-using strategy — all earlier ones look only at close.
+
 > The authoritative *list* of implemented strategies lives in `STRATEGY_CATALOG`
 > (`backend/app/research/strategies/catalog.py`) and is served by `GET /api/v1/strategies`.
 > This section is the *why* and the science — what each paper says and how we translated it

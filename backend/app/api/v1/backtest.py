@@ -14,6 +14,7 @@ from app.research.frames import bars_to_frame
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.bollinger_bands import BollingerBandsStrategy
 from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
+from app.research.strategies.keltner_channel import KeltnerChannelStrategy
 from app.research.strategies.macd_crossover import MACDCrossoverStrategy
 from app.research.strategies.mean_reversion import MeanReversionStrategy
 from app.research.strategies.momentum import MomentumStrategy
@@ -80,6 +81,13 @@ class VolTargetedSMAConfig(BaseModel):
     target_vol: float = Field(default=0.15, gt=0)
 
 
+class KeltnerChannelConfig(BaseModel):
+    name: Literal["keltner_channel"] = "keltner_channel"
+    ma_window: int = Field(default=20, ge=1)
+    atr_window: int = Field(default=14, ge=2)
+    multiplier: float = Field(default=2.0, gt=0)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -88,7 +96,8 @@ StrategyConfig = Annotated[
     | DonchianBreakoutConfig
     | BollingerBandsConfig
     | MACDCrossoverConfig
-    | VolTargetedSMAConfig,
+    | VolTargetedSMAConfig
+    | KeltnerChannelConfig,
     Field(discriminator="name"),
 ]
 
@@ -178,6 +187,12 @@ def _build_strategy(config: StrategyConfig) -> BaseStrategy:
             slow=config.slow,
             vol_window=config.vol_window,
             target_vol=config.target_vol,
+        )
+    if isinstance(config, KeltnerChannelConfig):
+        return KeltnerChannelStrategy(
+            ma_window=config.ma_window,
+            atr_window=config.atr_window,
+            multiplier=config.multiplier,
         )
     return MeanReversionStrategy(window=config.window, k=config.k)
 

@@ -271,6 +271,49 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         ],
     ),
     StrategySchema(
+        name="keltner_channel",
+        label="Keltner Channel Breakout",
+        description=(
+            "Volatility-adaptive channel: midline = EMA(close), width = multiplier * ATR. "
+            "Long when the close breaks above the upper band, short below the lower, flat "
+            "between. Channels widen in choppy regimes (fewer false breakouts than Donchian)."
+        ),
+        citations=[
+            "Keltner, Chester W. How To Make Money in Commodities. Keltner Statistical Service, 1960.",
+            "Wilder, J. Welles. New Concepts in Technical Trading Systems. Trend Research, 1978.",
+        ],
+        parameters=[
+            ParamSchema(
+                name="ma_window",
+                type="int",
+                default=20,
+                minimum=1,
+                maximum=200,
+                label="Midline EMA span",
+                description="Span of the EMA that forms the channel midline",
+            ),
+            ParamSchema(
+                name="atr_window",
+                type="int",
+                default=14,
+                minimum=2,
+                maximum=100,
+                label="ATR window",
+                description="Bars in the rolling Average True Range",
+            ),
+            ParamSchema(
+                name="multiplier",
+                type="float",
+                default=2.0,
+                minimum=0.5,
+                maximum=5.0,
+                step=0.1,
+                label="Band width (ATR multiple)",
+                description="How many ATRs the bands sit from the midline",
+            ),
+        ],
+    ),
+    StrategySchema(
         name="vol_targeted_sma",
         label="Vol-Targeted SMA Crossover",
         description=(
