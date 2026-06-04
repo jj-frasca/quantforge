@@ -59,13 +59,22 @@ export function ValidationReportPage() {
             value={strategy}
             onChange={(event) => setStrategy(event.target.value as (typeof STRATEGIES)[number])}
           >
-            {(strategies.data ?? STRATEGIES.map((s) => ({ name: s, label: s }))).map(
-              (entry) => (
-                <option key={entry.name} value={entry.name}>
-                  {entry.label}
+            {/*
+              /validate runs an internal config GRID per strategy and currently only has
+              hardcoded grids for the original three (sma/momentum/mean_reversion). The
+              catalog provides nicer human-readable LABELS but we filter to only the
+              strategies the validation engine supports — otherwise picking RSI here would
+              get a 422 from the backend's Literal validator. Extending /validate to the
+              full catalog is a follow-up (would need per-strategy grid generation).
+            */}
+            {STRATEGIES.map((slug) => {
+              const fromCatalog = strategies.data?.find((s) => s.name === slug)
+              return (
+                <option key={slug} value={slug}>
+                  {fromCatalog?.label ?? slug}
                 </option>
-              ),
-            )}
+              )
+            })}
           </select>
         </Field>
         <Field label="Start date">
