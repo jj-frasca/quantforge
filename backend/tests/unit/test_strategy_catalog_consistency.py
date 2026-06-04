@@ -12,6 +12,7 @@ from app.api.v1.backtest import (
     MomentumConfig,
     RSIMeanReversionConfig,
     SMAConfig,
+    VolTargetedSMAConfig,
 )
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
@@ -23,6 +24,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "donchian_breakout": DonchianBreakoutConfig,
     "bollinger_bands": BollingerBandsConfig,
     "macd_crossover": MACDCrossoverConfig,
+    "vol_targeted_sma": VolTargetedSMAConfig,
 }
 
 

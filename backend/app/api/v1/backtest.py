@@ -19,6 +19,7 @@ from app.research.strategies.mean_reversion import MeanReversionStrategy
 from app.research.strategies.momentum import MomentumStrategy
 from app.research.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
 from app.research.strategies.sma import SMAStrategy
+from app.research.strategies.vol_targeted_sma import VolTargetedSMAStrategy
 
 router = APIRouter(tags=["backtest"])
 
@@ -71,6 +72,14 @@ class MACDCrossoverConfig(BaseModel):
     signal: int = Field(default=9, ge=1)
 
 
+class VolTargetedSMAConfig(BaseModel):
+    name: Literal["vol_targeted_sma"] = "vol_targeted_sma"
+    fast: int = Field(default=20, ge=1)
+    slow: int = Field(default=50, ge=2)
+    vol_window: int = Field(default=30, ge=2)
+    target_vol: float = Field(default=0.15, gt=0)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -78,7 +87,8 @@ StrategyConfig = Annotated[
     | RSIMeanReversionConfig
     | DonchianBreakoutConfig
     | BollingerBandsConfig
-    | MACDCrossoverConfig,
+    | MACDCrossoverConfig
+    | VolTargetedSMAConfig,
     Field(discriminator="name"),
 ]
 
@@ -162,6 +172,13 @@ def _build_strategy(config: StrategyConfig) -> BaseStrategy:
         return BollingerBandsStrategy(window=config.window, num_std=config.num_std)
     if isinstance(config, MACDCrossoverConfig):
         return MACDCrossoverStrategy(fast=config.fast, slow=config.slow, signal=config.signal)
+    if isinstance(config, VolTargetedSMAConfig):
+        return VolTargetedSMAStrategy(
+            fast=config.fast,
+            slow=config.slow,
+            vol_window=config.vol_window,
+            target_vol=config.target_vol,
+        )
     return MeanReversionStrategy(window=config.window, k=config.k)
 
 

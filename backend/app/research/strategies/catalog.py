@@ -270,4 +270,57 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="vol_targeted_sma",
+        label="Vol-Targeted SMA Crossover",
+        description=(
+            "Same fast/slow SMA crossover as the basic SMA strategy, but the position "
+            "size is scaled by `target_vol / realized_vol` (clipped to <= 1, no leverage). "
+            "Demonstrates risk management on top of signal generation: shrinks position "
+            "in choppy regimes so portfolio volatility stays approximately constant."
+        ),
+        citations=[
+            "Moskowitz, Ooi & Pedersen (2012), 'Time Series Momentum'. "
+            "Journal of Financial Economics 104(2), pp. 228-250."
+        ],
+        parameters=[
+            ParamSchema(
+                name="fast",
+                type="int",
+                default=20,
+                minimum=1,
+                maximum=200,
+                label="Fast SMA window",
+                description="Bars in the fast moving average",
+            ),
+            ParamSchema(
+                name="slow",
+                type="int",
+                default=50,
+                minimum=2,
+                maximum=500,
+                label="Slow SMA window",
+                description="Bars in the slow moving average; must be > fast",
+            ),
+            ParamSchema(
+                name="vol_window",
+                type="int",
+                default=30,
+                minimum=2,
+                maximum=252,
+                label="Vol-estimation window",
+                description="Bars in the rolling std used to estimate realized volatility",
+            ),
+            ParamSchema(
+                name="target_vol",
+                type="float",
+                default=0.15,
+                minimum=0.01,
+                maximum=1.0,
+                step=0.01,
+                label="Target annualized vol",
+                description="Portfolio vol target (e.g. 0.15 = 15% annualized)",
+            ),
+        ],
+    ),
 ]

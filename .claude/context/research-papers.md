@@ -58,6 +58,20 @@ under → short/flat. Used by `SMAStrategy`.
   construction, so the no-look-ahead guarantee holds without an explicit `shift(1)`.
   Conventional Appel defaults: 12/26/9. Used by `MACDCrossoverStrategy`.
 
+**Moskowitz, Ooi & Pedersen (2012)** — "Time Series Momentum".
+*Journal of Financial Economics* 104(2), pp. 228-250.
+- Vol-scaling for trend-following signals. Across 58 instruments the authors show that
+  scaling position size by `target_vol / realized_vol` improves risk-adjusted return of
+  momentum/trend signals: the underlying trend direction stays the same, the scaling
+  moderates the contribution of high-vol regimes. Implementation: same fast/slow SMA
+  crossover as `SMAStrategy` for the *direction*, then position SIZE =
+  `clip(target_vol / realized_vol, upper=1.0).fillna(0.0)` so the strategy can only
+  de-risk and never lever up. Realized vol is annualized via `sqrt(252)` on the rolling
+  std of LOG returns — log returns are time-additive (clean rolling std) and symmetric
+  (vol estimate doesn't drift with the price level). Used by `VolTargetedSMAStrategy`.
+  This is the project's first strategy that does explicit risk management — separates
+  *what to trade* from *how much to trade*, which most retail strategies conflate.
+
 > The authoritative *list* of implemented strategies lives in `STRATEGY_CATALOG`
 > (`backend/app/research/strategies/catalog.py`) and is served by `GET /api/v1/strategies`.
 > This section is the *why* and the science — what each paper says and how we translated it
