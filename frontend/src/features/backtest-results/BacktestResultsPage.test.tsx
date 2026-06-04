@@ -140,6 +140,32 @@ test('shows the selected strategy description and citations', async () => {
   expect(screen.getByText(/trend-following baseline/i)).toBeInTheDocument()
 })
 
+test('submitting each catalog strategy reaches the backend (no client-side discriminated-union drift)', async () => {
+  // Regression: the frontend used to mirror the backend StrategyConfig as a Zod
+  // discriminated union with only sma/momentum/mean_reversion variants. Every new
+  // strategy that landed in the backend catalog silently failed the submit-time parse
+  // on the frontend. This test exercises every catalog variant against a
+  // canned-success handler — they all must reach the network.
+  const bodiesSeen: string[] = []
+  server.use(
+    http.post('/api/v1/backtest', async ({ request }) => {
+      const body = (await request.json()) as { strategy: { name: string } }
+      bodiesSeen.push(body.strategy.name)
+      return HttpResponse.json(successResponse)
+    }),
+  )
+  renderWithClient(<BacktestResultsPage />)
+  const strategySelect = await screen.findByLabelText(/^strategy$/i)
+
+  for (const name of ['sma', 'momentum', 'mean_reversion'] as const) {
+    await userEvent.selectOptions(strategySelect, name)
+    await userEvent.click(screen.getByRole('button', { name: /run backtest/i }))
+    await waitFor(() => {
+      expect(bodiesSeen.at(-1)).toBe(name)
+    })
+  }
+})
+
 test('surfaces the backend detail when the backtest fails', async () => {
   server.use(
     http.post('/api/v1/backtest', () =>

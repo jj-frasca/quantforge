@@ -1,11 +1,7 @@
 import { useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
-import {
-  backtestRequestSchema,
-  type BacktestRequest,
-  type StrategyConfig,
-} from '../../types/backtest'
+import type { BacktestRequest, StrategyConfig } from '../../types/backtest'
 import type { StrategySchema } from '../../types/strategies'
 import { StrategyParamForm } from '../strategies/StrategyParamForm'
 import { useStrategies } from '../strategies/useStrategies'
@@ -61,12 +57,11 @@ export function BacktestResultsPage() {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!selectedName) return
-    // Build via the discriminated union schema — invalid combinations throw at the
-    // boundary rather than reaching the server.
-    const strategy = backtestRequestSchema.shape.strategy.parse({
-      name: selectedName,
-      ...paramValues,
-    }) as StrategyConfig
+    // The catalog-driven form already constrains `name` to known options and `paramValues`
+    // to numeric inputs; the backend StrategyConfig discriminated union is the authority
+    // on shape (ADR-010). Send the body as-is and rely on the 422 path if anything
+    // doesn't match — no second source of truth here.
+    const strategy: StrategyConfig = { name: selectedName, ...paramValues }
     const body: BacktestRequest = {
       symbol: symbol.trim().toUpperCase(),
       strategy,

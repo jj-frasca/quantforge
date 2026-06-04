@@ -1,32 +1,25 @@
 import { z } from 'zod'
 
-// Mirrors backend StrategyConfig (discriminated union on `name`).
-// Keep field defaults aligned with backend defaults in case the UI ever wants them.
-export const smaConfigSchema = z.object({
-  name: z.literal('sma'),
-  fast: z.number().int().min(1),
-  slow: z.number().int().min(2),
-})
+// The strategy contract is owned by the BACKEND catalog (ADR-010): GET /api/v1/strategies
+// + the Pydantic StrategyConfig discriminated union validate names + params on receipt.
+// The frontend used to maintain its own three-strategy discriminated union here; that
+// drifted the moment new strategies landed in the catalog and silently rejected every
+// valid backtest submission at the boundary parse. We now accept any `{name, ...numbers}`
+// shape and rely on:
+//   1. the catalog-driven form to constrain `name` to known options and to provide
+//      typed numeric inputs for each parameter, and
+//   2. the backend to 422 on an unknown discriminator or out-of-range parameter.
+// See ADR-010 §Consequences and feedback-frontend-shadow-validators memory.
+//
+// The TS type uses an index signature `number | string` so both the literal `name`
+// field and any catalog-defined numeric param are accepted; Zod uses `passthrough()`
+// which keeps unknown fields rather than stripping them.
+export interface StrategyConfig {
+  name: string
+  [param: string]: number | string
+}
 
-export const momentumConfigSchema = z.object({
-  name: z.literal('momentum'),
-  lookback: z.number().int().min(1),
-  skip: z.number().int().min(0),
-})
-
-export const meanReversionConfigSchema = z.object({
-  name: z.literal('mean_reversion'),
-  window: z.number().int().min(2),
-  k: z.number().positive(),
-})
-
-export const strategyConfigSchema = z.discriminatedUnion('name', [
-  smaConfigSchema,
-  momentumConfigSchema,
-  meanReversionConfigSchema,
-])
-
-export type StrategyConfig = z.infer<typeof strategyConfigSchema>
+export const strategyConfigSchema = z.object({ name: z.string().min(1) }).passthrough()
 
 export const backtestRequestSchema = z.object({
   symbol: z.string().min(1),

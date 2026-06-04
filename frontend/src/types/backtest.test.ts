@@ -58,20 +58,22 @@ test('backtestResponseSchema rejects missing metrics', () => {
   expect(() => backtestResponseSchema.parse(bad)).toThrow()
 })
 
-test('strategyConfigSchema parses each strategy variant', () => {
-  expect(strategyConfigSchema.parse({ name: 'sma', fast: 5, slow: 20 })).toMatchObject({
-    name: 'sma',
-  })
+test('strategyConfigSchema accepts any name (backend is the discriminator authority)', () => {
+  // The frontend used to hardcode the three original variants here and silently rejected
+  // every new catalog strategy at the boundary. The contract is now: the backend catalog
+  // owns the list of valid names; the frontend trusts whatever the catalog-driven form
+  // selects and lets the backend 422 anything truly invalid (ADR-010 §Consequences).
   expect(
-    strategyConfigSchema.parse({ name: 'momentum', lookback: 60, skip: 5 }),
-  ).toMatchObject({ name: 'momentum' })
+    strategyConfigSchema.parse({ name: 'rsi_mean_reversion', window: 14, oversold: 30 }),
+  ).toMatchObject({ name: 'rsi_mean_reversion' })
   expect(
-    strategyConfigSchema.parse({ name: 'mean_reversion', window: 20, k: 2 }),
-  ).toMatchObject({ name: 'mean_reversion' })
+    strategyConfigSchema.parse({ name: 'keltner_channel', ma_window: 20 }),
+  ).toMatchObject({ name: 'keltner_channel' })
 })
 
-test('strategyConfigSchema rejects an unknown discriminator', () => {
-  expect(() =>
-    strategyConfigSchema.parse({ name: 'bogus', fast: 5, slow: 20 }),
-  ).toThrow()
+test('strategyConfigSchema rejects a missing or empty name', () => {
+  // The one thing we DO enforce: there must be a non-empty name. Everything else is
+  // delegated to the backend.
+  expect(() => strategyConfigSchema.parse({ name: '', fast: 5 })).toThrow()
+  expect(() => strategyConfigSchema.parse({ fast: 5, slow: 20 })).toThrow()
 })

@@ -87,12 +87,17 @@ ergonomic shape and coupled to Pydantic's internal schema-emission rules.
   validation. If any of these breaks in CI, the catalog has drifted from the API contract
   and the frontend form will silently misbehave.
 
-- **The frontend Zod schema for the request body is unchanged.** The form constructs
-  `{ name: selectedName, ...paramValues }` and parses it through
-  `backtestRequestSchema.shape.strategy` (the existing discriminated union) at submit
-  time. A bad combination throws at the boundary before the network call, so the
-  network never sees an invalid payload. We did *not* loosen the API contract to
-  accommodate dynamic forms.
+- **The frontend Zod schema for the strategy is INTENTIONALLY loose:**
+  `z.object({ name: z.string().min(1) }).passthrough()` — non-empty name plus any extra
+  fields. The backend catalog (this ADR) + the Pydantic `StrategyConfig` discriminated
+  union are the single source of truth for the *list of valid names* and the *per-name
+  parameter shapes*. The frontend used to mirror that union as a Zod discriminated
+  union, which became a *hidden shadow validator*: every new strategy added to the
+  catalog silently failed the submit-time `.parse()` because the frontend's three-
+  variant union didn't know about it. Recorded as
+  [[feedback-frontend-shadow-validators]]. The lesson: **never re-validate at the
+  frontend a constraint that lives on the backend.** Validate only what the frontend
+  uniquely owns (non-empty name + numeric inputs from the form).
 
 - **Strategy composition / a DSL is now an easier next step**, not a harder one. A
   composed strategy could ship as `name="composed"` with a `parameters` list of "sub-
