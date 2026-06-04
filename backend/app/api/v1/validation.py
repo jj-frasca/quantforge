@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -9,41 +9,23 @@ from app.data.sources.base import DataSourceAdapter
 from app.data.storage.repository import PriceBarRepository
 from app.dependencies import get_data_adapter, get_repository
 from app.research.frames import bars_to_frame
-from app.research.strategies.base import BaseStrategy
-from app.research.strategies.mean_reversion import MeanReversionStrategy
-from app.research.strategies.momentum import MomentumStrategy
-from app.research.strategies.sma import SMAStrategy
+from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
 from app.validation.engine import ValidationEngine
 from app.validation.report import ValidationReport
 
 router = APIRouter(tags=["validation"])
 
-StrategyName = Literal["sma", "momentum", "mean_reversion"]
 _MIN_BARS = 30
+_MIN_CONFIGS_FOR_PBO = 2  # CSCV needs at least 2 valid configs to estimate overfitting
 
 
 class ValidateRequest(BaseModel):
     symbol: str
-    strategy: StrategyName
+    # Any catalog name — backend validates against STRATEGY_CATALOG; an unknown name 422s.
+    # The catalog is the single source of truth for the supported set (ADR-010).
+    strategy: str
     start_date: datetime
     end_date: datetime
-
-
-def _config_grid(strategy: StrategyName) -> list[BaseStrategy]:
-    if strategy == "sma":
-        return [
-            SMAStrategy(fast=f, slow=s)
-            for f, s in [(5, 20), (10, 30), (15, 40), (20, 50), (5, 30), (10, 40)]
-        ]
-    if strategy == "momentum":
-        return [
-            MomentumStrategy(lookback=lb, skip=sk)
-            for lb, sk in [(20, 2), (40, 5), (60, 5), (30, 2)]
-        ]
-    return [
-        MeanReversionStrategy(window=w, k=k)
-        for w, k in [(10, 2.0), (20, 2.0), (20, 1.5), (30, 2.5)]
-    ]
 
 
 # Sync endpoint on purpose: FastAPI runs `def` handlers in a threadpool, so the blocking
@@ -54,6 +36,13 @@ def validate(
     adapter: Annotated[DataSourceAdapter, Depends(get_data_adapter)],
     repository: Annotated[PriceBarRepository, Depends(get_repository)],
 ) -> ValidationReport:
+    catalog_entry = find_catalog_entry(request.strategy)
+    if catalog_entry is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"unknown strategy: {request.strategy!r}; see GET /api/v1/strategies",
+        )
+
     bars = repository.get_bars(request.symbol, request.start_date, request.end_date)
     if len(bars) < _MIN_BARS:
         # Cache miss: run the ingestion pipeline (quality gate persists either way; bars
@@ -68,4 +57,21 @@ def validate(
             status_code=422,
             detail=f"insufficient data: {len(frame)} bars (need >= {_MIN_BARS})",
         )
-    return ValidationEngine().validate(request.strategy, _config_grid(request.strategy), frame)
+
+    # Catalog-driven grid (ADR-010 §Consequences). Hand-curated grids drift the moment a
+    # new strategy lands; deriving the grid from the catalog's param schema keeps validation
+    # parity with /backtest automatically.
+    configs = grid_from_catalog(catalog_entry, n_per_param=3)
+    if len(configs) < _MIN_CONFIGS_FOR_PBO:  # pragma: no cover
+        # Defensive: tests/unit/test_grid_generator.py asserts every catalog entry
+        # currently in STRATEGY_CATALOG produces >= 2 valid configs at n_per_param=3.
+        # This branch is the runtime backstop if a future catalog edit narrows bounds
+        # too aggressively (e.g., min == max on every param).
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"catalog grid produced only {len(configs)} valid configs for "
+                f"{request.strategy!r}; need >= {_MIN_CONFIGS_FOR_PBO} for PBO"
+            ),
+        )
+    return ValidationEngine().validate(request.strategy, configs, frame)

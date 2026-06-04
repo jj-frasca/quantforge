@@ -51,7 +51,24 @@ def _client(adapter: DataSourceAdapter, repo: PriceBarRepository) -> TestClient:
     return TestClient(app)
 
 
-@pytest.mark.parametrize("strategy", ["sma", "momentum", "mean_reversion"])
+@pytest.mark.parametrize(
+    "strategy",
+    [
+        # Every catalog strategy must validate end-to-end via the catalog-driven grid
+        # (ADR-010 §Consequences). The list of catalog names lives in catalog.py; if a
+        # new one lands without the auto-generated grid producing enough valid configs,
+        # this parametrize will surface it explicitly.
+        "sma",
+        "momentum",
+        "mean_reversion",
+        "rsi_mean_reversion",
+        "donchian_breakout",
+        "bollinger_bands",
+        "macd_crossover",
+        "vol_targeted_sma",
+        "keltner_channel",
+    ],
+)
 def test_validate_endpoint_on_cache_miss_ingests_then_validates(strategy: str) -> None:
     try:
         adapter, repo = _FakeAdapter(), InMemoryPriceBarRepository()

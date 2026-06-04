@@ -29,11 +29,28 @@ test('validationReportSchema rejects a missing field', () => {
   expect(() => validationReportSchema.parse(incomplete)).toThrow()
 })
 
-test('validateRequestSchema rejects an unknown strategy', () => {
+test('validateRequestSchema accepts any catalog strategy name', () => {
+  // The frontend used to hardcode `z.enum(['sma', 'momentum', 'mean_reversion'])` and
+  // silently broke when the backend extended /validate to every catalog strategy. The
+  // backend catalog is the discriminator authority (ADR-010); the frontend trusts the
+  // catalog-driven dropdown and lets the backend 422 anything truly invalid. See
+  // [[feedback-frontend-shadow-validators]].
+  expect(
+    validateRequestSchema.parse({
+      symbol: 'AAPL',
+      strategy: 'rsi_mean_reversion',
+      start_date: '2020-01-01T00:00:00Z',
+      end_date: '2024-01-01T00:00:00Z',
+    }),
+  ).toMatchObject({ strategy: 'rsi_mean_reversion' })
+})
+
+test('validateRequestSchema rejects an empty strategy name', () => {
+  // The one thing we DO enforce on the frontend: strategy must be a non-empty string.
   expect(() =>
     validateRequestSchema.parse({
       symbol: 'AAPL',
-      strategy: 'bogus',
+      strategy: '',
       start_date: '2020-01-01T00:00:00Z',
       end_date: '2024-01-01T00:00:00Z',
     }),

@@ -1,14 +1,14 @@
 import { useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
-import { STRATEGIES, type ValidateRequest } from '../../types/validation'
+import type { ValidateRequest } from '../../types/validation'
 import { useStrategies } from '../strategies/useStrategies'
 import { useValidation } from './useValidation'
 import { ValidationReportView } from './ValidationReportView'
 
 const DEFAULTS = {
   symbol: 'AAPL',
-  strategy: 'sma' as const,
+  strategy: 'sma',
   startDate: '2020-01-01',
   endDate: '2024-01-01',
 }
@@ -19,7 +19,7 @@ export function ValidationReportPage() {
   const validation = useValidation()
   const strategies = useStrategies()
   const [symbol, setSymbol] = useState(DEFAULTS.symbol)
-  const [strategy, setStrategy] = useState<(typeof STRATEGIES)[number]>(DEFAULTS.strategy)
+  const [strategy, setStrategy] = useState<string>(DEFAULTS.strategy)
   const [startDate, setStartDate] = useState(DEFAULTS.startDate)
   const [endDate, setEndDate] = useState(DEFAULTS.endDate)
 
@@ -34,8 +34,10 @@ export function ValidationReportPage() {
     validation.mutate(body)
   }
 
-  // /validate uses an internal config grid per strategy — only the strategy NAME flows
-  // through the API. The catalog drives the human-readable labels in the dropdown.
+  // The catalog is the single source of truth for valid strategy names (ADR-010).
+  // /validate now accepts every catalog entry — the grid is auto-generated from
+  // each strategy's ParamSchema (see grid_generator.py) so we no longer maintain a
+  // separate frontend whitelist that drifts. See feedback-frontend-shadow-validators.
   const catalogEntry = strategies.data?.find((s) => s.name === strategy)
 
   return (
@@ -45,58 +47,50 @@ export function ValidationReportPage() {
         <p>Run the full validation suite (PBO, Deflated Sharpe, walk-forward, purged CV).</p>
       </header>
 
-      <form onSubmit={onSubmit} className="validate-form">
-        <Field label="Symbol">
-          <input
-            type="text"
-            value={symbol}
-            onChange={(event) => setSymbol(event.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Strategy">
-          <select
-            value={strategy}
-            onChange={(event) => setStrategy(event.target.value as (typeof STRATEGIES)[number])}
-          >
-            {/*
-              /validate runs an internal config GRID per strategy and currently only has
-              hardcoded grids for the original three (sma/momentum/mean_reversion). The
-              catalog provides nicer human-readable LABELS but we filter to only the
-              strategies the validation engine supports — otherwise picking RSI here would
-              get a 422 from the backend's Literal validator. Extending /validate to the
-              full catalog is a follow-up (would need per-strategy grid generation).
-            */}
-            {STRATEGIES.map((slug) => {
-              const fromCatalog = strategies.data?.find((s) => s.name === slug)
-              return (
-                <option key={slug} value={slug}>
-                  {fromCatalog?.label ?? slug}
+      {strategies.isError && (
+        <p role="alert">Could not load the strategy catalog — refresh to retry.</p>
+      )}
+
+      {strategies.data && (
+        <form onSubmit={onSubmit} className="validate-form">
+          <Field label="Symbol">
+            <input
+              type="text"
+              value={symbol}
+              onChange={(event) => setSymbol(event.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Strategy">
+            <select value={strategy} onChange={(event) => setStrategy(event.target.value)}>
+              {strategies.data.map((entry) => (
+                <option key={entry.name} value={entry.name}>
+                  {entry.label}
                 </option>
-              )
-            })}
-          </select>
-        </Field>
-        <Field label="Start date">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(event) => setStartDate(event.target.value)}
-            required
-          />
-        </Field>
-        <Field label="End date">
-          <input
-            type="date"
-            value={endDate}
-            onChange={(event) => setEndDate(event.target.value)}
-            required
-          />
-        </Field>
-        <button type="submit" disabled={validation.isPending}>
-          {validation.isPending ? 'Validating…' : 'Run validation'}
-        </button>
-      </form>
+              ))}
+            </select>
+          </Field>
+          <Field label="Start date">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              required
+            />
+          </Field>
+          <Field label="End date">
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              required
+            />
+          </Field>
+          <button type="submit" disabled={validation.isPending}>
+            {validation.isPending ? 'Validating…' : 'Run validation'}
+          </button>
+        </form>
+      )}
 
       {catalogEntry && (
         <section aria-label="strategy info" className="strategy-info">

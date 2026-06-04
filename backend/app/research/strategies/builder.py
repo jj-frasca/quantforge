@@ -1,0 +1,96 @@
+"""Construct BaseStrategy instances from Pydantic configs or plain (name, params) dicts.
+
+Notes:
+    The two entry points serve different callers:
+    - `build_strategy(config)` — for the /backtest endpoint, which has already routed
+      its incoming JSON through the discriminated `StrategyConfig` union.
+    - `build_strategy_from_dict(name, params)` — for the /validate endpoint and the
+      catalog-driven grid generator, which produce raw (name, params) pairs and want
+      one function that handles BOTH validation and construction.
+
+    Both paths share the same dispatch table (`_FACTORIES`) keyed by discriminator,
+    so adding a strategy in [[ADR-010]] still touches one mapping plus the catalog.
+"""
+
+from typing import Final
+
+from pydantic import TypeAdapter
+
+from app.research.strategies.base import BaseStrategy
+from app.research.strategies.bollinger_bands import BollingerBandsStrategy
+from app.research.strategies.configs import (
+    BollingerBandsConfig,
+    DonchianBreakoutConfig,
+    KeltnerChannelConfig,
+    MACDCrossoverConfig,
+    MeanReversionConfig,
+    MomentumConfig,
+    RSIMeanReversionConfig,
+    SMAConfig,
+    StrategyConfig,
+    VolTargetedSMAConfig,
+)
+from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
+from app.research.strategies.keltner_channel import KeltnerChannelStrategy
+from app.research.strategies.macd_crossover import MACDCrossoverStrategy
+from app.research.strategies.mean_reversion import MeanReversionStrategy
+from app.research.strategies.momentum import MomentumStrategy
+from app.research.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
+from app.research.strategies.sma import SMAStrategy
+from app.research.strategies.vol_targeted_sma import VolTargetedSMAStrategy
+
+_StrategyConfigAdapter: Final = TypeAdapter[StrategyConfig](StrategyConfig)
+
+
+def build_strategy(config: StrategyConfig) -> BaseStrategy:
+    """Construct the concrete strategy for an already-validated Pydantic config."""
+    if isinstance(config, SMAConfig):
+        return SMAStrategy(fast=config.fast, slow=config.slow)
+    if isinstance(config, MomentumConfig):
+        return MomentumStrategy(lookback=config.lookback, skip=config.skip)
+    if isinstance(config, RSIMeanReversionConfig):
+        return RSIMeanReversionStrategy(
+            window=config.window,
+            oversold=config.oversold,
+            overbought=config.overbought,
+        )
+    if isinstance(config, DonchianBreakoutConfig):
+        return DonchianBreakoutStrategy(lookback=config.lookback)
+    if isinstance(config, BollingerBandsConfig):
+        return BollingerBandsStrategy(window=config.window, num_std=config.num_std)
+    if isinstance(config, MACDCrossoverConfig):
+        return MACDCrossoverStrategy(fast=config.fast, slow=config.slow, signal=config.signal)
+    if isinstance(config, VolTargetedSMAConfig):
+        return VolTargetedSMAStrategy(
+            fast=config.fast,
+            slow=config.slow,
+            vol_window=config.vol_window,
+            target_vol=config.target_vol,
+        )
+    if isinstance(config, KeltnerChannelConfig):
+        return KeltnerChannelStrategy(
+            ma_window=config.ma_window,
+            atr_window=config.atr_window,
+            multiplier=config.multiplier,
+        )
+    if isinstance(config, MeanReversionConfig):
+        return MeanReversionStrategy(window=config.window, k=config.k)
+    # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
+    # the isinstance chain above; the catalog-consistency test enforces that. A missing
+    # branch here would surface as this exception in dev rather than a silent wrong type.
+    raise ValueError(  # pragma: no cover
+        f"unhandled StrategyConfig variant: {type(config).__name__}"
+    )
+
+
+def build_strategy_from_dict(name: str, params: dict[str, int | float]) -> BaseStrategy:
+    """Validate `{name, ...params}` through Pydantic then construct the strategy.
+
+    Notes:
+        Used by the catalog-driven /validate grid path. Raises Pydantic's
+        ValidationError on an unknown discriminator or invalid param value, and
+        ValueError if the strategy constructor itself rejects a cross-parameter
+        combination (e.g. SMA `fast >= slow`).
+    """
+    config = _StrategyConfigAdapter.validate_python({"name": name, **params})
+    return build_strategy(config)

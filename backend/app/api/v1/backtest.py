@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.data.pipelines.ingestion import DataIngestionPipeline
 from app.data.sources.base import DataSourceAdapter
@@ -12,15 +12,8 @@ from app.dependencies import get_data_adapter, get_repository
 from app.research.backtesting.engine import BacktestEngine, BacktestResult
 from app.research.frames import bars_to_frame
 from app.research.strategies.base import BaseStrategy
-from app.research.strategies.bollinger_bands import BollingerBandsStrategy
-from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
-from app.research.strategies.keltner_channel import KeltnerChannelStrategy
-from app.research.strategies.macd_crossover import MACDCrossoverStrategy
-from app.research.strategies.mean_reversion import MeanReversionStrategy
-from app.research.strategies.momentum import MomentumStrategy
-from app.research.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
-from app.research.strategies.sma import SMAStrategy
-from app.research.strategies.vol_targeted_sma import VolTargetedSMAStrategy
+from app.research.strategies.builder import build_strategy
+from app.research.strategies.configs import StrategyConfig
 
 router = APIRouter(tags=["backtest"])
 
@@ -28,78 +21,6 @@ _MIN_BARS = 30
 _ROLLING_SHARPE_WINDOW = 60
 _TRADING_DAYS = 252
 _RETURN_HIST_BINS = 30
-
-
-class SMAConfig(BaseModel):
-    name: Literal["sma"] = "sma"
-    fast: int = Field(default=20, ge=1)
-    slow: int = Field(default=50, ge=2)
-
-
-class MomentumConfig(BaseModel):
-    name: Literal["momentum"] = "momentum"
-    lookback: int = Field(default=60, ge=1)
-    skip: int = Field(default=5, ge=0)
-
-
-class MeanReversionConfig(BaseModel):
-    name: Literal["mean_reversion"] = "mean_reversion"
-    window: int = Field(default=20, ge=2)
-    k: float = Field(default=2.0, gt=0)
-
-
-class RSIMeanReversionConfig(BaseModel):
-    name: Literal["rsi_mean_reversion"] = "rsi_mean_reversion"
-    window: int = Field(default=14, ge=2)
-    oversold: float = Field(default=30.0, gt=0, lt=100)
-    overbought: float = Field(default=70.0, gt=0, lt=100)
-
-
-class DonchianBreakoutConfig(BaseModel):
-    name: Literal["donchian_breakout"] = "donchian_breakout"
-    lookback: int = Field(default=20, ge=2)
-
-
-class BollingerBandsConfig(BaseModel):
-    name: Literal["bollinger_bands"] = "bollinger_bands"
-    window: int = Field(default=20, ge=2)
-    num_std: float = Field(default=2.0, gt=0)
-
-
-class MACDCrossoverConfig(BaseModel):
-    name: Literal["macd_crossover"] = "macd_crossover"
-    fast: int = Field(default=12, ge=1)
-    slow: int = Field(default=26, ge=2)
-    signal: int = Field(default=9, ge=1)
-
-
-class VolTargetedSMAConfig(BaseModel):
-    name: Literal["vol_targeted_sma"] = "vol_targeted_sma"
-    fast: int = Field(default=20, ge=1)
-    slow: int = Field(default=50, ge=2)
-    vol_window: int = Field(default=30, ge=2)
-    target_vol: float = Field(default=0.15, gt=0)
-
-
-class KeltnerChannelConfig(BaseModel):
-    name: Literal["keltner_channel"] = "keltner_channel"
-    ma_window: int = Field(default=20, ge=1)
-    atr_window: int = Field(default=14, ge=2)
-    multiplier: float = Field(default=2.0, gt=0)
-
-
-StrategyConfig = Annotated[
-    SMAConfig
-    | MomentumConfig
-    | MeanReversionConfig
-    | RSIMeanReversionConfig
-    | DonchianBreakoutConfig
-    | BollingerBandsConfig
-    | MACDCrossoverConfig
-    | VolTargetedSMAConfig
-    | KeltnerChannelConfig,
-    Field(discriminator="name"),
-]
 
 
 class BacktestRequest(BaseModel):
@@ -164,37 +85,6 @@ class BacktestResponse(BaseModel):
     # Distribution of daily returns (histogram bins + skew + excess kurtosis). Fat tails
     # are the bug, not the feature — a sharp left tail is the most honest risk warning.
     return_distribution: ReturnDistribution
-
-
-def _build_strategy(config: StrategyConfig) -> BaseStrategy:
-    if isinstance(config, SMAConfig):
-        return SMAStrategy(fast=config.fast, slow=config.slow)
-    if isinstance(config, MomentumConfig):
-        return MomentumStrategy(lookback=config.lookback, skip=config.skip)
-    if isinstance(config, RSIMeanReversionConfig):
-        return RSIMeanReversionStrategy(
-            window=config.window, oversold=config.oversold, overbought=config.overbought
-        )
-    if isinstance(config, DonchianBreakoutConfig):
-        return DonchianBreakoutStrategy(lookback=config.lookback)
-    if isinstance(config, BollingerBandsConfig):
-        return BollingerBandsStrategy(window=config.window, num_std=config.num_std)
-    if isinstance(config, MACDCrossoverConfig):
-        return MACDCrossoverStrategy(fast=config.fast, slow=config.slow, signal=config.signal)
-    if isinstance(config, VolTargetedSMAConfig):
-        return VolTargetedSMAStrategy(
-            fast=config.fast,
-            slow=config.slow,
-            vol_window=config.vol_window,
-            target_vol=config.target_vol,
-        )
-    if isinstance(config, KeltnerChannelConfig):
-        return KeltnerChannelStrategy(
-            ma_window=config.ma_window,
-            atr_window=config.atr_window,
-            multiplier=config.multiplier,
-        )
-    return MeanReversionStrategy(window=config.window, k=config.k)
 
 
 def _series_to_curve(series: "pd.Series") -> list[EquityPoint]:
@@ -308,7 +198,7 @@ def backtest(
             status_code=422,
             detail=f"insufficient data: {len(frame)} bars (need >= {_MIN_BARS})",
         )
-    strategy = _build_strategy(request.strategy)
+    strategy = build_strategy(request.strategy)
     engine = BacktestEngine()
     result = engine.run_strategy(frame, strategy)
     return _to_response(

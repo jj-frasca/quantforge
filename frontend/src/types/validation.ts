@@ -25,11 +25,14 @@ export const validationReportSchema = z.object({
 
 export type ValidationReport = z.infer<typeof validationReportSchema>
 
-export const STRATEGIES = ['sma', 'momentum', 'mean_reversion'] as const
-
+// Strategy contract is owned by the BACKEND catalog (ADR-010). The frontend used to
+// pin this to the original three names; that broke the moment /validate started
+// supporting every catalog strategy via auto-generated grids. See
+// [[feedback-frontend-shadow-validators]] — never re-validate at the frontend a
+// constraint the backend owns.
 export const validateRequestSchema = z.object({
   symbol: z.string().min(1),
-  strategy: z.enum(STRATEGIES),
+  strategy: z.string().min(1),
   start_date: z.string(),
   end_date: z.string(),
 })

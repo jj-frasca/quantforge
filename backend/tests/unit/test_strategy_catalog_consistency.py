@@ -4,7 +4,8 @@ the frontend form silently drops the new param — CI catches it here."""
 
 from pydantic import BaseModel
 
-from app.api.v1.backtest import (
+from app.research.strategies.catalog import STRATEGY_CATALOG
+from app.research.strategies.configs import (
     BollingerBandsConfig,
     DonchianBreakoutConfig,
     KeltnerChannelConfig,
@@ -15,7 +16,6 @@ from app.api.v1.backtest import (
     SMAConfig,
     VolTargetedSMAConfig,
 )
-from app.research.strategies.catalog import STRATEGY_CATALOG
 
 _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "sma": SMAConfig,

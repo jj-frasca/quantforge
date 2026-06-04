@@ -99,9 +99,24 @@ ergonomic shape and coupled to Pydantic's internal schema-emission rules.
   frontend a constraint that lives on the backend.** Validate only what the frontend
   uniquely owns (non-empty name + numeric inputs from the form).
 
+- **`/validate` is now catalog-driven too.** The original `/validate` endpoint had
+  hand-curated config grids per strategy (`_config_grid("sma")`, etc.), so adding a
+  catalog strategy didn't extend validation automatically — and the frontend had to
+  *also* filter the dropdown to the supported subset. After this ADR's first follow-on
+  bug (the frontend shadow validator, [[feedback-frontend-shadow-validators]]), the
+  catalog now drives `/validate` grids via `grid_from_catalog`
+  (`app/research/strategies/grid_generator.py`): each parameter is perturbed evenly
+  across `[minimum, maximum]`; the Cartesian product is filtered through
+  `build_strategy_from_dict`; cross-parameter constraint violators (SMA `fast >= slow`,
+  RSI `oversold >= overbought`, ...) are silently dropped. `tests/unit/
+  test_grid_generator.py` asserts every catalog entry yields >= 2 valid configs at
+  `n_per_param=3` (the PBO minimum). This means a single catalog entry now lights up
+  Backtest Results, Validation Report, AND the strategy-info pane on both pages.
+
 - **Strategy composition / a DSL is now an easier next step**, not a harder one. A
   composed strategy could ship as `name="composed"` with a `parameters` list of "sub-
-  strategy" references; the same form-rendering machinery would handle it.
+  strategy" references; the same form-rendering + grid-generation machinery would
+  handle it.
 
 - **The `frontend/src/features/strategy-config/` directory is now formally unnecessary**
   for parameter selection — Backtest Results already takes per-strategy params via the
