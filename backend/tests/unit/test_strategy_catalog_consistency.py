@@ -14,6 +14,7 @@ from app.research.strategies.configs import (
     MomentumConfig,
     RSIMeanReversionConfig,
     SMAConfig,
+    TrendFilteredMeanReversionConfig,
     VolTargetedSMAConfig,
 )
 
@@ -27,6 +28,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "macd_crossover": MACDCrossoverConfig,
     "vol_targeted_sma": VolTargetedSMAConfig,
     "keltner_channel": KeltnerChannelConfig,
+    "trend_filtered_mean_reversion": TrendFilteredMeanReversionConfig,
 }
 
 

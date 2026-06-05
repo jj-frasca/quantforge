@@ -28,6 +28,7 @@ from app.research.strategies.configs import (
     RSIMeanReversionConfig,
     SMAConfig,
     StrategyConfig,
+    TrendFilteredMeanReversionConfig,
     VolTargetedSMAConfig,
 )
 from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
@@ -37,6 +38,9 @@ from app.research.strategies.mean_reversion import MeanReversionStrategy
 from app.research.strategies.momentum import MomentumStrategy
 from app.research.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
 from app.research.strategies.sma import SMAStrategy
+from app.research.strategies.trend_filtered_mean_reversion import (
+    TrendFilteredMeanReversionStrategy,
+)
 from app.research.strategies.vol_targeted_sma import VolTargetedSMAStrategy
 
 _StrategyConfigAdapter: Final = TypeAdapter[StrategyConfig](StrategyConfig)
@@ -75,6 +79,12 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
         )
     if isinstance(config, MeanReversionConfig):
         return MeanReversionStrategy(window=config.window, k=config.k)
+    if isinstance(config, TrendFilteredMeanReversionConfig):
+        return TrendFilteredMeanReversionStrategy(
+            z_window=config.z_window,
+            z_threshold=config.z_threshold,
+            trend_window=config.trend_window,
+        )
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.

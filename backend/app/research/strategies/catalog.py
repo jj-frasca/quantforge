@@ -366,4 +366,47 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="trend_filtered_mean_reversion",
+        label="Trend-Filtered Mean Reversion",
+        description=(
+            "Mean-reversion bets gated by the longer trend: long oversold (z < -threshold) "
+            "ONLY inside an uptrend; short overbought ONLY inside a downtrend. Avoids "
+            "the classic 'falling knife' failure mode of blind mean reversion."
+        ),
+        citations=[
+            "Connors, Larry & Alvarez, Cesar. Short Term Trading Strategies That Work. "
+            "TradingMarkets Publishing Group, 2009."
+        ],
+        parameters=[
+            ParamSchema(
+                name="z_window",
+                type="int",
+                default=20,
+                minimum=2,
+                maximum=100,
+                label="Z-score window",
+                description="Bars in the rolling mean / std for the short-term z-score",
+            ),
+            ParamSchema(
+                name="z_threshold",
+                type="float",
+                default=1.5,
+                minimum=0.5,
+                maximum=4.0,
+                step=0.1,
+                label="Z-score threshold",
+                description="How far from the rolling mean to call oversold / overbought",
+            ),
+            ParamSchema(
+                name="trend_window",
+                type="int",
+                default=100,
+                minimum=20,
+                maximum=400,
+                label="Trend SMA window",
+                description="Bars in the longer-term trend filter (must be > z_window)",
+            ),
+        ],
+    ),
 ]

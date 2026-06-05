@@ -67,6 +67,7 @@ def _client(adapter: DataSourceAdapter, repo: PriceBarRepository) -> TestClient:
         "macd_crossover",
         "vol_targeted_sma",
         "keltner_channel",
+        "trend_filtered_mean_reversion",
     ],
 )
 def test_validate_endpoint_on_cache_miss_ingests_then_validates(strategy: str) -> None:

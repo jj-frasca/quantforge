@@ -87,6 +87,25 @@ Service.
   a Keltner band is a normal occurrence). Used by `KeltnerChannelStrategy`. This is the
   project's first OHLC-using strategy — all earlier ones look only at close.
 
+**Connors, Larry & Alvarez, Cesar (2009)** — *Short Term Trading Strategies That Work*.
+TradingMarkets Publishing Group.
+- Mean reversion *gated by* a longer-term trend filter. The book's signature setup is
+  RSI(2) inside a 200-day SMA filter; we use a continuous z-score inside a
+  configurable-window SMA filter because z-score composes naturally with the existing
+  `MeanReversionStrategy` (same z math). The hypothesis: blind mean-reversion bets
+  reliably catch falling knives during sustained moves; gating by the longer trend
+  means we only buy oversold dips inside an uptrend (where mean reversion is empirically
+  more reliable) and short rallies inside a downtrend. Implementation: two trailing
+  rolling means (the z-score's `z_window` and the trend SMA's `trend_window`); a
+  cross-parameter rule `trend_window > z_window` is enforced in the constructor — if
+  the trend runs at the same horizon as the bet the strategy degenerates. Boolean
+  masks for the four conditions (oversold, overbought, uptrend, downtrend) are
+  `fillna(False)`-d so the warmup region stays flat rather than accidentally long via
+  NaN-comparison weirdness. Used by `TrendFilteredMeanReversionStrategy`. This is the
+  project's first multi-indicator strategy — the semantic move is *combination*
+  (mean-reversion AND trend filter), the closest we have to strategy composition before
+  a real DSL ships.
+
 > The authoritative *list* of implemented strategies lives in `STRATEGY_CATALOG`
 > (`backend/app/research/strategies/catalog.py`) and is served by `GET /api/v1/strategies`.
 > This section is the *why* and the science — what each paper says and how we translated it

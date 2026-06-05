@@ -71,6 +71,13 @@ class KeltnerChannelConfig(BaseModel):
     multiplier: float = Field(default=2.0, gt=0)
 
 
+class TrendFilteredMeanReversionConfig(BaseModel):
+    name: Literal["trend_filtered_mean_reversion"] = "trend_filtered_mean_reversion"
+    z_window: int = Field(default=20, ge=2)
+    z_threshold: float = Field(default=1.5, gt=0)
+    trend_window: int = Field(default=100, ge=2)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -80,6 +87,7 @@ StrategyConfig = Annotated[
     | BollingerBandsConfig
     | MACDCrossoverConfig
     | VolTargetedSMAConfig
-    | KeltnerChannelConfig,
+    | KeltnerChannelConfig
+    | TrendFilteredMeanReversionConfig,
     Field(discriminator="name"),
 ]
