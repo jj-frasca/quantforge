@@ -16,6 +16,7 @@ from app.research.strategies.configs import (
     RSIMeanReversionConfig,
     SMAConfig,
     TrendFilteredMeanReversionConfig,
+    TripleMAAlignmentConfig,
     VolTargetedSMAConfig,
 )
 from app.research.strategies.sma import SMAStrategy
@@ -35,6 +36,7 @@ def test_build_strategy_dispatches_each_config_variant() -> None:
         VolTargetedSMAConfig(),
         KeltnerChannelConfig(),
         TrendFilteredMeanReversionConfig(),
+        TripleMAAlignmentConfig(),
     ]:
         strategy = build_strategy(config)
         assert strategy.name  # all strategies declare a `name` class var

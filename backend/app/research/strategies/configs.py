@@ -78,6 +78,13 @@ class TrendFilteredMeanReversionConfig(BaseModel):
     trend_window: int = Field(default=100, ge=2)
 
 
+class TripleMAAlignmentConfig(BaseModel):
+    name: Literal["triple_ma_alignment"] = "triple_ma_alignment"
+    fast: int = Field(default=10, ge=1)
+    medium: int = Field(default=30, ge=2)
+    slow: int = Field(default=100, ge=3)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -88,6 +95,7 @@ StrategyConfig = Annotated[
     | MACDCrossoverConfig
     | VolTargetedSMAConfig
     | KeltnerChannelConfig
-    | TrendFilteredMeanReversionConfig,
+    | TrendFilteredMeanReversionConfig
+    | TripleMAAlignmentConfig,
     Field(discriminator="name"),
 ]

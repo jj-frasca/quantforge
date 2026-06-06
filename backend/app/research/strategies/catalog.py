@@ -409,4 +409,43 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="triple_ma_alignment",
+        label="Triple MA Alignment",
+        description=(
+            "Three SMAs at three windows must agree on direction: long when fast > "
+            "medium > slow; short when fast < medium < slow; flat otherwise. Stricter "
+            "than a two-MA crossover -- fewer trades, longer holds, no fighting the chop."
+        ),
+        citations=["Elder, Alexander. Trading for a Living. Wiley, 1993."],
+        parameters=[
+            ParamSchema(
+                name="fast",
+                type="int",
+                default=10,
+                minimum=1,
+                maximum=100,
+                label="Fast window",
+                description="Bars in the fastest SMA",
+            ),
+            ParamSchema(
+                name="medium",
+                type="int",
+                default=30,
+                minimum=2,
+                maximum=200,
+                label="Medium window",
+                description="Bars in the middle SMA; must be > fast",
+            ),
+            ParamSchema(
+                name="slow",
+                type="int",
+                default=100,
+                minimum=3,
+                maximum=400,
+                label="Slow window",
+                description="Bars in the slowest SMA; must be > medium",
+            ),
+        ],
+    ),
 ]

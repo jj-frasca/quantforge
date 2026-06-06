@@ -15,6 +15,7 @@ from app.research.strategies.configs import (
     RSIMeanReversionConfig,
     SMAConfig,
     TrendFilteredMeanReversionConfig,
+    TripleMAAlignmentConfig,
     VolTargetedSMAConfig,
 )
 
@@ -29,6 +30,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "vol_targeted_sma": VolTargetedSMAConfig,
     "keltner_channel": KeltnerChannelConfig,
     "trend_filtered_mean_reversion": TrendFilteredMeanReversionConfig,
+    "triple_ma_alignment": TripleMAAlignmentConfig,
 }
 
 

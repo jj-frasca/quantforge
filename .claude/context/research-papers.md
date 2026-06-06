@@ -106,6 +106,16 @@ TradingMarkets Publishing Group.
   (mean-reversion AND trend filter), the closest we have to strategy composition before
   a real DSL ships.
 
+**Elder, Alexander (1993)** — *Trading for a Living*. Wiley.
+- Triple Screen / multi-condition trend confirmation. Elder's original method uses
+  three different *timeframes* of the same indicator (weekly trend + daily oscillator
+  + intraday entry). Our `TripleMAAlignmentStrategy` adapts the spirit (agreement
+  before action) to a single timeframe via three SMA *windows*: long when
+  `fast > medium > slow`, short when `fast < medium < slow`, flat otherwise. Cross-
+  parameter rule `fast < medium < slow` enforced in the constructor. The stricter
+  agreement rule (vs. a two-MA crossover) means fewer trades, longer holds, and an
+  explicit flat state during chop. No look-ahead via trailing rolling means.
+
 > The authoritative *list* of implemented strategies lives in `STRATEGY_CATALOG`
 > (`backend/app/research/strategies/catalog.py`) and is served by `GET /api/v1/strategies`.
 > This section is the *why* and the science — what each paper says and how we translated it
