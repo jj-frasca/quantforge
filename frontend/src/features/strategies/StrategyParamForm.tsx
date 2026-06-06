@@ -17,7 +17,11 @@ export function StrategyParamForm({ parameters, values, onChange }: Props) {
         const stored = values[param.name]
         const display = Number.isFinite(stored) ? stored : ''
         return (
-          <Field key={param.name} label={param.label}>
+          <Field
+            key={param.name}
+            label={param.label}
+            hint={param.description ?? undefined}
+          >
             <input
               type="number"
               min={param.minimum ?? undefined}
