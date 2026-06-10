@@ -4,6 +4,7 @@ unknown strategy name fails Pydantic validation."""
 
 from datetime import datetime
 
+import pytest
 from fastapi.testclient import TestClient
 from tests.fixtures.synthetic import builders
 
@@ -242,6 +243,68 @@ def test_backtest_endpoint_supports_trend_filtered_mean_reversion() -> None:
         }
     finally:
         app.dependency_overrides.clear()
+
+
+def test_backtest_endpoint_defaults_initial_capital_and_cost_rate() -> None:
+    # Omitted-by-caller path: engine defaults flow through. Documents the contract on
+    # the existing _BODY shape so subsequent override tests have a baseline to compare to.
+    try:
+        response = _client(_FakeAdapter(), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=_BODY
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["cost_rate"] == 0.001
+        assert body["equity_curve"][0]["equity"] == pytest.approx(100_000.0, rel=1e-3)
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_backtest_endpoint_honors_overridden_initial_capital() -> None:
+    body = {**_BODY, "initial_capital": 250_000.0}
+    try:
+        response = _client(_FakeAdapter(), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=body
+        )
+        assert response.status_code == 200, response.text
+        result = response.json()
+        # Override flows to the engine -> first equity bar starts at 250k. The
+        # buy-and-hold reference uses the same starting capital.
+        assert result["equity_curve"][0]["equity"] == pytest.approx(250_000.0, rel=1e-3)
+        assert result["buy_and_hold_curve"][0]["equity"] == pytest.approx(250_000.0, rel=1e-3)
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_backtest_endpoint_honors_overridden_cost_rate() -> None:
+    # CLAUDE.md §8 invariant: costs always reduce returns. A zero-cost run must end at
+    # least as high as the default-cost run on the same data + strategy.
+    try:
+        repo = InMemoryPriceBarRepository()
+        adapter = _FakeAdapter()
+        client = _client(adapter, repo)
+        default_response = client.post("/api/v1/backtest", json=_BODY).json()
+        zero_cost_response = client.post(
+            "/api/v1/backtest", json={**_BODY, "cost_rate": 0.0}
+        ).json()
+        assert zero_cost_response["cost_rate"] == 0.0
+        assert (
+            zero_cost_response["equity_curve"][-1]["equity"]
+            >= default_response["equity_curve"][-1]["equity"]
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_backtest_endpoint_rejects_non_positive_initial_capital() -> None:
+    # Pydantic gt=0 surfaces as 422 before the handler runs.
+    response = TestClient(app).post("/api/v1/backtest", json={**_BODY, "initial_capital": 0})
+    assert response.status_code == 422
+
+
+def test_backtest_endpoint_rejects_negative_cost_rate() -> None:
+    response = TestClient(app).post("/api/v1/backtest", json={**_BODY, "cost_rate": -0.001})
+    assert response.status_code == 422
 
 
 def test_backtest_endpoint_supports_triple_ma_alignment() -> None:

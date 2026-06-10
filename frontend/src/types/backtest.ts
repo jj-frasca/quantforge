@@ -26,6 +26,10 @@ export const backtestRequestSchema = z.object({
   strategy: strategyConfigSchema,
   start_date: z.string(),
   end_date: z.string(),
+  // Engine knobs (server-side defaults if omitted). Surfaced on the form so the user
+  // can see what costs do to the equity curve. See api-contracts.md POST /backtest.
+  initial_capital: z.number().positive().optional(),
+  cost_rate: z.number().min(0).optional(),
 })
 
 export type BacktestRequest = z.infer<typeof backtestRequestSchema>

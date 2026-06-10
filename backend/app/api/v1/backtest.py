@@ -3,7 +3,7 @@ from typing import Annotated
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.data.pipelines.ingestion import DataIngestionPipeline
 from app.data.sources.base import DataSourceAdapter
@@ -28,6 +28,12 @@ class BacktestRequest(BaseModel):
     strategy: StrategyConfig
     start_date: datetime
     end_date: datetime
+    # Engine knobs the API caller can override. Both default to the BacktestEngine's
+    # constructor defaults (100_000 starting capital, 10 bps cost per unit turnover).
+    # Exposed via the form so the user can sanity-check what costs do to the equity
+    # curve — the most under-appreciated variable in retail backtests.
+    initial_capital: float = Field(default=100_000.0, gt=0)
+    cost_rate: float = Field(default=0.001, ge=0)
 
 
 class EquityPoint(BaseModel):
@@ -199,7 +205,10 @@ def backtest(
             detail=f"insufficient data: {len(frame)} bars (need >= {_MIN_BARS})",
         )
     strategy = build_strategy(request.strategy)
-    engine = BacktestEngine()
+    engine = BacktestEngine(
+        initial_capital=request.initial_capital,
+        cost_rate=request.cost_rate,
+    )
     result = engine.run_strategy(frame, strategy)
     return _to_response(
         request.symbol,

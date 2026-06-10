@@ -94,17 +94,25 @@ then re-reads. Same `MIN_BARS=30` backstop.
 ```json
 {
   "symbol": "AAPL",
-  "strategy": { "name": "sma" | "momentum" | "mean_reversion", "...params": "..." },
+  "strategy": { "name": "<catalog-name>", "...params": "..." },
   "start_date": "2024-01-01T00:00:00Z",
-  "end_date":   "2024-12-01T00:00:00Z"
+  "end_date":   "2024-12-01T00:00:00Z",
+  "initial_capital": 100000.0,
+  "cost_rate": 0.001
 }
 ```
-`strategy` is a Pydantic discriminated union (`Field(discriminator="name")`):
-- `sma`: `{ name: "sma", fast: int, slow: int }`
-- `momentum`: `{ name: "momentum", lookback: int, skip: int }`
-- `mean_reversion`: `{ name: "mean_reversion", window: int, k: float }`
+`strategy` is a Pydantic discriminated union (`Field(discriminator="name")`) over every
+`STRATEGY_CATALOG` entry; see `GET /api/v1/strategies` for the full list and
+per-strategy parameter schemas (ADR-010). Adding a strategy is a backend-only diff.
 
-An unknown `name` is a 422 from Pydantic — never reaches the handler.
+`initial_capital` (default `100_000.0`, `gt=0`) and `cost_rate` (default `0.001` = 10 bps
+per unit turnover, `ge=0`) are optional engine overrides — let the caller sanity-check
+what costs do to the equity curve (the most under-appreciated variable in retail
+backtests). Both flow into `BacktestEngine(initial_capital=..., cost_rate=...)` and
+are echoed back in the response.
+
+An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` is a
+422 from Pydantic — never reaches the handler.
 
 **Responses**:
 - `200` → `BacktestResponse`:

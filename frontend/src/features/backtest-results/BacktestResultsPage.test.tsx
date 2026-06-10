@@ -89,7 +89,41 @@ test('submitting sends the discriminated body and renders the result', async () 
     strategy: { name: 'sma', fast: 20, slow: 50 },
     start_date: '2020-01-01T00:00:00Z',
     end_date: '2024-01-01T00:00:00Z',
+    // Engine knobs land in the wire payload at their form defaults: $100k capital and
+    // 10 bps cost (10 / 10_000 = 0.001 fraction — the backend's canonical form).
+    initial_capital: 100_000,
+    cost_rate: 0.001,
   })
+})
+
+test('overriding initial capital and cost on the form propagates to the request body', async () => {
+  // The build catch behind this test: HTML5 `min` + `step` were a footgun on the cost
+  // input. With min=1 and step=1000, a default value of 100_000 violated the
+  // constraint `value = min + n*step`; userEvent silently swallowed the submit and
+  // none of the existing tests rendered a result. We use step="any" + min to keep
+  // sensible bounds without the divisibility trap. See
+  // [[feedback-quantforge-ci-discipline]] in auto-memory.
+  let body: { initial_capital?: number; cost_rate?: number } | undefined
+  server.use(
+    http.post('/api/v1/backtest', async ({ request }) => {
+      body = (await request.json()) as typeof body
+      return HttpResponse.json(successResponse)
+    }),
+  )
+  renderWithClient(<BacktestResultsPage />)
+  const capitalInput = await screen.findByLabelText(/initial capital/i)
+  await userEvent.clear(capitalInput)
+  await userEvent.type(capitalInput, '250000')
+  const costInput = screen.getByLabelText(/cost \(bps\)/i)
+  await userEvent.clear(costInput)
+  await userEvent.type(costInput, '5')
+
+  await userEvent.click(screen.getByRole('button', { name: /run backtest/i }))
+  await screen.findByLabelText('backtest result')
+  expect(body?.initial_capital).toBe(250_000)
+  // 5 bps -> 0.0005 fraction. The bps-to-fraction conversion is the form's
+  // responsibility, not the backend's.
+  expect(body?.cost_rate).toBe(0.0005)
 })
 
 test('typing into a catalog-driven param field updates the form state', async () => {

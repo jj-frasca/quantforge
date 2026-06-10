@@ -11,6 +11,10 @@ import { useBacktest } from './useBacktest'
 const DEFAULT_SYMBOL = 'AAPL'
 const DEFAULT_START = '2020-01-01'
 const DEFAULT_END = '2024-01-01'
+const DEFAULT_INITIAL_CAPITAL = 100_000
+const DEFAULT_COST_RATE_BPS = 10  // 10 bps == 0.001 fraction. We use bps on the form so
+// the user types "10" instead of "0.001" — the unit conversion (bps -> fraction) is
+// applied in onSubmit so the wire payload stays in the canonical 0.001 form.
 
 const toIsoStartOfDay = (date: string): string => `${date}T00:00:00Z`
 
@@ -34,6 +38,8 @@ export function BacktestResultsPage() {
   const [symbol, setSymbol] = useState(DEFAULT_SYMBOL)
   const [startDate, setStartDate] = useState(DEFAULT_START)
   const [endDate, setEndDate] = useState(DEFAULT_END)
+  const [initialCapital, setInitialCapital] = useState<number>(DEFAULT_INITIAL_CAPITAL)
+  const [costRateBps, setCostRateBps] = useState<number>(DEFAULT_COST_RATE_BPS)
   const [selection, setSelection] = useState<StrategySelection | null>(null)
 
   const catalog = strategies.data
@@ -67,6 +73,9 @@ export function BacktestResultsPage() {
       strategy,
       start_date: toIsoStartOfDay(startDate),
       end_date: toIsoStartOfDay(endDate),
+      initial_capital: initialCapital,
+      // bps (typed by the user) -> fraction (the backend's wire format).
+      cost_rate: costRateBps / 10_000,
     }
     backtest.mutate(body)
   }
@@ -125,6 +134,30 @@ export function BacktestResultsPage() {
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
               required
+            />
+          </Field>
+          <Field
+            label="Initial capital ($)"
+            hint="Starting equity for the backtest; defaults to $100,000."
+          >
+            <input
+              type="number"
+              min={1}
+              step="any"
+              value={initialCapital}
+              onChange={(event) => setInitialCapital(Number(event.target.value))}
+            />
+          </Field>
+          <Field
+            label="Cost (bps)"
+            hint="Transaction cost per unit turnover, in basis points (10 bps = 0.10%)."
+          >
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={costRateBps}
+              onChange={(event) => setCostRateBps(Number(event.target.value))}
             />
           </Field>
           <button type="submit" disabled={backtest.isPending || !allParamsValid(paramValues)}>
