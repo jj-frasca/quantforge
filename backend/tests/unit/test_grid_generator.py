@@ -99,6 +99,7 @@ def test_grid_from_catalog_handles_a_schema_with_no_params() -> None:
     empty_entry = StrategySchema(
         name="sma",
         label="SMA",
+        category="Trend",
         description="",
         citations=[],
         parameters=[],

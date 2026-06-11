@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Field } from '../../components/ui/Field'
 import type { BacktestRequest, StrategyConfig } from '../../types/backtest'
 import type { StrategySchema } from '../../types/strategies'
+import { groupByCategory } from '../strategies/groupByCategory'
 import { StrategyParamForm } from '../strategies/StrategyParamForm'
 import { useStrategies } from '../strategies/useStrategies'
 import { BacktestResultView } from './BacktestResultView'
@@ -106,10 +107,14 @@ export function BacktestResultsPage() {
               value={selectedName}
               onChange={(event) => onStrategyChange(event.target.value)}
             >
-              {strategies.data.map((s) => (
-                <option key={s.name} value={s.name}>
-                  {s.label}
-                </option>
+              {groupByCategory(strategies.data).map(({ category, entries }) => (
+                <optgroup key={category} label={category}>
+                  {entries.map((s) => (
+                    <option key={s.name} value={s.name}>
+                      {s.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </Field>

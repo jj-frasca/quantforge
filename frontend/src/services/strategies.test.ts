@@ -9,6 +9,7 @@ const catalog: StrategyCatalog = [
   {
     name: 'sma',
     label: 'SMA Crossover',
+    category: 'Trend',
     description: 'baseline',
     citations: [],
     parameters: [

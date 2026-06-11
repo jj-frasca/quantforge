@@ -13,6 +13,40 @@ Liveness probe. → `200 {"status": "ok", "environment": "<env>"}`. No DB depend
 
 ---
 
+## GET /api/v1/strategies
+Return the strategy catalog — the single source of truth for what `/backtest` and
+`/validate` accept, including UI labels, descriptions, citations, parameter schemas, and
+category tags. Drives the dynamic strategy form on the frontend (ADR-010).
+
+**Responses**:
+- `200` → `list[StrategySchema]`:
+  ```json
+  [
+    {
+      "name": "sma",
+      "label": "SMA Crossover",
+      "category": "Trend",
+      "description": "Long when the fast SMA crosses above the slow; short below ...",
+      "citations": ["..."],
+      "parameters": [
+        { "name": "fast", "type": "int", "default": 20, "minimum": 1, "maximum": 200,
+          "label": "Fast window", "description": "..." },
+        { "name": "slow", "type": "int", "default": 50, "minimum": 2, "maximum": 500,
+          "label": "Slow window", "description": "..." }
+      ]
+    }
+  ]
+  ```
+  - `category` is a backend `Literal["Trend" | "Mean Reversion" | "Breakout" |
+    "Combination"]`. The frontend groups the dropdown by category via `<optgroup>`.
+    Adding a new category requires extending the Literal AND the frontend Zod enum in
+    the SAME commit — otherwise every new-category strategy fails the boundary parse
+    (see [[feedback-frontend-shadow-validators]]).
+  - `parameters[].type` is `"int" | "float"`; `default`, `minimum`, `maximum`, `step`
+    drive the rendered numeric input.
+
+---
+
 ## GET /api/v1/bars
 Return cached price bars for a `(symbol, range)` — pure read, **does not trigger ingestion**.
 Powers the Data Explorer chart and any future "show what's stored" UIs.

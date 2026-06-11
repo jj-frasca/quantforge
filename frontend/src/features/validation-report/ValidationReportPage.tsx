@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
 import type { ValidateRequest } from '../../types/validation'
+import { groupByCategory } from '../strategies/groupByCategory'
 import { useStrategies } from '../strategies/useStrategies'
 import { useValidation } from './useValidation'
 import { ValidationReportView } from './ValidationReportView'
@@ -63,10 +64,14 @@ export function ValidationReportPage() {
           </Field>
           <Field label="Strategy">
             <select value={strategy} onChange={(event) => setStrategy(event.target.value)}>
-              {strategies.data.map((entry) => (
-                <option key={entry.name} value={entry.name}>
-                  {entry.label}
-                </option>
+              {groupByCategory(strategies.data).map(({ category, entries }) => (
+                <optgroup key={category} label={category}>
+                  {entries.map((entry) => (
+                    <option key={entry.name} value={entry.name}>
+                      {entry.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </Field>

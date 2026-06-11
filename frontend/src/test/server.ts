@@ -11,6 +11,7 @@ export const defaultStrategyCatalog: StrategyCatalog = [
     name: 'sma',
     label: 'SMA Crossover',
     description: 'Trend-following baseline.',
+    category: 'Trend',
     citations: [],
     parameters: [
       { name: 'fast', type: 'int', default: 20, minimum: 1, label: 'Fast window' },
@@ -21,6 +22,7 @@ export const defaultStrategyCatalog: StrategyCatalog = [
     name: 'momentum',
     label: 'Time-Series Momentum',
     description: 'Sign of trailing returns.',
+    category: 'Trend',
     citations: [],
     parameters: [
       { name: 'lookback', type: 'int', default: 60, minimum: 1, label: 'Lookback window' },
@@ -31,6 +33,7 @@ export const defaultStrategyCatalog: StrategyCatalog = [
     name: 'mean_reversion',
     label: 'Mean Reversion (z-score)',
     description: 'Trade deviations from a rolling mean.',
+    category: 'Mean Reversion',
     citations: [],
     parameters: [
       { name: 'window', type: 'int', default: 20, minimum: 2, label: 'Window' },

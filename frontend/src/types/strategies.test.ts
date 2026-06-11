@@ -6,6 +6,7 @@ const valid = [
   {
     name: 'sma',
     label: 'SMA Crossover',
+    category: 'Trend' as const,
     description: 'Trend-following baseline.',
     citations: ['textbook'],
     parameters: [
@@ -33,6 +34,14 @@ test('strategyCatalogSchema rejects an unknown param type', () => {
       parameters: [{ ...valid[0].parameters[0], type: 'string' }],
     },
   ]
+  expect(() => strategyCatalogSchema.parse(bad)).toThrow()
+})
+
+test('strategyCatalogSchema rejects an unknown category', () => {
+  // If the backend adds a new StrategyCategory variant, the frontend Zod enum has to
+  // be extended in the SAME commit; otherwise every entry with the new category will
+  // fail the boundary parse. This test makes that contract enforceable.
+  const bad = [{ ...valid[0], category: 'Carry' }]
   expect(() => strategyCatalogSchema.parse(bad)).toThrow()
 })
 

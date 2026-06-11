@@ -62,3 +62,15 @@ def test_every_catalog_param_default_satisfies_its_pydantic_config() -> None:
         defaults = {p.name: p.default for p in entry.parameters}
         # Should not raise — Pydantic enforces ge/gt/positive constraints declared on Field
         config_class(name=entry.name, **defaults)  # type: ignore[call-arg]
+
+
+def test_every_catalog_entry_has_a_known_category() -> None:
+    # The category is the Literal StrategyCategory; Pydantic itself rejects unknown values
+    # at construction time. This test just documents the expected categories and surfaces
+    # any catalog entry that drifts off the list, so adding a new category is a deliberate
+    # decision (extend the Literal and update this test in the same commit).
+    expected = {"Trend", "Mean Reversion", "Breakout", "Combination"}
+    for entry in STRATEGY_CATALOG:
+        assert entry.category in expected, (
+            f"catalog entry '{entry.name}' has unexpected category '{entry.category}'"
+        )
