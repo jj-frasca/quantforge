@@ -73,6 +73,16 @@ def test_backtest_endpoint_returns_equity_curve_and_metrics() -> None:
         assert sum(b["frequency"] for b in dist["bins"]) == len(body["equity_curve"])
         assert isinstance(dist["skewness"], float)
         assert isinstance(dist["kurtosis"], float)
+        # Trade markers: present, shape is correct, every direction is buy or sell.
+        # On a clean synthetic series with an SMA crossover, we expect at least one
+        # signal flip past the warmup window — so the list is non-empty here.
+        assert "trade_markers" in body
+        assert isinstance(body["trade_markers"], list)
+        assert len(body["trade_markers"]) > 0
+        for marker in body["trade_markers"]:
+            assert set(marker) == {"timestamp_utc", "direction", "equity"}
+            assert marker["direction"] in {"buy", "sell"}
+            assert isinstance(marker["equity"], float)
     finally:
         app.dependency_overrides.clear()
 

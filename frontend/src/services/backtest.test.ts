@@ -50,6 +50,7 @@ const successResponse: BacktestResponse = {
     skewness: 0,
     kurtosis: 0,
   },
+  trade_markers: [],
 }
 
 test('requestBacktest returns a parsed response on success', async () => {

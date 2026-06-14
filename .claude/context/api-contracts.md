@@ -171,7 +171,11 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
       "bins": [{ "bin_center": 0.0, "frequency": 80 }, "..."],
       "skewness": -0.42,
       "kurtosis": 1.85
-    }
+    },
+    "trade_markers": [
+      { "timestamp_utc": "...", "direction": "buy", "equity": 101000.0 },
+      { "timestamp_utc": "...", "direction": "sell", "equity": 103500.0 }
+    ]
   }
   ```
   - `buy_and_hold_curve` is a 100% long position of the SAME symbol from t=0, same
@@ -183,6 +187,13 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
   - `return_distribution` is the histogram of daily strategy returns plus sample
     `skewness` and **excess** `kurtosis` (Fisher convention — Gaussian == 0). Negative
     skew + high excess kurtosis = small wins / occasional large losses.
+  - `trade_markers` are discrete position-direction changes (bars where
+    `position.diff() != 0`). `direction` is `"buy"` when the change is positive (entering
+    long, covering short, or flipping short -> long) and `"sell"` when it's negative; flat
+    bars produce no markers. `equity` is the strategy's equity at that bar — used as the
+    y-coordinate when overlaid on the equity-curve chart. The first bar with a non-zero
+    position is NOT a marker (we mark signal *changes*, not the initial state). Empty list
+    if the strategy never moves direction in the backtest window.
 - `422` → insufficient data after the cache-miss ingest, or an unknown strategy discriminator.
 
 **DI**: `get_data_adapter` + `get_repository`. Same overrides as /validate in tests.

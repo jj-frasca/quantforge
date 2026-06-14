@@ -47,6 +47,11 @@ const winning: BacktestResponse = {
     skewness: -0.3,
     kurtosis: 1.4,
   },
+  trade_markers: [
+    { timestamp_utc: '2024-03-15T00:00:00Z', direction: 'buy', equity: 110_000 },
+    { timestamp_utc: '2024-07-22T00:00:00Z', direction: 'sell', equity: 125_000 },
+    { timestamp_utc: '2024-09-10T00:00:00Z', direction: 'buy', equity: 120_000 },
+  ],
 }
 
 const losing: BacktestResponse = {

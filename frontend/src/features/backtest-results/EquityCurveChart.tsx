@@ -1,26 +1,33 @@
 import {
   CartesianGrid,
+  ComposedChart,
   Legend,
   Line,
-  LineChart,
   ResponsiveContainer,
+  Scatter,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
 
-import type { EquityPoint } from '../../types/backtest'
+import type { EquityPoint, TradeMarker } from '../../types/backtest'
 
 interface Props {
   data: EquityPoint[]
   benchmark?: EquityPoint[]
   benchmarkLabel?: string
+  tradeMarkers?: TradeMarker[]
 }
 
 const fmtMoney = (value: number): string =>
   value.toLocaleString(undefined, { maximumFractionDigits: 0 })
 
-export function EquityCurveChart({ data, benchmark, benchmarkLabel = 'Buy & hold' }: Props) {
+export function EquityCurveChart({
+  data,
+  benchmark,
+  benchmarkLabel = 'Buy & hold',
+  tradeMarkers,
+}: Props) {
   if (data.length === 0) {
     return (
       <section aria-label="equity curve" className="equity-curve empty">
@@ -34,25 +41,39 @@ export function EquityCurveChart({ data, benchmark, benchmarkLabel = 'Buy & hold
   const benchByDate = new Map(
     (benchmark ?? []).map((point) => [point.timestamp_utc.slice(0, 10), point.equity]),
   )
+  // Split markers by direction so each can be a separate Scatter series with its own
+  // color/shape. The dataKey on each Scatter looks up these fields per row; undefined
+  // means "no marker on this bar", which Recharts skips.
+  const buyByDate = new Map<string, number>()
+  const sellByDate = new Map<string, number>()
+  for (const marker of tradeMarkers ?? []) {
+    const date = marker.timestamp_utc.slice(0, 10)
+    if (marker.direction === 'buy') buyByDate.set(date, marker.equity)
+    else sellByDate.set(date, marker.equity)
+  }
   const chartData = data.map((point) => {
     const date = point.timestamp_utc.slice(0, 10)
     return {
       date,
       strategy: point.equity,
       benchmark: benchByDate.get(date),
+      buyMarker: buyByDate.get(date),
+      sellMarker: sellByDate.get(date),
     }
   })
   const last = data[data.length - 1].equity
   const first = data[0].equity
   const change = last / first - 1
+  const nMarkers = (tradeMarkers ?? []).length
 
   return (
     <section aria-label="equity curve" className="equity-curve">
       <p className="summary">
         Ending equity ${fmtMoney(last)} ({(change * 100).toFixed(1)}%)
+        {nMarkers > 0 && ` · ${nMarkers} trade${nMarkers === 1 ? '' : 's'}`}
       </p>
       <ResponsiveContainer width="100%" height={320}>
-        <LineChart data={chartData}>
+        <ComposedChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="date" minTickGap={32} />
           <YAxis domain={['auto', 'auto']} tickFormatter={fmtMoney} />
@@ -79,7 +100,23 @@ export function EquityCurveChart({ data, benchmark, benchmarkLabel = 'Buy & hold
               dot={false}
             />
           )}
-        </LineChart>
+          {nMarkers > 0 && (
+            <>
+              <Scatter
+                name="Buy"
+                dataKey="buyMarker"
+                fill="#22c55e"
+                shape="triangle"
+              />
+              <Scatter
+                name="Sell"
+                dataKey="sellMarker"
+                fill="#ef4444"
+                shape="triangle"
+              />
+            </>
+          )}
+        </ComposedChart>
       </ResponsiveContainer>
     </section>
   )

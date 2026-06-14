@@ -57,6 +57,7 @@ export function BacktestResultView({ result }: Props) {
         data={result.equity_curve}
         benchmark={result.buy_and_hold_curve}
         benchmarkLabel={`Buy & hold ${result.symbol}`}
+        tradeMarkers={result.trade_markers}
       />
       <DrawdownChart data={result.drawdown_curve} />
       <RollingSharpeChart

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
@@ -59,6 +59,22 @@ class RollingSharpePoint(BaseModel):
     sharpe: float
 
 
+class TradeMarker(BaseModel):
+    """A single position-direction change.
+
+    Notes:
+        `direction` is "buy" when the new position is greater than the prior one
+        (entering long OR covering short OR flipping short -> long), "sell" when
+        the new position is less than the prior one. `equity` is the strategy's
+        equity at the bar where the signal flipped — used as the y-coordinate
+        when the marker is overlaid on the equity-curve chart.
+    """
+
+    timestamp_utc: datetime
+    direction: Literal["buy", "sell"]
+    equity: float
+
+
 class ReturnBin(BaseModel):
     bin_center: float
     frequency: int
@@ -91,6 +107,9 @@ class BacktestResponse(BaseModel):
     # Distribution of daily returns (histogram bins + skew + excess kurtosis). Fat tails
     # are the bug, not the feature — a sharp left tail is the most honest risk warning.
     return_distribution: ReturnDistribution
+    # Discrete position-flip events for the equity-curve overlay. Bars where the signal
+    # changed direction; empty if the strategy never moved (a stuck-flat regime).
+    trade_markers: list[TradeMarker]
 
 
 def _series_to_curve(series: "pd.Series") -> list[EquityPoint]:
@@ -100,6 +119,29 @@ def _series_to_curve(series: "pd.Series") -> list[EquityPoint]:
 def _equity_to_drawdown(equity: "pd.Series") -> list[DrawdownPoint]:
     dd = equity / equity.cummax() - 1.0
     return [DrawdownPoint(timestamp_utc=ts, drawdown=float(value)) for ts, value in dd.items()]
+
+
+def _trade_markers(position: "pd.Series", equity: "pd.Series") -> list[TradeMarker]:
+    """Position-direction changes as discrete trade events for the equity-curve overlay.
+
+    Notes:
+        We mark the bar where the SIGNAL changes (position.diff != 0), which is the bar
+        the user sees on the chart. The engine actually trades on the NEXT bar
+        (`position.shift(1)`), but the SIGNAL is what drives a trader's mental model.
+        First bar uses `position.diff().fillna(0)` so a strategy that starts long
+        doesn't appear to "buy from nothing" on bar 0 — that's the engine's responsibility,
+        not a trade event we want to surface.
+    """
+    diff = position.diff().fillna(0.0)
+    markers: list[TradeMarker] = []
+    for ts, change in diff.items():
+        if change == 0.0:
+            continue
+        direction: Literal["buy", "sell"] = "buy" if change > 0 else "sell"
+        markers.append(
+            TradeMarker(timestamp_utc=ts, direction=direction, equity=float(equity.loc[ts]))
+        )
+    return markers
 
 
 def _return_distribution(returns: "pd.Series", bins: int) -> ReturnDistribution:
@@ -181,6 +223,7 @@ def _to_response(
         rolling_sharpe_curve=_rolling_sharpe(strategy_returns, _ROLLING_SHARPE_WINDOW),
         rolling_sharpe_window=_ROLLING_SHARPE_WINDOW,
         return_distribution=_return_distribution(strategy_returns, _RETURN_HIST_BINS),
+        trade_markers=_trade_markers(result.position, result.equity_curve),
     )
 
 

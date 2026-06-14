@@ -79,6 +79,14 @@ export const backtestMetricsSchema = z.object({
 
 export type BacktestMetricsView = z.infer<typeof backtestMetricsSchema>
 
+export const tradeMarkerSchema = z.object({
+  timestamp_utc: z.string(),
+  direction: z.enum(['buy', 'sell']),
+  equity: z.number(),
+})
+
+export type TradeMarker = z.infer<typeof tradeMarkerSchema>
+
 export const backtestResponseSchema = z.object({
   symbol: z.string(),
   strategy_name: z.string(),
@@ -93,6 +101,7 @@ export const backtestResponseSchema = z.object({
   rolling_sharpe_curve: z.array(rollingSharpePointSchema),
   rolling_sharpe_window: z.number().int().positive(),
   return_distribution: returnDistributionSchema,
+  trade_markers: z.array(tradeMarkerSchema),
 })
 
 export type BacktestResponse = z.infer<typeof backtestResponseSchema>

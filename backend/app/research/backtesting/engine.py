@@ -13,6 +13,11 @@ class BacktestResult:
     metrics: BacktestMetrics
     n_trades: int
     cost_rate: float
+    # Clipped/filled position series — exposed so API callers can derive trade events
+    # (timestamps where the signal changes direction) without re-running the strategy.
+    # No look-ahead concern: this is the signal series the engine ALREADY uses for the
+    # backtest, not future-looking data.
+    position: pd.Series
 
 
 class BacktestEngine:
@@ -48,6 +53,7 @@ class BacktestEngine:
             metrics=BacktestMetrics.from_series(net, equity_curve),
             n_trades=n_trades,
             cost_rate=self.cost_rate,
+            position=position,
         )
 
     def run_strategy(self, data: pd.DataFrame, strategy: BaseStrategy) -> BacktestResult:

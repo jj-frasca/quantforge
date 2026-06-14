@@ -42,6 +42,10 @@ const validResponse = {
     skewness: -0.2,
     kurtosis: 1.1,
   },
+  trade_markers: [
+    { timestamp_utc: '2024-01-15T00:00:00Z', direction: 'buy' as const, equity: 101_000 },
+    { timestamp_utc: '2024-02-20T00:00:00Z', direction: 'sell' as const, equity: 103_500 },
+  ],
 }
 
 test('backtestResponseSchema parses a valid response', () => {
