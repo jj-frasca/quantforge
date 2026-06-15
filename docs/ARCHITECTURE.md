@@ -54,7 +54,7 @@ affect a section below, the section has been edited inline to match.
    current stable is the better engineering choice. Frontend tests run on Vitest + RTL + MSW;
    coverage gate ≥ 75%.
 
-## 0.6 Implementation Status (as of 2026-05-29)
+## 0.6 Implementation Status (as of 2026-06-16)
 
 The §4 tree below is the **target** layout; not all of it is built yet. Authoritative reality:
 
@@ -64,23 +64,30 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   below); `DataIngestionPipeline` + in-memory `PriceBarRepository`; SQLAlchemy ORM models;
   **TimescaleDB sync repository (psycopg3) + Alembic migration** (hypertable + index),
   integration-tested via Docker (`make migrate`, `make test-integration`).
-- Research: vectorized `BacktestEngine` + metrics + §8 oracle tests; `SMAStrategy`,
-  `MomentumStrategy`, `MeanReversionStrategy`; `BenchmarkComparator`; `MonteCarloSimulator`;
-  `ExperimentManifest`.
+- Research: vectorized `BacktestEngine` + metrics + §8 oracle tests; **11 strategies** in
+  the catalog (`STRATEGY_CATALOG` in `app/research/strategies/catalog.py`, ADR-010 is the
+  single source of truth) grouped into Trend / Mean Reversion / Breakout / Combination —
+  SMA, Momentum, Mean Reversion z-score, RSI Mean Reversion, Donchian Breakout, Bollinger
+  Bands, MACD, Vol-Targeted SMA, Keltner Channel, Trend-Filtered Mean Reversion, Triple MA
+  Alignment; `BenchmarkComparator`; `MonteCarloSimulator`; `ExperimentManifest`.
 - Validation: `deflated_sharpe`, `pbo` (CSCV), `walk_forward`, `purged_cv`,
   `parameter_stability`, `regime_analysis`; `ValidationEngine` → `ValidationReport`.
-- API: `GET /health`, `POST /api/v1/ingest` (runs `DataIngestionPipeline` behind DI),
-  `POST /api/v1/validate` (**cache-aside** through the repo; returns plain-English
-  `Interpretation`s per metric), `GET /api/v1/bars` (read-only projection of cached bars —
-  float `ChartBar` for charting), `POST /api/v1/backtest` (single-config backtest,
-  cache-aside; equity + buy-and-hold + drawdown + rolling-Sharpe curves; daily-return
-  distribution histogram with skew + excess kurtosis; discriminated `StrategyConfig`).
-  Frontend: **Data Explorer** (form → `/ingest` → `IngestResultView` + Recharts price
-  chart from `/bars`), **Backtest Results** (per-strategy param form → `/backtest` →
-  metrics + four canonical charts: equity-with-buy-and-hold, underwater drawdown,
-  rolling Sharpe, return-distribution histogram), **Validation Report** (symbol/strategy
-  /range form → `/validate` → metrics + Interpretations panel + flags); 3-way primary
-  nav (Data Explorer default); CI gates backend + frontend.
+- API: 6 endpoints — `GET /health`, `GET /api/v1/strategies` (catalog: each entry has
+  category + label + description + citations + ParamSchema, ADR-010), `POST /api/v1/ingest`
+  (runs `DataIngestionPipeline` behind DI), `POST /api/v1/validate` (**cache-aside** through
+  the repo; auto-generated grids per catalog entry; returns plain-English `Interpretation`s
+  per metric), `GET /api/v1/bars` (read-only projection of cached bars — float `ChartBar`
+  for charting), `POST /api/v1/backtest` (single-config backtest, cache-aside; customizable
+  `initial_capital` + `cost_rate`; returns equity + buy-and-hold + drawdown + rolling-Sharpe
+  curves + daily-return distribution + **trade_markers** for the chart overlay; discriminated
+  `StrategyConfig` over every catalog entry).
+  Frontend: **Data Explorer** (form → `/ingest` → `IngestResultView` + Recharts price chart
+  from `/bars`), **Backtest Results** (catalog-driven per-strategy param form with inline
+  hints → `/backtest` → metrics + four canonical charts: equity-with-buy-and-hold AND
+  trade-marker triangles, underwater drawdown, rolling Sharpe, return-distribution
+  histogram), **Validation Report** (symbol/strategy/range form → `/validate` → metrics +
+  Interpretations panel + flags). Strategy dropdowns on both pages are grouped by category
+  via `<optgroup>`. 3-way primary nav (Data Explorer default); CI gates backend + frontend.
 
 **DEFERRED / NOT YET BUILT (documented in the target tree but absent in code):**
 - **Redis cache** — only a `redis_url` config field exists; no client/cache code. The

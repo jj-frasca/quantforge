@@ -13,22 +13,27 @@ and Bailey et al.
 
 End-to-end, all gates green (100% backend coverage; frontend ≥ 75%):
 
-- **5 HTTP endpoints**: `GET /health`, `POST /api/v1/ingest`, `GET /api/v1/bars`,
-  `POST /api/v1/backtest`, `POST /api/v1/validate` — cache-aside through the price-bar
-  repository, sync `def` per ADR-009 so blocking yfinance + DB calls go through FastAPI's
-  threadpool.
-- **3 product pages**: **Data Explorer** (fetch + quality-gate + chart), **Backtest
-  Results** (per-strategy param form, equity curve with buy-and-hold overlay, underwater
-  drawdown plot), **Validation Report** (full statistical suite + plain-English verdicts
-  per metric).
+- **6 HTTP endpoints**: `GET /health`, `GET /api/v1/strategies` (catalog — single source
+  of truth per ADR-010), `POST /api/v1/ingest`, `GET /api/v1/bars`, `POST /api/v1/backtest`,
+  `POST /api/v1/validate` — cache-aside through the price-bar repository, sync `def` per
+  ADR-009 so blocking yfinance + DB calls go through FastAPI's threadpool.
+- **3 product pages**: **Data Explorer** (fetch + quality-gate + price chart), **Backtest
+  Results** (per-strategy param form, equity curve with buy-and-hold overlay + trade-marker
+  triangles, underwater drawdown, rolling Sharpe, daily-return distribution; customizable
+  `initial_capital` + `cost_rate`), **Validation Report** (full statistical suite +
+  plain-English verdicts per metric). Strategy dropdowns are catalog-driven and grouped
+  by category (Trend / Mean Reversion / Breakout / Combination).
 - **Data layer**: PriceBar / FundamentalData / quality models; yfinance adapter +
   OHLCV normalizer with split/dividend adjustment; 6-active-check DataQualityEngine
   (honest "flags potential X" wording — never "guarantees"); ingestion pipeline; **sync
   TimescaleDB repository on psycopg3** with Alembic migration (hypertable + index),
   Docker-gated integration tests.
 - **Research engine**: vectorized pandas/numpy backtester (ADR-007 — vectorbt rejected:
-  fails on Python 3.12); three strategies (SMA crossover, momentum, mean reversion);
-  benchmark comparator; Monte Carlo simulator; experiment manifest.
+  fails on Python 3.12); **11 strategies** in the catalog (SMA, Momentum, Mean Reversion
+  z-score, RSI Mean Reversion, Donchian Breakout, Bollinger Bands, MACD, Vol-Targeted SMA,
+  Keltner Channel, Trend-Filtered Mean Reversion, Triple MA Alignment) — each with the
+  paper citation in `.claude/context/research-papers.md`; adding a strategy is a single
+  backend diff (ADR-010); benchmark comparator; Monte Carlo simulator; experiment manifest.
 - **Validation engine**: PBO via CSCV (Bailey 2015), Deflated Sharpe Ratio with
   multiple-testing penalty, walk-forward splits, purged K-fold CV with embargo, parameter
   stability, regime analysis. Every financial-math invariant (`docs/ARCHITECTURE.md` §8)
