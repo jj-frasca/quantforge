@@ -40,6 +40,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: development
       LOG_LEVEL: INFO
+      # docker-compose has the real DB; flip the runtime to use it. Standalone `uvicorn`
+      # (no docker) leaves this unset and falls through to the in-memory default.
+      STORAGE_BACKEND: timescale
     ports:
       - "8000:8000"
     volumes:
