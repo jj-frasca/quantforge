@@ -86,8 +86,10 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   hints → `/backtest` → metrics + four canonical charts: equity-with-buy-and-hold AND
   trade-marker triangles, underwater drawdown, rolling Sharpe, return-distribution
   histogram), **Validation Report** (symbol/strategy/range form → `/validate` → metrics +
-  Interpretations panel + flags). Strategy dropdowns on both pages are grouped by category
-  via `<optgroup>`. 3-way primary nav (Data Explorer default); CI gates backend + frontend.
+  Interpretations panel + flags), **About** (live-rendered catalog grouped by category +
+  validation methodology + ADR links — the project's own self-documenting page). Strategy
+  dropdowns on the form pages are grouped by category via `<optgroup>`. 4-way primary nav
+  (Data Explorer default); CI gates backend + frontend.
 
 **DEFERRED / NOT YET BUILT (documented in the target tree but absent in code):**
 - **Redis cache** — only a `redis_url` config field exists; no client/cache code. The

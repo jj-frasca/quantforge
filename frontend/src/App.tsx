@@ -1,15 +1,17 @@
 import { useState } from 'react'
 
+import { AboutPage } from './features/about/AboutPage'
 import { BacktestResultsPage } from './features/backtest-results/BacktestResultsPage'
 import { DataExplorerPage } from './features/data-explorer/DataExplorerPage'
 import { ValidationReportPage } from './features/validation-report/ValidationReportPage'
 
-type PageId = 'validation' | 'data-explorer' | 'backtest-results'
+type PageId = 'validation' | 'data-explorer' | 'backtest-results' | 'about'
 
 const PAGES: { id: PageId; label: string }[] = [
   { id: 'data-explorer', label: 'Data Explorer' },
   { id: 'backtest-results', label: 'Backtest Results' },
   { id: 'validation', label: 'Validation' },
+  { id: 'about', label: 'About' },
 ]
 
 function App() {
@@ -50,6 +52,7 @@ function App() {
       {page === 'validation' && <ValidationReportPage />}
       {page === 'data-explorer' && <DataExplorerPage />}
       {page === 'backtest-results' && <BacktestResultsPage />}
+      {page === 'about' && <AboutPage />}
 
       <footer className="app-footer">
         <small>

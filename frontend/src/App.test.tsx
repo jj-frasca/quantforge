@@ -1,5 +1,6 @@
-// App: renders the shell + 3-page nav; default page is Data Explorer (natural flow:
-// ingest first, then backtest or validate). Backend mocked with MSW.
+// App: renders the shell + 4-page nav (Data Explorer / Backtest Results / Validation /
+// About); default page is Data Explorer (natural flow: ingest first, then backtest or
+// validate). Backend mocked with MSW.
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -31,5 +32,13 @@ test('switches to Backtest Results from the nav', async () => {
   expect(screen.getByRole('button', { name: /run backtest/i })).toBeInTheDocument()
   expect(
     screen.getByRole('button', { name: 'Backtest Results', current: 'page' }),
+  ).toBeInTheDocument()
+})
+
+test('switches to About and renders the static page', async () => {
+  renderWithClient(<App />)
+  await userEvent.click(screen.getByRole('button', { name: 'About' }))
+  expect(
+    await screen.findByRole('heading', { name: /about quantforge/i }),
   ).toBeInTheDocument()
 })
