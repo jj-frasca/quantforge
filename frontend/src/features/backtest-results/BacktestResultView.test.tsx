@@ -73,3 +73,13 @@ test('uses the failing chrome for a negative total return', () => {
   const { container } = render(<BacktestResultView result={losing} />)
   expect(container.querySelector('.report.fail')).toBeInTheDocument()
 })
+
+test('renders plain-English hints under each headline metric so a non-quant can read them', () => {
+  // The "democratize advanced trading" rule: a metric without context is hostile to
+  // anyone who hasn't memorized the textbook. We assert at least the Sharpe and Max
+  // drawdown hints so the panel can't ship without them; the others wear the same
+  // pattern and are covered by the visual diff.
+  render(<BacktestResultView result={winning} />)
+  expect(screen.getByText(/return per unit of risk/i)).toBeInTheDocument()
+  expect(screen.getByText(/worst peak-to-trough drop/i)).toBeInTheDocument()
+})

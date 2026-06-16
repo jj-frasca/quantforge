@@ -30,26 +30,48 @@ export function BacktestResultView({ result }: Props) {
         <div>
           <dt>Sharpe</dt>
           <dd>{asRatio(result.metrics.sharpe)}</dd>
+          <small className="metric-hint">
+            Return per unit of risk. Above 1 is good; above 2 is excellent; below 0
+            means losing money on average.
+          </small>
         </div>
         <div>
           <dt>Annualized return</dt>
           <dd>{asPercent(result.metrics.annualized_return)}</dd>
+          <small className="metric-hint">
+            What this would have averaged per year. The S&P 500 has averaged ~10%
+            historically.
+          </small>
         </div>
         <div>
           <dt>Annualized vol</dt>
           <dd>{asPercent(result.metrics.annualized_vol)}</dd>
+          <small className="metric-hint">
+            Year-over-year swings. Higher means a bumpier ride to the same destination.
+          </small>
         </div>
         <div>
           <dt>Max drawdown</dt>
           <dd>{asPercent(result.metrics.max_drawdown)}</dd>
+          <small className="metric-hint">
+            Worst peak-to-trough drop. The deepest you'd have been down at any point.
+          </small>
         </div>
         <div>
           <dt>Trades</dt>
           <dd>{result.n_trades}</dd>
+          <small className="metric-hint">
+            How often the strategy switched direction. More trades = more friction from
+            costs.
+          </small>
         </div>
         <div>
           <dt>Cost rate</dt>
           <dd>{asPercent(result.cost_rate)}</dd>
+          <small className="metric-hint">
+            Friction per trade. 10 bps = 0.10% per round-trip — eats away at high-turnover
+            strategies.
+          </small>
         </div>
       </dl>
 
