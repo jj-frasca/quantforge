@@ -1,17 +1,24 @@
 import { useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
+import { defaultDateRange } from '../../lib/defaultDateRange'
 import type { ValidateRequest } from '../../types/validation'
 import { groupByCategory } from '../strategies/groupByCategory'
 import { useStrategies } from '../strategies/useStrategies'
 import { useValidation } from './useValidation'
 import { ValidationReportView } from './ValidationReportView'
 
+// Validation runs PBO / walk-forward / purged CV — wants more data than a single
+// backtest does. 5 trailing years ≈ 1260 bars, comfortable for the 10 PBO splits + 5
+// walk-forward folds + 5 purged CV folds. Anchored to "today" so the defaults never
+// go stale.
+const { startDate: DEFAULT_START_DATE, endDate: DEFAULT_END_DATE } = defaultDateRange(5)
+
 const DEFAULTS = {
   symbol: 'AAPL',
   strategy: 'sma',
-  startDate: '2020-01-01',
-  endDate: '2024-01-01',
+  startDate: DEFAULT_START_DATE,
+  endDate: DEFAULT_END_DATE,
 }
 
 const toIsoStartOfDay = (date: string): string => `${date}T00:00:00Z`

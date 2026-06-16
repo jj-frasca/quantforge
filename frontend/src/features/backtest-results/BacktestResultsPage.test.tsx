@@ -85,16 +85,23 @@ test('submitting sends the discriminated body and renders the result', async () 
 
   expect(await screen.findByLabelText('backtest result')).toBeInTheDocument()
   expect(screen.getByLabelText('equity curve')).toBeInTheDocument()
-  expect(body).toEqual({
+  // Dates come from defaultDateRange(5) anchored to "today" — we don't pin the wall
+  // clock here (defaultDateRange has its own test). Use toMatchObject and verify the
+  // date shape separately.
+  expect(body).toMatchObject({
     symbol: 'AAPL',
     strategy: { name: 'sma', fast: 20, slow: 50 },
-    start_date: '2020-01-01T00:00:00Z',
-    end_date: '2024-01-01T00:00:00Z',
     // Engine knobs land in the wire payload at their form defaults: $100k capital and
     // 10 bps cost (10 / 10_000 = 0.001 fraction — the backend's canonical form).
     initial_capital: 100_000,
     cost_rate: 0.001,
   })
+  // Dates are YYYY-MM-DDT00:00:00Z ISO strings; end_date is today (or close enough),
+  // start_date is 5 calendar years earlier.
+  const dateRe = /^\d{4}-\d{2}-\d{2}T00:00:00Z$/
+  const wireBody = body as { start_date: string; end_date: string }
+  expect(wireBody.start_date).toMatch(dateRe)
+  expect(wireBody.end_date).toMatch(dateRe)
 })
 
 test('overriding initial capital and cost on the form propagates to the request body', async () => {

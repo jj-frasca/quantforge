@@ -59,11 +59,13 @@ test('submitting fires /ingest + /bars and renders both result + chart', async (
   expect(await screen.findByRole('status')).toHaveTextContent(/stored 30 bars/i)
   expect(await screen.findByLabelText('price chart')).toBeInTheDocument()
   expect(screen.getByText(/last close 100\.50/)).toBeInTheDocument()
-  expect(ingestBody).toEqual({
-    symbol: 'AAPL',
-    start_date: '2024-01-01T00:00:00Z',
-    end_date: '2024-12-01T00:00:00Z',
-  })
+  // Dates come from defaultDateRange(1) anchored to "today" — covered by
+  // defaultDateRange.test.ts; here we just assert the rest of the body and the shape.
+  expect(ingestBody).toMatchObject({ symbol: 'AAPL' })
+  const dateRe = /^\d{4}-\d{2}-\d{2}T00:00:00Z$/
+  const wireBody = ingestBody as { start_date: string; end_date: string }
+  expect(wireBody.start_date).toMatch(dateRe)
+  expect(wireBody.end_date).toMatch(dateRe)
 })
 
 test('surfaces the backend detail when ingestion fails', async () => {

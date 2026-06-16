@@ -9,9 +9,13 @@ import { useStrategies } from '../strategies/useStrategies'
 import { BacktestResultView } from './BacktestResultView'
 import { useBacktest } from './useBacktest'
 
+import { defaultDateRange } from '../../lib/defaultDateRange'
+
 const DEFAULT_SYMBOL = 'AAPL'
-const DEFAULT_START = '2020-01-01'
-const DEFAULT_END = '2024-01-01'
+// Trailing 5-year window: ~1260 trading bars, comfortable margin past every catalog
+// strategy's longest warmup (trend_window=100, slow=100). Anchored to "today" so the
+// defaults never go stale as the project sits on master.
+const { startDate: DEFAULT_START, endDate: DEFAULT_END } = defaultDateRange(5)
 const DEFAULT_INITIAL_CAPITAL = 100_000
 const DEFAULT_COST_RATE_BPS = 10  // 10 bps == 0.001 fraction. We use bps on the form so
 // the user types "10" instead of "0.001" — the unit conversion (bps -> fraction) is

@@ -34,12 +34,17 @@ test('submitting sends the typed body and renders the report on success', async 
   await userEvent.click(screen.getByRole('button', { name: /run validation/i }))
 
   expect(await screen.findByRole('status')).toHaveTextContent(/passes validation/i)
-  expect(body).toEqual({
+  // Dates come from defaultDateRange(5) anchored to "today" — covered by
+  // defaultDateRange.test.ts; here we just assert the rest of the body and the shape
+  // of the date fields.
+  expect(body).toMatchObject({
     symbol: 'AAPL',
     strategy: 'momentum',
-    start_date: '2020-01-01T00:00:00Z',
-    end_date: '2024-01-01T00:00:00Z',
   })
+  const dateRe = /^\d{4}-\d{2}-\d{2}T00:00:00Z$/
+  const wireBody = body as { start_date: string; end_date: string }
+  expect(wireBody.start_date).toMatch(dateRe)
+  expect(wireBody.end_date).toMatch(dateRe)
 })
 
 test('the catalog drives the strategy dropdown — new strategies appear automatically', async () => {

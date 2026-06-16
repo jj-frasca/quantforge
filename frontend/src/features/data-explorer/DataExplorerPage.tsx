@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
+import { defaultDateRange } from '../../lib/defaultDateRange'
 import type { BarsQuery } from '../../types/bars'
 import type { IngestRequest } from '../../types/ingest'
 import { IngestResultView } from './IngestResultView'
@@ -9,10 +10,15 @@ import { PriceChart } from './PriceChart'
 import { useIngest } from './useIngest'
 import { usePriceBars } from './usePriceBars'
 
+// Data Explorer is just for previewing — 1 trailing year (~252 bars) keeps the price
+// chart legible and the ingestion fast. Anchored to "today" so the defaults follow
+// the calendar.
+const { startDate: DEFAULT_START_DATE, endDate: DEFAULT_END_DATE } = defaultDateRange(1)
+
 const DEFAULTS = {
   symbol: 'AAPL',
-  startDate: '2024-01-01',
-  endDate: '2024-12-01',
+  startDate: DEFAULT_START_DATE,
+  endDate: DEFAULT_END_DATE,
 }
 
 // Date pickers give a YYYY-MM-DD; the backend wants an ISO timestamp.
