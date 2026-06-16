@@ -450,6 +450,50 @@ code {
   color: var(--accent);
 }
 
+/* Jargon term with an inline definition. Dotted underline signals "hover for help";
+   the tooltip is CSS-driven so no JS state is needed. Positioned absolutely off the
+   parent <span class="term"> and revealed on hover/focus. */
+.term {
+  position: relative;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--accent-border);
+  text-underline-offset: 3px;
+  cursor: help;
+  outline: none;
+}
+
+.term-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: max-content;
+  max-width: 280px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 1.4;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 120ms ease,
+    visibility 120ms ease;
+  pointer-events: none;
+}
+
+.term:hover .term-tooltip,
+.term:focus .term-tooltip,
+.term:focus-within .term-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* Plain-English face of each strategy — distinct from the longer description. */
 .strategy-summary {
   font-size: 15px;

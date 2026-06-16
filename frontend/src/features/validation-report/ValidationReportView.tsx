@@ -1,3 +1,4 @@
+import { Term } from '../../components/ui/Term'
 import type { ValidationReport } from '../../types/validation'
 
 const asPercent = (value: number): string => `${(value * 100).toFixed(1)}%`
@@ -21,27 +22,52 @@ export function ValidationReportView({ report }: Props) {
 
       <dl className="metrics">
         <div>
-          <dt>Observed Sharpe</dt>
+          <dt>
+            Observed{' '}
+            <Term definition="Return per unit of risk — annualized mean return divided by annualized standard deviation. Above 1 is good; above 2 is excellent; below 0 means losing money on average.">
+              Sharpe
+            </Term>
+          </dt>
           <dd>{asRatio(report.observed_sharpe)}</dd>
         </div>
         <div>
-          <dt>Deflated Sharpe</dt>
+          <dt>
+            <Term definition="The Sharpe ratio penalized for how many configurations we tried. Bailey & López de Prado (2014). DSR > 0 means the result survives multiple-testing; DSR ≤ 0 means it's plausibly explained by luck.">
+              Deflated Sharpe
+            </Term>
+          </dt>
           <dd>{asRatio(report.deflated_sharpe)}</dd>
         </div>
         <div>
-          <dt>Probability of backtest overfitting</dt>
+          <dt>
+            <Term definition="Probability of Backtest Overfitting. Estimates how likely the in-sample result fails out-of-sample. Bailey et al. (2015). Below 0.3 is good; above 0.5 is high risk.">
+              Probability of backtest overfitting
+            </Term>
+          </dt>
           <dd>{asPercent(report.pbo)}</dd>
         </div>
         <div>
-          <dt>Parameter stability</dt>
+          <dt>
+            <Term definition="How robust the result is to small parameter tweaks. Above 0.7 means the strategy doesn't sit on a knife-edge; below 0.4 is fragile.">
+              Parameter stability
+            </Term>
+          </dt>
           <dd>{asPercent(report.parameter_stability_score)}</dd>
         </div>
         <div>
-          <dt>Walk-forward splits</dt>
+          <dt>
+            <Term definition="How many independent train/test splits walked forward through time. More splits = more rigorous out-of-sample evidence.">
+              Walk-forward splits
+            </Term>
+          </dt>
           <dd>{report.n_walk_forward_splits}</dd>
         </div>
         <div>
-          <dt>Purged folds</dt>
+          <dt>
+            <Term definition="Cross-validation folds with leakage protection: training samples whose labels overlap the test set are purged, with an embargo period after each test fold. López de Prado (2018).">
+              Purged folds
+            </Term>
+          </dt>
           <dd>{report.n_purged_folds}</dd>
         </div>
       </dl>
