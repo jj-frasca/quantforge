@@ -10,6 +10,7 @@ const catalog: StrategyCatalog = [
     name: 'sma',
     label: 'SMA Crossover',
     category: 'Trend',
+    summary: 'Buys when the recent average has been rising; sells when it has been falling.',
     description: 'baseline',
     citations: [],
     parameters: [

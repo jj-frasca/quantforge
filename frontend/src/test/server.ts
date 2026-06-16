@@ -12,6 +12,7 @@ export const defaultStrategyCatalog: StrategyCatalog = [
     label: 'SMA Crossover',
     description: 'Trend-following baseline.',
     category: 'Trend',
+    summary: 'Buys when the recent average has been rising; sells when it has been falling.',
     citations: [],
     parameters: [
       { name: 'fast', type: 'int', default: 20, minimum: 1, label: 'Fast window' },
@@ -23,6 +24,7 @@ export const defaultStrategyCatalog: StrategyCatalog = [
     label: 'Time-Series Momentum',
     description: 'Sign of trailing returns.',
     category: 'Trend',
+    summary: 'Buys what has been going up over the past few months; sells what has been going down.',
     citations: [],
     parameters: [
       { name: 'lookback', type: 'int', default: 60, minimum: 1, label: 'Lookback window' },
@@ -34,6 +36,7 @@ export const defaultStrategyCatalog: StrategyCatalog = [
     label: 'Mean Reversion (z-score)',
     description: 'Trade deviations from a rolling mean.',
     category: 'Mean Reversion',
+    summary: 'Bets the price will snap back toward its recent average.',
     citations: [],
     parameters: [
       { name: 'window', type: 'int', default: 20, minimum: 2, label: 'Window' },

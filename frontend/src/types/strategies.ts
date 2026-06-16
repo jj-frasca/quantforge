@@ -24,6 +24,10 @@ export const strategySchema = z.object({
   name: z.string(),
   label: z.string(),
   category: z.enum(STRATEGY_CATEGORIES),
+  // One plain-English sentence — distinct from `description` (which carries the
+  // implementation nuance). This is the strategy's user-facing face on the
+  // strategy-info panel.
+  summary: z.string(),
   description: z.string(),
   citations: z.array(z.string()),
   parameters: z.array(paramSchema),

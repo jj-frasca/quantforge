@@ -89,6 +89,7 @@ export function AboutPage() {
                   {entries.map((entry) => (
                     <li key={entry.name} className="strategy-entry">
                       <strong>{entry.label}</strong>
+                      <p className="strategy-summary">{entry.summary}</p>
                       <p>{entry.description}</p>
                       {entry.citations.length > 0 && (
                         <ul className="citations">

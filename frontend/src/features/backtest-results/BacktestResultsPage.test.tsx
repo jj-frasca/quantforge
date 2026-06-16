@@ -220,3 +220,14 @@ test('surfaces the backend detail when the backtest fails', async () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/insufficient data/i)
   })
 })
+
+test('shows the strategy summary above the longer description so a beginner gets it at a glance', async () => {
+  // The "democratize" rule: the at-a-glance face of each strategy is the plain-English
+  // summary, not the implementation-nuance description. We assert the summary copy
+  // (from the test/server.ts default catalog for SMA) lands on screen the moment a
+  // strategy is selected.
+  renderWithClient(<BacktestResultsPage />)
+  await screen.findByLabelText(/^strategy$/i)
+  const info = screen.getByLabelText('strategy info')
+  expect(info).toHaveTextContent(/recent average has been rising/i)
+})

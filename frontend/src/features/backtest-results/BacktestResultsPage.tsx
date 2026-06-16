@@ -177,7 +177,8 @@ export function BacktestResultsPage() {
 
       {selectedEntry && (
         <section aria-label="strategy info" className="strategy-info">
-          <p>{selectedEntry.description}</p>
+          <p className="strategy-summary">{selectedEntry.summary}</p>
+          <p className="strategy-description">{selectedEntry.description}</p>
           {selectedEntry.citations.length > 0 && (
             <ul className="citations">
               {selectedEntry.citations.map((citation) => (

@@ -106,7 +106,8 @@ export function ValidationReportPage() {
 
       {catalogEntry && (
         <section aria-label="strategy info" className="strategy-info">
-          <p>{catalogEntry.description}</p>
+          <p className="strategy-summary">{catalogEntry.summary}</p>
+          <p className="strategy-description">{catalogEntry.description}</p>
           {catalogEntry.citations.length > 0 && (
             <ul className="citations">
               {catalogEntry.citations.map((citation) => (

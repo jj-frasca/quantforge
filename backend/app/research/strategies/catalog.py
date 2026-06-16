@@ -50,6 +50,10 @@ class StrategySchema(BaseModel):
     name: str
     label: str
     category: StrategyCategory
+    # One plain-English sentence: what the strategy DOES, in language a non-quant can
+    # parse on first read. Distinct from `description` (which goes into the implementation
+    # nuance). This is the strategy's user-facing face.
+    summary: str
     description: str
     citations: list[str]
     parameters: list[ParamSchema]
@@ -64,6 +68,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="sma",
         label="SMA Crossover",
         category="Trend",
+        summary="Buys when the recent average price has been rising; sells when it has been falling.",
         description=(
             "Long when the fast moving average crosses above the slow; short when below. "
             "Trailing windows mean no look-ahead. Classic trend-following baseline."
@@ -94,6 +99,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="momentum",
         label="Time-Series Momentum",
         category="Trend",
+        summary="Buys what has been going up over the past few months; sells what has been going down.",
         description=(
             "Long past winners, short past losers — sign of the trailing return over "
             "`lookback` bars, ending `skip` bars ago (the skip avoids short-term reversal)."
@@ -124,6 +130,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="mean_reversion",
         label="Mean Reversion (z-score)",
         category="Mean Reversion",
+        summary="Bets the price will snap back toward its recent average — buys when it is unusually low, sells when unusually high.",
         description=(
             "Short when price is rich vs. its rolling mean, long when cheap. "
             "Signal = -clip(z / k, -1, 1) where z is the trailing z-score of price."
@@ -155,6 +162,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="rsi_mean_reversion",
         label="RSI Mean Reversion",
         category="Mean Reversion",
+        summary="Buys after the price has been weak for a while; sells after it has been strong — assuming both will reverse.",
         description=(
             "Long when the Relative Strength Index drops below `oversold`, short above "
             "`overbought`, flat between. Classic Wilder RSI (1978)."
@@ -198,6 +206,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="donchian_breakout",
         label="Donchian Channel Breakout",
         category="Breakout",
+        summary="Waits for the price to break above a recent high (long) or below a recent low (short), then rides the move.",
         description=(
             "Long when the close breaks above the prior `lookback`-bar high; short "
             "when it breaks below the prior low. Carries the last breakout forward "
@@ -220,6 +229,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="bollinger_bands",
         label="Bollinger Bands Mean Reversion",
         category="Mean Reversion",
+        summary="Bets on snap-back to the average, using volatility-scaled bands to decide when the price has wandered 'far enough'.",
         description=(
             "Long when the close drops below the lower band (mean - num_std * sigma); "
             "short when it rises above the upper band. Flat between the bands. Discrete "
@@ -252,6 +262,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="macd_crossover",
         label="MACD Crossover",
         category="Trend",
+        summary="Same idea as SMA crossover, but smoother and faster to react when the trend turns.",
         description=(
             "Long when the MACD line (EMA fast - EMA slow) is above its signal line "
             "(EMA of MACD); short when below. Conventional 12/26/9 trend-following filter."
@@ -293,6 +304,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="keltner_channel",
         label="Keltner Channel Breakout",
         category="Breakout",
+        summary="Like Donchian breakout, but the bands widen with volatility — fewer false signals in choppy markets.",
         description=(
             "Volatility-adaptive channel: midline = EMA(close), width = multiplier * ATR. "
             "Long when the close breaks above the upper band, short below the lower, flat "
@@ -337,6 +349,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="vol_targeted_sma",
         label="Vol-Targeted SMA Crossover",
         category="Trend",
+        summary="An SMA crossover that shrinks the position size in choppy markets — same direction, less white-knuckle ride.",
         description=(
             "Same fast/slow SMA crossover as the basic SMA strategy, but the position "
             "size is scaled by `target_vol / realized_vol` (clipped to <= 1, no leverage). "
@@ -391,6 +404,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="trend_filtered_mean_reversion",
         label="Trend-Filtered Mean Reversion",
         category="Combination",
+        summary="Only buys oversold dips when the longer trend is up, and only shorts overbought spikes when the longer trend is down. Avoids the falling-knife trap.",
         description=(
             "Mean-reversion bets gated by the longer trend: long oversold (z < -threshold) "
             "ONLY inside an uptrend; short overbought ONLY inside a downtrend. Avoids "
@@ -435,6 +449,7 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         name="triple_ma_alignment",
         label="Triple MA Alignment",
         category="Trend",
+        summary="Long only when three different averages agree the trend is up; short only when they agree it is down; stays flat the rest of the time.",
         description=(
             "Three SMAs at three windows must agree on direction: long when fast > "
             "medium > slow; short when fast < medium < slow; flat otherwise. Stricter "

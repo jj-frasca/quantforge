@@ -100,6 +100,7 @@ def test_grid_from_catalog_handles_a_schema_with_no_params() -> None:
         name="sma",
         label="SMA",
         category="Trend",
+        summary="",
         description="",
         citations=[],
         parameters=[],

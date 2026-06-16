@@ -7,6 +7,7 @@ const sample = (overrides: Partial<StrategyCatalog[number]>): StrategyCatalog[nu
   name: 'x',
   label: 'X',
   category: 'Trend',
+  summary: '',
   description: '',
   citations: [],
   parameters: [],

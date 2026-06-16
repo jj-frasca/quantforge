@@ -64,6 +64,18 @@ def test_every_catalog_param_default_satisfies_its_pydantic_config() -> None:
         config_class(name=entry.name, **defaults)  # type: ignore[call-arg]
 
 
+def test_every_catalog_entry_has_a_plain_english_summary() -> None:
+    # The summary is the strategy's user-facing face. Empty / placeholder copy ships a
+    # nameless dropdown option to a beginner; we'd rather fail CI than ship that.
+    # Length is a sanity floor — Pydantic doesn't enforce it on `str` fields.
+    for entry in STRATEGY_CATALOG:
+        assert entry.summary.strip(), f"catalog entry '{entry.name}' has an empty summary"
+        assert len(entry.summary) >= 30, (
+            f"catalog entry '{entry.name}' summary is suspiciously short "
+            f"({len(entry.summary)} chars) — does it read as a real sentence?"
+        )
+
+
 def test_every_catalog_entry_has_a_known_category() -> None:
     # The category is the Literal StrategyCategory; Pydantic itself rejects unknown values
     # at construction time. This test just documents the expected categories and surfaces

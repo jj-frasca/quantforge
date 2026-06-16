@@ -7,6 +7,7 @@ const valid = [
     name: 'sma',
     label: 'SMA Crossover',
     category: 'Trend' as const,
+    summary: 'Buys when the recent average has been rising; sells when it has been falling.',
     description: 'Trend-following baseline.',
     citations: ['textbook'],
     parameters: [
