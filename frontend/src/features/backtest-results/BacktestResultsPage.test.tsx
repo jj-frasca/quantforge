@@ -221,6 +221,16 @@ test('surfaces the backend detail when the backtest fails', async () => {
   })
 })
 
+test('shows a friendly nudge so a beginner knows defaults are sane and Run is the next step', async () => {
+  // The "democratize" rule: a 7-field form is intimidating even when every field is
+  // pre-populated. The nudge above the form says explicitly that one click is enough.
+  renderWithClient(<BacktestResultsPage />)
+  await screen.findByLabelText(/^strategy$/i)
+  expect(
+    screen.getByText(/every field below is pre-filled with sensible defaults/i),
+  ).toBeInTheDocument()
+})
+
 test('shows the strategy summary above the longer description so a beginner gets it at a glance', async () => {
   // The "democratize" rule: the at-a-glance face of each strategy is the plain-English
   // summary, not the implementation-nuance description. We assert the summary copy

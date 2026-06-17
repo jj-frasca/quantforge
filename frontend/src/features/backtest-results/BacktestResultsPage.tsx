@@ -97,8 +97,13 @@ export function BacktestResultsPage() {
       )}
 
       {strategies.data && selectedEntry && (
-        <form onSubmit={onSubmit} className="ingest-form">
-          <Field label="Symbol">
+        <>
+          <p className="quick-run-nudge">
+            👉 Every field below is pre-filled with sensible defaults. Click{' '}
+            <strong>Run backtest</strong> to try it — tweak anything if you want.
+          </p>
+          <form onSubmit={onSubmit} className="ingest-form">
+            <Field label="Symbol">
             <input
               type="text"
               value={symbol}
@@ -172,7 +177,8 @@ export function BacktestResultsPage() {
           <button type="submit" disabled={backtest.isPending || !allParamsValid(paramValues)}>
             {backtest.isPending ? 'Running…' : 'Run backtest'}
           </button>
-        </form>
+          </form>
+        </>
       )}
 
       {selectedEntry && (
