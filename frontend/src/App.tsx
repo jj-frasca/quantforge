@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { OnboardingBanner } from './components/ui/OnboardingBanner'
 import { AboutPage } from './features/about/AboutPage'
 import { BacktestResultsPage } from './features/backtest-results/BacktestResultsPage'
 import { DataExplorerPage } from './features/data-explorer/DataExplorerPage'
@@ -35,6 +36,7 @@ function App() {
           AI-native quantitative research platform. Ingest market data, run honest backtests,
           and validate strategies with PBO, Deflated Sharpe, walk-forward, and purged CV.
         </p>
+        <OnboardingBanner />
         <nav aria-label="primary" className="primary-nav">
           {PAGES.map((p) => (
             <button
