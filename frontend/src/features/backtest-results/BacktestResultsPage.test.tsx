@@ -231,6 +231,35 @@ test('shows a friendly nudge so a beginner knows defaults are sane and Run is th
   ).toBeInTheDocument()
 })
 
+test('clicking a preset card loads its symbol + strategy + params into the form', async () => {
+  // Track what hits the wire. The preset under test is "SMA crossover on SPY" — when
+  // the user clicks Load, the form must repaint with symbol=SPY and strategy=sma with
+  // the preset's fast/slow, and submitting then sends that body. This is the whole
+  // value prop of presets: one click goes from "I don't know what to type" to "I have
+  // a result on screen."
+  let body: { symbol?: string; strategy?: { name: string; fast?: number; slow?: number } } = {}
+  server.use(
+    http.post('/api/v1/backtest', async ({ request }) => {
+      body = (await request.json()) as typeof body
+      return HttpResponse.json(successResponse)
+    }),
+  )
+  renderWithClient(<BacktestResultsPage />)
+  await screen.findByLabelText(/^strategy$/i)
+  const presetLoadButtons = screen.getAllByRole('button', { name: /load this preset/i })
+  // First card is SMA on SPY (Slate 3 ordering).
+  await userEvent.click(presetLoadButtons[0])
+  expect(screen.getByLabelText(/symbol/i)).toHaveValue('SPY')
+  expect(screen.getByLabelText(/^strategy$/i)).toHaveValue('sma')
+  expect(screen.getByLabelText(/fast/i)).toHaveValue(50)
+  expect(screen.getByLabelText(/slow/i)).toHaveValue(200)
+  await userEvent.click(screen.getByRole('button', { name: /run backtest/i }))
+  await waitFor(() => {
+    expect(body.symbol).toBe('SPY')
+    expect(body.strategy).toMatchObject({ name: 'sma', fast: 50, slow: 200 })
+  })
+})
+
 test('shows the strategy summary above the longer description so a beginner gets it at a glance', async () => {
   // The "democratize" rule: the at-a-glance face of each strategy is the plain-English
   // summary, not the implementation-nuance description. We assert the summary copy

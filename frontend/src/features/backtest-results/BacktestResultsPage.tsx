@@ -1,15 +1,16 @@
 import { useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
+import { defaultDateRange } from '../../lib/defaultDateRange'
 import type { BacktestRequest, StrategyConfig } from '../../types/backtest'
 import type { StrategySchema } from '../../types/strategies'
 import { groupByCategory } from '../strategies/groupByCategory'
+import { PresetCards } from '../strategies/PresetCards'
+import type { Preset } from '../strategies/presets'
 import { StrategyParamForm } from '../strategies/StrategyParamForm'
 import { useStrategies } from '../strategies/useStrategies'
 import { BacktestResultView } from './BacktestResultView'
 import { useBacktest } from './useBacktest'
-
-import { defaultDateRange } from '../../lib/defaultDateRange'
 
 const DEFAULT_SYMBOL = 'AAPL'
 // Trailing 5-year window: ~1260 trading bars, comfortable margin past every catalog
@@ -65,6 +66,16 @@ export function BacktestResultsPage() {
     setSelection({ name: selectedEntry.name, values: next })
   }
 
+  const onLoadPreset = (preset: Preset) => {
+    setSymbol(preset.symbol)
+    setSelection({ name: preset.strategy.name, values: { ...preset.strategy.params } })
+    const range = defaultDateRange(preset.yearsBack)
+    setStartDate(range.startDate)
+    setEndDate(range.endDate)
+    // Capital + cost stay at the form defaults — the preset's story is the
+    // (symbol, strategy, params, window), not the engine knobs.
+  }
+
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!selectedName) return
@@ -102,6 +113,7 @@ export function BacktestResultsPage() {
             👉 Every field below is pre-filled with sensible defaults. Click{' '}
             <strong>Run backtest</strong> to try it — tweak anything if you want.
           </p>
+          <PresetCards onLoad={onLoadPreset} />
           <form onSubmit={onSubmit} className="ingest-form">
             <Field label="Symbol">
             <input
