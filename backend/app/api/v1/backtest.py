@@ -132,15 +132,16 @@ def _trade_markers(position: "pd.Series", equity: "pd.Series") -> list[TradeMark
         doesn't appear to "buy from nothing" on bar 0 — that's the engine's responsibility,
         not a trade event we want to surface.
     """
+    # Iterate positionally (index, diff, equity all aligned) rather than looking up
+    # equity.loc[ts]: real data can carry a duplicated bar timestamp, and a label lookup
+    # on a non-unique index returns a Series — float() then raises and the route 500s.
     diff = position.diff().fillna(0.0)
     markers: list[TradeMarker] = []
-    for ts, change in diff.items():
+    for ts, change, eq in zip(diff.index, diff.to_numpy(), equity.to_numpy(), strict=True):
         if change == 0.0:
             continue
         direction: Literal["buy", "sell"] = "buy" if change > 0 else "sell"
-        markers.append(
-            TradeMarker(timestamp_utc=ts, direction=direction, equity=float(equity.loc[ts]))
-        )
+        markers.append(TradeMarker(timestamp_utc=ts, direction=direction, equity=float(eq)))
     return markers
 
 
