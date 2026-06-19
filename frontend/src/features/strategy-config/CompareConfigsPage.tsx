@@ -9,6 +9,7 @@ import { StrategyParamForm } from '../strategies/StrategyParamForm'
 import { useStrategies } from '../strategies/useStrategies'
 import { CompareEquityCurves } from './CompareEquityCurves'
 import { CompareMetricsTable } from './CompareMetricsTable'
+import { CompareSpreadCallout } from './CompareSpreadCallout'
 import { useCompareBacktests } from './useCompareBacktests'
 
 // ADR-011 §Decision: cap N at 6. Floor at 2: one row is a normal backtest.
@@ -229,6 +230,7 @@ export function CompareConfigsPage() {
       {compare.status === 'settled' && selectedEntry && (
         <>
           <CompareEquityCurves rows={rows.map((r, i) => ({ label: rowLabel(i), values: r.values }))} results={compare.results} />
+          <CompareSpreadCallout results={compare.results} />
           <CompareMetricsTable
             symbol={symbol.trim().toUpperCase()}
             strategy={selectedEntry.name}
