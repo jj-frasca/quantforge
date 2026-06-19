@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
 import { defaultDateRange } from '../../lib/defaultDateRange'
+import { useAppShell } from '../../state/appShell'
 import type { ValidateRequest } from '../../types/validation'
 import { groupByCategory } from '../strategies/groupByCategory'
 import { useStrategies } from '../strategies/useStrategies'
@@ -26,10 +27,19 @@ const toIsoStartOfDay = (date: string): string => `${date}T00:00:00Z`
 export function ValidationReportPage() {
   const validation = useValidation()
   const strategies = useStrategies()
-  const [symbol, setSymbol] = useState(DEFAULTS.symbol)
-  const [strategy, setStrategy] = useState<string>(DEFAULTS.strategy)
-  const [startDate, setStartDate] = useState(DEFAULTS.startDate)
-  const [endDate, setEndDate] = useState(DEFAULTS.endDate)
+  // Lazy initializer reads & clears the pending handoff on first mount only —
+  // single-shot, so re-navigating to Validation after the consumer ran won't
+  // re-apply the same handoff. App.tsx unmounts pages on nav so every mount is
+  // a fresh first-render.
+  const [initialHandoff] = useState(() =>
+    useAppShell.getState().consumePendingValidation(),
+  )
+  const [symbol, setSymbol] = useState(initialHandoff?.symbol ?? DEFAULTS.symbol)
+  const [strategy, setStrategy] = useState<string>(
+    initialHandoff?.strategy ?? DEFAULTS.strategy,
+  )
+  const [startDate, setStartDate] = useState(initialHandoff?.startDate ?? DEFAULTS.startDate)
+  const [endDate, setEndDate] = useState(initialHandoff?.endDate ?? DEFAULTS.endDate)
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

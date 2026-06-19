@@ -49,4 +49,18 @@ test('Compare Configs page runs two real backtests and renders both curves', asy
   await expect(chart).toBeVisible()
   await expect(chart.getByText('Config A')).toBeVisible()
   await expect(chart.getByText('Config B')).toBeVisible()
+
+  // The methodology bridge — click Validate on a Config and assert the Validation
+  // page mounts with that config's (symbol, strategy) already pre-filled. This is
+  // the cross-page guarantee from appShell.requestValidation.
+  const validateButtons = table.getByRole('button', { name: /validate this config/i })
+  await validateButtons.first().click()
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Validation Report' }),
+  ).toBeVisible()
+  // Default Compare symbol is AAPL; the catalog's first strategy is SMA.
+  await expect(page.getByLabel('Symbol')).toHaveValue('AAPL')
+  // 'Strategy' also matches the validation page's 'strategy info' region; scope
+  // to the <select> by role to disambiguate.
+  await expect(page.getByRole('combobox', { name: 'Strategy' })).toHaveValue('sma')
 })

@@ -4,10 +4,17 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { beforeEach } from 'vitest'
 
+import { useAppShell } from '../../state/appShell'
 import { server } from '../../test/server'
 import { passingReport, renderWithClient } from '../../test/utils'
 import { ValidationReportPage } from './ValidationReportPage'
+
+beforeEach(() => {
+  // Reset appShell — Validation page consumes pendingValidation on mount.
+  useAppShell.setState({ activePage: 'data-explorer', pendingValidation: null })
+})
 
 test('renders the form with sensible defaults once the catalog lands', async () => {
   renderWithClient(<ValidationReportPage />)
@@ -61,6 +68,28 @@ test('the catalog drives the strategy dropdown — new strategies appear automat
   const optionValues = Array.from(dropdown.querySelectorAll('option')).map((o) => o.value)
   // The default test catalog (test/server.ts) includes mean_reversion among others.
   expect(optionValues).toContain('mean_reversion')
+})
+
+test('hydrates the form from a pending validation handoff on mount', async () => {
+  // The methodology bridge from Compare Configs: clicking "Validate this config"
+  // sets appShell.pendingValidation AND switches the page. ValidationReportPage
+  // must consume that handoff on mount, pre-fill the form, and clear the store —
+  // single-shot so re-navigating doesn't re-apply.
+  useAppShell.setState({
+    pendingValidation: {
+      symbol: 'QQQ',
+      strategy: 'mean_reversion',
+      startDate: '2020-01-01',
+      endDate: '2024-12-31',
+    },
+  })
+  renderWithClient(<ValidationReportPage />)
+  expect(await screen.findByLabelText(/symbol/i)).toHaveValue('QQQ')
+  expect(screen.getByLabelText(/^strategy$/i)).toHaveValue('mean_reversion')
+  expect(screen.getByLabelText(/start date/i)).toHaveValue('2020-01-01')
+  expect(screen.getByLabelText(/end date/i)).toHaveValue('2024-12-31')
+  // Store is cleared post-consumption so re-mounts don't re-apply.
+  expect(useAppShell.getState().pendingValidation).toBeNull()
 })
 
 test('surfaces the backend detail when validation fails', async () => {

@@ -226,10 +226,14 @@ export function CompareConfigsPage() {
         </form>
       )}
 
-      {compare.status === 'settled' && (
+      {compare.status === 'settled' && selectedEntry && (
         <>
           <CompareEquityCurves rows={rows.map((r, i) => ({ label: rowLabel(i), values: r.values }))} results={compare.results} />
           <CompareMetricsTable
+            symbol={symbol.trim().toUpperCase()}
+            strategy={selectedEntry.name}
+            startDate={startDate}
+            endDate={endDate}
             rows={rows.map((r, i) => ({ label: rowLabel(i), values: r.values }))}
             results={compare.results}
           />

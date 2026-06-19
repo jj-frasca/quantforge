@@ -1,13 +1,21 @@
-// App: renders the shell + 4-page nav (Data Explorer / Backtest Results / Validation /
-// About); default page is Data Explorer (natural flow: ingest first, then backtest or
-// validate). Backend mocked with MSW.
+// App: renders the shell + 5-page nav (Data Explorer / Backtest Results /
+// Compare Configs / Validation / About); default page is Data Explorer (natural
+// flow: ingest first, then backtest or validate). Backend mocked with MSW.
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { beforeEach } from 'vitest'
 
 import App from './App'
+import { useAppShell } from './state/appShell'
 import { server } from './test/server'
 import { passingReport, renderWithClient } from './test/utils'
+
+beforeEach(() => {
+  // appShell is a Zustand singleton — reset between tests so each starts on the
+  // default page with no pending handoff.
+  useAppShell.setState({ activePage: 'data-explorer', pendingValidation: null })
+})
 
 test('renders the app shell with the Data Explorer page by default', () => {
   renderWithClient(<App />)

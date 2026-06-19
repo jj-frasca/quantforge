@@ -1,18 +1,10 @@
-import { useState } from 'react'
-
 import { OnboardingBanner } from './components/ui/OnboardingBanner'
 import { AboutPage } from './features/about/AboutPage'
 import { BacktestResultsPage } from './features/backtest-results/BacktestResultsPage'
 import { DataExplorerPage } from './features/data-explorer/DataExplorerPage'
 import { CompareConfigsPage } from './features/strategy-config/CompareConfigsPage'
 import { ValidationReportPage } from './features/validation-report/ValidationReportPage'
-
-type PageId =
-  | 'validation'
-  | 'data-explorer'
-  | 'backtest-results'
-  | 'compare-configs'
-  | 'about'
+import { useAppShell, type PageId } from './state/appShell'
 
 const PAGES: { id: PageId; label: string }[] = [
   { id: 'data-explorer', label: 'Data Explorer' },
@@ -23,7 +15,8 @@ const PAGES: { id: PageId; label: string }[] = [
 ]
 
 function App() {
-  const [page, setPage] = useState<PageId>('data-explorer')
+  const page = useAppShell((state) => state.activePage)
+  const setPage = useAppShell((state) => state.setActivePage)
 
   return (
     <main className="app-shell">
