@@ -1,5 +1,5 @@
 .PHONY: help install dev down test test-live test-integration lint format migrate check coverage \
-        frontend-install frontend-lint frontend-test frontend-check check-all
+        frontend-install frontend-lint frontend-test frontend-check e2e e2e-install check-all
 
 # backend is a uv project living in ./backend
 BE := cd backend && uv run
@@ -54,5 +54,11 @@ frontend-test: ## Frontend tests with coverage gate (>=75%)
 	$(FE) npm run coverage
 
 frontend-check: frontend-lint frontend-test ## Frontend gate: lint + typecheck + tests
+
+e2e-install: ## One-time: install the Playwright Chromium browser
+	$(FE) npx playwright install chromium
+
+e2e: ## Browser e2e smoke (real backend + dev server) — local only, NOT a CI/coverage gate
+	$(FE) npm run e2e
 
 check-all: check frontend-check ## Full gate: backend + frontend

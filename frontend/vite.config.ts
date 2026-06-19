@@ -15,6 +15,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.ts',
+    // Vitest owns src/** only. The Playwright e2e specs in e2e/** import
+    // @playwright/test and must NOT be collected here (they fail to load under
+    // Vitest's runner).
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['e2e/**', 'node_modules/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
