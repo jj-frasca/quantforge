@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
 import { defaultDateRange } from '../../lib/defaultDateRange'
+import { useAppShell } from '../../state/appShell'
 import type { BacktestRequest, StrategyConfig } from '../../types/backtest'
 import type { StrategySchema } from '../../types/strategies'
 import { groupByCategory } from '../strategies/groupByCategory'
@@ -210,7 +211,32 @@ export function BacktestResultsPage() {
       {backtest.isError && (
         <p role="alert">Backtest failed — {(backtest.error as Error).message}</p>
       )}
-      {backtest.data && <BacktestResultView result={backtest.data} />}
+      {backtest.data && selectedEntry && (
+        <>
+          <BacktestResultView result={backtest.data} />
+          <div className="post-result-bridge">
+            <p>
+              In-sample numbers look good?{' '}
+              Run the full validation suite to see whether they survive PBO and the
+              Deflated Sharpe penalty.
+            </p>
+            <button
+              type="button"
+              className="validate-strategy-bridge"
+              onClick={() =>
+                useAppShell.getState().requestValidation({
+                  symbol: symbol.trim().toUpperCase(),
+                  strategy: selectedEntry.name,
+                  startDate,
+                  endDate,
+                })
+              }
+            >
+              Validate this strategy →
+            </button>
+          </div>
+        </>
+      )}
     </section>
   )
 }

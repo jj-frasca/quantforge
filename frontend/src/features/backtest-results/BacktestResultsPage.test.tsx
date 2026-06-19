@@ -4,11 +4,17 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { beforeEach } from 'vitest'
 
+import { useAppShell } from '../../state/appShell'
 import { server } from '../../test/server'
 import { renderWithClient } from '../../test/utils'
 import type { BacktestResponse } from '../../types/backtest'
 import { BacktestResultsPage } from './BacktestResultsPage'
+
+beforeEach(() => {
+  useAppShell.setState({ activePage: 'data-explorer', pendingValidation: null })
+})
 
 const successResponse: BacktestResponse = {
   symbol: 'AAPL',
@@ -269,4 +275,22 @@ test('shows the strategy summary above the longer description so a beginner gets
   await screen.findByLabelText(/^strategy$/i)
   const info = screen.getByLabelText('strategy info')
   expect(info).toHaveTextContent(/recent average has been rising/i)
+})
+
+test('clicking "Validate this strategy" after a backtest hands off to Validation', async () => {
+  // Symmetric with the per-row Validate button on Compare Configs — closes the same
+  // methodology arc from the single-backtest workflow. After a successful backtest,
+  // the post-result bridge offers to take the user into PBO + Deflated Sharpe with
+  // the current (symbol, strategy, dates) pre-filled.
+  server.use(
+    http.post('/api/v1/backtest', () => HttpResponse.json(successResponse)),
+  )
+  renderWithClient(<BacktestResultsPage />)
+  await userEvent.click(await screen.findByRole('button', { name: /run backtest/i }))
+  await screen.findByLabelText('backtest result')
+  await userEvent.click(screen.getByRole('button', { name: /validate this strategy/i }))
+  const state = useAppShell.getState()
+  expect(state.activePage).toBe('validation')
+  expect(state.pendingValidation?.symbol).toBe('AAPL')
+  expect(state.pendingValidation?.strategy).toBe('sma')
 })
