@@ -4,13 +4,20 @@ import { OnboardingBanner } from './components/ui/OnboardingBanner'
 import { AboutPage } from './features/about/AboutPage'
 import { BacktestResultsPage } from './features/backtest-results/BacktestResultsPage'
 import { DataExplorerPage } from './features/data-explorer/DataExplorerPage'
+import { CompareConfigsPage } from './features/strategy-config/CompareConfigsPage'
 import { ValidationReportPage } from './features/validation-report/ValidationReportPage'
 
-type PageId = 'validation' | 'data-explorer' | 'backtest-results' | 'about'
+type PageId =
+  | 'validation'
+  | 'data-explorer'
+  | 'backtest-results'
+  | 'compare-configs'
+  | 'about'
 
 const PAGES: { id: PageId; label: string }[] = [
   { id: 'data-explorer', label: 'Data Explorer' },
   { id: 'backtest-results', label: 'Backtest Results' },
+  { id: 'compare-configs', label: 'Compare Configs' },
   { id: 'validation', label: 'Validation' },
   { id: 'about', label: 'About' },
 ]
@@ -54,6 +61,7 @@ function App() {
       {page === 'validation' && <ValidationReportPage />}
       {page === 'data-explorer' && <DataExplorerPage />}
       {page === 'backtest-results' && <BacktestResultsPage />}
+      {page === 'compare-configs' && <CompareConfigsPage />}
       {page === 'about' && <AboutPage />}
 
       <footer className="app-footer">

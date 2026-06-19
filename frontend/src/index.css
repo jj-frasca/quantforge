@@ -792,3 +792,78 @@ code {
   background: var(--accent);
   color: #fff;
 }
+
+/* Compare Configs page — N parameter rows for the same strategy/symbol/window
+   overlaid on one chart + a metrics table. ADR-011. */
+.compare-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.compare-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compare-row legend {
+  font-weight: 600;
+  color: var(--text-h);
+  padding: 0 6px;
+}
+
+.compare-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.compare-count {
+  color: var(--text);
+}
+
+.compare-chart {
+  margin-top: 20px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.compare-chart.empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text);
+}
+
+.compare-metrics-table {
+  margin-top: 16px;
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+
+.compare-metrics-table th,
+.compare-metrics-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.compare-metrics-table thead th {
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.compare-row-error {
+  color: var(--accent);
+  font-style: italic;
+}
