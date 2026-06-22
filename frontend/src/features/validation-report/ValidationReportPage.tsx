@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
 import { defaultDateRange } from '../../lib/defaultDateRange'
@@ -27,13 +27,21 @@ const toIsoStartOfDay = (date: string): string => `${date}T00:00:00Z`
 export function ValidationReportPage() {
   const validation = useValidation()
   const strategies = useStrategies()
-  // Lazy initializer reads & clears the pending handoff on first mount only —
-  // single-shot, so re-navigating to Validation after the consumer ran won't
-  // re-apply the same handoff. App.tsx unmounts pages on nav so every mount is
-  // a fresh first-render.
+  // Lazy init READS the pending handoff so the form's initial values are correct
+  // on first paint. The clear happens in the effect below — calling the store's
+  // set() during this component's render would re-render App mid-render (it
+  // subscribes to appShell), tripping React's "Cannot update a component while
+  // rendering a different component" warning. Effect deferral keeps the store
+  // mutation outside any other component's render pass.
   const [initialHandoff] = useState(() =>
-    useAppShell.getState().consumePendingValidation(),
+    useAppShell.getState().pendingValidation,
   )
+  useEffect(() => {
+    if (initialHandoff !== null) {
+      useAppShell.setState({ pendingValidation: null })
+    }
+  }, [initialHandoff])
+
   const [symbol, setSymbol] = useState(initialHandoff?.symbol ?? DEFAULTS.symbol)
   const [strategy, setStrategy] = useState<string>(
     initialHandoff?.strategy ?? DEFAULTS.strategy,

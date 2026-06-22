@@ -19,6 +19,18 @@ test.beforeEach(async ({ page }) => {
 test('Compare Configs page runs two real backtests and renders both curves', async ({
   page,
 }) => {
+  // Track any console.error or uncaught page error — the methodology-bridge slice
+  // (commit 0377ee1) originally shipped a setState-in-render in the handoff
+  // consumer that fired React's "Cannot update a component while rendering a
+  // different component" warning. The unit tests don't exercise StrictMode so
+  // this needs to be caught at the e2e layer. Any console.error during the
+  // entire flow fails the test.
+  const consoleErrors: string[] = []
+  page.on('pageerror', (err) => consoleErrors.push(`pageerror: ${err.message}`))
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') consoleErrors.push(`console.error: ${msg.text()}`)
+  })
+
   await page.goto('/')
 
   await page.getByRole('button', { name: 'Compare Configs', exact: true }).click()
@@ -63,4 +75,9 @@ test('Compare Configs page runs two real backtests and renders both curves', asy
   // 'Strategy' also matches the validation page's 'strategy info' region; scope
   // to the <select> by role to disambiguate.
   await expect(page.getByRole('combobox', { name: 'Strategy' })).toHaveValue('sma')
+
+  // No setState-in-render warnings from the handoff path; no unrelated console
+  // errors either. The fix this assertion guards: ValidationReportPage now clears
+  // the store in useEffect, not during lazy-init of useState.
+  expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
 })
