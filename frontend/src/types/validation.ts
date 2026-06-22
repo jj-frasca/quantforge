@@ -8,6 +8,16 @@ export const interpretationSchema = z.object({
 
 export type Interpretation = z.infer<typeof interpretationSchema>
 
+// One bucket of the regime breakdown — strategy performance restricted to bull
+// OR bear bars. ADR-012; the backend computes this for the BEST config only.
+export const regimeBreakdownEntrySchema = z.object({
+  n_bars: z.number().int().nonnegative(),
+  total_return: z.number(),
+  sharpe: z.number(),
+})
+
+export type RegimeBreakdownEntry = z.infer<typeof regimeBreakdownEntrySchema>
+
 // Mirrors the backend ValidationReport (api-contracts.md / app/validation/report.py).
 // `passed` is server-computed and authoritative — render the verdict from it.
 export const validationReportSchema = z.object({
@@ -21,6 +31,10 @@ export const validationReportSchema = z.object({
   flags: z.array(z.string()),
   interpretations: z.array(interpretationSchema),
   passed: z.boolean(),
+  // Keys are open-set ("bull" / "bear" today; possibly "sideways" in the future
+  // per ADR-012 §Consequences). Default {} so test fixtures and older responses
+  // still parse.
+  regime_breakdown: z.record(z.string(), regimeBreakdownEntrySchema).default({}),
 })
 
 export type ValidationReport = z.infer<typeof validationReportSchema>

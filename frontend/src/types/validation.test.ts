@@ -13,6 +13,10 @@ const valid = {
   flags: [],
   interpretations: [],
   passed: true,
+  regime_breakdown: {
+    bull: { n_bars: 100, total_return: 0.1, sharpe: 1.0 },
+    bear: { n_bars: 50, total_return: 0.0, sharpe: 0.5 },
+  },
 }
 
 test('validationReportSchema parses a valid report', () => {

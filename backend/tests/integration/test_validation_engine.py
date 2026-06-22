@@ -56,3 +56,14 @@ def test_overfitting_risk_is_flagged_on_noise() -> None:
     assert report.pbo >= 0.5
     assert any("overfitting" in flag for flag in report.flags)
     assert report.passed is False
+
+
+def test_report_carries_a_regime_breakdown_for_the_best_config() -> None:
+    # ADR-012: the report must surface bull/bear performance of the BEST config so
+    # the frontend can say "only works in bulls" when one regime carries the edge.
+    report = ValidationEngine().validate("sma_crossover", _CONFIGS, _random_walk_frame(seed=0))
+    # Random walk produces both regimes; at least one key should be present.
+    assert len(report.regime_breakdown) >= 1
+    for label, entry in report.regime_breakdown.items():
+        assert label in {"bull", "bear"}
+        assert entry.n_bars >= 0

@@ -20,6 +20,23 @@ class Interpretation(BaseModel):
     verdict: Verdict
 
 
+class RegimeBreakdownEntry(BaseModel):
+    """Strategy performance restricted to one market regime (bull/bear).
+
+    Notes:
+        Keys of the parent ``regime_breakdown`` dict are open-set (ADR-012) so a
+        future "sideways" regime is not a breaking response change. n_bars + Sharpe
+        let the frontend say "only works in bulls" when one regime carries the
+        edge (validation-methodology.md §5).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    n_bars: int
+    total_return: float
+    sharpe: float
+
+
 class ValidationReport(BaseModel):
     """Aggregated validation result for one strategy — the MVP deliverable.
 
@@ -40,6 +57,10 @@ class ValidationReport(BaseModel):
     n_purged_folds: int
     flags: list[str] = Field(default_factory=list)
     interpretations: list[Interpretation] = Field(default_factory=list)
+    # ADR-012: regime breakdown for the BEST config (the one whose Sharpe drives
+    # the report's headline metrics). Keyed by regime name; missing key means
+    # zero bars in that regime.
+    regime_breakdown: dict[str, RegimeBreakdownEntry] = Field(default_factory=dict)
 
     @field_validator("pbo", "parameter_stability_score")
     @classmethod

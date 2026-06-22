@@ -7,7 +7,8 @@ from app.validation.deflated_sharpe import deflated_sharpe
 from app.validation.parameter_stability import parameter_stability
 from app.validation.pbo import probability_of_backtest_overfitting
 from app.validation.purged_cv import purged_kfold_splits
-from app.validation.report import Interpretation, ValidationReport
+from app.validation.regime_analysis import analyze_regimes
+from app.validation.report import Interpretation, RegimeBreakdownEntry, ValidationReport
 from app.validation.walk_forward import walk_forward_splits
 
 _SHORT_SAMPLE = 100
@@ -149,10 +150,12 @@ class ValidationEngine:
             raise ValueError("need >= 2 configurations to estimate overfitting")
 
         returns_columns = []
+        returns_series: list[pd.Series] = []
         sharpes = []
         for strategy in configs:
             result = self._engine.run_strategy(data, strategy)
             returns_columns.append(result.returns.to_numpy())
+            returns_series.append(result.returns)
             sharpes.append(result.metrics.sharpe)
 
         performance = np.column_stack(returns_columns)
@@ -163,6 +166,10 @@ class ValidationEngine:
         sr_std = max(float(np.std(sharpes, ddof=1)), 1e-6)
         deflated = deflated_sharpe(observed_sharpe, n_trials=len(configs), sr_std=sr_std)
         stability = parameter_stability(sharpes).stability_score
+
+        # ADR-012: regime breakdown for the BEST config — the same config whose
+        # Sharpe drives observed_sharpe / deflated_sharpe above.
+        regime_breakdown = self._regime_breakdown(returns_series[best], data)
 
         n_obs = len(data)
         flags: list[str] = []
@@ -181,4 +188,26 @@ class ValidationEngine:
             n_purged_folds=len(purged_kfold_splits(n_obs, self._purged_folds, self._embargo)),
             flags=flags,
             interpretations=_interpret(pbo, deflated, stability),
+            regime_breakdown=regime_breakdown,
         )
+
+    @staticmethod
+    def _regime_breakdown(
+        best_returns: pd.Series, data: pd.DataFrame
+    ) -> dict[str, RegimeBreakdownEntry]:
+        """Bucket the best config's bars into bull/bear regimes (ADR-012).
+
+        Notes:
+            Uses the canonical 'close' column for the market series — every PriceBar
+            row in the validation data has it (strategies need it to backtest). Defaults
+            to ``analyze_regimes``'s 20-bar trailing window.
+        """
+        raw = analyze_regimes(best_returns, data["close"])
+        return {
+            label: RegimeBreakdownEntry(
+                n_bars=metrics.n_bars,
+                total_return=metrics.total_return,
+                sharpe=metrics.sharpe,
+            )
+            for label, metrics in raw.items()
+        }

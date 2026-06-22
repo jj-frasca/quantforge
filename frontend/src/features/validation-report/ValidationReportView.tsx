@@ -1,5 +1,6 @@
 import { Term } from '../../components/ui/Term'
 import type { ValidationReport } from '../../types/validation'
+import { RegimeBreakdownView } from './RegimeBreakdownView'
 
 const asPercent = (value: number): string => `${(value * 100).toFixed(1)}%`
 const asRatio = (value: number): string => value.toFixed(2)
@@ -90,6 +91,8 @@ export function ValidationReportView({ report }: Props) {
           ))}
         </ul>
       )}
+
+      <RegimeBreakdownView breakdown={report.regime_breakdown} />
     </section>
   )
 }

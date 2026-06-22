@@ -34,6 +34,10 @@ export const passingReport: ValidationReport = {
     },
   ],
   passed: true,
+  regime_breakdown: {
+    bull: { n_bars: 180, total_return: 0.15, sharpe: 1.3 },
+    bear: { n_bars: 100, total_return: 0.05, sharpe: 0.9 },
+  },
 }
 
 export const failingReport: ValidationReport = {
@@ -63,4 +67,8 @@ export const failingReport: ValidationReport = {
     },
   ],
   passed: false,
+  regime_breakdown: {
+    bull: { n_bars: 220, total_return: 0.12, sharpe: 1.1 },
+    bear: { n_bars: 60, total_return: -0.18, sharpe: -0.5 },
+  },
 }
