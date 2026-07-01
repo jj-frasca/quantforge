@@ -46,10 +46,24 @@ const validResponse = {
     { timestamp_utc: '2024-01-15T00:00:00Z', direction: 'buy' as const, equity: 101_000 },
     { timestamp_utc: '2024-02-20T00:00:00Z', direction: 'sell' as const, equity: 103_500 },
   ],
+  benchmark_comparison: {
+    benchmark_symbol: 'SPY',
+    alpha: 0.04,
+    beta: 0.9,
+    information_ratio: 0.5,
+    tracking_error: 0.08,
+    benchmark_relative_drawdown: -0.1,
+  },
 }
 
 test('backtestResponseSchema parses a valid response', () => {
   expect(backtestResponseSchema.parse(validResponse)).toEqual(validResponse)
+})
+
+test('backtestResponseSchema accepts a null benchmark_comparison', () => {
+  // ADR-013: the field is nullable — a benchmark-less response is legitimate, not an error.
+  const parsed = backtestResponseSchema.parse({ ...validResponse, benchmark_comparison: null })
+  expect(parsed.benchmark_comparison).toBeNull()
 })
 
 test('backtestResponseSchema rejects a negative n_trades', () => {

@@ -334,6 +334,105 @@ def test_backtest_endpoint_supports_triple_ma_alignment() -> None:
         app.dependency_overrides.clear()
 
 
+_BENCHMARK_KEYS = {
+    "benchmark_symbol",
+    "alpha",
+    "beta",
+    "information_ratio",
+    "tracking_error",
+    "benchmark_relative_drawdown",
+}
+
+
+def test_backtest_endpoint_includes_benchmark_comparison_vs_spy() -> None:
+    # ADR-013: every backtest reports alpha/beta/IR/tracking-error/relative-drawdown
+    # against SPY, fetched via the same cache-aside path as the requested symbol.
+    try:
+        response = _client(_FakeAdapter(), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=_BODY
+        )
+        assert response.status_code == 200, response.text
+        bench = response.json()["benchmark_comparison"]
+        assert bench is not None
+        assert set(bench) == _BENCHMARK_KEYS
+        assert bench["benchmark_symbol"] == "SPY"
+        for key in _BENCHMARK_KEYS - {"benchmark_symbol"}:
+            assert isinstance(bench[key], float)
+        # Relative drawdown is a drawdown => in [-1, 0].
+        assert -1.0 <= bench["benchmark_relative_drawdown"] <= 0.0
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_backtest_endpoint_benchmark_present_when_symbol_is_spy() -> None:
+    # symbol == SPY reuses the fetched series (no redundant fetch) but still reports a
+    # comparison: a strategy on SPY vs. holding SPY is a legitimate question.
+    body = {**_BODY, "symbol": "SPY"}
+    try:
+        response = _client(_FakeAdapter(), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=body
+        )
+        assert response.status_code == 200, response.text
+        bench = response.json()["benchmark_comparison"]
+        assert bench is not None
+        assert bench["benchmark_symbol"] == "SPY"
+    finally:
+        app.dependency_overrides.clear()
+
+
+class _SparseBenchmarkAdapter(DataSourceAdapter):
+    """Returns a healthy series for the requested symbol but too few bars for SPY,
+    so the benchmark fetch yields insufficient data."""
+
+    source = "yfinance"
+    adapter_version = "fake-sparse-1"
+
+    def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+        n = 5 if symbol == "SPY" else 300
+        return builders.clean_series(symbol=symbol, n=n)
+
+
+def test_backtest_endpoint_benchmark_null_when_spy_data_insufficient() -> None:
+    # ADR-013: a SPY-fetch shortfall must NOT 500 the core backtest — the field is
+    # simply None and the strategy's own result still returns 200.
+    try:
+        response = _client(_SparseBenchmarkAdapter(), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=_BODY
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["benchmark_comparison"] is None
+        # The rest of the backtest is unaffected.
+        assert len(body["equity_curve"]) > 0
+    finally:
+        app.dependency_overrides.clear()
+
+
+class _RaisingBenchmarkAdapter(DataSourceAdapter):
+    """Healthy for the requested symbol; raises when SPY is fetched — simulates a
+    data-vendor hiccup that hits only the benchmark leg."""
+
+    source = "yfinance"
+    adapter_version = "fake-raise-1"
+
+    def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+        if symbol == "SPY":
+            raise RuntimeError("benchmark vendor unavailable")
+        return builders.clean_series(symbol=symbol, n=300)
+
+
+def test_backtest_endpoint_benchmark_null_when_spy_fetch_raises() -> None:
+    # ADR-013: a raising SPY fetch degrades to no comparison, never a 500.
+    try:
+        response = _client(_RaisingBenchmarkAdapter(), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=_BODY
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["benchmark_comparison"] is None
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_backtest_endpoint_rejects_unknown_strategy_name() -> None:
     # discriminated union: an unknown `name` is a 422 from Pydantic, never reaches our handler
     bad = {**_BODY, "strategy": {"name": "bogus", "fast": 5, "slow": 20}}

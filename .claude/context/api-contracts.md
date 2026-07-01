@@ -175,7 +175,12 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
     "trade_markers": [
       { "timestamp_utc": "...", "direction": "buy", "equity": 101000.0 },
       { "timestamp_utc": "...", "direction": "sell", "equity": 103500.0 }
-    ]
+    ],
+    "benchmark_comparison": {
+      "benchmark_symbol": "SPY", "alpha": 0.037, "beta": 0.85,
+      "information_ratio": 0.61, "tracking_error": 0.09,
+      "benchmark_relative_drawdown": -0.12
+    }
   }
   ```
   - `buy_and_hold_curve` is a 100% long position of the SAME symbol from t=0, same
@@ -194,6 +199,13 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
     y-coordinate when overlaid on the equity-curve chart. The first bar with a non-zero
     position is NOT a marker (we mark signal *changes*, not the initial state). Empty list
     if the strategy never moves direction in the backtest window.
+  - `benchmark_comparison` (ADR-013) is the strategy-vs-SPY decomposition: annualized
+    `alpha`, `beta`, `information_ratio`, annualized `tracking_error`, and
+    `benchmark_relative_drawdown` (worst underperformance vs SPY, in `[-1, 0]`). SPY is
+    fetched via the same cache-aside path; when `symbol == "SPY"` the fetched series is
+    reused. **The field is `null`** when the SPY series can't be fetched or doesn't overlap
+    — a benchmark is context, not a precondition, so its absence never fails the backtest.
+    The frontend Zod schema mirrors it as **nullable** ([[feedback-frontend-shadow-validators]]).
 - `422` → insufficient data after the cache-miss ingest, or an unknown strategy discriminator.
 
 **DI**: `get_data_adapter` + `get_repository`. Same overrides as /validate in tests.

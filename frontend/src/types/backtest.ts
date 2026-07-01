@@ -87,6 +87,21 @@ export const tradeMarkerSchema = z.object({
 
 export type TradeMarker = z.infer<typeof tradeMarkerSchema>
 
+// Strategy-vs-SPY decomposition (ADR-013). NULLABLE by contract: the backend returns
+// null when the SPY series can't be fetched or doesn't overlap — a benchmark is context,
+// not a precondition. A non-nullable mirror here would 422 a legitimate benchmark-less
+// response (see feedback-frontend-shadow-validators).
+export const benchmarkComparisonSchema = z.object({
+  benchmark_symbol: z.string(),
+  alpha: z.number(),
+  beta: z.number(),
+  information_ratio: z.number(),
+  tracking_error: z.number(),
+  benchmark_relative_drawdown: z.number(),
+})
+
+export type BenchmarkComparison = z.infer<typeof benchmarkComparisonSchema>
+
 export const backtestResponseSchema = z.object({
   symbol: z.string(),
   strategy_name: z.string(),
@@ -102,6 +117,7 @@ export const backtestResponseSchema = z.object({
   rolling_sharpe_window: z.number().int().positive(),
   return_distribution: returnDistributionSchema,
   trade_markers: z.array(tradeMarkerSchema),
+  benchmark_comparison: benchmarkComparisonSchema.nullable(),
 })
 
 export type BacktestResponse = z.infer<typeof backtestResponseSchema>

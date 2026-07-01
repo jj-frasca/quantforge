@@ -53,6 +53,7 @@ const successResponse: BacktestResponse = {
     kurtosis: 0.5,
   },
   trade_markers: [],
+  benchmark_comparison: null,
 }
 
 test('renders the form with catalog-driven defaults once strategies load', async () => {

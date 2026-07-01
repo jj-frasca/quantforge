@@ -43,6 +43,7 @@ const baseResponse = {
     kurtosis: 0,
   },
   trade_markers: [],
+  benchmark_comparison: null,
 }
 
 const buildRequest = (fast: number, slow: number): BacktestRequest => ({

@@ -1,4 +1,5 @@
 import type { BacktestResponse } from '../../types/backtest'
+import { BenchmarkComparisonPanel } from './BenchmarkComparisonPanel'
 import { DrawdownChart } from './DrawdownChart'
 import { EquityCurveChart } from './EquityCurveChart'
 import { ReturnDistributionChart } from './ReturnDistributionChart'
@@ -81,6 +82,7 @@ export function BacktestResultView({ result }: Props) {
         benchmarkLabel={`Buy & hold ${result.symbol}`}
         tradeMarkers={result.trade_markers}
       />
+      <BenchmarkComparisonPanel comparison={result.benchmark_comparison} />
       <DrawdownChart data={result.drawdown_curve} />
       <RollingSharpeChart
         data={result.rolling_sharpe_curve}

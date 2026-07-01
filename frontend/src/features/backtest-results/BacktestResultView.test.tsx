@@ -52,6 +52,14 @@ const winning: BacktestResponse = {
     { timestamp_utc: '2024-07-22T00:00:00Z', direction: 'sell', equity: 125_000 },
     { timestamp_utc: '2024-09-10T00:00:00Z', direction: 'buy', equity: 120_000 },
   ],
+  benchmark_comparison: {
+    benchmark_symbol: 'SPY',
+    alpha: 0.037,
+    beta: 0.85,
+    information_ratio: 0.61,
+    tracking_error: 0.09,
+    benchmark_relative_drawdown: -0.12,
+  },
 }
 
 const losing: BacktestResponse = {
@@ -61,11 +69,13 @@ const losing: BacktestResponse = {
 
 test('renders the heading, the metrics, and the equity curve summary', () => {
   render(<BacktestResultView result={winning} />)
-  expect(screen.getByRole('heading')).toHaveTextContent(/sma_crossover/i)
+  expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/sma_crossover/i)
   expect(screen.getByText('1.50')).toBeInTheDocument() // sharpe
   expect(screen.getByText('18.0%')).toBeInTheDocument() // annualized_return
-  expect(screen.getByRole('status')).toHaveTextContent(/total return 42\.0%/i)
-  expect(screen.getByRole('status')).toHaveTextContent(/buy & hold 20\.0%/i)
+  // The view now renders a second role=status verdict (the benchmark panel), so scope
+  // to the total-return line by its text rather than the ambiguous role.
+  const verdict = screen.getByText(/total return 42\.0%/i)
+  expect(verdict).toHaveTextContent(/buy & hold 20\.0%/i)
   expect(screen.getByLabelText('equity curve')).toBeInTheDocument()
 })
 

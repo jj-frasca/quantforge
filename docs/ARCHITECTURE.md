@@ -54,7 +54,7 @@ affect a section below, the section has been edited inline to match.
    current stable is the better engineering choice. Frontend tests run on Vitest + RTL + MSW;
    coverage gate ≥ 75%.
 
-## 0.6 Implementation Status (as of 2026-06-16)
+## 0.6 Implementation Status (as of 2026-06-30)
 
 The §4 tree below is the **target** layout; not all of it is built yet. Authoritative reality:
 
@@ -79,13 +79,15 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   per metric), `GET /api/v1/bars` (read-only projection of cached bars — float `ChartBar`
   for charting), `POST /api/v1/backtest` (single-config backtest, cache-aside; customizable
   `initial_capital` + `cost_rate`; returns equity + buy-and-hold + drawdown + rolling-Sharpe
-  curves + daily-return distribution + **trade_markers** for the chart overlay; discriminated
+  curves + daily-return distribution + **trade_markers** for the chart overlay + **nullable
+  `benchmark_comparison`** (alpha/beta/IR/tracking-error vs SPY, ADR-013); discriminated
   `StrategyConfig` over every catalog entry).
   Frontend: **Data Explorer** (form → `/ingest` → `IngestResultView` + Recharts price chart
   from `/bars`), **Backtest Results** (catalog-driven per-strategy param form with inline
   hints → `/backtest` → metrics + four canonical charts: equity-with-buy-and-hold AND
   trade-marker triangles, underwater drawdown, rolling Sharpe, return-distribution
-  histogram), **Validation Report** (symbol/strategy/range form → `/validate` → metrics +
+  histogram + a **benchmark-vs-SPY panel** (alpha/beta/IR, ADR-013) below the equity curve),
+  **Validation Report** (symbol/strategy/range form → `/validate` → metrics +
   Interpretations panel + flags), **About** (live-rendered catalog grouped by category +
   validation methodology + ADR links — the project's own self-documenting page). Strategy
   dropdowns on the form pages are grouped by category via `<optgroup>`. 4-way primary nav

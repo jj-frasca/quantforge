@@ -40,6 +40,7 @@ const success = (sharpe: number): CompareRow => ({
     rolling_sharpe_window: 60,
     return_distribution: { bins: [], skewness: 0, kurtosis: 0 },
     trade_markers: [],
+    benchmark_comparison: null,
   } as BacktestResponse,
 })
 

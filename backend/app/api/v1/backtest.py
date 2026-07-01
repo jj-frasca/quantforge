@@ -10,6 +10,7 @@ from app.data.sources.base import DataSourceAdapter
 from app.data.storage.repository import PriceBarRepository
 from app.dependencies import get_data_adapter, get_repository
 from app.research.backtesting.engine import BacktestEngine, BacktestResult
+from app.research.benchmarks.comparator import BenchmarkComparator
 from app.research.frames import bars_to_frame
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.builder import build_strategy
@@ -21,6 +22,7 @@ _MIN_BARS = 30
 _ROLLING_SHARPE_WINDOW = 60
 _TRADING_DAYS = 252
 _RETURN_HIST_BINS = 30
+_BENCHMARK_SYMBOL = "SPY"
 
 
 class BacktestRequest(BaseModel):
@@ -86,6 +88,24 @@ class ReturnDistribution(BaseModel):
     kurtosis: float  # excess kurtosis (Gaussian == 0)
 
 
+class BenchmarkComparisonView(BaseModel):
+    """Strategy-vs-benchmark decomposition (ADR-013), default benchmark SPY.
+
+    Notes:
+        alpha/beta separate skill from market exposure: beta≈1 with alpha≈0 means the
+        "edge" is just index exposure. IR is the excess-return Sharpe; tracking_error is
+        its annualized volatility. benchmark_relative_drawdown is the worst drawdown of the
+        strategy's equity RELATIVE to the benchmark's (in [-1, 0]).
+    """
+
+    benchmark_symbol: str
+    alpha: float
+    beta: float
+    information_ratio: float
+    tracking_error: float
+    benchmark_relative_drawdown: float
+
+
 class BacktestResponse(BaseModel):
     symbol: str
     strategy_name: str
@@ -110,6 +130,10 @@ class BacktestResponse(BaseModel):
     # Discrete position-flip events for the equity-curve overlay. Bars where the signal
     # changed direction; empty if the strategy never moved (a stuck-flat regime).
     trade_markers: list[TradeMarker]
+    # Alpha/beta/IR/tracking-error vs SPY (ADR-013). None when the SPY series can't be
+    # fetched or doesn't overlap — a benchmark is context, not a precondition, so its
+    # absence never denies the user their own result.
+    benchmark_comparison: BenchmarkComparisonView | None
 
 
 def _series_to_curve(series: "pd.Series") -> list[EquityPoint]:
@@ -192,6 +216,65 @@ def _rolling_sharpe(returns: "pd.Series", window: int) -> list[RollingSharpePoin
     return [RollingSharpePoint(timestamp_utc=ts, sharpe=float(v)) for ts, v in sharpe.items()]
 
 
+def _load_frame(
+    symbol: str,
+    start: datetime,
+    end: datetime,
+    adapter: DataSourceAdapter,
+    repository: PriceBarRepository,
+) -> "pd.DataFrame":
+    """Cache-aside load: read the store, ingest on a miss, return the canonical frame."""
+    bars = repository.get_bars(symbol, start, end)
+    if len(bars) < _MIN_BARS:
+        DataIngestionPipeline(adapter, repository).ingest(symbol, start, end)
+        bars = repository.get_bars(symbol, start, end)
+    return bars_to_frame(bars)
+
+
+def _benchmark_comparison(
+    symbol: str,
+    start: datetime,
+    end: datetime,
+    adapter: DataSourceAdapter,
+    repository: PriceBarRepository,
+    strategy_returns: "pd.Series",
+    symbol_close: "pd.Series",
+) -> BenchmarkComparisonView | None:
+    """Compare the strategy's returns to SPY buy-and-hold (ADR-013).
+
+    Notes:
+        Returns None rather than raising if SPY can't be fetched or doesn't overlap: a
+        benchmark is context, not a precondition, so a data-vendor hiccup on SPY must not
+        deny the user their own result. When the requested symbol IS SPY we reuse its
+        already-fetched close series instead of a redundant second fetch.
+    """
+    try:
+        if symbol.upper() == _BENCHMARK_SYMBOL:
+            bench_close = symbol_close
+        else:
+            bench_frame = _load_frame(_BENCHMARK_SYMBOL, start, end, adapter, repository)
+            if len(bench_frame) < _MIN_BARS:
+                return None
+            bench_close = bench_frame["close"]
+    except Exception:
+        # Broad by intent: any failure fetching the benchmark degrades to "no comparison",
+        # never a 500 on the core backtest (BLE not selected in ruff.toml).
+        return None
+
+    bench_returns = bench_close.pct_change().fillna(0.0)
+    comparison = BenchmarkComparator(_BENCHMARK_SYMBOL).compare(strategy_returns, bench_returns)
+    if comparison.excess_returns.empty:
+        return None
+    return BenchmarkComparisonView(
+        benchmark_symbol=_BENCHMARK_SYMBOL,
+        alpha=comparison.alpha,
+        beta=comparison.beta,
+        information_ratio=comparison.information_ratio,
+        tracking_error=comparison.tracking_error,
+        benchmark_relative_drawdown=comparison.benchmark_relative_drawdown,
+    )
+
+
 def _to_response(
     symbol: str,
     strategy: BaseStrategy,
@@ -199,6 +282,7 @@ def _to_response(
     prices: "pd.Series",
     initial_capital: float,
     strategy_returns: "pd.Series",
+    benchmark_comparison: BenchmarkComparisonView | None,
 ) -> BacktestResponse:
     # Buy-and-hold equity: a 100% long position from t=0, same starting capital, no costs.
     bh_returns = prices.pct_change().fillna(0.0)
@@ -225,6 +309,7 @@ def _to_response(
         rolling_sharpe_window=_ROLLING_SHARPE_WINDOW,
         return_distribution=_return_distribution(strategy_returns, _RETURN_HIST_BINS),
         trade_markers=_trade_markers(result.position, result.equity_curve),
+        benchmark_comparison=benchmark_comparison,
     )
 
 
@@ -236,13 +321,7 @@ def backtest(
     repository: Annotated[PriceBarRepository, Depends(get_repository)],
 ) -> BacktestResponse:
     # Cache-aside, same as /validate (data is the same shape).
-    bars = repository.get_bars(request.symbol, request.start_date, request.end_date)
-    if len(bars) < _MIN_BARS:
-        DataIngestionPipeline(adapter, repository).ingest(
-            request.symbol, request.start_date, request.end_date
-        )
-        bars = repository.get_bars(request.symbol, request.start_date, request.end_date)
-    frame = bars_to_frame(bars)
+    frame = _load_frame(request.symbol, request.start_date, request.end_date, adapter, repository)
     if len(frame) < _MIN_BARS:
         raise HTTPException(
             status_code=422,
@@ -254,6 +333,15 @@ def backtest(
         cost_rate=request.cost_rate,
     )
     result = engine.run_strategy(frame, strategy)
+    benchmark = _benchmark_comparison(
+        request.symbol,
+        request.start_date,
+        request.end_date,
+        adapter,
+        repository,
+        result.returns,
+        frame["close"],
+    )
     return _to_response(
         request.symbol,
         strategy,
@@ -261,4 +349,5 @@ def backtest(
         frame["close"],
         engine.initial_capital,
         result.returns,
+        benchmark,
     )

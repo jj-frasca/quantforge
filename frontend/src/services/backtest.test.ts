@@ -51,6 +51,7 @@ const successResponse: BacktestResponse = {
     kurtosis: 0,
   },
   trade_markers: [],
+  benchmark_comparison: null,
 }
 
 test('requestBacktest returns a parsed response on success', async () => {

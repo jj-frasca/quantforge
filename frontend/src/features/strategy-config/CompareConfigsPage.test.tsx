@@ -41,6 +41,7 @@ const responseFor = (sharpe: number, totalReturn: number): BacktestResponse => (
     kurtosis: 0,
   },
   trade_markers: [],
+  benchmark_comparison: null,
 })
 
 test('renders the page with two default config rows', async () => {
