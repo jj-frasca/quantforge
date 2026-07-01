@@ -212,6 +212,36 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
 
 ---
 
+## POST /api/v1/monte-carlo
+Forward-looking risk of a strategy over a horizon (ADR-014 Phase 0). Runs the requested
+strategy (cache-aside, same as /backtest), estimates the strategy's daily drift + vol from its
+realized returns, and Monte-Carlo simulates `n_paths` GBM equity paths over `horizon_days`.
+
+- **Request**: `{ symbol, strategy (StrategyConfig), start_date, end_date, horizon_days=252,
+  n_paths=10000, loss_threshold=0.2, seed=42, initial_capital=100000, cost_rate=0.001 }`.
+  `horizon_days >= 1`, `n_paths >= 1`, `loss_threshold ∈ (0, 1]` (else `422`).
+- **Response** `MonteCarloResponse`:
+  ```json
+  {
+    "symbol": "AAPL", "strategy_name": "sma_crossover", "parameters": {"fast": 5, "slow": 20},
+    "horizon_days": 252, "n_paths": 10000, "loss_threshold": 0.2,
+    "prob_terminal_loss": 0.12, "prob_max_drawdown_exceeds": 0.28,
+    "terminal_return_p5": -0.18, "terminal_return_p50": 0.07, "terminal_return_p95": 0.41,
+    "expected_terminal_return": 0.08
+  }
+  ```
+  - `prob_terminal_loss` = P(strategy ends the horizon down more than `loss_threshold`).
+  - `prob_max_drawdown_exceeds` = P(worst intra-horizon drawdown breaches `loss_threshold`);
+    always `>= prob_terminal_loss` (an intra-horizon dip can recover by the end).
+  - Terminal-return percentiles (`p5/p50/p95`) + `expected_terminal_return` describe the
+    outcome distribution. **Deterministic under `seed`** — it flags POTENTIAL downside
+    (rule 6), it does not predict. A risk gate for the StrategyLab, not a forecast.
+- `422` → insufficient data (`< 30` bars) after the cache-miss ingest, or an unknown strategy.
+
+**DI**: `get_data_adapter` + `get_repository`. Reuses `/backtest`'s `_load_frame` cache-aside.
+
+---
+
 ## POST /api/v1/validate
 Run the full validation suite for a strategy on a symbol; returns a `ValidationReport`.
 

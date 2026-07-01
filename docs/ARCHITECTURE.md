@@ -72,7 +72,7 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   Alignment; `BenchmarkComparator`; `MonteCarloSimulator`; `ExperimentManifest`.
 - Validation: `deflated_sharpe`, `pbo` (CSCV), `walk_forward`, `purged_cv`,
   `parameter_stability`, `regime_analysis`; `ValidationEngine` → `ValidationReport`.
-- API: 6 endpoints — `GET /health`, `GET /api/v1/strategies` (catalog: each entry has
+- API: 7 endpoints — `GET /health`, `GET /api/v1/strategies` (catalog: each entry has
   category + label + description + citations + ParamSchema, ADR-010), `POST /api/v1/ingest`
   (runs `DataIngestionPipeline` behind DI), `POST /api/v1/validate` (**cache-aside** through
   the repo; auto-generated grids per catalog entry; returns plain-English `Interpretation`s
@@ -81,7 +81,10 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   `initial_capital` + `cost_rate`; returns equity + buy-and-hold + drawdown + rolling-Sharpe
   curves + daily-return distribution + **trade_markers** for the chart overlay + **nullable
   `benchmark_comparison`** (alpha/beta/IR/tracking-error vs SPY, ADR-013); discriminated
-  `StrategyConfig` over every catalog entry).
+  `StrategyConfig` over every catalog entry), `POST /api/v1/monte-carlo` (ADR-014 Phase 0 —
+  runs the strategy then GBM-simulates forward risk: P(terminal loss > X), P(max drawdown > X),
+  terminal-return percentiles; deterministic under `seed`; wires the previously-dead
+  `MonteCarloSimulator`).
   Frontend: **Data Explorer** (form → `/ingest` → `IngestResultView` + Recharts price chart
   from `/bars`), **Backtest Results** (catalog-driven per-strategy param form with inline
   hints → `/backtest` → metrics + four canonical charts: equity-with-buy-and-hold AND
