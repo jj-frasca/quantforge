@@ -7,9 +7,27 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.research.lab.experiment import Experiment, InMemoryExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.search import run_search
+
+_LENIENT = GateConfig(dsr_min=-100.0, pbo_max=1.01, stability_min=-1.0, holdout_sharpe_min=-100.0)
+
+
+def _snap(growth: float, net_margin: float) -> FundamentalSnapshot:
+    return FundamentalSnapshot(
+        symbol="AAPL",
+        cik=320193,
+        entity_name="Apple Inc.",
+        fiscal_year=2024,
+        form="10-K",
+        accession_number="a",
+        source_url="http://x",
+        revenue=400_000,
+        revenue_growth_yoy=growth,
+        net_margin=net_margin,
+    )
 
 
 def _random_walk_frame(seed: int, n: int = 1500) -> pd.DataFrame:
@@ -80,6 +98,36 @@ def test_a_passing_gate_records_a_graduate() -> None:
     assert exp.graduate is not None
     assert exp.graduate.strategy_name == exp.best_strategy_name
     assert isinstance(exp.graduate.holdout_sharpe, float)
+
+
+def test_bad_fundamentals_veto_graduation_even_when_technicals_pass() -> None:
+    # Lenient gate over a strong trend would graduate on technicals — but collapsing revenue
+    # vetoes it (ADR-017). The failed screen is recorded with reasons.
+    exp = run_search(
+        _strong_uptrend_frame(0),
+        "AAPL",
+        ["sma", "momentum"],
+        config=_LENIENT,
+        fundamentals=_snap(growth=-0.30, net_margin=-0.05),
+        fundamental_criteria=FundamentalCriteria(),
+    )
+    assert exp.best_gate_result is not None and exp.best_gate_result.passed is True
+    assert exp.graduate is None  # vetoed
+    assert exp.fundamental_screen is not None and exp.fundamental_screen.passed is False
+    assert exp.fundamentals is not None and exp.fundamentals.cik == 320193
+
+
+def test_healthy_fundamentals_allow_graduation() -> None:
+    exp = run_search(
+        _strong_uptrend_frame(0),
+        "AAPL",
+        ["sma", "momentum"],
+        config=_LENIENT,
+        fundamentals=_snap(growth=0.15, net_margin=0.25),
+        fundamental_criteria=FundamentalCriteria(),
+    )
+    assert exp.fundamental_screen is not None and exp.fundamental_screen.passed is True
+    assert exp.graduate is not None
 
 
 def test_experiment_records_into_the_pool_and_counts_trials() -> None:

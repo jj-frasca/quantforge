@@ -1,5 +1,11 @@
 import pandas as pd
 
+from app.data.fundamentals import (
+    FundamentalCriteria,
+    FundamentalScreen,
+    FundamentalSnapshot,
+    screen_fundamentals,
+)
 from app.research.backtesting.engine import BacktestEngine
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GraduationGate
@@ -37,6 +43,8 @@ def run_search(
     config: GateConfig | None = None,
     prior_trials: int = 0,
     n_per_param: int = 3,
+    fundamentals: FundamentalSnapshot | None = None,
+    fundamental_criteria: FundamentalCriteria | None = None,
     rationale: str = "",
 ) -> Experiment:
     """Run one search: validate each catalog strategy on the in-sample split, pick the best by
@@ -93,8 +101,15 @@ def run_search(
         holdout=holdout,
         config=gate_config,
     )
+    screen: FundamentalScreen | None = None
+    if fundamentals is not None and fundamental_criteria is not None:
+        screen = screen_fundamentals(fundamentals, fundamental_criteria)
+
+    # Fundamentals veto: a name that fails the 'sane fundamentals' screen cannot graduate no
+    # matter how good the technicals look (ADR-017). No screen (e.g. an ETF) = technicals only.
+    fundamentals_ok = screen is None or screen.passed
     graduate = None
-    if gate_result.passed:
+    if gate_result.passed and fundamentals_ok:
         graduate = Graduate(
             strategy_name=best_report.strategy_name,
             parameters=trials[best_idx].parameters,
@@ -111,6 +126,8 @@ def run_search(
         lifetime_trials=lifetime_trials,
         best_strategy_name=best_report.strategy_name,
         best_gate_result=gate_result,
+        fundamentals=fundamentals,
+        fundamental_screen=screen,
         graduate=graduate,
         rationale=rationale,
     )

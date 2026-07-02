@@ -12,6 +12,8 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
+from app.data.sources.edgar import SecEdgarFundamentalsSource
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import JsonFileExperimentStore
@@ -21,12 +23,22 @@ from app.research.strategies.catalog import STRATEGY_CATALOG
 
 POOL = Path("/tmp/qf_pool.json")
 START = datetime(2005, 1, 1, tzinfo=UTC)
+USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
+
+
+def _fundamentals(source: SecEdgarFundamentalsSource, symbol: str) -> FundamentalSnapshot | None:
+    """Best-effort fundamentals. ETFs/indices have no 10-K revenue -> None (technicals only)."""
+    try:
+        return source.fetch(symbol)
+    except (ValueError, OSError):
+        return None
 
 
 def main() -> None:
     symbols = sys.argv[1:] or ["SPY", "QQQ", "AAPL"]
     names = [entry.name for entry in STRATEGY_CATALOG]
     adapter = YFinanceAdapter()
+    edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     store = JsonFileExperimentStore(POOL)
     end = datetime.now(UTC)
 
@@ -34,8 +46,16 @@ def main() -> None:
         prior = store.trials_for_symbol(symbol)
         bars = adapter.fetch_price_bars(symbol, START, end)
         frame = bars_to_frame(bars)
+        fundamentals = _fundamentals(edgar, symbol)
         exp = run_search(
-            frame, symbol, names, config=GateConfig(), prior_trials=prior, rationale="first hunt"
+            frame,
+            symbol,
+            names,
+            config=GateConfig(),
+            prior_trials=prior,
+            fundamentals=fundamentals,
+            fundamental_criteria=FundamentalCriteria(),
+            rationale="first hunt",
         )
         store.add(exp)
 
@@ -51,8 +71,23 @@ def main() -> None:
                 f"{t.pbo:>8.2f}{t.parameter_stability_score:>11.2f}"
             )
 
+        if exp.fundamentals is not None:
+            f = exp.fundamentals
+            screen = (
+                "PASS" if (exp.fundamental_screen and exp.fundamental_screen.passed) else "FAIL"
+            )
+            growth = f"{f.revenue_growth_yoy:.1%}" if f.revenue_growth_yoy is not None else "n/a"
+            margin = f"{f.net_margin:.1%}" if f.net_margin is not None else "n/a"
+            print(
+                f"\nfundamentals ({f.form} FY{f.fiscal_year}): revenue growth {growth}, "
+                f"net margin {margin}  ->  screen {screen}  [cite {f.accession_number}]"
+            )
+            if exp.fundamental_screen and not exp.fundamental_screen.passed:
+                for reason in exp.fundamental_screen.reasons:
+                    print(f"  - {reason}")
+
         g = exp.best_gate_result
-        verdict = "GRADUATED ✅" if (g and g.passed) else "NO WINNER ❌"
+        verdict = "GRADUATED ✅" if (g and g.passed and exp.graduate) else "NO WINNER ❌"
         print(f"\nbest: {exp.best_strategy_name}  ->  {verdict}")
         if g and not g.passed:
             for reason in g.reasons:

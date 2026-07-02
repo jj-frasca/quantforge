@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.data.fundamentals import FundamentalScreen, FundamentalSnapshot
 from app.research.lab.gate import GateConfig, GateResult
 
 
@@ -52,6 +53,10 @@ class Experiment(BaseModel):
     # "Honest when it fails" (ADR-014) needs the losing gate result, not just the winners.
     best_strategy_name: str | None = None
     best_gate_result: GateResult | None = None
+    # Fundamentals context for the symbol (ADR-017): the cited snapshot + whether it cleared the
+    # 'sane fundamentals' screen. A failed screen vetoes graduation regardless of the technicals.
+    fundamentals: FundamentalSnapshot | None = None
+    fundamental_screen: FundamentalScreen | None = None
     graduate: Graduate | None = None
     rationale: str = ""
 

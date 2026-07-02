@@ -36,6 +36,45 @@ class FundamentalSnapshot(BaseModel):
     pe_ratio: float | None = None  # None until joined with a market price
 
 
+class FundamentalCriteria(BaseModel):
+    """Tunable 'sane fundamentals' thresholds (ADR-017). A None threshold skips that check."""
+
+    model_config = ConfigDict(frozen=True)
+
+    min_revenue_growth_yoy: float | None = 0.0
+    min_net_margin: float | None = 0.0
+
+
+class FundamentalScreen(BaseModel):
+    """Whether a name's fundamentals clear the criteria, with a reason per failed check."""
+
+    model_config = ConfigDict(frozen=True)
+
+    passed: bool
+    reasons: list[str] = []
+
+
+def screen_fundamentals(
+    snapshot: FundamentalSnapshot, criteria: FundamentalCriteria
+) -> FundamentalScreen:
+    """Conservative screen: a metric we cannot verify (None) FAILS its check — we don't trade a
+    company whose fundamentals we can't confirm."""
+    reasons: list[str] = []
+    if criteria.min_revenue_growth_yoy is not None:
+        g = snapshot.revenue_growth_yoy
+        if g is None:
+            reasons.append("revenue growth unavailable (cannot verify)")
+        elif g < criteria.min_revenue_growth_yoy:
+            reasons.append(f"revenue growth {g:.1%} < {criteria.min_revenue_growth_yoy:.1%}")
+    if criteria.min_net_margin is not None:
+        m = snapshot.net_margin
+        if m is None:
+            reasons.append("net margin unavailable (cannot verify)")
+        elif m < criteria.min_net_margin:
+            reasons.append(f"net margin {m:.1%} < {criteria.min_net_margin:.1%}")
+    return FundamentalScreen(passed=not reasons, reasons=reasons)
+
+
 def _annual_facts(
     gaap: dict[str, Any], tags: tuple[str, ...], unit: str = "USD"
 ) -> list[dict[str, Any]]:
