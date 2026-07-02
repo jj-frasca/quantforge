@@ -1,5 +1,4 @@
 import math
-from dataclasses import dataclass, field
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -42,8 +41,12 @@ class GateConfig(BaseModel):
         return compute_parameter_hash(self.model_dump())
 
 
-@dataclass(frozen=True)
-class GateResult:
+class GateResult(BaseModel):
+    """Deterministic graduation verdict — serializable so the experiment store can record the
+    exact judgment for the calibration loop (ADR-015/016)."""
+
+    model_config = ConfigDict(frozen=True)
+
     passed: bool
     dsr_ok: bool
     pbo_ok: bool
@@ -52,7 +55,7 @@ class GateResult:
     holdout_ok: bool
     required_track_record_years: float
     gate_config_version: str
-    reasons: list[str] = field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
 
 
 class GraduationGate:
