@@ -1,16 +1,19 @@
-"""Drive a StrategyLab hunt on real max-history daily data (ADR-014/015/016).
+"""Drive a StrategyLab universe hunt on real max-history daily data (ADR-014/015/016/017).
 
-Usage: PYTHONPATH=. uv run python scripts/run_hunt.py [SYMBOL ...]   (default: SPY QQQ AAPL)
+Usage: PYTHONPATH=. uv run python scripts/run_hunt.py [SYMBOL ...]   (default: a large-cap universe)
 
-Fetches the longest available daily history per symbol, searches every catalog strategy on the
-in-sample split, scores the best on the SEALED holdout, and applies the deterministic gate.
-Findings accumulate in a JSON research pool so the lifetime trial count compounds (the DSR/MinTRL
-honesty flywheel). This is the agent-driven loop, run locally — never in CI (live network).
+For each symbol: fetch the longest daily history, pull cited SEC-EDGAR fundamentals (best effort),
+search every catalog strategy on the in-sample split, score the best on the SEALED holdout, and
+apply the deterministic gate + fundamentals veto. Findings accumulate in a JSON research pool
+(the per-symbol trial count compounds → the DSR/MinTRL honesty flywheel). Prints a per-symbol
+summary and a cross-symbol leaderboard. Local-only (live network); never in CI.
 """
 
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+
+import pandas as pd
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.data.sources.edgar import SecEdgarFundamentalsSource
@@ -18,86 +21,97 @@ from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import JsonFileExperimentStore
 from app.research.lab.gate import GateConfig
-from app.research.lab.search import run_search
+from app.research.lab.universe import rank_experiments, run_universe_hunt
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
 POOL = Path("/tmp/qf_pool.json")
 START = datetime(2005, 1, 1, tzinfo=UTC)
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
 
-
-def _fundamentals(source: SecEdgarFundamentalsSource, symbol: str) -> FundamentalSnapshot | None:
-    """Best-effort fundamentals. ETFs/indices have no 10-K revenue -> None (technicals only)."""
-    try:
-        return source.fetch(symbol)
-    except (ValueError, OSError):
-        return None
+# A liquid large-cap universe across sectors — more independent shots on goal.
+DEFAULT_UNIVERSE = [
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "TSLA",
+    "AMD",
+    "CRM",
+    "ORCL",
+    "JPM",
+    "V",
+    "MA",
+    "UNH",
+    "JNJ",
+    "PG",
+    "KO",
+    "PEP",
+    "WMT",
+    "HD",
+    "XOM",
+    "CVX",
+    "DIS",
+    "NFLX",
+]
 
 
 def main() -> None:
-    symbols = sys.argv[1:] or ["SPY", "QQQ", "AAPL"]
+    symbols = sys.argv[1:] or DEFAULT_UNIVERSE
     names = [entry.name for entry in STRATEGY_CATALOG]
     adapter = YFinanceAdapter()
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     store = JsonFileExperimentStore(POOL)
     end = datetime.now(UTC)
 
-    for symbol in symbols:
-        prior = store.trials_for_symbol(symbol)
-        bars = adapter.fetch_price_bars(symbol, START, end)
-        frame = bars_to_frame(bars)
-        fundamentals = _fundamentals(edgar, symbol)
-        exp = run_search(
-            frame,
-            symbol,
-            names,
-            config=GateConfig(),
-            prior_trials=prior,
-            fundamentals=fundamentals,
-            fundamental_criteria=FundamentalCriteria(),
-            rationale="first hunt",
-        )
-        store.add(exp)
+    def frame_provider(symbol: str) -> pd.DataFrame:
+        return bars_to_frame(adapter.fetch_price_bars(symbol, START, end))
 
-        span_years = (frame.index.max() - frame.index.min()).days / 365.25
+    def fundamentals_provider(symbol: str) -> FundamentalSnapshot | None:
+        try:
+            return edgar.fetch(symbol)
+        except (ValueError, OSError):
+            return None  # ETFs/indices have no 10-K revenue
+
+    print(f"Hunting {len(symbols)} symbols x {len(names)} strategies...\n")
+    result = run_universe_hunt(
+        symbols,
+        names,
+        frame_provider,
+        fundamentals_provider=fundamentals_provider,
+        config=GateConfig(),
+        fundamental_criteria=FundamentalCriteria(),
+        store=store,
+        rationale="universe hunt",
+    )
+
+    for exp in result.experiments:
+        best = max(exp.trials, key=lambda t: t.deflated_sharpe)
+        screen = exp.fundamental_screen
+        fund = "n/a" if screen is None else ("PASS" if screen.passed else "FAIL")
+        verdict = "GRADUATED ✅" if exp.graduate else "—"
         print(
-            f"\n{'=' * 78}\n{symbol}  |  {len(frame)} daily bars  |  {span_years:.1f}y  "
-            f"|  lifetime trials: {exp.lifetime_trials}\n{'=' * 78}"
+            f"{exp.symbol:<6} best {best.strategy_name:<30} DSR {best.deflated_sharpe:>6.2f}  "
+            f"PBO {best.pbo:>4.2f}  fundamentals {fund:<4}  {verdict}"
         )
-        print(f"{'strategy':<32}{'obs SR':>9}{'DSR':>9}{'PBO':>8}{'stability':>11}")
-        for t in sorted(exp.trials, key=lambda x: x.deflated_sharpe, reverse=True):
-            print(
-                f"{t.strategy_name:<32}{t.observed_sharpe:>9.2f}{t.deflated_sharpe:>9.2f}"
-                f"{t.pbo:>8.2f}{t.parameter_stability_score:>11.2f}"
-            )
 
-        if exp.fundamentals is not None:
-            f = exp.fundamentals
-            screen = (
-                "PASS" if (exp.fundamental_screen and exp.fundamental_screen.passed) else "FAIL"
-            )
-            growth = f"{f.revenue_growth_yoy:.1%}" if f.revenue_growth_yoy is not None else "n/a"
-            margin = f"{f.net_margin:.1%}" if f.net_margin is not None else "n/a"
-            print(
-                f"\nfundamentals ({f.form} FY{f.fiscal_year}): revenue growth {growth}, "
-                f"net margin {margin}  ->  screen {screen}  [cite {f.accession_number}]"
-            )
-            if exp.fundamental_screen and not exp.fundamental_screen.passed:
-                for reason in exp.fundamental_screen.reasons:
-                    print(f"  - {reason}")
+    print(f"\n{'=' * 66}\nCROSS-SYMBOL LEADERBOARD (top 15 by graduated, then DSR)\n{'=' * 66}")
+    print(f"{'symbol':<7}{'strategy':<30}{'DSR':>7}{'holdout':>9}  graduated")
+    for row in rank_experiments(result.experiments)[:15]:
+        hold = f"{row.holdout_sharpe:.2f}" if row.holdout_sharpe is not None else "—"
+        print(
+            f"{row.symbol:<7}{row.strategy_name:<30}{row.deflated_sharpe:>7.2f}{hold:>9}  "
+            f"{'YES' if row.graduated else 'no'}"
+        )
 
-        g = exp.best_gate_result
-        verdict = "GRADUATED ✅" if (g and g.passed and exp.graduate) else "NO WINNER ❌"
-        print(f"\nbest: {exp.best_strategy_name}  ->  {verdict}")
-        if g and not g.passed:
-            for reason in g.reasons:
-                print(f"  - {reason}")
-        if exp.graduate:
-            gr = exp.graduate
-            print(
-                f"  holdout Sharpe {gr.holdout_sharpe:.2f}, holdout return "
-                f"{gr.holdout_total_return * 100:.1f}%  params={gr.parameters}"
-            )
+    graduates = [e for e in result.experiments if e.graduate]
+    print(
+        f"\n{len(graduates)} graduate(s) out of {len(result.experiments)} symbols "
+        f"({len(result.errors)} errors)."
+    )
+    if result.errors:
+        print("errors:", ", ".join(f"{s} ({e})" for s, e in result.errors.items()))
 
 
 if __name__ == "__main__":
