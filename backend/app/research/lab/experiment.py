@@ -34,6 +34,7 @@ class Graduate(BaseModel):
     gate_result: GateResult
     holdout_sharpe: float
     holdout_total_return: float
+    holdout_n_bars: int = 0  # holdout length -> track-record years for universe deflation (ADR-018)
 
 
 class Experiment(BaseModel):

@@ -3,13 +3,20 @@ never kills the run), and rank the results into a cross-symbol leaderboard. Wide
 is the honest way to find edges — trial counts are per-symbol, so more names = more independent
 shots, not a bigger overfitting penalty on any one name."""
 
+import math
+
 import numpy as np
 import pandas as pd
+import pytest
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
-from app.research.lab.experiment import Experiment, InMemoryExperimentStore
-from app.research.lab.gate import GateConfig
-from app.research.lab.universe import rank_experiments, run_universe_hunt
+from app.research.lab.experiment import Experiment, Graduate, InMemoryExperimentStore, Trial
+from app.research.lab.gate import GateConfig, GateResult
+from app.research.lab.universe import (
+    expected_max_sharpe_under_null,
+    rank_experiments,
+    run_universe_hunt,
+)
 
 _LENIENT = GateConfig(
     dsr_min=-100.0,
@@ -99,6 +106,64 @@ def test_empty_universe_returns_nothing() -> None:
     result = run_universe_hunt([], ["sma"], _provider({}))
     assert result.experiments == []
     assert rank_experiments(result.experiments) == []
+
+
+def test_expected_max_sharpe_under_null_values_and_edges() -> None:
+    assert expected_max_sharpe_under_null(1, 4.0) == 0.0  # N<2 -> no selection
+    assert expected_max_sharpe_under_null(51, 0.0) == 0.0  # no holdout -> 0
+    # N=51, 4y holdout -> sqrt(1/4)*sqrt(2 ln 51) ~= 1.40
+    assert expected_max_sharpe_under_null(51, 4.0) == pytest.approx(
+        math.sqrt(1 / 4) * math.sqrt(2 * math.log(51))
+    )
+
+
+def _graduated_exp(symbol: str, holdout_sharpe: float, holdout_years: float) -> Experiment:
+    trial = Trial(
+        strategy_name="sma",
+        parameters={"fast": 5, "slow": 20},
+        observed_sharpe=1.0,
+        deflated_sharpe=0.6,
+        pbo=0.1,
+        parameter_stability_score=0.8,
+    )
+    gr = GateResult(
+        passed=True,
+        dsr_ok=True,
+        pbo_ok=True,
+        stability_ok=True,
+        mintrl_ok=True,
+        holdout_ok=True,
+        required_track_record_years=1.0,
+        gate_config_version="v",
+    )
+    graduate = Graduate(
+        strategy_name="sma",
+        parameters={"fast": 5, "slow": 20},
+        gate_result=gr,
+        holdout_sharpe=holdout_sharpe,
+        holdout_total_return=0.1,
+        holdout_n_bars=int(holdout_years * 252),
+    )
+    return Experiment(
+        symbol=symbol,
+        strategy_names=["sma"],
+        gate_config=GateConfig(),
+        trials=[trial],
+        lifetime_trials=1,
+        graduate=graduate,
+    )
+
+
+def test_universe_deflation_annotates_graduates() -> None:
+    # 51 experiments: a strong graduate (holdout SR 2.0, clears the ~1.4 null bar) survives; a weak
+    # one (0.3) does not; non-graduates carry None.
+    non_grad = _graduated_exp("PAD", 0.0, 4.0).model_copy(update={"graduate": None})
+    experiments = [_graduated_exp("STRONG", 2.0, 4.0), _graduated_exp("WEAK", 0.3, 4.0)]
+    experiments += [non_grad.model_copy(update={"symbol": f"N{i}"}) for i in range(49)]
+    rows = {r.symbol: r for r in rank_experiments(experiments)}
+    assert rows["STRONG"].survives_universe_deflation is True
+    assert rows["WEAK"].survives_universe_deflation is False
+    assert rows["N0"].survives_universe_deflation is None
 
 
 def test_rank_skips_experiments_with_no_trials() -> None:

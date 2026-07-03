@@ -153,6 +153,7 @@ def run_search(
             gate_result=gate_result,
             holdout_sharpe=holdout.sharpe,
             holdout_total_return=holdout.total_return,
+            holdout_n_bars=holdout.n_bars,
         )
 
     return Experiment(

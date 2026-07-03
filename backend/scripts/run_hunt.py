@@ -105,19 +105,22 @@ def main() -> None:
             f"PBO {best.pbo:>4.2f}  fundamentals {fund:<4}  {verdict}"
         )
 
-    print(f"\n{'=' * 66}\nCROSS-SYMBOL LEADERBOARD (top 15 by graduated, then DSR)\n{'=' * 66}")
-    print(f"{'symbol':<7}{'strategy':<30}{'DSR':>7}{'holdout':>9}  graduated")
-    for row in rank_experiments(result.experiments)[:15]:
+    rows = rank_experiments(result.experiments)
+    print(f"\n{'=' * 72}\nCROSS-SYMBOL LEADERBOARD (top 15)\n{'=' * 72}")
+    print(f"{'symbol':<7}{'strategy':<30}{'DSR':>7}{'holdout':>9}  graduated  univ-survivor")
+    for row in rows[:15]:
         hold = f"{row.holdout_sharpe:.2f}" if row.holdout_sharpe is not None else "—"
+        univ = {True: "YES", False: "no", None: "—"}[row.survives_universe_deflation]
         print(
             f"{row.symbol:<7}{row.strategy_name:<30}{row.deflated_sharpe:>7.2f}{hold:>9}  "
-            f"{'YES' if row.graduated else 'no'}"
+            f"{'YES' if row.graduated else 'no':<9}  {univ}"
         )
 
     graduates = [e for e in result.experiments if e.graduate]
+    survivors = [r for r in rows if r.survives_universe_deflation]
     print(
         f"\n{len(graduates)} graduate(s) out of {len(result.experiments)} symbols "
-        f"({len(result.errors)} errors)."
+        f"({len(result.errors)} errors); {len(survivors)} survive universe-level deflation."
     )
     if result.errors:
         print("errors:", ", ".join(f"{s} ({e})" for s, e in result.errors.items()))
