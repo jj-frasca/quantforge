@@ -11,7 +11,13 @@ from app.research.lab.experiment import Experiment, InMemoryExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.universe import rank_experiments, run_universe_hunt
 
-_LENIENT = GateConfig(dsr_min=-100.0, pbo_max=1.01, stability_min=-1.0, holdout_sharpe_min=-100.0)
+_LENIENT = GateConfig(
+    dsr_min=-100.0,
+    pbo_max=1.01,
+    stability_min=-1.0,
+    holdout_sharpe_min=-100.0,
+    require_beat_buy_and_hold=False,
+)
 
 
 def _trend(seed: int, drift: float, n: int = 1500) -> pd.DataFrame:

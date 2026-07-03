@@ -12,7 +12,13 @@ from app.research.lab.experiment import Experiment, InMemoryExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.search import run_search
 
-_LENIENT = GateConfig(dsr_min=-100.0, pbo_max=1.01, stability_min=-1.0, holdout_sharpe_min=-100.0)
+_LENIENT = GateConfig(
+    dsr_min=-100.0,
+    pbo_max=1.01,
+    stability_min=-1.0,
+    holdout_sharpe_min=-100.0,
+    require_beat_buy_and_hold=False,
+)
 
 
 def _snap(growth: float, net_margin: float) -> FundamentalSnapshot:
@@ -91,7 +97,11 @@ def test_a_passing_gate_records_a_graduate() -> None:
     # A permissive GateConfig over a strong-trend series lets a candidate clear the gate, so the
     # graduate (with its holdout score) is recorded. Exercises the graduation branch.
     lenient = GateConfig(
-        dsr_min=-100.0, pbo_max=1.01, stability_min=-1.0, holdout_sharpe_min=-100.0
+        dsr_min=-100.0,
+        pbo_max=1.01,
+        stability_min=-1.0,
+        holdout_sharpe_min=-100.0,
+        require_beat_buy_and_hold=False,
     )
     exp = run_search(_strong_uptrend_frame(0), "AAPL", ["sma", "momentum"], config=lenient)
     assert exp.best_gate_result is not None and exp.best_gate_result.passed is True

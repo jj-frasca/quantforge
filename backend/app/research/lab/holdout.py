@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from app.research.backtesting.engine import BacktestEngine
+from app.research.backtesting.metrics import sharpe_ratio
 from app.research.strategies.base import BaseStrategy
 
 
@@ -54,6 +55,9 @@ class HoldoutScore:
     sharpe: float
     total_return: float
     n_bars: int
+    # Buy-and-hold of the SAME symbol over the holdout — the "why not just hold it?" benchmark.
+    # A strategy that trails this on a risk-adjusted basis added no value (ADR-013 / rule 6).
+    buy_and_hold_sharpe: float = 0.0
 
 
 def split_holdout(
@@ -86,8 +90,10 @@ def split_holdout(
 def score_on_holdout(sealed: SealedHoldout, strategy: BaseStrategy) -> HoldoutScore:
     """Run `strategy` on the sealed holdout only and return its out-of-sample score."""
     result = BacktestEngine().run_strategy(sealed._frame, strategy)
+    bh_returns = sealed._frame["close"].pct_change().fillna(0.0)
     return HoldoutScore(
         sharpe=result.metrics.sharpe,
         total_return=result.metrics.total_return,
         n_bars=sealed.n_bars,
+        buy_and_hold_sharpe=sharpe_ratio(bh_returns),
     )

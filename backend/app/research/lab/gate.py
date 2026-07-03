@@ -34,6 +34,9 @@ class GateConfig(BaseModel):
     pbo_max: float = 0.5
     stability_min: float = 0.5
     holdout_sharpe_min: float = 0.0
+    # A graduate must beat simply buy-and-holding the same name on the holdout (risk-adjusted),
+    # or its "edge" is just poorly-captured beta on a name that went up. Diagnosis 2026-07-02.
+    require_beat_buy_and_hold: bool = True
     trial_budget: int = Field(default=200, ge=1)
 
     @property
@@ -53,6 +56,7 @@ class GateResult(BaseModel):
     stability_ok: bool
     mintrl_ok: bool
     holdout_ok: bool
+    beats_buy_and_hold_ok: bool = True
     required_track_record_years: float
     gate_config_version: str
     reasons: list[str] = Field(default_factory=list)
@@ -77,6 +81,9 @@ class GraduationGate:
         stability_ok = report.parameter_stability_score >= config.stability_min
         mintrl_ok = track_record_years >= required
         holdout_ok = holdout.sharpe > config.holdout_sharpe_min
+        beats_buy_and_hold_ok = (not config.require_beat_buy_and_hold) or (
+            holdout.sharpe > holdout.buy_and_hold_sharpe
+        )
 
         reasons: list[str] = []
         if not dsr_ok:
@@ -105,8 +112,21 @@ class GraduationGate:
                 f"holdout Sharpe {holdout.sharpe:.3f} <= {config.holdout_sharpe_min} "
                 "(did not survive the locked out-of-sample period)"
             )
+        if not beats_buy_and_hold_ok:
+            reasons.append(
+                f"holdout Sharpe {holdout.sharpe:.3f} <= buy-and-hold Sharpe "
+                f"{holdout.buy_and_hold_sharpe:.3f} (no edge over simply holding the name — "
+                "the 'edge' is just beta on a name that went up)"
+            )
 
-        passed = dsr_ok and pbo_ok and stability_ok and mintrl_ok and holdout_ok
+        passed = (
+            dsr_ok
+            and pbo_ok
+            and stability_ok
+            and mintrl_ok
+            and holdout_ok
+            and beats_buy_and_hold_ok
+        )
         return GateResult(
             passed=passed,
             dsr_ok=dsr_ok,
@@ -114,6 +134,7 @@ class GraduationGate:
             stability_ok=stability_ok,
             mintrl_ok=mintrl_ok,
             holdout_ok=holdout_ok,
+            beats_buy_and_hold_ok=beats_buy_and_hold_ok,
             required_track_record_years=required,
             gate_config_version=config.version_hash,
             reasons=reasons,

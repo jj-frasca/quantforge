@@ -24,8 +24,10 @@ def _report(dsr: float, pbo: float, stability: float, observed: float) -> Valida
     )
 
 
-def _holdout(sharpe: float) -> HoldoutScore:
-    return HoldoutScore(sharpe=sharpe, total_return=0.1, n_bars=252)
+def _holdout(sharpe: float, buy_and_hold_sharpe: float = 0.0) -> HoldoutScore:
+    return HoldoutScore(
+        sharpe=sharpe, total_return=0.1, n_bars=252, buy_and_hold_sharpe=buy_and_hold_sharpe
+    )
 
 
 # ---- minbtl_years ---------------------------------------------------------------------------
@@ -138,3 +140,31 @@ def test_holdout_that_does_not_survive_fails() -> None:
     )
     assert result.passed is False
     assert result.holdout_ok is False
+
+
+def test_positive_holdout_that_trails_buy_and_hold_fails() -> None:
+    # Diagnosis 2026-07-02: a positive holdout Sharpe that still trails simply holding the name
+    # is poorly-captured beta, not an edge. Must not graduate.
+    result = GraduationGate().evaluate(
+        report=_report(dsr=1.0, pbo=0.1, stability=0.8, observed=1.5),
+        track_record_years=12.0,
+        n_trials=50,
+        holdout=_holdout(0.4, buy_and_hold_sharpe=0.9),
+        config=GateConfig(),
+    )
+    assert result.passed is False
+    assert result.holdout_ok is True  # positive in absolute terms...
+    assert result.beats_buy_and_hold_ok is False  # ...but worse than just holding
+    assert any("buy-and-hold" in r for r in result.reasons)
+
+
+def test_beat_buy_and_hold_check_can_be_disabled() -> None:
+    result = GraduationGate().evaluate(
+        report=_report(dsr=1.0, pbo=0.1, stability=0.8, observed=1.5),
+        track_record_years=12.0,
+        n_trials=50,
+        holdout=_holdout(0.4, buy_and_hold_sharpe=0.9),
+        config=GateConfig(require_beat_buy_and_hold=False),
+    )
+    assert result.passed is True
+    assert result.beats_buy_and_hold_ok is True
