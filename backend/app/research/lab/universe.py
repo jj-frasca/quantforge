@@ -39,6 +39,8 @@ def run_universe_hunt(
     fundamental_criteria: FundamentalCriteria | None = None,
     store: ExperimentStore | None = None,
     n_per_param: int = 3,
+    refine: bool = False,
+    refine_span: float = 0.25,
     rationale: str = "",
 ) -> UniverseHuntResult:
     """Hunt across a symbol universe, resiliently. A per-symbol failure (no data, too little
@@ -60,6 +62,8 @@ def run_universe_hunt(
                 config=config,
                 prior_trials=prior,
                 n_per_param=n_per_param,
+                refine=refine,
+                refine_span=refine_span,
                 fundamentals=fundamentals,
                 fundamental_criteria=fundamental_criteria,
                 rationale=rationale,

@@ -11,7 +11,11 @@ from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GraduationGate
 from app.research.lab.holdout import score_on_holdout, split_holdout
 from app.research.strategies.base import BaseStrategy
-from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
+from app.research.strategies.grid_generator import (
+    find_catalog_entry,
+    grid_from_catalog,
+    refine_grid,
+)
 from app.validation.engine import ValidationEngine
 
 _MIN_CONFIGS_FOR_PBO = 2
@@ -43,6 +47,8 @@ def run_search(
     config: GateConfig | None = None,
     prior_trials: int = 0,
     n_per_param: int = 3,
+    refine: bool = False,
+    refine_span: float = 0.25,
     fundamentals: FundamentalSnapshot | None = None,
     fundamental_criteria: FundamentalCriteria | None = None,
     rationale: str = "",
@@ -90,10 +96,41 @@ def run_search(
             f">= {_MIN_CONFIGS_FOR_PBO} grid configs"
         )
 
-    lifetime_trials = prior_trials + len(trials)
     best_idx = max(range(len(trials)), key=lambda i: trials[i].deflated_sharpe)
     best_report = reports[best_idx]
-    holdout = score_on_holdout(sealed, best_configs[best_idx])
+    finalist_config = best_configs[best_idx]
+
+    # Coarse-to-fine (ADR-014): zoom in around the coarse winner. Every refined pass is another
+    # trial that raises the DSR/MinTRL bar, so searching harder self-polices against overfitting.
+    if refine:
+        entry = find_catalog_entry(trials[best_idx].strategy_name)
+        refined_configs = (
+            refine_grid(
+                entry, trials[best_idx].parameters, n_per_param=n_per_param, span_frac=refine_span
+            )
+            if entry is not None
+            else []
+        )
+        if len(refined_configs) >= _MIN_CONFIGS_FOR_PBO:
+            refined_report = validator.validate(
+                trials[best_idx].strategy_name, refined_configs, handle.frame
+            )
+            refined_config = _best_config(refined_configs, handle.frame, engine)
+            trials.append(
+                Trial(
+                    strategy_name=refined_report.strategy_name,
+                    parameters=_numeric_params(refined_config),
+                    observed_sharpe=refined_report.observed_sharpe,
+                    deflated_sharpe=refined_report.deflated_sharpe,
+                    pbo=refined_report.pbo,
+                    parameter_stability_score=refined_report.parameter_stability_score,
+                )
+            )
+            if refined_report.deflated_sharpe > best_report.deflated_sharpe:
+                best_report, finalist_config = refined_report, refined_config
+
+    lifetime_trials = prior_trials + len(trials)
+    holdout = score_on_holdout(sealed, finalist_config)
     gate_result = GraduationGate().evaluate(
         report=best_report,
         track_record_years=handle.years,
@@ -112,7 +149,7 @@ def run_search(
     if gate_result.passed and fundamentals_ok:
         graduate = Graduate(
             strategy_name=best_report.strategy_name,
-            parameters=trials[best_idx].parameters,
+            parameters=_numeric_params(finalist_config),
             gate_result=gate_result,
             holdout_sharpe=holdout.sharpe,
             holdout_total_return=holdout.total_return,

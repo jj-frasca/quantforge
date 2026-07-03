@@ -10,9 +10,11 @@ from app.research.strategies.catalog import (
     StrategySchema,
 )
 from app.research.strategies.grid_generator import (
+    _refined_values,
     _values_for_param,
     find_catalog_entry,
     grid_from_catalog,
+    refine_grid,
 )
 from app.research.strategies.sma import SMAStrategy
 
@@ -90,6 +92,59 @@ def test_grid_from_catalog_with_n_per_param_one_is_just_defaults() -> None:
     configs = grid_from_catalog(sma_entry, n_per_param=1)
     assert len(configs) == 1
     assert configs[0].parameters == {"fast": 20, "slow": 50}
+
+
+def test_refine_grid_zooms_around_the_center_within_bounds() -> None:
+    # Refine around fast=20/slow=50: values cluster near the center and stay valid (fast<slow).
+    sma_entry = find_catalog_entry("sma")
+    assert sma_entry is not None
+    configs = refine_grid(sma_entry, {"fast": 20, "slow": 50}, n_per_param=3, span_frac=0.25)
+    assert len(configs) >= 2
+    for strategy in configs:
+        assert isinstance(strategy, SMAStrategy)
+        assert strategy.fast < strategy.slow
+        assert 15 <= strategy.fast <= 25  # within +/-25% of 20
+        assert 37 <= strategy.slow <= 63  # within +/-25% of 50
+
+
+def test_refined_values_rejects_zero_n() -> None:
+    param = ParamSchema(name="k", type="float", default=2.0, label="k")
+    with pytest.raises(ValueError, match="n_per_param"):
+        _refined_values(param, center=2.0, n=0, span_frac=0.25)
+
+
+def test_refined_values_single_value_is_the_center() -> None:
+    param = ParamSchema(name="fast", type="int", default=20, label="Fast")
+    assert _refined_values(param, center=20.4, n=1, span_frac=0.25) == [20]
+
+
+def test_refined_values_float_param_returns_floats() -> None:
+    param = ParamSchema(name="k", type="float", default=2.0, label="k")
+    values = _refined_values(param, center=2.0, n=3, span_frac=0.25)
+    assert all(isinstance(v, float) for v in values)
+    assert min(values) >= 1.5 and max(values) <= 2.5
+
+
+def test_refined_values_degenerate_window_falls_back_to_center() -> None:
+    # minimum clamps low ABOVE high -> degenerate window -> just the center value.
+    param = ParamSchema(name="x", type="int", default=10, minimum=100, maximum=200, label="x")
+    assert _refined_values(param, center=10.0, n=3, span_frac=0.25) == [10]
+
+
+def test_refine_grid_filters_cross_param_violations() -> None:
+    # Center fast=45/slow=50 with a wide-ish span produces some fast>=slow combos -> skipped.
+    sma_entry = find_catalog_entry("sma")
+    assert sma_entry is not None
+    configs = refine_grid(sma_entry, {"fast": 45, "slow": 50}, n_per_param=3, span_frac=0.25)
+    assert all(isinstance(s, SMAStrategy) and s.fast < s.slow for s in configs)
+
+
+def test_refine_grid_missing_center_param_falls_back_to_default() -> None:
+    sma_entry = find_catalog_entry("sma")
+    assert sma_entry is not None
+    # center omits 'slow' -> uses the catalog default (50) as the center for that param.
+    configs = refine_grid(sma_entry, {"fast": 20}, n_per_param=3)
+    assert len(configs) >= 2
 
 
 def test_grid_from_catalog_handles_a_schema_with_no_params() -> None:

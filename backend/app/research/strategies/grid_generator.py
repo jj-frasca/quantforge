@@ -62,6 +62,53 @@ def _values_for_param(param: ParamSchema, n: int) -> list[float | int]:
     return list(raw)
 
 
+def _refined_values(
+    param: ParamSchema, center: float, n: int, span_frac: float
+) -> list[float | int]:
+    """`n` values in a narrow window around `center` (±span_frac), clamped to catalog bounds.
+    Coarse-to-fine refinement zooms in on a promising region; int params round + de-duplicate."""
+    if n < 1:
+        raise ValueError("n_per_param must be >= 1")
+    if n == 1:
+        return [round(center) if param.type == "int" else center]
+    low = center * (1 - span_frac)
+    high = center * (1 + span_frac)
+    if param.minimum is not None:
+        low = max(low, param.minimum)
+    if param.maximum is not None:
+        high = min(high, param.maximum)
+    if high <= low:
+        return [round(center) if param.type == "int" else center]
+    raw: list[float] = np.linspace(low, high, n).tolist()
+    if param.type == "int":
+        ints: list[int] = sorted({round(v) for v in raw})
+        return list(ints)
+    return list(raw)
+
+
+def refine_grid(
+    entry: StrategySchema,
+    center_params: dict[str, float | int],
+    n_per_param: int = 3,
+    span_frac: float = 0.25,
+) -> list[BaseStrategy]:
+    """A finer grid centered on `center_params` (the coarse pass's best config). Same
+    build-and-filter contract as grid_from_catalog; the narrower window resolves the local
+    optimum without widening the catalog bounds."""
+    per_param_values = [
+        _refined_values(p, float(center_params.get(p.name, p.default)), n_per_param, span_frac)
+        for p in entry.parameters
+    ]
+    strategies: list[BaseStrategy] = []
+    for combo in itertools.product(*per_param_values):
+        params = {p.name: v for p, v in zip(entry.parameters, combo, strict=True)}
+        try:
+            strategies.append(build_strategy_from_dict(entry.name, params))
+        except (ValidationError, ValueError):
+            continue
+    return strategies
+
+
 def grid_from_catalog(entry: StrategySchema, n_per_param: int = 3) -> list[BaseStrategy]:
     """Cartesian product of catalog-driven perturbations, filtered to valid strategies.
 

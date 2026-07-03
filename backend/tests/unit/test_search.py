@@ -130,6 +130,15 @@ def test_healthy_fundamentals_allow_graduation() -> None:
     assert exp.graduate is not None
 
 
+def test_refine_adds_a_trial_and_raises_the_bar() -> None:
+    # Coarse-to-fine: the refined pass on the winner is one extra trial (higher DSR/MinTRL bar).
+    base = run_search(_random_walk_frame(0), "AAPL", ["sma", "momentum"])
+    refined = run_search(_random_walk_frame(0), "AAPL", ["sma", "momentum"], refine=True)
+    assert len(refined.trials) == len(base.trials) + 1
+    assert refined.lifetime_trials == base.lifetime_trials + 1
+    assert refined.best_gate_result is not None
+
+
 def test_experiment_records_into_the_pool_and_counts_trials() -> None:
     store = InMemoryExperimentStore()
     exp = run_search(_random_walk_frame(5), "AAPL", ["sma", "momentum"], config=GateConfig())
