@@ -24,7 +24,8 @@ from app.research.lab.gate import GateConfig
 from app.research.lab.universe import rank_experiments, run_universe_hunt
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
-POOL = Path("/tmp/qf_pool.json")
+# In-repo research pool so findings survive and are reviewable in git.
+POOL = Path(__file__).resolve().parents[2] / "data" / "research_pool.json"
 START = datetime(2005, 1, 1, tzinfo=UTC)
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
 
@@ -57,8 +58,15 @@ DEFAULT_UNIVERSE = [
 ]
 
 
+def _resolve_symbols(args: list[str]) -> list[str]:
+    """A single .txt path -> one symbol per line; else the args as tickers; else the default."""
+    if len(args) == 1 and args[0].endswith(".txt"):
+        return [s.strip().upper() for s in Path(args[0]).read_text().splitlines() if s.strip()]
+    return args or DEFAULT_UNIVERSE
+
+
 def main() -> None:
-    symbols = sys.argv[1:] or DEFAULT_UNIVERSE
+    symbols = _resolve_symbols(sys.argv[1:])
     names = [entry.name for entry in STRATEGY_CATALOG]
     adapter = YFinanceAdapter()
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
@@ -83,7 +91,8 @@ def main() -> None:
         config=GateConfig(),
         fundamental_criteria=FundamentalCriteria(),
         store=store,
-        rationale="universe hunt",
+        refine=True,
+        rationale="universe hunt (refined)",
     )
 
     for exp in result.experiments:
