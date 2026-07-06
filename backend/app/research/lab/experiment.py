@@ -107,7 +107,9 @@ class JsonFileExperimentStore:
         experiments.append(experiment)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         payload = [e.model_dump(mode="json") for e in experiments]
-        self._path.write_text(json.dumps(payload, indent=2))
+        # Trailing newline so the file satisfies the end-of-file-fixer pre-commit hook and doesn't
+        # churn on every regeneration (which otherwise collides with pre-commit's stash).
+        self._path.write_text(json.dumps(payload, indent=2) + "\n")
 
     def all(self) -> list[Experiment]:
         return self._load()
