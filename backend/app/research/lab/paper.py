@@ -1,4 +1,6 @@
+import json
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
@@ -87,3 +89,34 @@ def evaluate_forward(position: PaperPosition, frame: pd.DataFrame) -> ForwardSco
         beats_buy_and_hold=fwd_sharpe > bh_sharpe,
         as_of=as_of,
     )
+
+
+class JsonFilePaperPortfolio:
+    """Persisted paper-trading portfolio (ADR-019): frozen positions + their latest forward score,
+    JSON-backed in-repo (reviewable in git). Single-process, mirroring the experiment store."""
+
+    def __init__(self, path: Path | str) -> None:
+        self._path = Path(path)
+
+    def positions(self) -> list[PaperPosition]:
+        if not self._path.exists():
+            return []
+        return [PaperPosition.model_validate(item) for item in json.loads(self._path.read_text())]
+
+    def save(self, positions: list[PaperPosition]) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        payload = [p.model_dump(mode="json") for p in positions]
+        # Trailing newline (end-of-file-fixer), same as the experiment store.
+        self._path.write_text(json.dumps(payload, indent=2) + "\n")
+
+    def add(self, position: PaperPosition) -> bool:
+        """Freeze a position; no-op (returns False) if that symbol+strategy is already frozen."""
+        positions = self.positions()
+        if any(
+            p.symbol == position.symbol and p.strategy_name == position.strategy_name
+            for p in positions
+        ):
+            return False
+        positions.append(position)
+        self.save(positions)
+        return True

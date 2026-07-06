@@ -11,7 +11,8 @@ quality are the primary goals. See docs/ARCHITECTURE.md for full context.
 4. Write ADR before implementing any non-trivial architecture decision.
 5. Coverage must not drop: backend ≥ 85%, frontend ≥ 75%.
 6. DataQualityEngine checks flag POTENTIAL issues — never claim to prevent them.
-7. No paper trading, WebSockets, or order books. Out of scope (ADR-001).
+7. Paper trading is IN scope for forward-testing (ADR-019 — paper only, NO real-money orders).
+   WebSockets and order-book/HFT microstructure remain out of scope (ADR-001).
 8. Never hardcode secrets. All config via app/config.py (Pydantic Settings).
 9. Primary data source is yfinance (no API key). Polygon is the second vendor (Phase 3+).
 

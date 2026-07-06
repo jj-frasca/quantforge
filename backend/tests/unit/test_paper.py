@@ -12,6 +12,7 @@ from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import (
     ForwardScore,
+    JsonFilePaperPortfolio,
     PaperPosition,
     evaluate_forward,
     freeze_graduate,
@@ -108,3 +109,28 @@ def test_freeze_graduate_rejects_a_non_graduate() -> None:
 def test_position_and_score_round_trip_json() -> None:
     pos = _position().model_copy(update={"score": evaluate_forward(_position(), _frame())})
     assert PaperPosition.model_validate_json(pos.model_dump_json()) == pos
+
+
+def test_portfolio_add_persists_and_dedups(tmp_path) -> None:
+    path = tmp_path / "portfolio.json"
+    writer = JsonFilePaperPortfolio(path)
+    assert writer.add(_position()) is True
+    assert writer.add(_position()) is False  # same symbol+strategy -> no dup
+
+    reader = JsonFilePaperPortfolio(path)
+    positions = reader.positions()
+    assert len(positions) == 1
+    assert positions[0].symbol == "AAA"
+
+
+def test_portfolio_save_round_trips_scores(tmp_path) -> None:
+    path = tmp_path / "portfolio.json"
+    scored = _position().model_copy(update={"score": evaluate_forward(_position(), _frame())})
+    JsonFilePaperPortfolio(path).save([scored])
+    loaded = JsonFilePaperPortfolio(path).positions()
+    assert loaded == [scored]
+    assert loaded[0].score is not None and loaded[0].score.forward_bars > 0
+
+
+def test_portfolio_is_empty_when_file_absent(tmp_path) -> None:
+    assert JsonFilePaperPortfolio(tmp_path / "nope.json").positions() == []
