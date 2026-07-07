@@ -134,3 +134,75 @@ def test_portfolio_save_round_trips_scores(tmp_path) -> None:
 
 def test_portfolio_is_empty_when_file_absent(tmp_path) -> None:
     assert JsonFilePaperPortfolio(tmp_path / "nope.json").positions() == []
+
+
+# ---- lifecycle / exits (ADR-020) ------------------------------------------------------------
+
+from app.research.lab.paper import (  # noqa: E402
+    ExitPolicy,
+    LifecycleDecision,
+    evaluate_lifecycle,
+    lifecycle_from_returns,
+)
+
+
+def _series(vals: list[float]) -> pd.Series:
+    return pd.Series(vals, index=pd.date_range("2022-01-01", periods=len(vals), freq="B"))
+
+
+def test_grace_period_holds() -> None:
+    d = lifecycle_from_returns(_series([0.001] * 10), _series([0.0] * 10), ExitPolicy())
+    assert isinstance(d, LifecycleDecision)
+    assert d.action == "hold" and "grace" in d.reasons[0]
+
+
+def test_healthy_forward_holds() -> None:
+    rng = np.random.default_rng(1)
+    fwd = _series(list(rng.normal(0.0015, 0.004, 100)))
+    bh = _series(list(rng.normal(-0.001, 0.004, 100)))
+    d = lifecycle_from_returns(fwd, bh, ExitPolicy())
+    assert d.action == "hold" and d.reasons == []
+
+
+def test_decayed_rolling_sharpe_exits() -> None:
+    policy = ExitPolicy(require_beat_buy_and_hold_forward=False, max_forward_drawdown=10.0)
+    rng = np.random.default_rng(0)
+    fwd = _series(list(rng.normal(-0.002, 0.008, 100)))
+    d = lifecycle_from_returns(fwd, _series(list(rng.normal(0.0, 0.008, 100))), policy)
+    assert d.action == "exit" and any("rolling Sharpe" in r for r in d.reasons)
+
+
+def test_forward_drawdown_breach_exits() -> None:
+    policy = ExitPolicy(
+        require_beat_buy_and_hold_forward=False,
+        min_rolling_sharpe=-100.0,
+        max_forward_drawdown=0.05,
+    )
+    vals = [-0.03] * 12 + [0.0005] * 90  # ~30% drop then drift up
+    d = lifecycle_from_returns(_series(vals), _series([0.0] * 102), policy)
+    assert d.action == "exit" and any("drawdown" in r for r in d.reasons)
+
+
+def test_stops_beating_buy_and_hold_forward_exits() -> None:
+    policy = ExitPolicy(min_rolling_sharpe=-100.0, max_forward_drawdown=10.0)  # only the B&H rule
+    rng = np.random.default_rng(2)
+    fwd = _series(list(rng.normal(0.0005, 0.01, 100)))
+    bh = _series(list(rng.normal(0.003, 0.008, 100)))
+    d = lifecycle_from_returns(fwd, bh, policy)
+    assert d.action == "exit" and any("buy-and-hold" in r for r in d.reasons)
+
+
+def test_exit_policy_version_hash_is_deterministic_and_sensitive() -> None:
+    assert ExitPolicy().version_hash == ExitPolicy().version_hash
+    assert ExitPolicy(max_forward_drawdown=0.2).version_hash != ExitPolicy().version_hash
+
+
+def test_evaluate_lifecycle_holds_when_no_forward_data() -> None:
+    pos = _position(datetime(2030, 1, 1, tzinfo=UTC))
+    d = evaluate_lifecycle(pos, _frame(), ExitPolicy())
+    assert d.action == "hold"
+
+
+def test_evaluate_lifecycle_runs_on_a_real_frame() -> None:
+    d = evaluate_lifecycle(_position(), _frame(), ExitPolicy())
+    assert d.action in {"hold", "exit"}
