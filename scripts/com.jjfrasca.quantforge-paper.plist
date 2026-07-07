@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Daily paper-trading forward accrual (ADR-019). Token-free. Install:
+     cp scripts/com.jjfrasca.quantforge-paper.plist ~/Library/LaunchAgents/
+     launchctl unload ~/Library/LaunchAgents/com.jjfrasca.quantforge-paper.plist 2>/dev/null
+     launchctl load ~/Library/LaunchAgents/com.jjfrasca.quantforge-paper.plist -->
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>HOME</key>
+		<string>/Users/joefrasca</string>
+		<key>PATH</key>
+		<string>/Users/joefrasca/.local/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<key>SHELL</key>
+		<string>/bin/zsh</string>
+		<key>USER</key>
+		<string>joefrasca</string>
+	</dict>
+	<key>Label</key>
+	<string>com.jjfrasca.quantforge-paper</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>/Users/joefrasca/claude-work/quantforge/scripts/cron_paper.sh</string>
+	</array>
+	<key>RunAtLoad</key>
+	<false/>
+	<key>StandardErrorPath</key>
+	<string>/Users/joefrasca/.claude/_reports/cron-quantforge-paper.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/joefrasca/.claude/_reports/cron-quantforge-paper.log</string>
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Hour</key>
+		<integer>17</integer>
+		<key>Minute</key>
+		<integer>30</integer>
+	</dict>
+</dict>
+</plist>
