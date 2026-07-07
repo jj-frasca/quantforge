@@ -1,0 +1,56 @@
+name: Paper forward accrual
+
+# Token-free (no Claude): advances the paper-trading forward test daily in the cloud — runs even
+# when Joe's Mac is off (ADR-019). Uses Alpaca for cloud-reliable data (yfinance is flaky from
+# cloud IPs). Commits the accrued portfolio back to the repo.
+on:
+  schedule:
+    - cron: "30 1 * * 2-6" # 01:30 UTC Tue–Sat = after each US trading day's close + settle
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: paper-forward
+  cancel-in-progress: false
+
+jobs:
+  accrue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync dependencies (Python pinned via .python-version)
+        working-directory: backend
+        run: uv sync
+
+      - name: Advance the paper portfolio (Alpaca data)
+        working-directory: backend
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+        run: PYTHONPATH=. uv run python scripts/paper.py | tee "$GITHUB_WORKSPACE/paper_out.txt"
+
+      - name: Slack the scoreboard
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -Rs '{text: ("*QuantForge paper forward-test (cloud)*\n```" + . + "```")}' paper_out.txt \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+
+      - name: Commit accrued portfolio (if changed)
+        run: |
+          if ! git diff --quiet -- data/paper_portfolio.json; then
+            git config user.name "quantforge-paper-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add data/paper_portfolio.json
+            git commit -m "chore(paper): cloud forward accrual $(date +%F)"
+            git push
+          else
+            echo "no portfolio change"
+          fi
