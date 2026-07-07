@@ -12,7 +12,8 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from app.data.sources.yfinance import YFinanceAdapter
+from app.config import get_settings
+from app.dependencies import build_data_adapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import JsonFileExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio, evaluate_forward, freeze_graduate
@@ -41,7 +42,7 @@ def main() -> None:
             if portfolio.add(position):
                 print(f"froze {position.symbol} / {position.strategy_name} as of {as_of.date()}")
 
-    adapter = YFinanceAdapter()
+    adapter = build_data_adapter(get_settings())
     now = datetime.now(UTC)
     updated = []
     for position in portfolio.positions():

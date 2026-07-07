@@ -15,9 +15,10 @@ from pathlib import Path
 
 import pandas as pd
 
+from app.config import get_settings
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.data.sources.edgar import SecEdgarFundamentalsSource
-from app.data.sources.yfinance import YFinanceAdapter
+from app.dependencies import build_data_adapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import JsonFileExperimentStore
 from app.research.lab.gate import GateConfig
@@ -68,7 +69,7 @@ def _resolve_symbols(args: list[str]) -> list[str]:
 def main() -> None:
     symbols = _resolve_symbols(sys.argv[1:])
     names = [entry.name for entry in STRATEGY_CATALOG]
-    adapter = YFinanceAdapter()
+    adapter = build_data_adapter(get_settings())
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     store = JsonFileExperimentStore(POOL)
     end = datetime.now(UTC)
