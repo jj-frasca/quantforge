@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     # Browser origins allowed to call the API (Vite dev server by default).
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # Alpaca (ADR-019): free paper-trading + market data. Empty by default; set in .env. The
+    # data adapter is cloud-reliable (yfinance is flaky from cloud IPs). Never hardcode (rule 8).
+    alpaca_api_key: str = ""
+    alpaca_secret_key: str = ""
 
 
 @lru_cache
