@@ -69,6 +69,7 @@ class AlpacaDataAdapter(DataSourceAdapter):
                 "start": start.date().isoformat(),
                 "end": end.date().isoformat(),
                 "adjustment": "all",
+                "feed": "iex",  # free-tier feed; the default (sip) is paid -> 403 on a free account
                 "limit": "10000",
             }
             if page_token:
