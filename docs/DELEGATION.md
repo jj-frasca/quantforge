@@ -97,7 +97,13 @@ price) -> UndervaluationScore`. Keep it HONEST (rule 6: "flags potential", cite 
 **Gotchas:** peers are hard — do SELF-HISTORY + absolute intrinsic value FIRST; defer peer sets.
 P/E over time needs price history joined with EDGAR EPS. Don't overclaim precision.
 
-## WP-D — Backend read API for the dashboard   [no new ADR; follows api-contracts.md]
+## WP-D — Backend read API for the dashboard  ✅ DONE by base agent (2026-07-07)
+`backend/app/api/v1/lab.py`: `GET /api/v1/leaderboard` (rank_experiments over the pool) +
+`GET /api/v1/paper-portfolio` (positions + lifecycle). Paths via `get_pool_path`/`get_portfolio_path`
+deps (override in tests). Registered in main.py. 100% covered. **WP-E consumes these — response
+shapes = `list[LeaderboardRow]` and `list[PaperPosition]` (see the pydantic models).**
+
+## ~~WP-D — Backend read API for the dashboard~~ (original spec, now done)   [no new ADR]
 **Goal:** read-only endpoints so the frontend can show the lab + paper book.
 **Owns:** `backend/app/api/v1/lab.py`, `backend/tests/integration/test_lab_endpoints.py`; small
 append to `app/main.py` (register router) + `.claude/context/api-contracts.md`.

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.backtest import router as backtest_router
 from app.api.v1.bars import router as bars_router
 from app.api.v1.ingest import router as ingest_router
+from app.api.v1.lab import router as lab_router
 from app.api.v1.monte_carlo import router as monte_carlo_router
 from app.api.v1.strategies import router as strategies_router
 from app.api.v1.validation import router as validation_router
@@ -22,6 +23,7 @@ app.include_router(bars_router, prefix="/api/v1")
 app.include_router(backtest_router, prefix="/api/v1")
 app.include_router(strategies_router, prefix="/api/v1")
 app.include_router(monte_carlo_router, prefix="/api/v1")
+app.include_router(lab_router, prefix="/api/v1")
 
 
 @app.get("/health")
