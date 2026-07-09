@@ -75,6 +75,15 @@ def test_history_pulls_line_items_and_derives_fcf() -> None:
     assert latest.price is None  # EDGAR carries no market price
 
 
+def test_history_records_fiscal_period_end_date_for_the_price_join() -> None:
+    from datetime import date
+
+    hist = parse_company_facts_history(_facts(), "AAPL")
+    # _fact sets the period end to <fy>-09-30 — the anchor the price join uses.
+    assert hist.years[-1].period_end == date(2024, 9, 30)
+    assert hist.years[0].period_end == date(2022, 9, 30)
+
+
 def test_history_carries_citation_of_latest_filing() -> None:
     hist = parse_company_facts_history(_facts(), "AAPL")
     assert hist.symbol == "AAPL"

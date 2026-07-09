@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
@@ -52,6 +53,7 @@ class AnnualFundamentals(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     fiscal_year: int
+    period_end: date | None = None
     revenue: float
     net_income: float | None = None
     eps: float | None = None
@@ -216,6 +218,9 @@ def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> F
         raise ValueError(f"no annual revenue facts found for {symbol!r}")
 
     revenue_by_year = {int(row["fy"]): float(row["val"]) for row in revenue_rows}
+    period_end_by_year = {
+        int(row["fy"]): date.fromisoformat(row["end"]) for row in revenue_rows if row.get("end")
+    }
     net_income = _year_value_map(gaap, _NET_INCOME_TAGS)
     eps = _year_value_map(gaap, _EPS_TAGS, unit="USD/shares")
     shares = _year_value_map(gaap, _SHARES_TAGS, unit="shares")
@@ -233,6 +238,7 @@ def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> F
         years.append(
             AnnualFundamentals(
                 fiscal_year=fy,
+                period_end=period_end_by_year.get(fy),
                 revenue=revenue_by_year[fy],
                 net_income=net_income.get(fy),
                 eps=eps.get(fy),
