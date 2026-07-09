@@ -13,22 +13,25 @@ _TICKERS = {
 }
 
 
-def _facts() -> dict[str, Any]:
-    row = {
-        "val": 400_000,
-        "fy": 2024,
+def _row(val: float, fy: int) -> dict[str, Any]:
+    return {
+        "val": val,
+        "fy": fy,
         "fp": "FY",
         "form": "10-K",
-        "accn": "a",
-        "filed": "2025-02-01",
+        "accn": f"a-{fy}",
+        "filed": f"{fy + 1}-02-01",
     }
+
+
+def _facts() -> dict[str, Any]:
     return {
         "cik": 320193,
         "entityName": "Apple Inc.",
         "facts": {
             "us-gaap": {
-                "Revenues": {"units": {"USD": [row]}},
-                "NetIncomeLoss": {"units": {"USD": [{**row, "val": 100_000}]}},
+                "Revenues": {"units": {"USD": [_row(350_000, 2023), _row(400_000, 2024)]}},
+                "NetIncomeLoss": {"units": {"USD": [_row(90_000, 2023), _row(100_000, 2024)]}},
             }
         },
     }
@@ -80,6 +83,16 @@ def test_ticker_map_is_fetched_once_and_cached() -> None:
     assert sum("company_tickers" in url for url in calls) == 1  # cached after first resolve
 
 
+def test_fetch_history_resolves_cik_and_returns_multi_year_history() -> None:
+    calls: list[str] = []
+    hist = _source(calls).fetch_history("AAPL")
+    assert hist.symbol == "AAPL"
+    assert hist.cik == 320193
+    assert [y.fiscal_year for y in hist.years] == [2023, 2024]
+    assert hist.years[-1].revenue == 400_000
+    assert any("CIK0000320193.json" in url for url in calls)
+
+
 @pytest.mark.live
 def test_live_edgar_fetch_for_a_real_symbol() -> None:
     source = SecEdgarFundamentalsSource(user_agent="QuantForge research jjfrasca10@gmail.com")
@@ -88,3 +101,13 @@ def test_live_edgar_fetch_for_a_real_symbol() -> None:
     assert snap.revenue > 0
     assert snap.accession_number
     assert snap.source == "SEC EDGAR"
+
+
+@pytest.mark.live
+def test_live_edgar_fetch_history_for_a_real_symbol() -> None:
+    source = SecEdgarFundamentalsSource(user_agent="QuantForge research jjfrasca10@gmail.com")
+    hist = source.fetch_history("AAPL")
+    assert hist.cik == 320193
+    assert len(hist.years) >= 3  # EDGAR carries many years of 10-K facts
+    assert hist.years[-1].revenue > 0
+    assert hist.accession_number

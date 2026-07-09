@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
@@ -11,6 +12,15 @@ _REVENUE_TAGS = (
 _NET_INCOME_TAGS = ("NetIncomeLoss",)
 _GROSS_PROFIT_TAGS = ("GrossProfit",)
 _EPS_TAGS = ("EarningsPerShareDiluted", "EarningsPerShareBasic")
+_SHARES_TAGS = (
+    "WeightedAverageNumberOfDilutedSharesOutstanding",
+    "WeightedAverageNumberOfSharesOutstandingBasic",
+)
+_OCF_TAGS = (
+    "NetCashProvidedByUsedInOperatingActivities",
+    "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
+)
+_CAPEX_TAGS = ("PaymentsToAcquirePropertyPlantAndEquipment",)
 
 
 class FundamentalSnapshot(BaseModel):
@@ -34,6 +44,39 @@ class FundamentalSnapshot(BaseModel):
     net_margin: float | None = None
     eps: float | None = None
     pe_ratio: float | None = None  # None until joined with a market price
+
+
+class AnnualFundamentals(BaseModel):
+    """One fiscal year of line items for a symbol (ADR-022). ``price`` is the market price near
+    the fiscal-year end, joined from the price layer upstream — EDGAR carries no prices."""
+
+    model_config = ConfigDict(frozen=True)
+
+    fiscal_year: int
+    period_end: date | None = None
+    revenue: float
+    net_income: float | None = None
+    eps: float | None = None
+    shares_diluted: float | None = None
+    free_cash_flow: float | None = None
+    price: float | None = None
+
+
+class FundamentalsHistory(BaseModel):
+    """Multi-year fundamentals for a symbol, oldest→newest, cited to the latest 10-K (ADR-022).
+    Reports what the filer stated — never a claim of correctness (rule 6)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    cik: int
+    entity_name: str
+    form: str
+    accession_number: str
+    source_url: str
+    source: str = "SEC EDGAR"
+
+    years: tuple[AnnualFundamentals, ...]
 
 
 class FundamentalCriteria(BaseModel):
@@ -150,4 +193,71 @@ def parse_company_facts(company_facts: dict[str, Any], symbol: str) -> Fundament
         gross_margin=gross_margin,
         net_margin=net_margin,
         eps=eps,
+    )
+
+
+def _year_value_map(
+    gaap: dict[str, Any], tags: tuple[str, ...], unit: str = "USD"
+) -> dict[int, float]:
+    """Fiscal-year → value for the first matching tag. Empty if no tag matches."""
+    return {int(row["fy"]): float(row["val"]) for row in _annual_facts(gaap, tags, unit)}
+
+
+def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> FundamentalsHistory:
+    """Parse an EDGAR CompanyFacts payload into a multi-year FundamentalsHistory (ADR-022).
+
+    Revenue anchors the set of fiscal years; other line items are joined per year where present.
+    Raises ValueError if no annual revenue facts exist.
+    """
+    cik = int(company_facts.get("cik", 0))
+    entity_name = str(company_facts.get("entityName", symbol))
+    gaap = company_facts.get("facts", {}).get("us-gaap", {})
+
+    revenue_rows = _annual_facts(gaap, _REVENUE_TAGS)
+    if not revenue_rows:
+        raise ValueError(f"no annual revenue facts found for {symbol!r}")
+
+    revenue_by_year = {int(row["fy"]): float(row["val"]) for row in revenue_rows}
+    period_end_by_year = {
+        int(row["fy"]): date.fromisoformat(row["end"]) for row in revenue_rows if row.get("end")
+    }
+    net_income = _year_value_map(gaap, _NET_INCOME_TAGS)
+    eps = _year_value_map(gaap, _EPS_TAGS, unit="USD/shares")
+    shares = _year_value_map(gaap, _SHARES_TAGS, unit="shares")
+    ocf = _year_value_map(gaap, _OCF_TAGS)
+    capex = _year_value_map(gaap, _CAPEX_TAGS)
+
+    years: list[AnnualFundamentals] = []
+    for fy in sorted(revenue_by_year):
+        cash_from_ops, capital_spend = ocf.get(fy), capex.get(fy)
+        fcf = (
+            cash_from_ops - capital_spend
+            if cash_from_ops is not None and capital_spend is not None
+            else None
+        )
+        years.append(
+            AnnualFundamentals(
+                fiscal_year=fy,
+                period_end=period_end_by_year.get(fy),
+                revenue=revenue_by_year[fy],
+                net_income=net_income.get(fy),
+                eps=eps.get(fy),
+                shares_diluted=shares.get(fy),
+                free_cash_flow=fcf,
+            )
+        )
+
+    latest = revenue_rows[-1]
+    accession = str(latest["accn"])
+    return FundamentalsHistory(
+        symbol=symbol,
+        cik=cik,
+        entity_name=entity_name,
+        form=str(latest["form"]),
+        accession_number=accession,
+        source_url=(
+            f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}"
+            f"&type=10-K&accession_number={accession}"
+        ),
+        years=tuple(years),
     )
