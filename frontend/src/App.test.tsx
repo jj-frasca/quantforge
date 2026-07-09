@@ -1,5 +1,5 @@
-// App: renders the shell + 5-page nav (Data Explorer / Backtest Results /
-// Compare Configs / Validation / About); default page is Data Explorer (natural
+// App: renders the shell + 6-page nav (Data Explorer / Backtest Results /
+// Compare Configs / Validation / Live / About); default page is Data Explorer (natural
 // flow: ingest first, then backtest or validate). Backend mocked with MSW.
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -40,6 +40,17 @@ test('switches to Backtest Results from the nav', async () => {
   expect(screen.getByRole('button', { name: /run backtest/i })).toBeInTheDocument()
   expect(
     screen.getByRole('button', { name: 'Backtest Results', current: 'page' }),
+  ).toBeInTheDocument()
+})
+
+test('switches to the Live dashboard from the nav', async () => {
+  renderWithClient(<App />)
+  await userEvent.click(screen.getByRole('button', { name: 'Live' }))
+  expect(
+    await screen.findByRole('heading', { name: 'Live' }),
+  ).toBeInTheDocument()
+  expect(
+    screen.getByRole('button', { name: 'Live', current: 'page' }),
   ).toBeInTheDocument()
 })
 
