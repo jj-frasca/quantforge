@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.data.fundamentals import FundamentalScreen, FundamentalSnapshot
 from app.research.lab.gate import GateConfig, GateResult
+from app.research.valuation import UndervaluationScore
 
 
 class Trial(BaseModel):
@@ -58,6 +59,9 @@ class Experiment(BaseModel):
     # 'sane fundamentals' screen. A failed screen vetoes graduation regardless of the technicals.
     fundamentals: FundamentalSnapshot | None = None
     fundamental_screen: FundamentalScreen | None = None
+    # Cited undervaluation score at hunt time (ADR-023), recorded so we can later measure whether
+    # value+algo survivors outperform. None when value is off or the name is unscorable (e.g. ETF).
+    undervaluation_score: UndervaluationScore | None = None
     graduate: Graduate | None = None
     rationale: str = ""
 

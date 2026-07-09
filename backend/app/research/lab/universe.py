@@ -9,6 +9,7 @@ from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.research.lab.experiment import Experiment, ExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.search import run_search
+from app.research.lab.value_filter import ValueGateConfig, ValueProvider, screen_value
 
 _TRADING_DAYS = 252
 
@@ -20,6 +21,8 @@ FundamentalsProvider = Callable[[str], FundamentalSnapshot | None]
 class UniverseHuntResult:
     experiments: list[Experiment]
     errors: dict[str, str] = field(default_factory=dict)
+    # Names skipped by the ADR-023 value pre-screen (symbol -> why). Empty when value is off.
+    filtered: dict[str, str] = field(default_factory=dict)
 
 
 class LeaderboardRow(BaseModel):
@@ -54,6 +57,8 @@ def run_universe_hunt(
     fundamentals_provider: FundamentalsProvider | None = None,
     config: GateConfig | None = None,
     fundamental_criteria: FundamentalCriteria | None = None,
+    value_provider: ValueProvider | None = None,
+    value_config: ValueGateConfig | None = None,
     store: ExperimentStore | None = None,
     n_per_param: int = 3,
     refine: bool = False,
@@ -64,11 +69,23 @@ def run_universe_hunt(
     history, no valid strategies) is recorded in `errors` and skipped; the rest still run. Trial
     counts are per-symbol (via the pool), so a wider universe is more independent shots, not a
     heavier overfitting penalty on any one name.
+
+    Optional value gate (ADR-023, OFF by default so the existing hunt is unchanged): when a
+    `value_provider` is given, each candidate's `UndervaluationScore` is recorded on its Experiment;
+    when a `value_config` is ALSO given, names that fail the value pre-screen are skipped (recorded
+    in `filtered`) and never hunted. Both are injectable so unit tests use fakes (no network).
     """
     experiments: list[Experiment] = []
     errors: dict[str, str] = {}
+    filtered: dict[str, str] = {}
     for symbol in symbols:
         try:
+            value_score = value_provider(symbol) if value_provider else None
+            if value_provider is not None and value_config is not None:
+                screen = screen_value(value_score, value_config)
+                if not screen.passed:
+                    filtered[symbol] = "; ".join(screen.reasons)
+                    continue
             frame = frame_provider(symbol)
             fundamentals = fundamentals_provider(symbol) if fundamentals_provider else None
             prior = store.trials_for_symbol(symbol) if store else 0
@@ -88,10 +105,12 @@ def run_universe_hunt(
         except (ValueError, KeyError, OSError) as exc:
             errors[symbol] = f"{type(exc).__name__}: {exc}"
             continue
+        if value_score is not None:
+            exp = exp.model_copy(update={"undervaluation_score": value_score})
         if store is not None:
             store.add(exp)
         experiments.append(exp)
-    return UniverseHuntResult(experiments=experiments, errors=errors)
+    return UniverseHuntResult(experiments=experiments, errors=errors, filtered=filtered)
 
 
 def rank_experiments(experiments: list[Experiment]) -> list[LeaderboardRow]:
