@@ -20,6 +20,7 @@ const scored: PaperPosition = {
     buy_and_hold_sharpe: -0.4,
     beats_buy_and_hold: true,
     as_of: '2026-07-08T00:00:00Z',
+    forward_equity: [],
   },
 }
 

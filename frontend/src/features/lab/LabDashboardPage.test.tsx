@@ -26,13 +26,17 @@ const positions = [
     closed_at: null,
     exit_reasons: [],
     score: {
-      forward_bars: 42,
+      forward_bars: 2,
       forward_return: 0.08,
       forward_sharpe: 0.9,
       buy_and_hold_return: -0.146,
       buy_and_hold_sharpe: -0.4,
       beats_buy_and_hold: true,
       as_of: '2026-07-08T00:00:00Z',
+      forward_equity: [
+        { timestamp: '2026-07-07T00:00:00Z', strategy_equity: 1.02, buy_and_hold_equity: 0.99 },
+        { timestamp: '2026-07-08T00:00:00Z', strategy_equity: 1.08, buy_and_hold_equity: 0.854 },
+      ],
     },
   },
 ]
@@ -49,6 +53,8 @@ test('renders the leaderboard and paper portfolio from the endpoints', async () 
   // Both sections render the CRM position/row.
   expect(screen.getAllByRole('cell', { name: 'CRM' }).length).toBeGreaterThanOrEqual(2)
   expect(screen.getByText(/1 of 1 position beating buy-and-hold/i)).toBeInTheDocument()
+  // The real forward equity curve renders once ≥2 forward bars have accrued (ADR-023).
+  expect(screen.getByLabelText('equity curve CRM')).toBeInTheDocument()
 })
 
 test('renders empty states when both endpoints return no data', async () => {

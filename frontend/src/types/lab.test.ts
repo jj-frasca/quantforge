@@ -38,7 +38,7 @@ test('leaderboardSchema tolerates a non-graduate row with null holdout fields', 
   expect(parsed[0].holdout_sharpe).toBeNull()
 })
 
-test('paperPortfolioSchema parses an open position with a forward score', () => {
+test('paperPortfolioSchema parses an open position with a forward score + equity series', () => {
   const raw = [
     {
       symbol: 'CRM',
@@ -46,13 +46,17 @@ test('paperPortfolioSchema parses an open position with a forward score', () => 
       parameters: { window: 20, k: 2.0 },
       frozen_at: '2026-07-06T00:00:00Z',
       score: {
-        forward_bars: 42,
+        forward_bars: 2,
         forward_return: 0.08,
         forward_sharpe: 0.9,
         buy_and_hold_return: -0.146,
         buy_and_hold_sharpe: -0.4,
         beats_buy_and_hold: true,
         as_of: '2026-07-08T00:00:00Z',
+        forward_equity: [
+          { timestamp: '2026-07-07T00:00:00Z', strategy_equity: 1.02, buy_and_hold_equity: 0.99 },
+          { timestamp: '2026-07-08T00:00:00Z', strategy_equity: 1.08, buy_and_hold_equity: 0.854 },
+        ],
       },
       status: 'open',
       closed_at: null,
@@ -62,6 +66,32 @@ test('paperPortfolioSchema parses an open position with a forward score', () => 
   const parsed = paperPortfolioSchema.parse(raw)
   expect(parsed[0].status).toBe('open')
   expect(parsed[0].score?.beats_buy_and_hold).toBe(true)
+  expect(parsed[0].score?.forward_equity).toHaveLength(2)
+  expect(parsed[0].score?.forward_equity[0].strategy_equity).toBe(1.02)
+})
+
+test('forwardScoreSchema defaults forward_equity to [] when absent (pre-ADR-023 scores)', () => {
+  const raw = [
+    {
+      symbol: 'AAPL',
+      strategy_name: 'sma',
+      parameters: {},
+      frozen_at: '2026-07-06T00:00:00Z',
+      score: {
+        forward_bars: 0,
+        forward_return: 0.0,
+        forward_sharpe: 0.0,
+        buy_and_hold_return: 0.0,
+        buy_and_hold_sharpe: 0.0,
+        beats_buy_and_hold: false,
+        as_of: '2026-07-08T00:00:00Z',
+      },
+      status: 'open',
+      exit_reasons: [],
+    },
+  ]
+  const parsed = paperPortfolioSchema.parse(raw)
+  expect(parsed[0].score?.forward_equity).toEqual([])
 })
 
 test('paperPortfolioSchema parses a closed position with exit reasons and null score', () => {

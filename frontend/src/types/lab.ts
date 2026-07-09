@@ -22,7 +22,17 @@ export type LeaderboardRow = z.infer<typeof leaderboardRowSchema>
 
 export const leaderboardSchema = z.array(leaderboardRowSchema)
 
-// ADR-019 forward score: scalars only (no per-bar series). `beats_buy_and_hold` is the honest bar.
+// ADR-023 forward equity point: a normalized index (base 1.0) compounding each post-freeze bar.
+export const forwardEquityPointSchema = z.object({
+  timestamp: z.string(),
+  strategy_equity: z.number(),
+  buy_and_hold_equity: z.number(),
+})
+
+export type ForwardEquityPoint = z.infer<typeof forwardEquityPointSchema>
+
+// ADR-019 forward score: scalar metrics + the ADR-023 per-bar `forward_equity` series (defaulted
+// so scores persisted before ADR-023 still parse). `beats_buy_and_hold` is the honest bar.
 export const forwardScoreSchema = z.object({
   forward_bars: z.number().int().nonnegative(),
   forward_return: z.number(),
@@ -31,6 +41,7 @@ export const forwardScoreSchema = z.object({
   buy_and_hold_sharpe: z.number(),
   beats_buy_and_hold: z.boolean(),
   as_of: z.string(),
+  forward_equity: z.array(forwardEquityPointSchema).default([]),
 })
 
 export type ForwardScore = z.infer<typeof forwardScoreSchema>

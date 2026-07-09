@@ -1,6 +1,7 @@
 import { ForwardComparisonChart } from './ForwardComparisonChart'
 import { LeaderboardTable } from './LeaderboardTable'
 import { PaperPortfolioTable } from './PaperPortfolioTable'
+import { PositionEquityCurve } from './PositionEquityCurve'
 import { useLeaderboard } from './useLeaderboard'
 import { usePaperPortfolio } from './usePaperPortfolio'
 
@@ -28,6 +29,14 @@ export function LabDashboardPage() {
           <>
             <PaperPortfolioTable positions={portfolio.data} />
             <ForwardComparisonChart positions={portfolio.data} />
+            <div className="equity-curves">
+              {portfolio.data.map((position) => (
+                <PositionEquityCurve
+                  key={`${position.symbol}-${position.strategy_name}`}
+                  position={position}
+                />
+              ))}
+            </div>
           </>
         )}
       </section>
