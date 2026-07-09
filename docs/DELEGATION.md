@@ -153,3 +153,47 @@ cron where yfinance is reliable, and only the paper loop in the cloud.
 - WP-A is done by the base agent; WP-F builds on it. WP-E integrates once WP-D's contract merges.
 - Each agent: write its ADR first (B, C), TDD, `make check`/`make frontend-check`, push granular,
   verify CI+pre-commit. Rebase on `master` before opening a PR to reduce shared-file conflicts.
+
+---
+
+# Round 2 — the wiring layer (WP-B and WP-C are merged as libraries; nothing calls them yet)
+
+WP-B (execution) and WP-C (valuation) are on master but UNWIRED. WP-E (dashboard) is still in flight
+under its original agent. Round 2 connects the merged modules into the live loop.
+
+## WP-G — Wire execution into a scheduled paper-broker step (uses merged WP-B)
+**Goal:** actually place real paper orders on Alpaca from the OPEN managed book, so P&L shows in the
+Alpaca dashboard (the "prove it with real fills" step).
+**Owns:** `backend/scripts/paper_broker.py`, `.github/workflows/paper-broker.yml`,
+`backend/tests/unit/test_paper_broker_step.py`. No new ADR (follows ADR-021).
+**Contract:** for each OPEN `PaperPosition` in `data/paper_portfolio.json`: fetch recent daily bars
+(`build_data_adapter(get_settings())` → Alpaca IEX), `quote_position` → `equal_weight_targets(equity)`
+where equity = `AlpacaBroker.account().equity`, then `reconcile(broker, targets)`. Broker =
+`AlpacaBroker("https://paper-api.alpaca.markets", settings.alpaca_api_key, settings.alpaca_secret_key)`.
+**Extract the pure orchestration** (open positions + frame-provider + equity → `list[TargetPosition]`)
+into a testable function so `make check` stays 100%; the broker HTTP round-trip is the `@live` part.
+**Depends on:** WP-B (merged). **Gotchas:** OPEN positions only; run daily after close; reconcile is
+idempotent (safe to re-run); market-closed → orders queue (don't crash); paper endpoint only.
+
+## WP-H — Wire valuation into the hunt: combine algo + undervalued companies (uses merged WP-C)
+**Goal:** Joe's core want — combine the algo with GENUINELY undervalued companies. Two moves per the
+base agent's rec: **(a) value pre-screen** the universe (only hunt names that look undervalued + have
+sane fundamentals) and **(b) record** each candidate's `UndervaluationScore` on its `Experiment`, so
+the data shows whether value+algo survivors outperform.
+**Owns:** `backend/app/research/lab/value_filter.py` (new), a small optional field on `Experiment`
+(`app/research/lab/experiment.py`), wiring in `app/research/lab/universe.py` (extend
+`run_universe_hunt` with an optional value gate — keep it OFF by default so nothing breaks), tests.
+**Write ADR-023 FIRST** — combining value with the algo is a real methodology decision (and a place
+overfitting can sneak in: the value screen must be a TUNABLE, versioned config like `GateConfig`, not
+hardcoded, and must not shrink the universe so far that nothing graduates).
+**Contract:** `UndervaluationScore` comes from `SecEdgarFundamentalsSource.fetch_history(symbol)` +
+`price_join` + `score_valuation(history, price)` (all merged in WP-C). The pre-screen + recording must
+be injectable/optional so the existing hunt is unchanged when value is off.
+**Depends on:** WP-C + WP-F (both merged). **Gotchas:** valuation needs a price near fiscal-year end
+(use WP-C's `price_join`); EDGAR history is a per-symbol network call (cache it); ETFs have no
+fundamentals → skip value screen (technicals only), same as the existing fundamentals veto.
+
+## Round 2 parallelization
+- WP-G and WP-H are independent (different trees; WP-H's `universe.py`/`experiment.py` edits don't
+  overlap WP-G). Spawn both in parallel now. WP-E finishes under its own agent; merge it when ready,
+  then a small WP-I wires the dashboard to also show `UndervaluationScore` once WP-H lands.
