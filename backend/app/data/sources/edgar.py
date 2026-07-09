@@ -1,7 +1,12 @@
 from collections.abc import Callable
 from typing import Any
 
-from app.data.fundamentals import FundamentalSnapshot, parse_company_facts
+from app.data.fundamentals import (
+    FundamentalsHistory,
+    FundamentalSnapshot,
+    parse_company_facts,
+    parse_company_facts_history,
+)
 
 JsonFetcher = Callable[[str], dict[str, Any]]
 
@@ -28,6 +33,12 @@ class SecEdgarFundamentalsSource:
         cik = self._cik_for(symbol)
         facts = self._fetch_json(_COMPANY_FACTS_URL.format(cik=cik))
         return parse_company_facts(facts, symbol.upper())
+
+    def fetch_history(self, symbol: str) -> FundamentalsHistory:
+        """Multi-year fundamentals for a symbol (ADR-022), for valuation-vs-own-history + DCF."""
+        cik = self._cik_for(symbol)
+        facts = self._fetch_json(_COMPANY_FACTS_URL.format(cik=cik))
+        return parse_company_facts_history(facts, symbol.upper())
 
     def _cik_for(self, symbol: str) -> int:
         if self._ticker_to_cik is None:
