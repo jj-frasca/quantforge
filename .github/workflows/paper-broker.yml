@@ -1,0 +1,45 @@
+name: Paper broker (real fills)
+
+# Token-free (no Claude): mirror the OPEN managed paper book into REAL orders on the free Alpaca
+# paper account daily in the cloud, so P&L shows in the Alpaca dashboard (ADR-021). Runs after the
+# forward-accrual step so the book it mirrors reflects the day's promote/monitor/exit decisions.
+# Idempotent (reconcile places only the diff); market-closed simply queues the orders. Paper only.
+on:
+  schedule:
+    - cron: "45 1 * * 2-6" # 01:45 UTC Tue–Sat = shortly after paper-forward's 01:30 accrual
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paper-broker
+  cancel-in-progress: false
+
+jobs:
+  broker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync dependencies (Python pinned via .python-version)
+        working-directory: backend
+        run: uv sync
+
+      - name: Place paper orders from the OPEN book (Alpaca)
+        working-directory: backend
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+        run: PYTHONPATH=. uv run python scripts/paper_broker.py | tee "$GITHUB_WORKSPACE/broker_out.txt"
+
+      - name: Slack the fills
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -Rs '{text: ("*QuantForge paper broker (cloud fills)*\n```" + . + "```")}' broker_out.txt \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
