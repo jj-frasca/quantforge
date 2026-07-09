@@ -1,0 +1,76 @@
+name: Scheduled hunt + auto-promotion
+
+# Token-free (no Claude): mass-tests the strategy catalog across a big universe on max-history daily
+# data, auto-promotes graduates into the managed paper book (WP-A/ADR-020), and commits the updated
+# pool + portfolio. Weekly — the hunt is heavy (universe x catalog x coarse-to-fine refine).
+#
+# DATA SOURCE: the hunt forces yfinance internally (scripts/hunt.py) because MinTRL needs 15-20yr and
+# Alpaca's free IEX feed is too short (ADR-015). So NO Alpaca keys are wired here. yfinance can be
+# flaky from cloud IPs → the run step retries; the local backend/scripts/cron_hunt.sh is a fallback.
+on:
+  schedule:
+    - cron: "0 7 * * 0" # 07:00 UTC Sunday — over the weekend, out of the trading week
+  workflow_dispatch:
+    inputs:
+      universe:
+        description: "Universe file (relative to repo root) to hunt"
+        required: false
+        default: "data/universes/sp500.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scheduled-hunt
+  cancel-in-progress: false
+
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350 # under the 6h hard cap; the universe hunt is long
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync dependencies (Python pinned via .python-version)
+        working-directory: backend
+        run: uv sync
+
+      - name: Run the hunt + auto-promotion (yfinance, retried)
+        working-directory: backend
+        env:
+          UNIVERSE: ${{ github.event.inputs.universe || 'data/universes/sp500.txt' }}
+        run: |
+          set +e
+          for attempt in 1 2; do
+            echo "=== hunt attempt $attempt ==="
+            PYTHONPATH=. uv run python scripts/hunt.py "$GITHUB_WORKSPACE/$UNIVERSE" \
+              | tee "$GITHUB_WORKSPACE/hunt_out.txt"
+            status=${PIPESTATUS[0]}
+            [ "$status" -eq 0 ] && break
+            echo "attempt $attempt failed (status $status); retrying..." && sleep 30
+          done
+          exit "$status"
+
+      - name: Slack the summary
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -Rs '{text: ("*QuantForge scheduled hunt (cloud)*\n```" + . + "```")}' hunt_out.txt \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+
+      - name: Commit pool + portfolio (if changed)
+        if: ${{ always() }}
+        run: |
+          if ! git diff --quiet -- data/research_pool.json data/paper_portfolio.json; then
+            git config user.name "quantforge-hunt-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add data/research_pool.json data/paper_portfolio.json
+            git commit -m "chore(hunt): scheduled mass-test + auto-promotion $(date +%F)"
+            git push
+          else
+            echo "no pool/portfolio change"
+          fi
