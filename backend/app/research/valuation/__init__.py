@@ -11,6 +11,7 @@ from app.research.valuation.multiples import (
     compute_multiples,
     percentile_rank,
 )
+from app.research.valuation.price_join import asof_close, attach_fiscal_year_prices
 from app.research.valuation.score import UndervaluationScore, score_valuation
 
 __all__ = [
@@ -18,6 +19,8 @@ __all__ = [
     "IntrinsicValueResult",
     "MultiplesResult",
     "UndervaluationScore",
+    "asof_close",
+    "attach_fiscal_year_prices",
     "compute_multiples",
     "dcf_intrinsic_value",
     "estimate_growth",
