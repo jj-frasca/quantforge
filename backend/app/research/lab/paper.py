@@ -13,10 +13,25 @@ from app.research.lab.experiment import Experiment
 from app.research.strategies.builder import build_strategy_from_dict
 
 
+class ForwardEquityPoint(BaseModel):
+    """One bar of the forward equity curve (ADR-023): a normalized index (base 1.0 at the freeze
+    boundary) that compounds each post-freeze bar. Floats — a derived stat, not a price."""
+
+    model_config = ConfigDict(frozen=True)
+
+    timestamp: datetime
+    strategy_equity: float
+    buy_and_hold_equity: float
+
+
 class ForwardScore(BaseModel):
     """A frozen strategy's out-of-time performance (ADR-019), scored ONLY on bars after the freeze
     date — data it could not have been fit to. `beats_buy_and_hold` is the honest bar: did the
-    strategy earn more than simply holding the name, risk-adjusted, going forward?"""
+    strategy earn more than simply holding the name, risk-adjusted, going forward?
+
+    Notes: `forward_equity` (ADR-023) is the per-bar equity index for the dashboard curve; it is
+    additive + defaulted so scores persisted before ADR-023 still validate (they carry an empty
+    series until the next accrual repopulates them)."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -27,6 +42,7 @@ class ForwardScore(BaseModel):
     buy_and_hold_sharpe: float
     beats_buy_and_hold: bool
     as_of: datetime
+    forward_equity: list[ForwardEquityPoint] = []
 
 
 class PaperPosition(BaseModel):
@@ -177,6 +193,18 @@ def evaluate_forward(position: PaperPosition, frame: pd.DataFrame) -> ForwardSco
     bh = frame["close"].pct_change().fillna(0.0)[forward_mask]
     fwd_sharpe = sharpe_ratio(fwd)
     bh_sharpe = sharpe_ratio(bh)
+    # Normalized equity indices (base 1.0), compounding each forward bar — the honest curve on
+    # data the strategy never saw (ADR-023). Terminal value == 1 + the scalar total return.
+    strat_equity = (1.0 + fwd).cumprod()
+    bh_equity = (1.0 + bh).cumprod()
+    forward_equity = [
+        ForwardEquityPoint(
+            timestamp=ts.to_pydatetime(),
+            strategy_equity=float(strat_equity.iloc[i]),
+            buy_and_hold_equity=float(bh_equity.iloc[i]),
+        )
+        for i, ts in enumerate(fwd.index)
+    ]
     return ForwardScore(
         forward_bars=int(forward_mask.sum()),
         forward_return=float((1.0 + fwd).prod() - 1.0),
@@ -185,6 +213,7 @@ def evaluate_forward(position: PaperPosition, frame: pd.DataFrame) -> ForwardSco
         buy_and_hold_sharpe=bh_sharpe,
         beats_buy_and_hold=fwd_sharpe > bh_sharpe,
         as_of=as_of,
+        forward_equity=forward_equity,
     )
 
 
