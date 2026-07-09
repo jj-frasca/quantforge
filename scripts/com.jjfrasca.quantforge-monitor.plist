@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Token-free WP-agent monitor (every 30 min). Install:
+     cp scripts/com.jjfrasca.quantforge-monitor.plist ~/Library/LaunchAgents/
+     launchctl unload ~/Library/LaunchAgents/com.jjfrasca.quantforge-monitor.plist 2>/dev/null
+     launchctl load ~/Library/LaunchAgents/com.jjfrasca.quantforge-monitor.plist -->
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>HOME</key>
+		<string>/Users/joefrasca</string>
+		<key>PATH</key>
+		<string>/Users/joefrasca/.local/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<key>SHELL</key>
+		<string>/bin/zsh</string>
+		<key>USER</key>
+		<string>joefrasca</string>
+	</dict>
+	<key>Label</key>
+	<string>com.jjfrasca.quantforge-monitor</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>/Users/joefrasca/claude-work/quantforge/scripts/monitor_agents.sh</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/joefrasca/.claude/_reports/cron-quantforge-monitor.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/joefrasca/.claude/_reports/cron-quantforge-monitor.log</string>
+	<key>StartInterval</key>
+	<integer>1800</integer>
+</dict>
+</plist>
