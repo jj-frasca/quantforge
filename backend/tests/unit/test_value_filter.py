@@ -5,6 +5,8 @@ exactly like the ADR-017 fundamentals veto. The score provider is injected — n
 
 from datetime import date
 
+import pytest
+
 from app.data.fundamentals import AnnualFundamentals, FundamentalsHistory
 from app.research.lab.value_filter import (
     ValueGateConfig,
@@ -169,3 +171,21 @@ def test_provider_returns_none_when_history_lookup_fails() -> None:
 def test_provider_returns_none_when_no_prices() -> None:
     provider = make_value_provider(lambda s: _history(), lambda s: [])
     assert provider("AAA") is None
+
+
+@pytest.mark.live
+def test_live_value_provider_scores_a_real_symbol_from_edgar() -> None:
+    # Real EDGAR history + a plausible recent price series -> a cited UndervaluationScore.
+    from app.data.sources.edgar import SecEdgarFundamentalsSource
+
+    source = SecEdgarFundamentalsSource(user_agent="QuantForge research jjfrasca10@gmail.com")
+    provider = make_value_provider(
+        source.fetch_history,
+        lambda s: [(date(y, 12, 31), 150.0 + y) for y in range(2015, 2025)],
+    )
+    result = provider("AAPL")
+    assert result is not None
+    assert result.symbol == "AAPL"
+    assert result.cik == 320193
+    assert result.accession_number  # citation present (rule 6)
+    assert result.source == "SEC EDGAR"
