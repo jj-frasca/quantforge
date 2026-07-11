@@ -197,3 +197,32 @@ fundamentals → skip value screen (technicals only), same as the existing funda
 - WP-G and WP-H are independent (different trees; WP-H's `universe.py`/`experiment.py` edits don't
   overlap WP-G). Spawn both in parallel now. WP-E finishes under its own agent; merge it when ready,
   then a small WP-I wires the dashboard to also show `UndervaluationScore` once WP-H lands.
+
+---
+
+# Round 3 — discovery expansion (spawned 2026-07-11, all killed by the account session limit; RE-SPAWN after reset)
+
+Base: master is green. None of these pushed — re-spawn cleanly. Independent files (no collisions).
+
+## WP-J — activate the value engine in the hunt (RECORD-FIRST)
+Wire `make_value_provider` (EDGAR `fetch_history` + a per-symbol daily-close price series) into
+`run_universe_hunt` so every candidate's `UndervaluationScore` is RECORDED (value_provider ON,
+value_config OFF/permissive by default — calibrate before enforcing). Opt-in `--value-screen
+[MIN_SCORE]` CLI flag turns on the hard `ValueGateConfig`. OWNS `backend/scripts/{hunt,run_hunt}.py`
++ a value-wiring helper + tests. Injectable providers (CI network-free; `@live` for real EDGAR).
+Gotcha: 503-name EDGAR fetch load → cache + resilient (fail → None → technicals only).
+
+## WP-K — widen the single-name strategy catalog (~10 new strategies)
+Add diverse cited strategies (Williams %R, CCI, Stochastic, ADX trend, Aroon, VWAP reversion,
+dual-momentum, 52-week-high, Chaikin MF, TRIX, Connors RSI). OWNS `strategies/*.py`, `catalog.py`,
+`configs.py`, `builder.py`, `research-papers.md`, tests.
+⚠️ GOTCHA WP-K HIT: strategy **categories are mirrored in a frontend Zod enum with a guarding
+test** (`frontend/src/.../groupByCategory` + a category enum). To stay backend-only, **use ONLY the
+existing categories** (Trend / Mean Reversion / Breakout / Combination) — do NOT invent a new
+category like "Seasonality" (that needs a paired frontend change + would break the guard test).
+
+## WP-L — cross-sectional dimension (ADR-024 first)
+Rank the universe each period, long-top/short-bottom (cross-sectional momentum, short-term
+reversal, cross-sectional value via the merged valuation). NEW tree `app/research/cross_sectional/`
++ own registry; reuse the existing DSR/PBO/holdout gate on the portfolio return series. Do NOT
+touch the single-name catalog or scripts. No-lookahead: rank on t, trade t+1.
