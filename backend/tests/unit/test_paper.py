@@ -11,6 +11,7 @@ import pytest
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import (
+    ForwardEquityPoint,
     ForwardScore,
     JsonFilePaperPortfolio,
     PaperPosition,
@@ -54,6 +55,40 @@ def test_no_forward_bars_yet_when_freeze_is_after_the_last_bar() -> None:
     assert score.forward_bars == 0
     assert score.forward_return == 0.0
     assert score.beats_buy_and_hold is False
+    assert score.forward_equity == []
+
+
+def test_evaluate_forward_populates_a_normalized_forward_equity_series() -> None:
+    """ADR-023: the forward equity index (base 1.0, compounding per bar) is served for the
+    dashboard curve. Its terminal value must reconcile with the reported scalar returns."""
+    frame = _frame()
+    score = evaluate_forward(_position(), frame)
+    # One point per forward bar.
+    assert len(score.forward_equity) == score.forward_bars
+    assert all(isinstance(p, ForwardEquityPoint) for p in score.forward_equity)
+    # Timestamps are strictly after the freeze and strictly increasing.
+    assert all(p.timestamp > _FREEZE for p in score.forward_equity)
+    stamps = [p.timestamp for p in score.forward_equity]
+    assert stamps == sorted(stamps) and len(set(stamps)) == len(stamps)
+    # Terminal equity reconciles with the scalar total returns (index base 1.0).
+    last = score.forward_equity[-1]
+    assert last.strategy_equity == pytest.approx(1.0 + score.forward_return)
+    assert last.buy_and_hold_equity == pytest.approx(1.0 + score.buy_and_hold_return)
+
+
+def test_forward_equity_series_round_trips_through_the_json_store(tmp_path: object) -> None:
+    """A persisted score with a series reloads intact (old scores without one default to [])."""
+    import pathlib
+
+    assert isinstance(tmp_path, pathlib.Path)
+    frame = _frame()
+    position = _position()
+    scored = position.model_copy(update={"score": evaluate_forward(position, frame)})
+    store = JsonFilePaperPortfolio(tmp_path / "pf.json")
+    store.save([scored])
+    reloaded = store.positions()[0]
+    assert reloaded.score is not None
+    assert len(reloaded.score.forward_equity) == scored.score.forward_bars  # type: ignore[union-attr]
 
 
 def test_freeze_graduate_builds_a_position_from_a_graduated_experiment() -> None:

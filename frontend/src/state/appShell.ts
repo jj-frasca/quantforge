@@ -17,6 +17,7 @@ export type PageId =
   | 'backtest-results'
   | 'compare-configs'
   | 'validation'
+  | 'lab'
   | 'about'
 
 interface AppShellState {
