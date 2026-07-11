@@ -114,11 +114,13 @@ def run_universe_hunt(
 
 
 def rank_experiments(experiments: list[Experiment]) -> list[LeaderboardRow]:
-    """Cross-symbol leaderboard: graduates first, then by best-candidate deflated Sharpe. Each
-    graduate is annotated with whether it survives universe-level deflation (ADR-018) — the honest
-    cross-symbol test, using the number of symbols searched as the selection breadth."""
-    n_symbols = len(experiments)
-    rows: list[LeaderboardRow] = []
+    """Cross-symbol leaderboard: ONE row per symbol (its best experiment), graduates first then by
+    deflated Sharpe. A symbol hunted more than once collapses to its best result — so the row is
+    unique per symbol (no duplicate keys) and the board isn't padded with repeat experiments. Each
+    graduate is annotated with whether it survives universe-level deflation (ADR-018), using the
+    count of UNIQUE symbols searched as the selection breadth."""
+    n_symbols = len({exp.symbol for exp in experiments})
+    best_by_symbol: dict[str, LeaderboardRow] = {}
     for exp in experiments:
         if not exp.trials:
             continue
@@ -128,14 +130,20 @@ def rank_experiments(experiments: list[Experiment]) -> list[LeaderboardRow]:
             holdout_years = exp.graduate.holdout_n_bars / _TRADING_DAYS
             threshold = expected_max_sharpe_under_null(n_symbols, holdout_years)
             survives = exp.graduate.holdout_sharpe > threshold
-        rows.append(
-            LeaderboardRow(
-                symbol=exp.symbol,
-                strategy_name=best.strategy_name,
-                deflated_sharpe=best.deflated_sharpe,
-                graduated=exp.graduate is not None,
-                holdout_sharpe=exp.graduate.holdout_sharpe if exp.graduate else None,
-                survives_universe_deflation=survives,
-            )
+        row = LeaderboardRow(
+            symbol=exp.symbol,
+            strategy_name=best.strategy_name,
+            deflated_sharpe=best.deflated_sharpe,
+            graduated=exp.graduate is not None,
+            holdout_sharpe=exp.graduate.holdout_sharpe if exp.graduate else None,
+            survives_universe_deflation=survives,
         )
-    return sorted(rows, key=lambda r: (r.graduated, r.deflated_sharpe), reverse=True)
+        current = best_by_symbol.get(exp.symbol)
+        if current is None or (row.graduated, row.deflated_sharpe) > (
+            current.graduated,
+            current.deflated_sharpe,
+        ):
+            best_by_symbol[exp.symbol] = row
+    return sorted(
+        best_by_symbol.values(), key=lambda r: (r.graduated, r.deflated_sharpe), reverse=True
+    )

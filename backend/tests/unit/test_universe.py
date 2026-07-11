@@ -110,6 +110,35 @@ def test_empty_universe_returns_nothing() -> None:
     assert rank_experiments(result.experiments) == []
 
 
+def _exp_with_dsr(symbol: str, dsr: float) -> Experiment:
+    return Experiment(
+        symbol=symbol,
+        strategy_names=["sma"],
+        gate_config=GateConfig(),
+        trials=[
+            Trial(
+                strategy_name="sma",
+                parameters={"fast": 5, "slow": 20},
+                observed_sharpe=1.0,
+                deflated_sharpe=dsr,
+                pbo=0.1,
+                parameter_stability_score=0.8,
+            )
+        ],
+        lifetime_trials=1,
+    )
+
+
+def test_leaderboard_collapses_a_symbol_to_its_best_experiment() -> None:
+    # A symbol hunted twice -> ONE row (best DSR), so keys are unique + the board isn't padded.
+    rows = rank_experiments(
+        [_exp_with_dsr("DUP", 0.2), _exp_with_dsr("DUP", 0.5), _exp_with_dsr("OTHER", 0.3)]
+    )
+    assert len(rows) == 2  # one row per symbol
+    dup = [r for r in rows if r.symbol == "DUP"]
+    assert len(dup) == 1 and dup[0].deflated_sharpe == 0.5  # kept the better experiment
+
+
 def test_expected_max_sharpe_under_null_values_and_edges() -> None:
     assert expected_max_sharpe_under_null(1, 4.0) == 0.0  # N<2 -> no selection
     assert expected_max_sharpe_under_null(51, 0.0) == 0.0  # no holdout -> 0
