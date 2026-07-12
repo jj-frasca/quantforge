@@ -11,6 +11,7 @@ from app.research.lab.gate import GateConfig
 from app.research.lab.paper import ExitPolicy, PaperPosition
 from app.research.lab.portfolio_manager import manage_portfolio
 from app.research.lab.universe import UniverseHuntResult, run_universe_hunt
+from app.research.lab.value_filter import ValueGateConfig, ValueProvider
 
 FrameProvider = Callable[[str], pd.DataFrame]
 FundamentalsProvider = Callable[[str], FundamentalSnapshot | None]
@@ -38,6 +39,8 @@ def hunt_and_promote(
     fundamentals_provider: FundamentalsProvider | None = None,
     config: GateConfig | None = None,
     fundamental_criteria: FundamentalCriteria | None = None,
+    value_provider: ValueProvider | None = None,
+    value_config: ValueGateConfig | None = None,
     exit_policy: ExitPolicy | None = None,
     now: datetime,
     refine: bool = True,
@@ -52,6 +55,9 @@ def hunt_and_promote(
         Promotion draws from the whole pool, not just this run's graduates, so a graduate from an
         earlier hunt that was never promoted is still picked up (idempotent — a held or previously
         cut name is not re-added). Pure over its providers/stores → unit-testable without network.
+        A `value_provider` (ADR-023, WP-J) records a cited `UndervaluationScore` on each hunted
+        name; a `value_config` additionally pre-screens out names below min_score — both forwarded
+        straight to the hunt (record-first: recording on, the hard gate opt-in).
     """
     hunt = run_universe_hunt(
         symbols,
@@ -60,6 +66,8 @@ def hunt_and_promote(
         fundamentals_provider=fundamentals_provider,
         config=config,
         fundamental_criteria=fundamental_criteria,
+        value_provider=value_provider,
+        value_config=value_config,
         store=pool,
         refine=refine,
         rationale=rationale,

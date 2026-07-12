@@ -28,6 +28,11 @@ from app.research.lab.gate import GateConfig
 from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.scheduled_hunt import hunt_and_promote
 from app.research.lab.universe import rank_experiments
+from app.research.lab.value_wiring import (
+    cached_frame_provider,
+    make_hunt_value_provider,
+    parse_value_screen,
+)
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
 DATA = Path(__file__).resolve().parents[2] / "data"
@@ -50,7 +55,8 @@ def _resolve_symbols(args: list[str]) -> list[str]:
 
 
 def main() -> None:
-    symbols = _resolve_symbols(sys.argv[1:])
+    value_config, arg_rest = parse_value_screen(sys.argv[1:])
+    symbols = _resolve_symbols(arg_rest)
     names = [entry.name for entry in STRATEGY_CATALOG]
     adapter = YFinanceAdapter()  # forced: the hunt needs 15-20yr; Alpaca IEX is too short.
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
@@ -58,8 +64,11 @@ def main() -> None:
     portfolio = JsonFilePaperPortfolio(PORTFOLIO)
     now = datetime.now(UTC)
 
-    def frame_provider(symbol: str) -> pd.DataFrame:
+    def fetch_frame(symbol: str) -> pd.DataFrame:
         return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
+
+    # One memoized fetch feeds BOTH the backtest and the value price series (no double price load).
+    frame_provider = cached_frame_provider(fetch_frame)
 
     def fundamentals_provider(symbol: str) -> FundamentalSnapshot | None:
         try:
@@ -67,7 +76,15 @@ def main() -> None:
         except (ValueError, OSError):
             return None  # ETFs/indices have no 10-K revenue
 
-    print(f"Hunting {len(symbols)} symbols x {len(names)} strategies (yfinance max history)...\n")
+    # Record-first value (ADR-023): score every name; only enforce the gate when --value-screen given.
+    value_provider = make_hunt_value_provider(edgar.fetch_history, frame_provider)
+    screen_note = (
+        "" if value_config is None else f" [value gate min_score={value_config.min_score}]"
+    )
+    print(
+        f"Hunting {len(symbols)} symbols x {len(names)} strategies "
+        f"(yfinance max history){screen_note}...\n"
+    )
     result = hunt_and_promote(
         symbols,
         names,
@@ -77,6 +94,8 @@ def main() -> None:
         fundamentals_provider=fundamentals_provider,
         config=GateConfig(),
         fundamental_criteria=FundamentalCriteria(),
+        value_provider=value_provider,
+        value_config=value_config,
         now=now,
         refine=True,
         rationale="scheduled universe hunt (WP-F)",
@@ -107,6 +126,12 @@ def main() -> None:
     if result.hunt.errors:
         shown = list(result.hunt.errors.items())[:10]
         print("errors:", ", ".join(f"{s} ({e})" for s, e in shown))
+    if result.hunt.filtered:
+        shown_f = list(result.hunt.filtered.items())[:10]
+        print(
+            f"value-screened out {len(result.hunt.filtered)}: "
+            + ", ".join(f"{s} ({why})" for s, why in shown_f)
+        )
 
 
 if __name__ == "__main__":

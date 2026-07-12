@@ -1,12 +1,18 @@
 """Drive a StrategyLab universe hunt on real max-history daily data (ADR-014/015/016/017).
 
-Usage: PYTHONPATH=. uv run python scripts/run_hunt.py [SYMBOL ...]   (default: a large-cap universe)
+Usage: PYTHONPATH=. uv run python scripts/run_hunt.py [--value-screen [MIN_SCORE]] [SYMBOL ...]
+       (default universe: a large-cap set)
 
 For each symbol: fetch the longest daily history, pull cited SEC-EDGAR fundamentals (best effort),
 search every catalog strategy on the in-sample split, score the best on the SEALED holdout, and
 apply the deterministic gate + fundamentals veto. Findings accumulate in a JSON research pool
 (the per-symbol trial count compounds → the DSR/MinTRL honesty flywheel). Prints a per-symbol
 summary and a cross-symbol leaderboard. Local-only (live network); never in CI.
+
+Value (ADR-023, WP-J): a cited `UndervaluationScore` is RECORDED on every hunted name (EDGAR
+fundamentals-history + the hunt's own price frame, so no extra price fetch). `--value-screen`
+turns on the hard value gate (optional following float = min_score; default 0.5, needs calibration)
+so only names that look undervalued are hunted; names below the bar are reported as filtered.
 """
 
 import sys
@@ -23,6 +29,11 @@ from app.research.frames import bars_to_frame
 from app.research.lab.experiment import JsonFileExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.universe import rank_experiments, run_universe_hunt
+from app.research.lab.value_wiring import (
+    cached_frame_provider,
+    make_hunt_value_provider,
+    parse_value_screen,
+)
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
 # In-repo research pool so findings survive and are reviewable in git.
@@ -67,15 +78,19 @@ def _resolve_symbols(args: list[str]) -> list[str]:
 
 
 def main() -> None:
-    symbols = _resolve_symbols(sys.argv[1:])
+    value_config, arg_rest = parse_value_screen(sys.argv[1:])
+    symbols = _resolve_symbols(arg_rest)
     names = [entry.name for entry in STRATEGY_CATALOG]
     adapter = build_data_adapter(get_settings())
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     store = JsonFileExperimentStore(POOL)
     end = datetime.now(UTC)
 
-    def frame_provider(symbol: str) -> pd.DataFrame:
+    def fetch_frame(symbol: str) -> pd.DataFrame:
         return bars_to_frame(adapter.fetch_price_bars(symbol, START, end))
+
+    # One memoized fetch feeds BOTH the backtest and the value price series (no double price load).
+    frame_provider = cached_frame_provider(fetch_frame)
 
     def fundamentals_provider(symbol: str) -> FundamentalSnapshot | None:
         try:
@@ -83,7 +98,12 @@ def main() -> None:
         except (ValueError, OSError):
             return None  # ETFs/indices have no 10-K revenue
 
-    print(f"Hunting {len(symbols)} symbols x {len(names)} strategies...\n")
+    # Record-first value (ADR-023): score every name; only enforce the gate when --value-screen given.
+    value_provider = make_hunt_value_provider(edgar.fetch_history, frame_provider)
+    screen_note = (
+        "" if value_config is None else f" [value gate min_score={value_config.min_score}]"
+    )
+    print(f"Hunting {len(symbols)} symbols x {len(names)} strategies{screen_note}...\n")
     result = run_universe_hunt(
         symbols,
         names,
@@ -91,6 +111,8 @@ def main() -> None:
         fundamentals_provider=fundamentals_provider,
         config=GateConfig(),
         fundamental_criteria=FundamentalCriteria(),
+        value_provider=value_provider,
+        value_config=value_config,
         store=store,
         refine=True,
         rationale="universe hunt (refined)",
@@ -125,6 +147,11 @@ def main() -> None:
     )
     if result.errors:
         print("errors:", ", ".join(f"{s} ({e})" for s, e in result.errors.items()))
+    if result.filtered:
+        print(
+            f"value-screened out {len(result.filtered)}: "
+            + ", ".join(f"{s} ({why})" for s, why in list(result.filtered.items())[:10])
+        )
 
 
 if __name__ == "__main__":

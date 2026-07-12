@@ -17,6 +17,8 @@ from app.research.lab.experiment import (
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import PaperPosition
 from app.research.lab.scheduled_hunt import hunt_and_promote
+from app.research.lab.value_filter import ValueGateConfig
+from app.research.valuation import UndervaluationScore
 
 _NOW = datetime(2024, 6, 1, tzinfo=UTC)
 
@@ -124,6 +126,62 @@ def test_hunt_and_promote_does_not_re_add_a_held_name() -> None:
 
     assert len([p for p in result.positions if p.symbol == "CRM"]) == 1
     assert result.promoted == []
+
+
+def _uscore(symbol: str, score: float | None) -> UndervaluationScore:
+    return UndervaluationScore(
+        symbol=symbol,
+        cik=1,
+        entity_name="x",
+        fiscal_year=2024,
+        form="10-K",
+        accession_number="a",
+        source_url="http://x",
+        current_price=50.0,
+        pe_ratio=10.0,
+        pe_percentile=0.3,
+        ps_ratio=2.0,
+        ps_percentile=0.3,
+        intrinsic_value_per_share=55.0,
+        margin_of_safety=0.1,
+        growth_rate_used=0.03,
+        fcf_is_net_income_proxy=False,
+        score=score,
+        flags=[],
+    )
+
+
+def _long_provider(symbol: str) -> pd.DataFrame:
+    rng = np.random.default_rng(1)
+    closes = 100.0 * np.cumprod(1 + rng.normal(0.0004, 0.01, 1500))
+    idx = pd.date_range("2015-01-01", periods=1500, freq="B", tz="UTC")
+    return pd.DataFrame({"close": closes}, index=idx)
+
+
+def test_hunt_and_promote_forwards_value_provider_and_config_to_the_hunt() -> None:
+    # ADR-023 wiring (WP-J): a value_provider records the score on each hunted name; a value_config
+    # additionally pre-screens out names below min_score before they are ever hunted.
+    pool = InMemoryExperimentStore()
+    portfolio = _FakePortfolio()
+    scores = {"CHEAP": _uscore("CHEAP", 0.8), "RICH": _uscore("RICH", 0.1)}
+
+    result = hunt_and_promote(
+        ["CHEAP", "RICH"],
+        ["sma"],
+        _long_provider,
+        pool=pool,
+        portfolio=portfolio,
+        now=_NOW,
+        refine=False,
+        value_provider=lambda s: scores[s],
+        value_config=ValueGateConfig(min_score=0.5),
+    )
+
+    hunted = {e.symbol for e in result.hunt.experiments}
+    assert hunted == {"CHEAP"}  # RICH pre-screened out, never hunted
+    assert "RICH" in result.hunt.filtered
+    recorded = result.hunt.experiments[0].undervaluation_score
+    assert recorded is not None and recorded.score == 0.8
 
 
 def test_hunt_and_promote_runs_the_hunt_and_records_experiments() -> None:
