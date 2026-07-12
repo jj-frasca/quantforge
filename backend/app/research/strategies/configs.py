@@ -85,6 +85,27 @@ class TripleMAAlignmentConfig(BaseModel):
     slow: int = Field(default=100, ge=3)
 
 
+class WilliamsRConfig(BaseModel):
+    name: Literal["williams_r"] = "williams_r"
+    window: int = Field(default=14, ge=2)
+    oversold: float = Field(default=-80.0, ge=-100, le=0)
+    overbought: float = Field(default=-20.0, ge=-100, le=0)
+
+
+class CCIConfig(BaseModel):
+    name: Literal["cci"] = "cci"
+    window: int = Field(default=20, ge=2)
+    threshold: float = Field(default=100.0, gt=0)
+
+
+class StochasticOscillatorConfig(BaseModel):
+    name: Literal["stochastic_oscillator"] = "stochastic_oscillator"
+    k_window: int = Field(default=14, ge=2)
+    d_window: int = Field(default=3, ge=1)
+    oversold: float = Field(default=20.0, gt=0, lt=100)
+    overbought: float = Field(default=80.0, gt=0, lt=100)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -96,6 +117,9 @@ StrategyConfig = Annotated[
     | VolTargetedSMAConfig
     | KeltnerChannelConfig
     | TrendFilteredMeanReversionConfig
-    | TripleMAAlignmentConfig,
+    | TripleMAAlignmentConfig
+    | WilliamsRConfig
+    | CCIConfig
+    | StochasticOscillatorConfig,
     Field(discriminator="name"),
 ]

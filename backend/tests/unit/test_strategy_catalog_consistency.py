@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from app.research.strategies.catalog import STRATEGY_CATALOG
 from app.research.strategies.configs import (
     BollingerBandsConfig,
+    CCIConfig,
     DonchianBreakoutConfig,
     KeltnerChannelConfig,
     MACDCrossoverConfig,
@@ -14,9 +15,11 @@ from app.research.strategies.configs import (
     MomentumConfig,
     RSIMeanReversionConfig,
     SMAConfig,
+    StochasticOscillatorConfig,
     TrendFilteredMeanReversionConfig,
     TripleMAAlignmentConfig,
     VolTargetedSMAConfig,
+    WilliamsRConfig,
 )
 
 _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
@@ -31,6 +34,9 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "keltner_channel": KeltnerChannelConfig,
     "trend_filtered_mean_reversion": TrendFilteredMeanReversionConfig,
     "triple_ma_alignment": TripleMAAlignmentConfig,
+    "williams_r": WilliamsRConfig,
+    "cci": CCIConfig,
+    "stochastic_oscillator": StochasticOscillatorConfig,
 }
 
 

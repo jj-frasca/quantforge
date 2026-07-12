@@ -18,8 +18,10 @@ from pydantic import TypeAdapter
 
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.bollinger_bands import BollingerBandsStrategy
+from app.research.strategies.cci import CCIStrategy
 from app.research.strategies.configs import (
     BollingerBandsConfig,
+    CCIConfig,
     DonchianBreakoutConfig,
     KeltnerChannelConfig,
     MACDCrossoverConfig,
@@ -27,10 +29,12 @@ from app.research.strategies.configs import (
     MomentumConfig,
     RSIMeanReversionConfig,
     SMAConfig,
+    StochasticOscillatorConfig,
     StrategyConfig,
     TrendFilteredMeanReversionConfig,
     TripleMAAlignmentConfig,
     VolTargetedSMAConfig,
+    WilliamsRConfig,
 )
 from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
 from app.research.strategies.keltner_channel import KeltnerChannelStrategy
@@ -39,11 +43,13 @@ from app.research.strategies.mean_reversion import MeanReversionStrategy
 from app.research.strategies.momentum import MomentumStrategy
 from app.research.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
 from app.research.strategies.sma import SMAStrategy
+from app.research.strategies.stochastic_oscillator import StochasticOscillatorStrategy
 from app.research.strategies.trend_filtered_mean_reversion import (
     TrendFilteredMeanReversionStrategy,
 )
 from app.research.strategies.triple_ma_alignment import TripleMAAlignmentStrategy
 from app.research.strategies.vol_targeted_sma import VolTargetedSMAStrategy
+from app.research.strategies.williams_r import WilliamsRStrategy
 
 _StrategyConfigAdapter: Final = TypeAdapter[StrategyConfig](StrategyConfig)
 
@@ -89,6 +95,21 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
         )
     if isinstance(config, TripleMAAlignmentConfig):
         return TripleMAAlignmentStrategy(fast=config.fast, medium=config.medium, slow=config.slow)
+    if isinstance(config, WilliamsRConfig):
+        return WilliamsRStrategy(
+            window=config.window,
+            oversold=config.oversold,
+            overbought=config.overbought,
+        )
+    if isinstance(config, CCIConfig):
+        return CCIStrategy(window=config.window, threshold=config.threshold)
+    if isinstance(config, StochasticOscillatorConfig):
+        return StochasticOscillatorStrategy(
+            k_window=config.k_window,
+            d_window=config.d_window,
+            oversold=config.oversold,
+            overbought=config.overbought,
+        )
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.

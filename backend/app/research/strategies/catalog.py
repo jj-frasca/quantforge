@@ -486,4 +486,137 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="williams_r",
+        label="Williams %R",
+        category="Mean Reversion",
+        summary="Buys when the price is stuck near its recent lows and sells when it is near its recent highs, betting on a bounce.",
+        description=(
+            "Williams %R oscillator: long when %R falls below the oversold level (close "
+            "pinned near the window low), short when it rises above overbought (near the "
+            "window high), flat between. Trailing high/low windows -- no look-ahead."
+        ),
+        citations=[
+            "Williams, Larry. How I Made One Million Dollars Last Year Trading Commodities. "
+            "Windsor Books, 1979."
+        ],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=14,
+                minimum=2,
+                maximum=200,
+                label="Lookback window",
+                description="Bars in the rolling high/low that define the %R range",
+            ),
+            ParamSchema(
+                name="oversold",
+                type="float",
+                default=-80.0,
+                minimum=-99.0,
+                maximum=-51.0,
+                step=1.0,
+                label="Oversold threshold",
+                description="Go long when %R drops below this level (range -100..0)",
+            ),
+            ParamSchema(
+                name="overbought",
+                type="float",
+                default=-20.0,
+                minimum=-49.0,
+                maximum=-1.0,
+                step=1.0,
+                label="Overbought threshold",
+                description="Go short when %R rises above this level; must be > oversold",
+            ),
+        ],
+    ),
+    StrategySchema(
+        name="cci",
+        label="Commodity Channel Index",
+        category="Mean Reversion",
+        summary="Measures how far the price has strayed from its recent average and bets it will snap back.",
+        description=(
+            "CCI = (typical price - SMA) / (0.015 * mean abs deviation). Long when CCI "
+            "drops below -threshold (oversold), short above +threshold (overbought), flat "
+            "between. Trailing rolling stats -- no look-ahead."
+        ),
+        citations=["Lambert, Donald R. 'Commodity Channel Index'. Commodities magazine, 1980."],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=20,
+                minimum=2,
+                maximum=200,
+                label="Window",
+                description="Bars in the rolling mean and mean-absolute-deviation",
+            ),
+            ParamSchema(
+                name="threshold",
+                type="float",
+                default=100.0,
+                minimum=50.0,
+                maximum=300.0,
+                step=5.0,
+                label="CCI threshold",
+                description="Absolute CCI level that triggers a long (below -threshold) or short",
+            ),
+        ],
+    ),
+    StrategySchema(
+        name="stochastic_oscillator",
+        label="Stochastic Oscillator",
+        category="Mean Reversion",
+        summary="Tracks where the close sits inside its recent range and fades the extremes -- buy near the bottom, sell near the top.",
+        description=(
+            "Smoothed stochastic: %K = position of the close within the window high/low "
+            "range, %D = SMA of %K. Long when %D is below the oversold level, short above "
+            "overbought, flat between. Trailing windows -- no look-ahead."
+        ),
+        citations=[
+            "Lane, George C. 'Lane's Stochastics'. Technical Analysis of Stocks & Commodities, 1984."
+        ],
+        parameters=[
+            ParamSchema(
+                name="k_window",
+                type="int",
+                default=14,
+                minimum=2,
+                maximum=200,
+                label="%K window",
+                description="Bars in the rolling high/low range for the raw %K",
+            ),
+            ParamSchema(
+                name="d_window",
+                type="int",
+                default=3,
+                minimum=1,
+                maximum=50,
+                label="%D smoothing",
+                description="Bars in the SMA that smooths %K into the traded %D line",
+            ),
+            ParamSchema(
+                name="oversold",
+                type="float",
+                default=20.0,
+                minimum=1.0,
+                maximum=49.0,
+                step=1.0,
+                label="Oversold threshold",
+                description="Go long when %D drops below this level",
+            ),
+            ParamSchema(
+                name="overbought",
+                type="float",
+                default=80.0,
+                minimum=51.0,
+                maximum=99.0,
+                step=1.0,
+                label="Overbought threshold",
+                description="Go short when %D rises above this level; must be > oversold",
+            ),
+        ],
+    ),
 ]
