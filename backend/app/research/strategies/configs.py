@@ -106,6 +106,12 @@ class StochasticOscillatorConfig(BaseModel):
     overbought: float = Field(default=80.0, gt=0, lt=100)
 
 
+class TRIXConfig(BaseModel):
+    name: Literal["trix"] = "trix"
+    window: int = Field(default=15, ge=2)
+    signal: int = Field(default=9, ge=1)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -120,6 +126,7 @@ StrategyConfig = Annotated[
     | TripleMAAlignmentConfig
     | WilliamsRConfig
     | CCIConfig
-    | StochasticOscillatorConfig,
+    | StochasticOscillatorConfig
+    | TRIXConfig,
     Field(discriminator="name"),
 ]

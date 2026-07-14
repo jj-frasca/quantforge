@@ -619,4 +619,40 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="trix",
+        label="TRIX",
+        category="Trend",
+        summary="Follows a heavily smoothed trend, going long when it turns up and short when it turns down.",
+        description=(
+            "Triple-smoothed EMA of the close (three chained EMAs of span `window`), then the "
+            "bar-over-bar percent change (TRIX), smoothed again over `signal`. Long when the "
+            "smoothed TRIX is positive, short when negative, flat at zero. Recursive EMAs + "
+            "trailing pct_change -- no look-ahead."
+        ),
+        citations=[
+            "Hutson, Jack K. 'Good TRIX'. Technical Analysis of Stocks & Commodities 1, "
+            "no. 5 (1983)."
+        ],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=15,
+                minimum=2,
+                maximum=200,
+                label="EMA window",
+                description="Span of each of the three chained EMAs that smooth the close",
+            ),
+            ParamSchema(
+                name="signal",
+                type="int",
+                default=9,
+                minimum=1,
+                maximum=100,
+                label="Signal smoothing",
+                description="Span of the EMA that smooths TRIX before the zero-line comparison",
+            ),
+        ],
+    ),
 ]

@@ -18,6 +18,7 @@ from app.research.strategies.configs import (
     StochasticOscillatorConfig,
     TrendFilteredMeanReversionConfig,
     TripleMAAlignmentConfig,
+    TRIXConfig,
     VolTargetedSMAConfig,
     WilliamsRConfig,
 )
@@ -37,6 +38,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "williams_r": WilliamsRConfig,
     "cci": CCIConfig,
     "stochastic_oscillator": StochasticOscillatorConfig,
+    "trix": TRIXConfig,
 }
 
 

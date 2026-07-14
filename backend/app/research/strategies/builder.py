@@ -33,6 +33,7 @@ from app.research.strategies.configs import (
     StrategyConfig,
     TrendFilteredMeanReversionConfig,
     TripleMAAlignmentConfig,
+    TRIXConfig,
     VolTargetedSMAConfig,
     WilliamsRConfig,
 )
@@ -48,6 +49,7 @@ from app.research.strategies.trend_filtered_mean_reversion import (
     TrendFilteredMeanReversionStrategy,
 )
 from app.research.strategies.triple_ma_alignment import TripleMAAlignmentStrategy
+from app.research.strategies.trix import TRIXStrategy
 from app.research.strategies.vol_targeted_sma import VolTargetedSMAStrategy
 from app.research.strategies.williams_r import WilliamsRStrategy
 
@@ -110,6 +112,8 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
             oversold=config.oversold,
             overbought=config.overbought,
         )
+    if isinstance(config, TRIXConfig):
+        return TRIXStrategy(window=config.window, signal=config.signal)
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.
