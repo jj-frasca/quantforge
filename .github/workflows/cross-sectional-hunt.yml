@@ -1,0 +1,88 @@
+name: Scheduled cross-sectional hunt
+
+# Token-free (no Claude): ranks the universe each period (cross-sectional momentum + short-term
+# reversal), runs the resulting dollar-neutral portfolio return series through the SAME graduation
+# gate a single-name strategy must clear (ADR-024), and commits the updated cross-sectional pool.
+# Weekly, offset 3h after the single-name hunt so their data commits don't race.
+#
+# DATA SOURCE: forces yfinance internally (scripts/cross_sectional_hunt.py) — cross-sectional
+# momentum needs a long common history and Alpaca's free IEX feed is too short (ADR-015). So NO
+# Alpaca keys are wired here. yfinance can be flaky from cloud IPs → the run step retries.
+on:
+  schedule:
+    - cron: "0 10 * * 0" # 10:00 UTC Sunday — 3h after the single-name hunt (07:00)
+  workflow_dispatch:
+    inputs:
+      universe:
+        description: "Universe file (relative to repo root) to hunt"
+        required: false
+        default: "data/universes/sp500.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scheduled-cross-sectional-hunt
+  cancel-in-progress: false
+
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350 # under the 6h hard cap
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync dependencies (Python pinned via .python-version)
+        working-directory: backend
+        run: uv sync
+
+      - name: Run the cross-sectional hunt (yfinance, retried)
+        working-directory: backend
+        env:
+          UNIVERSE: ${{ github.event.inputs.universe || 'data/universes/sp500.txt' }}
+        run: |
+          set +e
+          for attempt in 1 2; do
+            echo "=== cross-sectional hunt attempt $attempt ==="
+            PYTHONPATH=. uv run python scripts/cross_sectional_hunt.py "$GITHUB_WORKSPACE/$UNIVERSE" \
+              | tee "$GITHUB_WORKSPACE/xs_hunt_out.txt"
+            status=${PIPESTATUS[0]}
+            [ "$status" -eq 0 ] && break
+            echo "attempt $attempt failed (status $status); retrying..." && sleep 30
+          done
+          exit "$status"
+
+      - name: Slack the summary
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -Rs '{text: ("*QuantForge cross-sectional hunt (cloud)*\n```" + . + "```")}' xs_hunt_out.txt \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+
+      - name: Commit cross-sectional pool (if changed)
+        if: ${{ always() }}
+        run: |
+          # add-first so a brand-new pool file (first run) is detected, not just modifications.
+          git add data/cross_sectional_pool.json
+          if git diff --cached --quiet; then
+            echo "no cross-sectional pool change"
+            exit 0
+          fi
+          git config user.name "quantforge-xs-hunt-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "chore(cross-sectional): scheduled hunt $(date +%F)"
+          # master can advance while the hunt runs (accrual bot, other pushes); rebase then retry.
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin master && git push; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push attempt $attempt failed (master moved?); retrying..."
+            sleep 5
+          done
+          echo "could not push after retries"
+          exit 1
