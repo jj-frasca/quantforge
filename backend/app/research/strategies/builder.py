@@ -16,10 +16,12 @@ from typing import Final
 
 from pydantic import TypeAdapter
 
+from app.research.strategies.aroon import AroonStrategy
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.bollinger_bands import BollingerBandsStrategy
 from app.research.strategies.cci import CCIStrategy
 from app.research.strategies.configs import (
+    AroonConfig,
     BollingerBandsConfig,
     CCIConfig,
     DonchianBreakoutConfig,
@@ -114,6 +116,8 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
         )
     if isinstance(config, TRIXConfig):
         return TRIXStrategy(window=config.window, signal=config.signal)
+    if isinstance(config, AroonConfig):
+        return AroonStrategy(window=config.window)
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.

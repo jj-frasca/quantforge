@@ -655,4 +655,28 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="aroon",
+        label="Aroon",
+        category="Trend",
+        summary="Follows the trend by asking whether a new high or a new low happened more recently.",
+        description=(
+            "Over a trailing window, Aroon-Up measures how recently the highest high was made "
+            "and Aroon-Down the lowest low. Long when Aroon-Up > Aroon-Down (highs are fresher "
+            "-- up-trend), short when Aroon-Down > Aroon-Up, flat when equal. Rolling argmax/"
+            "argmin -- no look-ahead."
+        ),
+        citations=["Chande, Tushar S. 'Aroon' (1995). Technical Analysis of Stocks & Commodities."],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=25,
+                minimum=2,
+                maximum=200,
+                label="Lookback window",
+                description="Bars in the trailing window that locates the most recent high/low",
+            ),
+        ],
+    ),
 ]

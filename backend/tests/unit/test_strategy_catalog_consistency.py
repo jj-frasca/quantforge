@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from app.research.strategies.catalog import STRATEGY_CATALOG
 from app.research.strategies.configs import (
+    AroonConfig,
     BollingerBandsConfig,
     CCIConfig,
     DonchianBreakoutConfig,
@@ -39,6 +40,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "cci": CCIConfig,
     "stochastic_oscillator": StochasticOscillatorConfig,
     "trix": TRIXConfig,
+    "aroon": AroonConfig,
 }
 
 

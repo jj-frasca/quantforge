@@ -112,6 +112,11 @@ class TRIXConfig(BaseModel):
     signal: int = Field(default=9, ge=1)
 
 
+class AroonConfig(BaseModel):
+    name: Literal["aroon"] = "aroon"
+    window: int = Field(default=25, ge=2)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -127,6 +132,7 @@ StrategyConfig = Annotated[
     | WilliamsRConfig
     | CCIConfig
     | StochasticOscillatorConfig
-    | TRIXConfig,
+    | TRIXConfig
+    | AroonConfig,
     Field(discriminator="name"),
 ]
