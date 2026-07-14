@@ -20,10 +20,12 @@ from app.research.strategies.aroon import AroonStrategy
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.bollinger_bands import BollingerBandsStrategy
 from app.research.strategies.cci import CCIStrategy
+from app.research.strategies.chaikin_money_flow import ChaikinMoneyFlowStrategy
 from app.research.strategies.configs import (
     AroonConfig,
     BollingerBandsConfig,
     CCIConfig,
+    ChaikinMoneyFlowConfig,
     DonchianBreakoutConfig,
     KeltnerChannelConfig,
     MACDCrossoverConfig,
@@ -118,6 +120,8 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
         return TRIXStrategy(window=config.window, signal=config.signal)
     if isinstance(config, AroonConfig):
         return AroonStrategy(window=config.window)
+    if isinstance(config, ChaikinMoneyFlowConfig):
+        return ChaikinMoneyFlowStrategy(window=config.window, threshold=config.threshold)
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.

@@ -679,4 +679,41 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="chaikin_money_flow",
+        label="Chaikin Money Flow",
+        category="Trend",
+        summary="Uses where each bar closes within its range, weighted by volume, to gauge buying vs selling pressure.",
+        description=(
+            "Money-flow multiplier = ((close - low) - (high - close)) / (high - low) per bar, "
+            "volume-weighted and summed over `window` divided by summed volume = CMF in [-1, 1]. "
+            "Long when CMF > threshold (net accumulation), short when CMF < -threshold "
+            "(distribution), flat between. Trailing rolling sums -- no look-ahead."
+        ),
+        citations=[
+            "Chaikin, Marc. Chaikin Money Flow (1980s); see Achelis, Technical Analysis A to Z "
+            "(2000)."
+        ],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=20,
+                minimum=2,
+                maximum=200,
+                label="Lookback window",
+                description="Bars in the trailing money-flow and volume sums",
+            ),
+            ParamSchema(
+                name="threshold",
+                type="float",
+                default=0.05,
+                minimum=0.01,
+                maximum=0.5,
+                step=0.01,
+                label="CMF threshold",
+                description="Absolute CMF level that triggers a long (above) or short (below -threshold)",
+            ),
+        ],
+    ),
 ]

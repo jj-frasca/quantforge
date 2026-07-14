@@ -117,6 +117,12 @@ class AroonConfig(BaseModel):
     window: int = Field(default=25, ge=2)
 
 
+class ChaikinMoneyFlowConfig(BaseModel):
+    name: Literal["chaikin_money_flow"] = "chaikin_money_flow"
+    window: int = Field(default=20, ge=2)
+    threshold: float = Field(default=0.05, gt=0, lt=1)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -133,6 +139,7 @@ StrategyConfig = Annotated[
     | CCIConfig
     | StochasticOscillatorConfig
     | TRIXConfig
-    | AroonConfig,
+    | AroonConfig
+    | ChaikinMoneyFlowConfig,
     Field(discriminator="name"),
 ]

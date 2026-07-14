@@ -9,6 +9,7 @@ from app.research.strategies.configs import (
     AroonConfig,
     BollingerBandsConfig,
     CCIConfig,
+    ChaikinMoneyFlowConfig,
     DonchianBreakoutConfig,
     KeltnerChannelConfig,
     MACDCrossoverConfig,
@@ -41,6 +42,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "stochastic_oscillator": StochasticOscillatorConfig,
     "trix": TRIXConfig,
     "aroon": AroonConfig,
+    "chaikin_money_flow": ChaikinMoneyFlowConfig,
 }
 
 
