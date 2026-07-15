@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from app.research.strategies.catalog import STRATEGY_CATALOG
 from app.research.strategies.configs import (
+    ADXConfig,
     AroonConfig,
     BollingerBandsConfig,
     CCIConfig,
@@ -45,6 +46,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "aroon": AroonConfig,
     "chaikin_money_flow": ChaikinMoneyFlowConfig,
     "vwap_reversion": VWAPReversionConfig,
+    "adx": ADXConfig,
 }
 
 

@@ -753,4 +753,40 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="adx",
+        label="ADX Directional Movement",
+        category="Trend",
+        summary="Trades with the dominant trend direction, but only when the trend is strong enough to bother.",
+        description=(
+            "Wilder's +DI / -DI measure up vs down directional movement; ADX measures trend "
+            "strength regardless of direction. Long when +DI > -DI and ADX > threshold, short "
+            "when -DI > +DI and ADX > threshold, flat when the trend is weak. Wilder smoothing "
+            "on shifted inputs -- no look-ahead."
+        ),
+        citations=[
+            "Wilder, J. Welles. New Concepts in Technical Trading Systems. Trend Research, 1978."
+        ],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=14,
+                minimum=2,
+                maximum=100,
+                label="Smoothing window",
+                description="Wilder smoothing period for TR, +DM/-DM, and ADX",
+            ),
+            ParamSchema(
+                name="threshold",
+                type="float",
+                default=25.0,
+                minimum=10.0,
+                maximum=60.0,
+                step=1.0,
+                label="ADX trend-strength threshold",
+                description="Minimum ADX to treat the trend as strong enough to trade",
+            ),
+        ],
+    ),
 ]

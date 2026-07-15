@@ -129,6 +129,12 @@ class VWAPReversionConfig(BaseModel):
     threshold: float = Field(default=0.02, gt=0, lt=1)
 
 
+class ADXConfig(BaseModel):
+    name: Literal["adx"] = "adx"
+    window: int = Field(default=14, ge=2)
+    threshold: float = Field(default=25.0, gt=0, lt=100)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -147,6 +153,7 @@ StrategyConfig = Annotated[
     | TRIXConfig
     | AroonConfig
     | ChaikinMoneyFlowConfig
-    | VWAPReversionConfig,
+    | VWAPReversionConfig
+    | ADXConfig,
     Field(discriminator="name"),
 ]

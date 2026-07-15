@@ -16,12 +16,14 @@ from typing import Final
 
 from pydantic import TypeAdapter
 
+from app.research.strategies.adx import ADXStrategy
 from app.research.strategies.aroon import AroonStrategy
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.bollinger_bands import BollingerBandsStrategy
 from app.research.strategies.cci import CCIStrategy
 from app.research.strategies.chaikin_money_flow import ChaikinMoneyFlowStrategy
 from app.research.strategies.configs import (
+    ADXConfig,
     AroonConfig,
     BollingerBandsConfig,
     CCIConfig,
@@ -126,6 +128,8 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
         return ChaikinMoneyFlowStrategy(window=config.window, threshold=config.threshold)
     if isinstance(config, VWAPReversionConfig):
         return VWAPReversionStrategy(window=config.window, threshold=config.threshold)
+    if isinstance(config, ADXConfig):
+        return ADXStrategy(window=config.window, threshold=config.threshold)
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.
