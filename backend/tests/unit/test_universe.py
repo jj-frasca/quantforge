@@ -280,6 +280,25 @@ def test_value_off_by_default_leaves_the_hunt_unchanged() -> None:
     assert result.experiments[0].undervaluation_score is None
 
 
+def test_leaderboard_surfaces_the_undervaluation_score() -> None:
+    # ADR-023: the cited undervaluation score recorded on the experiment is surfaced on the row
+    # so the dashboard can show "cheap + validated" together. Unscored names carry None.
+    scored = _exp_with_dsr("VAL", 0.4).model_copy(
+        update={"undervaluation_score": _uscore("VAL", 0.72)}
+    )
+    unscored = _exp_with_dsr("ETF", 0.3)  # no value score recorded
+    rows = {r.symbol: r for r in rank_experiments([scored, unscored])}
+    assert rows["VAL"].undervaluation_score == 0.72
+    assert rows["ETF"].undervaluation_score is None
+
+
+def test_leaderboard_undervaluation_score_is_none_when_unscorable() -> None:
+    # A recorded score whose composite is None (missing inputs) surfaces as None, not a crash.
+    exp = _exp_with_dsr("X", 0.4).model_copy(update={"undervaluation_score": _uscore("X", None)})
+    rows = rank_experiments([exp])
+    assert rows[0].undervaluation_score is None
+
+
 def test_rank_skips_experiments_with_no_trials() -> None:
     empty = Experiment(
         symbol="AAA", strategy_names=[], gate_config=GateConfig(), trials=[], lifetime_trials=0

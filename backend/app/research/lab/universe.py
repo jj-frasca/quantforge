@@ -36,6 +36,9 @@ class LeaderboardRow(BaseModel):
     # ADR-018: does the holdout Sharpe clear the best-of-N-under-the-null bar? A far stronger
     # claim than a per-symbol graduate. None for non-graduates.
     survives_universe_deflation: bool | None = None
+    # ADR-023: the cited composite undervaluation score (0-1, cheap = high) recorded at hunt time.
+    # None when value was off or the name is unscorable (e.g. an ETF with no 10-K).
+    undervaluation_score: float | None = None
 
 
 def expected_max_sharpe_under_null(n_symbols: int, holdout_years: float) -> float:
@@ -137,6 +140,9 @@ def rank_experiments(experiments: list[Experiment]) -> list[LeaderboardRow]:
             graduated=exp.graduate is not None,
             holdout_sharpe=exp.graduate.holdout_sharpe if exp.graduate else None,
             survives_universe_deflation=survives,
+            undervaluation_score=(
+                exp.undervaluation_score.score if exp.undervaluation_score else None
+            ),
         )
         current = best_by_symbol.get(exp.symbol)
         if current is None or (row.graduated, row.deflated_sharpe) > (
