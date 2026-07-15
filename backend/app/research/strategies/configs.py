@@ -123,6 +123,12 @@ class ChaikinMoneyFlowConfig(BaseModel):
     threshold: float = Field(default=0.05, gt=0, lt=1)
 
 
+class VWAPReversionConfig(BaseModel):
+    name: Literal["vwap_reversion"] = "vwap_reversion"
+    window: int = Field(default=20, ge=2)
+    threshold: float = Field(default=0.02, gt=0, lt=1)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -140,6 +146,7 @@ StrategyConfig = Annotated[
     | StochasticOscillatorConfig
     | TRIXConfig
     | AroonConfig
-    | ChaikinMoneyFlowConfig,
+    | ChaikinMoneyFlowConfig
+    | VWAPReversionConfig,
     Field(discriminator="name"),
 ]

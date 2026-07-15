@@ -22,6 +22,7 @@ from app.research.strategies.configs import (
     TripleMAAlignmentConfig,
     TRIXConfig,
     VolTargetedSMAConfig,
+    VWAPReversionConfig,
     WilliamsRConfig,
 )
 
@@ -43,6 +44,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "trix": TRIXConfig,
     "aroon": AroonConfig,
     "chaikin_money_flow": ChaikinMoneyFlowConfig,
+    "vwap_reversion": VWAPReversionConfig,
 }
 
 

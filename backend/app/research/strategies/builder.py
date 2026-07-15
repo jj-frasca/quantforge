@@ -39,6 +39,7 @@ from app.research.strategies.configs import (
     TripleMAAlignmentConfig,
     TRIXConfig,
     VolTargetedSMAConfig,
+    VWAPReversionConfig,
     WilliamsRConfig,
 )
 from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
@@ -55,6 +56,7 @@ from app.research.strategies.trend_filtered_mean_reversion import (
 from app.research.strategies.triple_ma_alignment import TripleMAAlignmentStrategy
 from app.research.strategies.trix import TRIXStrategy
 from app.research.strategies.vol_targeted_sma import VolTargetedSMAStrategy
+from app.research.strategies.vwap_reversion import VWAPReversionStrategy
 from app.research.strategies.williams_r import WilliamsRStrategy
 
 _StrategyConfigAdapter: Final = TypeAdapter[StrategyConfig](StrategyConfig)
@@ -122,6 +124,8 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
         return AroonStrategy(window=config.window)
     if isinstance(config, ChaikinMoneyFlowConfig):
         return ChaikinMoneyFlowStrategy(window=config.window, threshold=config.threshold)
+    if isinstance(config, VWAPReversionConfig):
+        return VWAPReversionStrategy(window=config.window, threshold=config.threshold)
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.

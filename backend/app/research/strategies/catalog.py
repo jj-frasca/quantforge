@@ -716,4 +716,41 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="vwap_reversion",
+        label="VWAP Reversion",
+        category="Mean Reversion",
+        summary="Bets the price snaps back toward the volume-weighted average when it strays too far from it.",
+        description=(
+            "Rolling VWAP = sum(typical price x volume) / sum(volume) over `window`, typical = "
+            "(high + low + close) / 3. Deviation (close - VWAP) / VWAP: long when below "
+            "-threshold (cheap vs where volume traded), short when above +threshold, flat "
+            "between. Trailing rolling sums -- no look-ahead."
+        ),
+        citations=[
+            "Berkowitz, S.A., Logue, D.E., Noser, E.A. 'The Total Cost of Transactions on the "
+            "NYSE'. Journal of Finance 43, no. 1 (1988)."
+        ],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=20,
+                minimum=2,
+                maximum=200,
+                label="Lookback window",
+                description="Bars in the trailing VWAP (price x volume and volume sums)",
+            ),
+            ParamSchema(
+                name="threshold",
+                type="float",
+                default=0.02,
+                minimum=0.005,
+                maximum=0.2,
+                step=0.005,
+                label="Deviation threshold",
+                description="Fractional distance from VWAP that triggers a long (below) or short (above)",
+            ),
+        ],
+    ),
 ]
