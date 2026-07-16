@@ -15,9 +15,10 @@ from typing import Literal
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
-from app.research.backtesting.metrics import sharpe_ratio
+from app.research.backtesting.metrics import max_drawdown, sharpe_ratio
 from app.research.cross_sectional.engine import asset_returns, portfolio_returns
 from app.research.cross_sectional.registry import default_strategies
+from app.research.cross_sectional.search import CrossSectionalExperiment
 
 
 class CrossSectionalForwardEquityPoint(BaseModel):
@@ -136,3 +137,172 @@ def score_forward(
         as_of=as_of.to_pydatetime(),
         forward_equity=forward_equity,
     )
+
+
+class CrossSectionalExitPolicy(BaseModel):
+    """Tunable, versioned exit rules for a forward-tested cross-sectional factor (ADR-025) — the
+    portfolio-level analog of the single-name ExitPolicy (ADR-020). A grace period avoids cutting on
+    entry noise; a rolling trailing window measures RECENT decay so it isn't masked by early gains."""
+
+    model_config = ConfigDict(frozen=True)
+
+    min_forward_bars_before_exit: int = 21  # ~1mo grace
+    rolling_window_bars: int = 63  # ~3mo trailing window
+    min_rolling_sharpe: float = 0.0
+    max_forward_drawdown: float = 0.30
+    require_beat_benchmark_forward: bool = True
+
+
+class CrossSectionalLifecycleDecision(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    action: Literal["hold", "retire"]
+    rolling_sharpe: float
+    forward_drawdown: float
+    rolling_benchmark_sharpe: float
+    reasons: list[str] = []
+
+
+def lifecycle_from_forward_returns(
+    forward_returns: pd.Series,
+    benchmark_returns: pd.Series,
+    policy: CrossSectionalExitPolicy,
+) -> CrossSectionalLifecycleDecision:
+    """Decide hold/retire from a factor's FORWARD returns vs the equal-weight benchmark (ADR-025).
+    Retire when recent (rolling-window) risk-adjusted performance decays below the floor, the forward
+    drawdown breaches the risk limit, or it stops beating the benchmark. Pure -- no engine/network."""
+    n = len(forward_returns)
+    if n < policy.min_forward_bars_before_exit:
+        return CrossSectionalLifecycleDecision(
+            action="hold",
+            rolling_sharpe=0.0,
+            forward_drawdown=0.0,
+            rolling_benchmark_sharpe=0.0,
+            reasons=["grace period (insufficient forward data)"],
+        )
+    equity = (1.0 + forward_returns).cumprod()
+    forward_drawdown = abs(max_drawdown(equity))
+    roll = forward_returns.iloc[-policy.rolling_window_bars :]
+    roll_bench = benchmark_returns.iloc[-policy.rolling_window_bars :]
+    rolling_sharpe = sharpe_ratio(roll)
+    rolling_bench_sharpe = sharpe_ratio(roll_bench)
+
+    reasons: list[str] = []
+    if rolling_sharpe <= policy.min_rolling_sharpe:
+        reasons.append(
+            f"rolling Sharpe {rolling_sharpe:.2f} <= {policy.min_rolling_sharpe} (edge has decayed)"
+        )
+    if forward_drawdown > policy.max_forward_drawdown:
+        reasons.append(
+            f"forward drawdown {forward_drawdown:.1%} > {policy.max_forward_drawdown:.0%} "
+            "(risk limit)"
+        )
+    if policy.require_beat_benchmark_forward and rolling_sharpe <= rolling_bench_sharpe:
+        reasons.append(
+            f"rolling Sharpe {rolling_sharpe:.2f} <= equal-weight benchmark {rolling_bench_sharpe:.2f}"
+            " (no longer beats holding the universe)"
+        )
+    return CrossSectionalLifecycleDecision(
+        action="retire" if reasons else "hold",
+        rolling_sharpe=rolling_sharpe,
+        forward_drawdown=forward_drawdown,
+        rolling_benchmark_sharpe=rolling_bench_sharpe,
+        reasons=reasons,
+    )
+
+
+def evaluate_cross_sectional_lifecycle(
+    position: CrossSectionalPosition, panel: pd.DataFrame, policy: CrossSectionalExitPolicy
+) -> CrossSectionalLifecycleDecision:
+    """Recompute the frozen factor's post-freeze forward returns + the equal-weight benchmark on
+    `panel` and decide hold/retire (ADR-025). Holds during the grace period / before any forward
+    data has accrued."""
+    forward_mask = panel.index > pd.Timestamp(position.frozen_at)
+    if not bool(forward_mask.any()):
+        return CrossSectionalLifecycleDecision(
+            action="hold",
+            rolling_sharpe=0.0,
+            forward_drawdown=0.0,
+            rolling_benchmark_sharpe=0.0,
+            reasons=["grace period (no forward data)"],
+        )
+    fwd = _factor_returns(position, panel)[forward_mask]
+    bench = _benchmark_returns(panel)[forward_mask]
+    return lifecycle_from_forward_returns(fwd, bench, policy)
+
+
+def freeze_cross_sectional_graduate(
+    experiment: CrossSectionalExperiment,
+    frozen_at: datetime,
+    *,
+    cost_rate: float = 0.001,
+    value_scores: dict[str, float] | None = None,
+) -> CrossSectionalPosition:
+    """Freeze a cross-sectional graduate for forward-testing: lock its strategy, searched params +
+    quantile, universe, cost rate, and (for xs_value) the static score snapshot as of `frozen_at`."""
+    graduate = experiment.graduate
+    if graduate is None:
+        raise ValueError("experiment has no graduate to freeze")
+    return CrossSectionalPosition(
+        strategy_name=graduate.strategy_name,
+        parameters=graduate.parameters,
+        universe_symbols=experiment.universe_symbols,
+        cost_rate=cost_rate,
+        frozen_at=frozen_at,
+        value_scores=value_scores,
+    )
+
+
+def manage_cross_sectional_book(
+    positions: list[CrossSectionalPosition],
+    graduate_experiments: list[CrossSectionalExperiment],
+    panel_provider: PanelProvider,
+    *,
+    exit_policy: CrossSectionalExitPolicy | None = None,
+    now: datetime,
+    cost_rate: float = 0.001,
+    value_scores: dict[str, float] | None = None,
+) -> list[CrossSectionalPosition]:
+    """Advance the cross-sectional forward book one step (ADR-025, mirrors portfolio_manager): PROMOTE
+    new graduates (freeze any factor -- (strategy, universe) -- not already tracked), MONITOR every
+    OPEN position and RETIRE the deteriorating ones. Retired factors are kept as an honest record and
+    never re-promoted. Pure over `panel_provider` -> testable without network."""
+    policy = exit_policy or CrossSectionalExitPolicy()
+
+    held = {(p.strategy_name, tuple(sorted(p.universe_symbols))) for p in positions}
+    book = list(positions)
+    for experiment in graduate_experiments:
+        if experiment.graduate is None:
+            continue
+        key = (experiment.graduate.strategy_name, tuple(sorted(experiment.universe_symbols)))
+        if key in held:
+            continue
+        book.append(
+            freeze_cross_sectional_graduate(
+                experiment, frozen_at=now, cost_rate=cost_rate, value_scores=value_scores
+            )
+        )
+        held.add(key)
+
+    updated: list[CrossSectionalPosition] = []
+    for position in book:
+        if position.status != "open":
+            updated.append(position)
+            continue
+        panel = panel_provider(position)
+        score = score_forward(position, panel)
+        decision = evaluate_cross_sectional_lifecycle(position, panel, policy)
+        if decision.action == "retire":
+            updated.append(
+                position.model_copy(
+                    update={
+                        "status": "retired",
+                        "retired_at": now,
+                        "exit_reasons": decision.reasons,
+                        "score": score,
+                    }
+                )
+            )
+        else:
+            updated.append(position.model_copy(update={"score": score}))
+    return updated
