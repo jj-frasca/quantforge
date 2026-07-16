@@ -135,6 +135,13 @@ class ADXConfig(BaseModel):
     threshold: float = Field(default=25.0, gt=0, lt=100)
 
 
+class ConnorsRSIConfig(BaseModel):
+    name: Literal["connors_rsi"] = "connors_rsi"
+    window: int = Field(default=2, ge=2)
+    oversold: float = Field(default=10.0, gt=0, lt=100)
+    overbought: float = Field(default=90.0, gt=0, lt=100)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -154,6 +161,7 @@ StrategyConfig = Annotated[
     | AroonConfig
     | ChaikinMoneyFlowConfig
     | VWAPReversionConfig
-    | ADXConfig,
+    | ADXConfig
+    | ConnorsRSIConfig,
     Field(discriminator="name"),
 ]

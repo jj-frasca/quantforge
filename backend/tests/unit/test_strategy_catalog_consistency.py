@@ -11,6 +11,7 @@ from app.research.strategies.configs import (
     BollingerBandsConfig,
     CCIConfig,
     ChaikinMoneyFlowConfig,
+    ConnorsRSIConfig,
     DonchianBreakoutConfig,
     KeltnerChannelConfig,
     MACDCrossoverConfig,
@@ -47,6 +48,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "chaikin_money_flow": ChaikinMoneyFlowConfig,
     "vwap_reversion": VWAPReversionConfig,
     "adx": ADXConfig,
+    "connors_rsi": ConnorsRSIConfig,
 }
 
 

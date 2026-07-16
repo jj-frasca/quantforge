@@ -789,4 +789,51 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="connors_rsi",
+        label="Connors RSI (2-period)",
+        category="Mean Reversion",
+        summary="Buys after a sharp short-term drop and sells after a sharp short-term pop, betting the move snaps back.",
+        description=(
+            "Larry Connors' short-period RSI mean reversion: a very short (default 2-bar) Wilder "
+            "RSI at extreme thresholds. Long when RSI drops below `oversold` (deeply oversold), "
+            "short when it rises above `overbought`, flat between. Recursive Wilder smoothing on "
+            "close-to-close moves -- no look-ahead."
+        ),
+        citations=[
+            "Connors, Larry & Alvarez, Cesar. Short Term Trading Strategies That Work. "
+            "TradingMarkets Publishing Group, 2009."
+        ],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=2,
+                minimum=2,
+                maximum=50,
+                label="RSI window",
+                description="Bars in the short-period Wilder RSI (Connors' default is 2)",
+            ),
+            ParamSchema(
+                name="oversold",
+                type="float",
+                default=10.0,
+                minimum=1.0,
+                maximum=49.0,
+                step=1.0,
+                label="Oversold threshold",
+                description="Go long when RSI drops below this level",
+            ),
+            ParamSchema(
+                name="overbought",
+                type="float",
+                default=90.0,
+                minimum=51.0,
+                maximum=99.0,
+                step=1.0,
+                label="Overbought threshold",
+                description="Go short when RSI rises above this level; must be > oversold",
+            ),
+        ],
+    ),
 ]
