@@ -25,6 +25,7 @@ from app.research.strategies.configs import (
     TripleMAAlignmentConfig,
     TRIXConfig,
     UltimateOscillatorConfig,
+    VolManagedMomentumConfig,
     VolTargetedSMAConfig,
     VWAPReversionConfig,
     WilliamsRConfig,
@@ -53,6 +54,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "connors_rsi": ConnorsRSIConfig,
     "fifty_two_week_high": FiftyTwoWeekHighConfig,
     "ultimate_oscillator": UltimateOscillatorConfig,
+    "vol_managed_momentum": VolManagedMomentumConfig,
 }
 
 

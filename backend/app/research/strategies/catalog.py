@@ -921,4 +921,51 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="vol_managed_momentum",
+        label="Volatility-Managed Momentum",
+        category="Trend",
+        summary="Follows the trend, but cuts position size hard after markets get turbulent and leans in when they are calm.",
+        description=(
+            "Moreira & Muir (2017): scale a momentum sign by the inverse of recent realized "
+            "VARIANCE. Direction is the sign of the trailing return over `lookback` bars; size "
+            "is target_variance / realized_variance, clipped to [0, 1] (de-risk only, no "
+            "leverage). Inverse-variance de-risks more aggressively after vol spikes than the "
+            "inverse-vol scaling of vol-targeted SMA. Trailing log-return variance -- no look-ahead."
+        ),
+        citations=[
+            "Moreira, Alan, and Tyler Muir. 'Volatility-Managed Portfolios'. "
+            "Journal of Finance 72, no. 4 (2017), pp. 1611-1644."
+        ],
+        parameters=[
+            ParamSchema(
+                name="lookback",
+                type="int",
+                default=60,
+                minimum=1,
+                maximum=500,
+                label="Momentum lookback",
+                description="Bars over which the trailing return sets the trade direction",
+            ),
+            ParamSchema(
+                name="vol_window",
+                type="int",
+                default=20,
+                minimum=2,
+                maximum=252,
+                label="Variance window",
+                description="Bars in the rolling realized-variance estimate that scales the position",
+            ),
+            ParamSchema(
+                name="target_vol",
+                type="float",
+                default=0.15,
+                minimum=0.01,
+                maximum=1.0,
+                step=0.01,
+                label="Target annualized vol",
+                description="Annualized vol target; target variance = target_vol squared",
+            ),
+        ],
+    ),
 ]

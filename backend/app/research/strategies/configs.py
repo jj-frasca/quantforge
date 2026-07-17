@@ -155,6 +155,13 @@ class UltimateOscillatorConfig(BaseModel):
     overbought: float = Field(default=70.0, gt=0, lt=100)
 
 
+class VolManagedMomentumConfig(BaseModel):
+    name: Literal["vol_managed_momentum"] = "vol_managed_momentum"
+    lookback: int = Field(default=60, ge=1)
+    vol_window: int = Field(default=20, ge=2)
+    target_vol: float = Field(default=0.15, gt=0)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -177,6 +184,7 @@ StrategyConfig = Annotated[
     | ADXConfig
     | ConnorsRSIConfig
     | FiftyTwoWeekHighConfig
-    | UltimateOscillatorConfig,
+    | UltimateOscillatorConfig
+    | VolManagedMomentumConfig,
     Field(discriminator="name"),
 ]
