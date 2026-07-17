@@ -142,6 +142,13 @@ class ConnorsRSIConfig(BaseModel):
     overbought: float = Field(default=90.0, gt=0, lt=100)
 
 
+class FiftyTwoWeekHighConfig(BaseModel):
+    name: Literal["fifty_two_week_high"] = "fifty_two_week_high"
+    window: int = Field(default=252, ge=2)
+    near_high: float = Field(default=0.95, gt=0, le=1)
+    near_low: float = Field(default=0.70, gt=0, le=1)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -162,6 +169,7 @@ StrategyConfig = Annotated[
     | ChaikinMoneyFlowConfig
     | VWAPReversionConfig
     | ADXConfig
-    | ConnorsRSIConfig,
+    | ConnorsRSIConfig
+    | FiftyTwoWeekHighConfig,
     Field(discriminator="name"),
 ]

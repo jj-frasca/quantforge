@@ -836,4 +836,51 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="fifty_two_week_high",
+        label="52-Week High Momentum",
+        category="Trend",
+        summary="Buys stocks trading near their one-year high and shorts those stuck far below it.",
+        description=(
+            "Proximity = close / trailing-window high. Long when proximity >= near_high (at/near "
+            "the high -- traders under-react to good news, per George & Hwang 2004), short when "
+            "proximity <= near_low (deep below), flat in the band between. Trailing rolling max -- "
+            "no look-ahead."
+        ),
+        citations=[
+            "George, Thomas J., and Chuan-Yang Hwang. 'The 52-Week High and Momentum Investing'. "
+            "Journal of Finance 59, no. 5 (2004), pp. 2145-2176."
+        ],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=252,
+                minimum=2,
+                maximum=504,
+                label="Lookback window",
+                description="Bars in the trailing high (252 ~ one trading year)",
+            ),
+            ParamSchema(
+                name="near_high",
+                type="float",
+                default=0.95,
+                minimum=0.5,
+                maximum=1.0,
+                step=0.01,
+                label="Near-high threshold",
+                description="Go long when close/high is at or above this fraction",
+            ),
+            ParamSchema(
+                name="near_low",
+                type="float",
+                default=0.70,
+                minimum=0.1,
+                maximum=0.99,
+                step=0.01,
+                label="Near-low threshold",
+                description="Go short when close/high is at or below this fraction; must be < near_high",
+            ),
+        ],
+    ),
 ]

@@ -30,6 +30,7 @@ from app.research.strategies.configs import (
     ChaikinMoneyFlowConfig,
     ConnorsRSIConfig,
     DonchianBreakoutConfig,
+    FiftyTwoWeekHighConfig,
     KeltnerChannelConfig,
     MACDCrossoverConfig,
     MeanReversionConfig,
@@ -47,6 +48,7 @@ from app.research.strategies.configs import (
 )
 from app.research.strategies.connors_rsi import ConnorsRSIStrategy
 from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
+from app.research.strategies.fifty_two_week_high import FiftyTwoWeekHighStrategy
 from app.research.strategies.keltner_channel import KeltnerChannelStrategy
 from app.research.strategies.macd_crossover import MACDCrossoverStrategy
 from app.research.strategies.mean_reversion import MeanReversionStrategy
@@ -137,6 +139,10 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
             window=config.window,
             oversold=config.oversold,
             overbought=config.overbought,
+        )
+    if isinstance(config, FiftyTwoWeekHighConfig):
+        return FiftyTwoWeekHighStrategy(
+            window=config.window, near_high=config.near_high, near_low=config.near_low
         )
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing

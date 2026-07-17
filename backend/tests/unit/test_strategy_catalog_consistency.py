@@ -13,6 +13,7 @@ from app.research.strategies.configs import (
     ChaikinMoneyFlowConfig,
     ConnorsRSIConfig,
     DonchianBreakoutConfig,
+    FiftyTwoWeekHighConfig,
     KeltnerChannelConfig,
     MACDCrossoverConfig,
     MeanReversionConfig,
@@ -49,6 +50,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "vwap_reversion": VWAPReversionConfig,
     "adx": ADXConfig,
     "connors_rsi": ConnorsRSIConfig,
+    "fifty_two_week_high": FiftyTwoWeekHighConfig,
 }
 
 
