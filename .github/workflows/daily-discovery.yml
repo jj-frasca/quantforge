@@ -1,0 +1,130 @@
+name: Daily discovery (sharded)
+
+# Token-free (no Claude): ADR-026 maximum discovery. A matrix of N parallel shard jobs each hunts a
+# round-robin slice of the universe with the FULL strategy catalog on max-history daily data and
+# uploads its experiments as an artifact; a single consolidation job merges them into the research
+# pool (dedup by experiment_id) and promotes graduates into the managed paper book — one commit, no
+# shared-pool write race. Public repo => unlimited Actions minutes, so this runs DAILY.
+#
+# Honesty (ADR-026): the DSR/PBO/MinTRL + universe-deflation gate RAISES the bar as trials grow —
+# more searching self-penalizes and cannot manufacture false graduates.
+#
+# DATA SOURCE: scripts force yfinance (long history). yfinance is flaky from cloud IPs -> retries.
+on:
+  schedule:
+    - cron: "0 8 * * 1-5" # 08:00 UTC Mon-Fri — after each US session settles
+  workflow_dispatch:
+    inputs:
+      universe:
+        description: "Universe file (relative to repo root)"
+        required: false
+        default: "data/universes/sp500.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-discovery
+  cancel-in-progress: false
+
+env:
+  N_SHARDS: "10"
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Hunt shard ${{ matrix.shard }} (yfinance, retried)
+        working-directory: backend
+        env:
+          UNIVERSE: ${{ github.event.inputs.universe || 'data/universes/sp500.txt' }}
+        run: |
+          set +e
+          OUT="$GITHUB_WORKSPACE/shard_${{ matrix.shard }}.json"
+          for attempt in 1 2; do
+            echo "=== shard ${{ matrix.shard }} attempt $attempt ==="
+            PYTHONPATH=. uv run python scripts/shard_hunt.py \
+              "${{ matrix.shard }}" "$N_SHARDS" "$GITHUB_WORKSPACE/$UNIVERSE" "$OUT"
+            status=$?
+            [ "$status" -eq 0 ] && break
+            echo "attempt $attempt failed ($status); retrying..." && sleep 30
+          done
+          exit "$status"
+      - name: Upload shard pool
+        if: ${{ always() && hashFiles(format('shard_{0}.json', matrix.shard)) != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pool-shard-${{ matrix.shard }}
+          path: shard_${{ matrix.shard }}.json
+          retention-days: 3
+
+  consolidate:
+    needs: discover
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Download shard pools
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pool-shard-*
+          path: shards
+          merge-multiple: true
+      - name: Consolidate + promote (yfinance, retried)
+        working-directory: backend
+        run: |
+          set +e
+          for attempt in 1 2; do
+            PYTHONPATH=. uv run python scripts/consolidate_pool.py \
+              "$GITHUB_WORKSPACE/shards" \
+              "$GITHUB_WORKSPACE/data/research_pool.json" \
+              "$GITHUB_WORKSPACE/data/paper_portfolio.json" | tee "$GITHUB_WORKSPACE/consolidate_out.txt"
+            status=${PIPESTATUS[0]}
+            [ "$status" -eq 0 ] && break
+            echo "attempt $attempt failed ($status); retrying..." && sleep 30
+          done
+          exit "$status"
+      - name: Slack the summary
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -Rs '{text: ("*QuantForge daily discovery (cloud)*\n```" + . + "```")}' consolidate_out.txt \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+      - name: Commit pool + portfolio (if changed)
+        run: |
+          git add data/research_pool.json data/paper_portfolio.json
+          if git diff --cached --quiet; then
+            echo "no pool/portfolio change"
+            exit 0
+          fi
+          git config user.name "quantforge-discovery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "chore(discovery): daily sharded hunt $(date +%F)"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin master && git push; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push attempt $attempt failed; retrying..."
+            sleep 5
+          done
+          echo "could not push after retries"
+          exit 1
