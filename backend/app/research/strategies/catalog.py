@@ -883,4 +883,42 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="ultimate_oscillator",
+        label="Ultimate Oscillator",
+        category="Mean Reversion",
+        summary="Blends buying pressure over three timeframes to spot exhausted selling or buying, then fades it.",
+        description=(
+            "Larry Williams' oscillator: buying pressure / true range averaged over 7, 14, 28 bars "
+            "and weighted 4:2:1 into a 0-100 line. Long when it drops below oversold (spent "
+            "selling), short above overbought, flat between. The multi-timeframe blend cuts the "
+            "false signals a single-window oscillator throws. Trailing sums -- no look-ahead."
+        ),
+        citations=[
+            "Williams, Larry. 'The Ultimate Oscillator'. Technical Analysis of Stocks & "
+            "Commodities (1976)."
+        ],
+        parameters=[
+            ParamSchema(
+                name="oversold",
+                type="float",
+                default=30.0,
+                minimum=1.0,
+                maximum=49.0,
+                step=1.0,
+                label="Oversold threshold",
+                description="Go long when the oscillator drops below this level",
+            ),
+            ParamSchema(
+                name="overbought",
+                type="float",
+                default=70.0,
+                minimum=51.0,
+                maximum=99.0,
+                step=1.0,
+                label="Overbought threshold",
+                description="Go short when the oscillator rises above this level; must be > oversold",
+            ),
+        ],
+    ),
 ]

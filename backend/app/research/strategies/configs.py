@@ -149,6 +149,12 @@ class FiftyTwoWeekHighConfig(BaseModel):
     near_low: float = Field(default=0.70, gt=0, le=1)
 
 
+class UltimateOscillatorConfig(BaseModel):
+    name: Literal["ultimate_oscillator"] = "ultimate_oscillator"
+    oversold: float = Field(default=30.0, gt=0, lt=100)
+    overbought: float = Field(default=70.0, gt=0, lt=100)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -170,6 +176,7 @@ StrategyConfig = Annotated[
     | VWAPReversionConfig
     | ADXConfig
     | ConnorsRSIConfig
-    | FiftyTwoWeekHighConfig,
+    | FiftyTwoWeekHighConfig
+    | UltimateOscillatorConfig,
     Field(discriminator="name"),
 ]
