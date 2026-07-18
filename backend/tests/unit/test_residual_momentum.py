@@ -35,6 +35,11 @@ def test_rejects_invalid_lookback() -> None:
         ResidualMomentumStrategy(lookback=0)
 
 
+def test_rejects_negative_skip() -> None:
+    with pytest.raises(ValueError, match="skip"):
+        ResidualMomentumStrategy(skip=-1)
+
+
 def test_rejects_invalid_mean_window() -> None:
     with pytest.raises(ValueError, match="mean_window"):
         ResidualMomentumStrategy(mean_window=1)
