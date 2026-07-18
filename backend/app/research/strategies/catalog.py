@@ -968,4 +968,51 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="residual_momentum",
+        label="Residual Momentum",
+        category="Trend",
+        summary="Trend-follows the part of returns that isn't just the stock's usual drift — steadier than raw momentum.",
+        description=(
+            "Residual return = daily return minus its own trailing mean (the name's recent drift). "
+            "Signal = sign of the summed residual over `lookback` bars ending `skip` bars ago. Long "
+            "when recent returns ran above the name's own trend, short below, flat when they track "
+            "it. Blitz-Huij-Martens (2011): residual momentum is less crash-prone than raw price "
+            "momentum. Single-name proxy (removes own drift, not a market beta). Trailing/shifted "
+            "-- no look-ahead."
+        ),
+        citations=[
+            "Blitz, David, Joop Huij, and Martin Martens. 'Residual Momentum'. "
+            "Journal of Empirical Finance 18, no. 3 (2011), pp. 506-521."
+        ],
+        parameters=[
+            ParamSchema(
+                name="lookback",
+                type="int",
+                default=120,
+                minimum=1,
+                maximum=500,
+                label="Momentum lookback",
+                description="Bars over which the residual return is summed",
+            ),
+            ParamSchema(
+                name="skip",
+                type="int",
+                default=20,
+                minimum=0,
+                maximum=60,
+                label="Skip bars",
+                description="Recent bars dropped from the lookback to avoid short-term reversal",
+            ),
+            ParamSchema(
+                name="mean_window",
+                type="int",
+                default=60,
+                minimum=2,
+                maximum=252,
+                label="Drift window",
+                description="Trailing window whose mean return is removed to form the residual",
+            ),
+        ],
+    ),
 ]

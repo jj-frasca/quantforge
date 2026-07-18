@@ -162,6 +162,13 @@ class VolManagedMomentumConfig(BaseModel):
     target_vol: float = Field(default=0.15, gt=0)
 
 
+class ResidualMomentumConfig(BaseModel):
+    name: Literal["residual_momentum"] = "residual_momentum"
+    lookback: int = Field(default=120, ge=1)
+    skip: int = Field(default=20, ge=0)
+    mean_window: int = Field(default=60, ge=2)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -185,6 +192,7 @@ StrategyConfig = Annotated[
     | ConnorsRSIConfig
     | FiftyTwoWeekHighConfig
     | UltimateOscillatorConfig
-    | VolManagedMomentumConfig,
+    | VolManagedMomentumConfig
+    | ResidualMomentumConfig,
     Field(discriminator="name"),
 ]

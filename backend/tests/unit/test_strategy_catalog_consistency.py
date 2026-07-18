@@ -18,6 +18,7 @@ from app.research.strategies.configs import (
     MACDCrossoverConfig,
     MeanReversionConfig,
     MomentumConfig,
+    ResidualMomentumConfig,
     RSIMeanReversionConfig,
     SMAConfig,
     StochasticOscillatorConfig,
@@ -55,6 +56,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "fifty_two_week_high": FiftyTwoWeekHighConfig,
     "ultimate_oscillator": UltimateOscillatorConfig,
     "vol_managed_momentum": VolManagedMomentumConfig,
+    "residual_momentum": ResidualMomentumConfig,
 }
 
 

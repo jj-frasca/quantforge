@@ -35,6 +35,7 @@ from app.research.strategies.configs import (
     MACDCrossoverConfig,
     MeanReversionConfig,
     MomentumConfig,
+    ResidualMomentumConfig,
     RSIMeanReversionConfig,
     SMAConfig,
     StochasticOscillatorConfig,
@@ -55,6 +56,7 @@ from app.research.strategies.keltner_channel import KeltnerChannelStrategy
 from app.research.strategies.macd_crossover import MACDCrossoverStrategy
 from app.research.strategies.mean_reversion import MeanReversionStrategy
 from app.research.strategies.momentum import MomentumStrategy
+from app.research.strategies.residual_momentum import ResidualMomentumStrategy
 from app.research.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
 from app.research.strategies.sma import SMAStrategy
 from app.research.strategies.stochastic_oscillator import StochasticOscillatorStrategy
@@ -155,6 +157,10 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
             lookback=config.lookback,
             vol_window=config.vol_window,
             target_vol=config.target_vol,
+        )
+    if isinstance(config, ResidualMomentumConfig):
+        return ResidualMomentumStrategy(
+            lookback=config.lookback, skip=config.skip, mean_window=config.mean_window
         )
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
