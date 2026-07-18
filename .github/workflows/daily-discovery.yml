@@ -18,7 +18,7 @@ on:
       universe:
         description: "Universe file (relative to repo root)"
         required: false
-        default: "data/universes/sp500.txt"
+        default: "data/universes/discovery.txt"
 
 permissions:
   contents: write
@@ -48,7 +48,7 @@ jobs:
       - name: Hunt shard ${{ matrix.shard }} (yfinance, retried)
         working-directory: backend
         env:
-          UNIVERSE: ${{ github.event.inputs.universe || 'data/universes/sp500.txt' }}
+          UNIVERSE: ${{ github.event.inputs.universe || 'data/universes/discovery.txt' }}
         run: |
           set +e
           OUT="$GITHUB_WORKSPACE/shard_${{ matrix.shard }}.json"
