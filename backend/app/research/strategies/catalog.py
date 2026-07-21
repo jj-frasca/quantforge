@@ -1015,4 +1015,33 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="overnight_gap",
+        label="Overnight Gap Fade",
+        category="Mean Reversion",
+        summary="Bets that big overnight price jumps partly reverse — shorts large up-gaps, buys large down-gaps.",
+        description=(
+            "Gap = today's open / yesterday's close - 1. Overnight moves tend to partially reverse "
+            "(Lou-Polk-Skouras 2019). Short when the gap exceeds +threshold, long when below "
+            "-threshold, flat for small gaps. The only strategy that uses the OPEN price, so it is "
+            "orthogonal to the close-based catalog. Gap at t uses data known at t's open -- no "
+            "look-ahead."
+        ),
+        citations=[
+            "Lou, Dong, Christopher Polk, and Spyros Skouras. 'A Tug of War: Overnight Versus "
+            "Intraday Expected Returns'. Journal of Financial Economics 134, no. 1 (2019)."
+        ],
+        parameters=[
+            ParamSchema(
+                name="threshold",
+                type="float",
+                default=0.02,
+                minimum=0.005,
+                maximum=0.15,
+                step=0.005,
+                label="Gap threshold",
+                description="Minimum absolute overnight gap that triggers a fade",
+            ),
+        ],
+    ),
 ]

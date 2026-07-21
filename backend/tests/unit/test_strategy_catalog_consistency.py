@@ -18,6 +18,7 @@ from app.research.strategies.configs import (
     MACDCrossoverConfig,
     MeanReversionConfig,
     MomentumConfig,
+    OvernightGapConfig,
     ResidualMomentumConfig,
     RSIMeanReversionConfig,
     SMAConfig,
@@ -57,6 +58,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "ultimate_oscillator": UltimateOscillatorConfig,
     "vol_managed_momentum": VolManagedMomentumConfig,
     "residual_momentum": ResidualMomentumConfig,
+    "overnight_gap": OvernightGapConfig,
 }
 
 

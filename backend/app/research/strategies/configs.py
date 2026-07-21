@@ -169,6 +169,11 @@ class ResidualMomentumConfig(BaseModel):
     mean_window: int = Field(default=60, ge=2)
 
 
+class OvernightGapConfig(BaseModel):
+    name: Literal["overnight_gap"] = "overnight_gap"
+    threshold: float = Field(default=0.02, gt=0, lt=1)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -193,6 +198,7 @@ StrategyConfig = Annotated[
     | FiftyTwoWeekHighConfig
     | UltimateOscillatorConfig
     | VolManagedMomentumConfig
-    | ResidualMomentumConfig,
+    | ResidualMomentumConfig
+    | OvernightGapConfig,
     Field(discriminator="name"),
 ]
