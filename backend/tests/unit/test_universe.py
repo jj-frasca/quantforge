@@ -63,6 +63,23 @@ def test_a_failing_symbol_is_captured_and_others_still_run() -> None:
     assert "BAD" in result.errors
 
 
+def test_a_data_normalization_error_is_captured_and_others_still_run() -> None:
+    # Regression (prod 2026-07-26): a malformed vendor bar makes the OHLCV normalizer raise
+    # decimal.InvalidOperation (an ArithmeticError). One bad symbol must be recorded, not crash.
+    from decimal import InvalidOperation
+
+    frames = {"GOOD": _trend(1, 0.0005)}
+
+    def provide(symbol: str) -> pd.DataFrame:
+        if symbol == "NANHIGH":
+            raise InvalidOperation("[<class 'decimal.ConversionSyntax'>]")
+        return frames[symbol]
+
+    result = run_universe_hunt(["GOOD", "NANHIGH"], ["sma", "momentum"], provide)
+    assert [e.symbol for e in result.experiments] == ["GOOD"]
+    assert "NANHIGH" in result.errors
+
+
 def test_leaderboard_ranks_graduates_first_then_by_deflated_sharpe() -> None:
     # Strong trend + lenient gate -> both graduate; ranking is by holdout/DSR.
     frames = {"HI": _trend(1, 0.0012), "LO": _trend(2, 0.0011)}

@@ -69,6 +69,31 @@ def test_run_cross_sectional_hunt_is_resilient_to_a_bad_symbol() -> None:
     assert result.experiment.universe_symbols == ["A", "B", "C"]  # the rest still ran
 
 
+def test_run_cross_sectional_hunt_is_resilient_to_a_data_normalization_error() -> None:
+    # Regression (prod 2026-07-26): a malformed vendor bar makes the OHLCV normalizer raise
+    # decimal.InvalidOperation (an ArithmeticError) for ONE symbol. That must be recorded and
+    # skipped, not crash the whole universe hunt.
+    from decimal import InvalidOperation
+
+    frames = {s: _frame(560, i) for i, s in enumerate(["A", "B", "C"])}
+
+    def provider(symbol: str) -> pd.DataFrame:
+        if symbol == "NANHIGH":
+            raise InvalidOperation("[<class 'decimal.ConversionSyntax'>]")
+        return frames[symbol]
+
+    store = InMemoryCrossSectionalStore()
+    result = run_cross_sectional_hunt(
+        ["A", "B", "C", "NANHIGH"],
+        provider,
+        store=store,
+        strategy_names=["xs_reversal"],
+        quantiles=(0.2, 0.3),
+    )
+    assert "NANHIGH" in result.errors
+    assert result.experiment.universe_symbols == ["A", "B", "C"]  # the rest still ran
+
+
 def test_run_cross_sectional_hunt_chains_prior_trials_from_the_store() -> None:
     frames = {s: _frame(560, i) for i, s in enumerate(["A", "B", "C"])}
     store = InMemoryCrossSectionalStore()

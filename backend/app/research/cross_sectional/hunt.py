@@ -54,7 +54,10 @@ def run_cross_sectional_hunt(
     for symbol in symbols:
         try:
             frames[symbol] = frame_provider(symbol)
-        except (ValueError, KeyError, OSError) as exc:
+        except (ValueError, KeyError, OSError, ArithmeticError, TypeError) as exc:
+            # A per-symbol fetch/normalize failure over unreliable vendor data must NOT kill the
+            # whole universe hunt — record it and move on. ArithmeticError covers the OHLCV
+            # normalizer's decimal.InvalidOperation on a malformed (NaN) bar (prod 2026-07-26).
             errors[symbol] = f"{type(exc).__name__}: {exc}"
 
     panel = price_panel_from_frames(frames)

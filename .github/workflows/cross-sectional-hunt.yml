@@ -66,6 +66,12 @@ jobs:
       - name: Commit cross-sectional pool (if changed)
         if: ${{ always() }}
         run: |
+          # Guard: the pool file may be absent if the hunt made no changes or failed early —
+          # `git add` on a missing pathspec exits 128 and reds the job (prod 2026-07-26).
+          if [ ! -f data/cross_sectional_pool.json ]; then
+            echo "no cross-sectional pool file produced; nothing to commit"
+            exit 0
+          fi
           # add-first so a brand-new pool file (first run) is detected, not just modifications.
           git add data/cross_sectional_pool.json
           if git diff --cached --quiet; then

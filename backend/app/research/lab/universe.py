@@ -105,7 +105,11 @@ def run_universe_hunt(
                 fundamental_criteria=fundamental_criteria,
                 rationale=rationale,
             )
-        except (ValueError, KeyError, OSError) as exc:
+        except (ValueError, KeyError, OSError, ArithmeticError, TypeError) as exc:
+            # A per-symbol failure over unreliable vendor data must never kill the universe hunt.
+            # ArithmeticError covers the OHLCV normalizer's decimal.InvalidOperation on a malformed
+            # (NaN) bar (the same class of failure that took down the cross-sectional hunt in prod
+            # 2026-07-26); TypeError guards other bad-data surprises.
             errors[symbol] = f"{type(exc).__name__}: {exc}"
             continue
         if value_score is not None:
