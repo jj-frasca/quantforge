@@ -52,9 +52,16 @@ def main() -> None:
         return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
 
     print(f"Cross-sectional hunt over {len(symbols)} symbols (yfinance max history)...\n")
-    result = run_cross_sectional_hunt(
-        symbols, frame_provider, store=store, rationale="scheduled cross-sectional hunt"
-    )
+    try:
+        result = run_cross_sectional_hunt(
+            symbols, frame_provider, store=store, rationale="scheduled cross-sectional hunt"
+        )
+    except ValueError as exc:
+        # Not enough usable data to rank cross-sectionally (too few symbols with history, or a thin
+        # common window). That's a data condition, not a code failure — exit 0 so the scheduled job
+        # doesn't red + email on a transient vendor day. No pool is written; the commit step no-ops.
+        print(f"cross-sectional hunt skipped: {exc}")
+        return
     exp = result.experiment
 
     print(

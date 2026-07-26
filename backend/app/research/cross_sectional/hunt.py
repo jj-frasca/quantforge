@@ -13,6 +13,10 @@ from app.research.lab.gate import GateConfig
 FrameProvider = Callable[[str], pd.DataFrame]
 
 _MIN_SYMBOLS = 2
+# A symbol needs at least this many bars to join the panel; the cross-sectional split needs
+# search (>=252) + holdout (>=252). Dropping short-history names (recent IPOs, truncated vendor
+# responses) stops ONE 28-bar symbol from collapsing the whole dropna intersection (prod 2026-07-26).
+_MIN_HISTORY_BARS = 504
 
 
 @dataclass(frozen=True)
@@ -22,12 +26,22 @@ class CrossSectionalHuntResult:
     errors: dict[str, str] = field(default_factory=dict)
 
 
-def price_panel_from_frames(frames: Mapping[str, pd.DataFrame]) -> pd.DataFrame:
-    """Align per-symbol price frames into one (dates x symbols) close panel. Columns are joined on
-    the union of dates and rows with ANY missing symbol are dropped, so the panel is a rectangular
-    block over the symbols' common, gap-free date range — exactly what the ranker needs to compare
-    like-for-like each period."""
-    closes = {symbol: frame["close"] for symbol, frame in frames.items()}
+def price_panel_from_frames(
+    frames: Mapping[str, pd.DataFrame], *, min_bars: int = _MIN_HISTORY_BARS
+) -> pd.DataFrame:
+    """Align per-symbol price frames into one (dates x symbols) close panel. Symbols with fewer than
+    `min_bars` observations are dropped FIRST, then columns are joined on the union of dates and rows
+    with any missing symbol removed, so the panel is a rectangular block over the survivors' common,
+    gap-free date range — exactly what the ranker needs to compare like-for-like each period.
+
+    Dropping short-history symbols is load-bearing: a single recent-IPO / truncated-vendor symbol
+    with only a handful of bars would otherwise collapse the dropna intersection to those few dates
+    and starve the search (prod 2026-07-26). Long-history names keep their full common window."""
+    closes = {
+        symbol: frame["close"]
+        for symbol, frame in frames.items()
+        if int(frame["close"].notna().sum()) >= min_bars
+    }
     panel = pd.DataFrame(closes)
     return panel.dropna()
 

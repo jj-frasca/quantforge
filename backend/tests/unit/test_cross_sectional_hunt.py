@@ -33,10 +33,24 @@ def _provider(frames: dict[str, pd.DataFrame]):
 def test_price_panel_from_frames_keeps_only_common_complete_dates() -> None:
     a = _frame(10, 1, start="2020-01-01")
     b = _frame(10, 2, start="2020-01-08")  # starts a week later -> partial overlap
-    panel = price_panel_from_frames({"A": a["close"].to_frame(), "B": b["close"].to_frame()})
+    panel = price_panel_from_frames(
+        {"A": a["close"].to_frame(), "B": b["close"].to_frame()}, min_bars=1
+    )
     assert list(panel.columns) == ["A", "B"]
     assert panel.index.min() == b.index.min()  # intersection starts at the later series' start
     assert not panel.isna().any().any()  # complete rows only
+
+
+def test_price_panel_drops_short_history_symbols_instead_of_collapsing() -> None:
+    # Regression (prod 2026-07-26): ONE recent-IPO symbol with only ~28 bars must NOT collapse the
+    # whole panel to 28 rows via the dropna intersection — it is dropped so the long common window
+    # of the full-history names survives.
+    long_a = _frame(800, 1)
+    long_b = _frame(800, 2)
+    short = _frame(28, 3)  # a recent listing / truncated vendor response
+    panel = price_panel_from_frames({"A": long_a, "B": long_b, "SHORT": short}, min_bars=504)
+    assert list(panel.columns) == ["A", "B"]  # SHORT dropped
+    assert len(panel) == 800  # panel keeps the long window, not truncated to 28
 
 
 def test_run_cross_sectional_hunt_persists_and_returns_the_experiment() -> None:
