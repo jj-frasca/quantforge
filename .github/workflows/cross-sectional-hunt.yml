@@ -16,7 +16,7 @@ on:
       universe:
         description: "Universe file (relative to repo root) to hunt"
         required: false
-        default: "data/universes/sp500.txt"
+        default: "data/universes/large_cap.txt"
 
 permissions:
   contents: write
@@ -42,7 +42,7 @@ jobs:
       - name: Run the cross-sectional hunt (yfinance, retried)
         working-directory: backend
         env:
-          UNIVERSE: ${{ github.event.inputs.universe || 'data/universes/sp500.txt' }}
+          UNIVERSE: ${{ github.event.inputs.universe || 'data/universes/large_cap.txt' }}
         run: |
           set +e
           for attempt in 1 2; do
