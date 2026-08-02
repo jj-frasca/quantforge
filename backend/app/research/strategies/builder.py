@@ -33,6 +33,7 @@ from app.research.strategies.configs import (
     ConnorsRSIConfig,
     DonchianATRTrailConfig,
     DonchianBreakoutConfig,
+    DualMomentumConfig,
     FiftyTwoWeekHighConfig,
     KeltnerChannelConfig,
     MACDCrossoverConfig,
@@ -57,6 +58,7 @@ from app.research.strategies.configs import (
 from app.research.strategies.connors_rsi import ConnorsRSIStrategy
 from app.research.strategies.donchian_atr_trail import DonchianATRTrailStrategy
 from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
+from app.research.strategies.dual_momentum import DualMomentumStrategy
 from app.research.strategies.fifty_two_week_high import FiftyTwoWeekHighStrategy
 from app.research.strategies.keltner_channel import KeltnerChannelStrategy
 from app.research.strategies.macd_crossover import MACDCrossoverStrategy
@@ -190,6 +192,8 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
             atr_window=config.atr_window,
             multiplier=config.multiplier,
         )
+    if isinstance(config, DualMomentumConfig):
+        return DualMomentumStrategy(lookback=config.lookback, trend_window=config.trend_window)
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.

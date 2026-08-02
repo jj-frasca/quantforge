@@ -195,6 +195,12 @@ class ATRChannelBreakoutConfig(BaseModel):
     multiplier: float = Field(default=2.0, gt=0)
 
 
+class DualMomentumConfig(BaseModel):
+    name: Literal["dual_momentum"] = "dual_momentum"
+    lookback: int = Field(default=120, ge=1)
+    trend_window: int = Field(default=200, ge=2)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -223,6 +229,7 @@ StrategyConfig = Annotated[
     | OvernightGapConfig
     | DonchianATRTrailConfig
     | SqueezeBreakoutConfig
-    | ATRChannelBreakoutConfig,
+    | ATRChannelBreakoutConfig
+    | DualMomentumConfig,
     Field(discriminator="name"),
 ]
