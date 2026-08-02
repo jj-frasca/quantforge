@@ -40,6 +40,7 @@ from app.research.strategies.configs import (
     ResidualMomentumConfig,
     RSIMeanReversionConfig,
     SMAConfig,
+    SqueezeBreakoutConfig,
     StochasticOscillatorConfig,
     StrategyConfig,
     TrendFilteredMeanReversionConfig,
@@ -63,6 +64,7 @@ from app.research.strategies.overnight_gap import OvernightGapStrategy
 from app.research.strategies.residual_momentum import ResidualMomentumStrategy
 from app.research.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
 from app.research.strategies.sma import SMAStrategy
+from app.research.strategies.squeeze_breakout import SqueezeBreakoutStrategy
 from app.research.strategies.stochastic_oscillator import StochasticOscillatorStrategy
 from app.research.strategies.trend_filtered_mean_reversion import (
     TrendFilteredMeanReversionStrategy,
@@ -173,6 +175,12 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
             entry_window=config.entry_window,
             atr_window=config.atr_window,
             atr_multiple=config.atr_multiple,
+        )
+    if isinstance(config, SqueezeBreakoutConfig):
+        return SqueezeBreakoutStrategy(
+            window=config.window,
+            bb_num_std=config.bb_num_std,
+            kc_multiple=config.kc_multiple,
         )
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing

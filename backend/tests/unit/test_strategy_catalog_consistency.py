@@ -23,6 +23,7 @@ from app.research.strategies.configs import (
     ResidualMomentumConfig,
     RSIMeanReversionConfig,
     SMAConfig,
+    SqueezeBreakoutConfig,
     StochasticOscillatorConfig,
     TrendFilteredMeanReversionConfig,
     TripleMAAlignmentConfig,
@@ -61,6 +62,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "residual_momentum": ResidualMomentumConfig,
     "overnight_gap": OvernightGapConfig,
     "donchian_atr_trail": DonchianATRTrailConfig,
+    "squeeze_breakout": SqueezeBreakoutConfig,
 }
 
 
