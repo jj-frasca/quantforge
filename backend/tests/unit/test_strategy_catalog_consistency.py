@@ -12,6 +12,7 @@ from app.research.strategies.configs import (
     CCIConfig,
     ChaikinMoneyFlowConfig,
     ConnorsRSIConfig,
+    DonchianATRTrailConfig,
     DonchianBreakoutConfig,
     FiftyTwoWeekHighConfig,
     KeltnerChannelConfig,
@@ -59,6 +60,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "vol_managed_momentum": VolManagedMomentumConfig,
     "residual_momentum": ResidualMomentumConfig,
     "overnight_gap": OvernightGapConfig,
+    "donchian_atr_trail": DonchianATRTrailConfig,
 }
 
 
