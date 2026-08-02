@@ -8,6 +8,7 @@ from app.research.strategies.catalog import STRATEGY_CATALOG
 from app.research.strategies.configs import (
     ADXConfig,
     AroonConfig,
+    ATRChannelBreakoutConfig,
     BollingerBandsConfig,
     CCIConfig,
     ChaikinMoneyFlowConfig,
@@ -63,6 +64,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "overnight_gap": OvernightGapConfig,
     "donchian_atr_trail": DonchianATRTrailConfig,
     "squeeze_breakout": SqueezeBreakoutConfig,
+    "atr_channel_breakout": ATRChannelBreakoutConfig,
 }
 
 

@@ -188,6 +188,13 @@ class SqueezeBreakoutConfig(BaseModel):
     kc_multiple: float = Field(default=1.5, gt=0)
 
 
+class ATRChannelBreakoutConfig(BaseModel):
+    name: Literal["atr_channel_breakout"] = "atr_channel_breakout"
+    ma_window: int = Field(default=20, ge=2)
+    atr_window: int = Field(default=14, ge=2)
+    multiplier: float = Field(default=2.0, gt=0)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -215,6 +222,7 @@ StrategyConfig = Annotated[
     | ResidualMomentumConfig
     | OvernightGapConfig
     | DonchianATRTrailConfig
-    | SqueezeBreakoutConfig,
+    | SqueezeBreakoutConfig
+    | ATRChannelBreakoutConfig,
     Field(discriminator="name"),
 ]

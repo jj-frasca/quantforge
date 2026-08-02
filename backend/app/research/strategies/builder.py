@@ -18,6 +18,7 @@ from pydantic import TypeAdapter
 
 from app.research.strategies.adx import ADXStrategy
 from app.research.strategies.aroon import AroonStrategy
+from app.research.strategies.atr_channel_breakout import ATRChannelBreakoutStrategy
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.bollinger_bands import BollingerBandsStrategy
 from app.research.strategies.cci import CCIStrategy
@@ -25,6 +26,7 @@ from app.research.strategies.chaikin_money_flow import ChaikinMoneyFlowStrategy
 from app.research.strategies.configs import (
     ADXConfig,
     AroonConfig,
+    ATRChannelBreakoutConfig,
     BollingerBandsConfig,
     CCIConfig,
     ChaikinMoneyFlowConfig,
@@ -181,6 +183,12 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
             window=config.window,
             bb_num_std=config.bb_num_std,
             kc_multiple=config.kc_multiple,
+        )
+    if isinstance(config, ATRChannelBreakoutConfig):
+        return ATRChannelBreakoutStrategy(
+            ma_window=config.ma_window,
+            atr_window=config.atr_window,
+            multiplier=config.multiplier,
         )
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
