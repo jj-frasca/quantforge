@@ -14,6 +14,7 @@ const PAGES = [
   { nav: 'Backtest Results', heading: 'Backtest Results' },
   { nav: 'Compare Configs', heading: 'Compare Configurations' },
   { nav: 'Validation', heading: 'Validation Report' },
+  { nav: 'Discoveries', heading: 'Discoveries' },
   { nav: 'About', heading: 'About QuantForge' },
 ] as const
 
