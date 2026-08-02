@@ -11,6 +11,7 @@ from app.research.cross_sectional.registry import (
     default_strategies,
 )
 from app.research.cross_sectional.strategies import (
+    low_volatility_signal,
     momentum_signal,
     reversal_signal,
     value_signal,
@@ -56,11 +57,59 @@ def test_value_signal_broadcasts_static_scores_across_dates() -> None:
     assert sig["S2"].isna().all()  # unscored name -> NaN -> excluded by the ranker
 
 
+def _low_vol_panel(n_dates: int = 40) -> pd.DataFrame:
+    # S_calm has tiny wiggles, S_wild has large ones -> S_calm must score highest on -realized-vol.
+    idx = pd.date_range("2020-01-01", periods=n_dates, freq="B", tz="UTC")
+    calm = 100.0 * np.cumprod(1.0 + np.full(n_dates, 0.0005))  # deterministic, near-zero vol
+    rng = np.random.default_rng(7)
+    wild = 100.0 * np.cumprod(1.0 + rng.normal(0.0, 0.05, n_dates))
+    mid = 100.0 * np.cumprod(1.0 + rng.normal(0.0, 0.02, n_dates))
+    return pd.DataFrame({"S_calm": calm, "S_wild": wild, "S_mid": mid}, index=idx)
+
+
+def test_low_volatility_signal_negates_trailing_realized_vol() -> None:
+    prices = _prices()
+    sig = low_volatility_signal(prices, vol_window=3)
+    returns = prices.pct_change()
+    expected = -returns.rolling(3).std()
+    pd.testing.assert_frame_equal(sig, expected)
+
+
+def test_low_volatility_signal_warms_up_nan() -> None:
+    prices = _prices()
+    sig = low_volatility_signal(prices, vol_window=4)
+    assert sig.iloc[:4].isna().all().all()  # first `vol_window` rows have no full return window
+    assert sig.iloc[4:].notna().all().all()
+
+
+def test_low_volatility_signal_no_lookahead_truncation_invariant() -> None:
+    prices = _prices(n_dates=12)
+    full = low_volatility_signal(prices, vol_window=3)
+    truncated = low_volatility_signal(prices.iloc[:8], vol_window=3)
+    pd.testing.assert_frame_equal(full.iloc[:8], truncated)
+
+
+def test_low_volatility_signal_ranks_calm_name_on_top() -> None:
+    prices = _low_vol_panel()
+    sig = low_volatility_signal(prices, vol_window=10)
+    assert sig.iloc[-1].idxmax() == "S_calm"  # long the lowest-vol name
+    assert sig.iloc[-1].idxmin() == "S_wild"  # short the highest-vol name
+
+
 def test_default_strategies_are_price_only_without_scores() -> None:
     strategies = default_strategies()
-    assert set(strategies) == {"xs_momentum", "xs_reversal"}
+    assert {"xs_momentum", "xs_reversal", "xs_low_volatility"} <= set(strategies)
+    assert "xs_value" not in strategies
     assert all(isinstance(s, CrossSectionalStrategy) for s in strategies.values())
     assert all(len(s.param_grid) >= 1 for s in strategies.values())
+
+
+def test_low_volatility_is_registered_with_multi_config_grid() -> None:
+    low_vol = default_strategies()["xs_low_volatility"]
+    assert len(low_vol.param_grid) >= 2  # >= 2 configs so PBO is meaningful
+    assert all("vol_window" in p for p in low_vol.param_grid)
+    panel = low_vol.build(low_vol.param_grid[0])(_prices())
+    assert panel.shape == _prices().shape
 
 
 def test_default_strategies_add_value_when_scores_given() -> None:

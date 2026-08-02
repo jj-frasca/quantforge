@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.research.cross_sectional.registry import default_strategies
 from app.research.cross_sectional.search import (
     CrossSectionalExperiment,
     run_cross_sectional_search,
@@ -45,7 +46,8 @@ def _persistent_momentum_panel(n: int = 800, n_symbols: int = 6, seed: int = 1) 
 def test_search_produces_a_trial_per_strategy_and_a_gate_verdict() -> None:
     exp = run_cross_sectional_search(_noise_panel(), rationale="unit")
     assert isinstance(exp, CrossSectionalExperiment)
-    assert {t.strategy_name for t in exp.trials} == {"xs_momentum", "xs_reversal"}
+    # With no names given, every price-only default strategy is searched (one trial each).
+    assert {t.strategy_name for t in exp.trials} == set(default_strategies())
     assert exp.universe_symbols == [f"S{i}" for i in range(6)]
     assert exp.best_gate_result is not None
     assert exp.lifetime_trials > 0
@@ -62,6 +64,12 @@ def test_a_working_factor_graduates_under_a_lenient_gate() -> None:
     assert exp.graduate.strategy_name == "xs_momentum"
     assert "quantile" in exp.graduate.parameters  # the searched quantile is recorded
     assert exp.graduate.holdout_n_bars > 0
+
+
+def test_low_volatility_strategy_is_searched_by_name() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_low_volatility"])
+    assert [t.strategy_name for t in exp.trials] == ["xs_low_volatility"]
+    assert exp.best_gate_result is not None
 
 
 def test_value_strategy_is_searched_when_scores_are_supplied() -> None:
