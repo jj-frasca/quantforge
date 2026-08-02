@@ -46,6 +46,50 @@ export const forwardScoreSchema = z.object({
 
 export type ForwardScore = z.infer<typeof forwardScoreSchema>
 
+// Graduates view (backend/app/api/v1/graduates.py): the research-pool experiments that cleared the
+// gate, best-first. A projection of the leaderboard restricted to graduates (no `graduated` field —
+// every row is, by construction). We validate only what the panel reads.
+export const graduateRowSchema = z.object({
+  symbol: z.string(),
+  strategy_name: z.string(),
+  deflated_sharpe: z.number(),
+  holdout_sharpe: z.number().nullable().optional(),
+  survives_universe_deflation: z.boolean().nullable().optional(),
+  // ADR-023: null when value was off or the name is unscorable (e.g. an ETF with no 10-K).
+  undervaluation_score: z.number().nullable().optional(),
+})
+
+export type GraduateRow = z.infer<typeof graduateRowSchema>
+
+export const graduatesSchema = z.array(graduateRowSchema)
+
+// Cross-sectional view (backend/app/api/v1/cross_sectional.py, ADR-024): the latest cross-sectional
+// hunt — its per-strategy finalists, graduation verdict, and universe size. `null` when no hunt has
+// produced a record yet (an empty/missing pool is a normal answer, not an error).
+export const crossSectionalTrialSchema = z.object({
+  strategy_name: z.string(),
+  observed_sharpe: z.number(),
+  deflated_sharpe: z.number(),
+  pbo: z.number(),
+  parameter_stability_score: z.number(),
+})
+
+export type CrossSectionalTrial = z.infer<typeof crossSectionalTrialSchema>
+
+export const crossSectionalViewSchema = z.object({
+  created_at: z.string(),
+  universe_size: z.number().int().nonnegative(),
+  best_strategy_name: z.string().nullable().optional(),
+  graduated: z.boolean(),
+  graduate_holdout_sharpe: z.number().nullable().optional(),
+  trials: z.array(crossSectionalTrialSchema),
+})
+
+export type CrossSectionalView = z.infer<typeof crossSectionalViewSchema>
+
+// The endpoint returns the view object or null (no hunt yet).
+export const crossSectionalResponseSchema = crossSectionalViewSchema.nullable()
+
 export const paperPositionSchema = z.object({
   symbol: z.string(),
   strategy_name: z.string(),

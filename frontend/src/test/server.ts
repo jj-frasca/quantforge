@@ -51,4 +51,8 @@ export const server = setupServer(
   // resolved request out of the box; individual tests server.use(...) to populate.
   http.get('/api/v1/leaderboard', () => HttpResponse.json([])),
   http.get('/api/v1/paper-portfolio', () => HttpResponse.json([])),
+  // Discoveries (graduates + cross-sectional) default to empty/null so any test mounting the page
+  // gets a resolved request out of the box; individual tests server.use(...) to populate.
+  http.get('/api/v1/graduates', () => HttpResponse.json([])),
+  http.get('/api/v1/cross-sectional', () => HttpResponse.json(null)),
 )
