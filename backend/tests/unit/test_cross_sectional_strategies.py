@@ -11,6 +11,7 @@ from app.research.cross_sectional.registry import (
     default_strategies,
 )
 from app.research.cross_sectional.strategies import (
+    high_proximity_signal,
     low_volatility_signal,
     momentum_signal,
     reversal_signal,
@@ -138,6 +139,55 @@ def test_short_term_reversal_1m_ranks_recent_loser_on_top() -> None:
     panel = rev_1m.build(rev_1m.param_grid[0])(prices)
     assert panel.iloc[-1].idxmax() == "S_loser"  # long the recent loser
     assert panel.iloc[-1].idxmin() == "S_up"  # short the recent winner
+
+
+def _high_proximity_panel(n_dates: int = 40) -> pd.DataFrame:
+    # S_high climbs monotonically (always at its trailing high -> ratio 1); S_faded rose then slid
+    # back well below its peak (ratio < 1). Nearness-to-high must rank S_high top, S_faded bottom.
+    idx = pd.date_range("2020-01-01", periods=n_dates, freq="B", tz="UTC")
+    half = n_dates // 2
+    high = 100.0 * np.cumprod(1.0 + np.full(n_dates, 0.004))
+    faded = 100.0 * np.cumprod(
+        1.0 + np.concatenate([np.full(half, 0.004), np.full(n_dates - half, -0.004)])
+    )
+    return pd.DataFrame({"S_high": high, "S_faded": faded}, index=idx)
+
+
+def test_high_proximity_signal_is_price_over_trailing_high() -> None:
+    prices = _prices()
+    sig = high_proximity_signal(prices, window=3)
+    expected = prices / prices.rolling(3).max()
+    pd.testing.assert_frame_equal(sig, expected)
+
+
+def test_high_proximity_signal_warms_up_nan() -> None:
+    prices = _prices()
+    sig = high_proximity_signal(prices, window=4)
+    assert sig.iloc[:3].isna().all().all()  # first `window` - 1 rows have no full window
+    assert sig.iloc[3:].notna().all().all()
+
+
+def test_high_proximity_signal_no_lookahead_truncation_invariant() -> None:
+    prices = _prices(n_dates=12)
+    full = high_proximity_signal(prices, window=4)
+    truncated = high_proximity_signal(prices.iloc[:8], window=4)
+    pd.testing.assert_frame_equal(full.iloc[:8], truncated)
+
+
+def test_high_proximity_signal_ranks_name_near_its_high_on_top() -> None:
+    prices = _high_proximity_panel()
+    sig = high_proximity_signal(prices, window=10)
+    assert (sig["S_high"].iloc[10:] == 1.0).all()  # a monotone climber sits at its trailing high
+    assert sig.iloc[-1].idxmax() == "S_high"  # long the name near its high
+    assert sig.iloc[-1].idxmin() == "S_faded"  # short the name far below its high
+
+
+def test_52w_high_is_registered_with_multi_config_grid() -> None:
+    high = default_strategies()["xs_52w_high"]
+    assert len(high.param_grid) >= 2  # >= 2 configs so PBO is meaningful
+    assert all("window" in p for p in high.param_grid)
+    panel = high.build(high.param_grid[0])(_prices(n_dates=300))
+    assert panel.shape == _prices(n_dates=300).shape
 
 
 def test_default_strategies_add_value_when_scores_given() -> None:
