@@ -30,6 +30,14 @@ def low_volatility_signal(prices: pd.DataFrame, vol_window: int) -> pd.DataFrame
     return -returns.rolling(vol_window).std()
 
 
+def high_proximity_signal(prices: pd.DataFrame, window: int) -> pd.DataFrame:
+    """52-week-high factor (George & Hwang 2004), cross-sectional: rank by proximity to the trailing
+    ``window``-bar high -- ``price / rolling_max``. Names trading near their running high (ratio -> 1)
+    score highest and are bought; names far below theirs are shorted. The rolling max includes the
+    current bar, so it uses only prices <= t (causal); the first ``window`` - 1 rows are NaN."""
+    return prices / prices.rolling(window).max()
+
+
 def value_signal(prices: pd.DataFrame, scores: Mapping[str, float]) -> pd.DataFrame:
     """Cross-sectional value (Fama & French 1992; Asness et al. 2013): rank on each symbol's
     UndervaluationScore (ADR-022). The score is a static as-of snapshot broadcast across every
