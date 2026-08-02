@@ -1187,4 +1187,42 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="dual_momentum",
+        label="Dual Momentum (absolute + relative)",
+        category="Trend",
+        summary="Holds the stock only when it has been rising AND is above its own longer-term "
+        "trend; otherwise steps aside to cash.",
+        description=(
+            "Gary Antonacci's dual momentum for a single name: go long only when the trailing "
+            "return over `lookback` is positive (absolute momentum) AND the close is above its "
+            "`trend_window` SMA (relative-momentum proxy). Long/flat, never short -- the "
+            "absolute-momentum gate is what sidesteps the deep drawdowns of always-invested "
+            "momentum. Trailing return and rolling mean -- no look-ahead."
+        ),
+        citations=[
+            "Antonacci, Gary. Dual Momentum Investing: An Innovative Strategy for Higher Returns "
+            "with Lower Risk. McGraw-Hill, 2014."
+        ],
+        parameters=[
+            ParamSchema(
+                name="lookback",
+                type="int",
+                default=120,
+                minimum=1,
+                maximum=500,
+                label="Absolute-momentum lookback",
+                description="Bars over which the trailing return must be positive to go long",
+            ),
+            ParamSchema(
+                name="trend_window",
+                type="int",
+                default=200,
+                minimum=2,
+                maximum=500,
+                label="Trend SMA window",
+                description="Bars in the longer-term trend the price must sit above to go long",
+            ),
+        ],
+    ),
 ]

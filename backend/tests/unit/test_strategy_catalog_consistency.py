@@ -15,6 +15,7 @@ from app.research.strategies.configs import (
     ConnorsRSIConfig,
     DonchianATRTrailConfig,
     DonchianBreakoutConfig,
+    DualMomentumConfig,
     FiftyTwoWeekHighConfig,
     KeltnerChannelConfig,
     MACDCrossoverConfig,
@@ -65,6 +66,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "donchian_atr_trail": DonchianATRTrailConfig,
     "squeeze_breakout": SqueezeBreakoutConfig,
     "atr_channel_breakout": ATRChannelBreakoutConfig,
+    "dual_momentum": DualMomentumConfig,
 }
 
 
