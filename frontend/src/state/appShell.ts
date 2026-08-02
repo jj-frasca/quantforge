@@ -18,6 +18,7 @@ export type PageId =
   | 'compare-configs'
   | 'validation'
   | 'lab'
+  | 'discoveries'
   | 'about'
 
 interface AppShellState {

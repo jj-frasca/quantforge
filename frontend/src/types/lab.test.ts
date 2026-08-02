@@ -1,9 +1,66 @@
 import {
+  crossSectionalResponseSchema,
+  graduatesSchema,
   leaderboardSchema,
   paperPortfolioSchema,
   type LeaderboardRow,
   type PaperPosition,
 } from './lab'
+
+test('graduatesSchema parses a graduate row incl. undervaluation + deflation verdict', () => {
+  const raw = [
+    {
+      symbol: 'CRM',
+      strategy_name: 'trend_filtered_mean_reversion',
+      deflated_sharpe: 0.44,
+      holdout_sharpe: 0.5,
+      survives_universe_deflation: false,
+      undervaluation_score: 0.7,
+    },
+  ]
+  const parsed = graduatesSchema.parse(raw)
+  expect(parsed[0].survives_universe_deflation).toBe(false)
+  expect(parsed[0].undervaluation_score).toBe(0.7)
+})
+
+test('graduatesSchema tolerates null undervaluation / deflation (unscorable name)', () => {
+  const parsed = graduatesSchema.parse([
+    {
+      symbol: 'SPY',
+      strategy_name: 'sma',
+      deflated_sharpe: 0.3,
+      holdout_sharpe: 0.2,
+      survives_universe_deflation: null,
+      undervaluation_score: null,
+    },
+  ])
+  expect(parsed[0].undervaluation_score).toBeNull()
+})
+
+test('crossSectionalResponseSchema parses a hunt view with trials', () => {
+  const parsed = crossSectionalResponseSchema.parse({
+    created_at: '2026-07-26T10:00:00Z',
+    universe_size: 51,
+    best_strategy_name: 'xs_momentum',
+    graduated: false,
+    graduate_holdout_sharpe: null,
+    trials: [
+      {
+        strategy_name: 'xs_momentum',
+        observed_sharpe: 0.5,
+        deflated_sharpe: -0.08,
+        pbo: 0.44,
+        parameter_stability_score: 0.22,
+      },
+    ],
+  })
+  expect(parsed?.universe_size).toBe(51)
+  expect(parsed?.trials[0].pbo).toBe(0.44)
+})
+
+test('crossSectionalResponseSchema parses null (no hunt yet)', () => {
+  expect(crossSectionalResponseSchema.parse(null)).toBeNull()
+})
 
 test('leaderboardSchema parses a graduate row with holdout + deflation fields', () => {
   const raw = [
