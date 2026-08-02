@@ -13,8 +13,10 @@ def momentum_signal(prices: pd.DataFrame, lookback: int, skip: int = 0) -> pd.Da
 
 
 def reversal_signal(prices: pd.DataFrame, lookback: int) -> pd.DataFrame:
-    """Short-term reversal (Lehmann 1990; Jegadeesh 1990): the NEGATED trailing return over a short
-    ``lookback`` (~5 bars) — long recent losers, short recent winners."""
+    """Cross-sectional reversal (Lehmann 1990; Jegadeesh 1990): the NEGATED trailing return over
+    ``lookback`` bars -- long recent losers, short recent winners. The caller picks the horizon: a
+    short ``lookback`` (~5 bars) is weekly reversal, ~21 bars is the 1-month (monthly) reversal of
+    Jegadeesh (1990)."""
     return -(prices / prices.shift(lookback) - 1.0)
 
 

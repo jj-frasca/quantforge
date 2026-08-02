@@ -72,6 +72,12 @@ def test_low_volatility_strategy_is_searched_by_name() -> None:
     assert exp.best_gate_result is not None
 
 
+def test_short_term_reversal_1m_strategy_is_searched_by_name() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_short_term_reversal_1m"])
+    assert [t.strategy_name for t in exp.trials] == ["xs_short_term_reversal_1m"]
+    assert exp.best_gate_result is not None
+
+
 def test_value_strategy_is_searched_when_scores_are_supplied() -> None:
     scores = {f"S{i}": float(i) / 6.0 for i in range(6)}
     exp = run_cross_sectional_search(

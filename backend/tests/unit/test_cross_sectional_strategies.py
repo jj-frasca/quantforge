@@ -112,6 +112,34 @@ def test_low_volatility_is_registered_with_multi_config_grid() -> None:
     assert panel.shape == _prices().shape
 
 
+def _recent_loser_panel(n_dates: int = 60) -> pd.DataFrame:
+    # S_loser slides over the trailing month while the others drift up -> a 21-bar reversal signal
+    # (negated trailing return) must rank the recent loser highest (long the loser).
+    idx = pd.date_range("2020-01-01", periods=n_dates, freq="B", tz="UTC")
+    up = 100.0 * np.cumprod(1.0 + np.full(n_dates, 0.002))
+    flat = 100.0 * np.cumprod(1.0 + np.full(n_dates, 0.0005))
+    down = 100.0 * np.cumprod(1.0 + np.full(n_dates, -0.003))
+    return pd.DataFrame({"S_up": up, "S_flat": flat, "S_loser": down}, index=idx)
+
+
+def test_short_term_reversal_1m_is_registered_with_longer_horizon() -> None:
+    strategies = default_strategies()
+    rev_1m = strategies["xs_short_term_reversal_1m"]
+    assert len(rev_1m.param_grid) >= 2  # >= 2 configs so PBO is meaningful
+    lookbacks_1m = {int(p["lookback"]) for p in rev_1m.param_grid}
+    short_lookbacks = {int(p["lookback"]) for p in strategies["xs_reversal"].param_grid}
+    # Jegadeesh (1990): a distinctly longer (~1-month) horizon than the short xs_reversal.
+    assert min(lookbacks_1m) > max(short_lookbacks)
+
+
+def test_short_term_reversal_1m_ranks_recent_loser_on_top() -> None:
+    prices = _recent_loser_panel()
+    rev_1m = default_strategies()["xs_short_term_reversal_1m"]
+    panel = rev_1m.build(rev_1m.param_grid[0])(prices)
+    assert panel.iloc[-1].idxmax() == "S_loser"  # long the recent loser
+    assert panel.iloc[-1].idxmin() == "S_up"  # short the recent winner
+
+
 def test_default_strategies_add_value_when_scores_given() -> None:
     strategies = default_strategies(value_scores={"S0": 0.8, "S1": 0.2})
     assert "xs_value" in strategies
