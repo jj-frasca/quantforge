@@ -1139,4 +1139,52 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="atr_channel_breakout",
+        label="ATR Channel Breakout",
+        category="Breakout",
+        summary="Buys when price breaks above a volatility-scaled band around its average and "
+        "shorts when it breaks below, then holds the trend until the opposite band breaks.",
+        description=(
+            "Channel = SMA(close) +/- multiplier * ATR (Wilder). Long on a break above the "
+            "upper band, short below the lower, and -- unlike Keltner -- the position is "
+            "carried forward between breakouts (a Donchian-style trend hold). The ATR width "
+            "widens with volatility, so it whipsaws less than a fixed-width channel in chop. "
+            "Trailing SMA / Wilder ATR on shifted true range -- no look-ahead."
+        ),
+        citations=[
+            "Kaufman, Perry J. Trading Systems and Methods. 5th ed. Wiley, 2013.",
+            "Wilder, J. Welles. New Concepts in Technical Trading Systems. Trend Research, 1978.",
+        ],
+        parameters=[
+            ParamSchema(
+                name="ma_window",
+                type="int",
+                default=20,
+                minimum=2,
+                maximum=200,
+                label="Midline SMA window",
+                description="Bars in the simple moving average that forms the channel midline",
+            ),
+            ParamSchema(
+                name="atr_window",
+                type="int",
+                default=14,
+                minimum=2,
+                maximum=100,
+                label="ATR window",
+                description="Wilder smoothing period for the Average True Range",
+            ),
+            ParamSchema(
+                name="multiplier",
+                type="float",
+                default=2.0,
+                minimum=0.5,
+                maximum=5.0,
+                step=0.1,
+                label="Band width (ATR multiple)",
+                description="How many ATRs the bands sit from the midline",
+            ),
+        ],
+    ),
 ]
