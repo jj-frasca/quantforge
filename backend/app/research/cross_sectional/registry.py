@@ -52,6 +52,11 @@ def default_strategies(
             build=lambda p: lambda prices: low_volatility_signal(prices, int(p["vol_window"])),
             param_grid=tuple({"vol_window": vw} for vw in (21, 63, 126)),
         ),
+        "xs_short_term_reversal_1m": CrossSectionalStrategy(
+            name="xs_short_term_reversal_1m",
+            build=lambda p: lambda prices: reversal_signal(prices, int(p["lookback"])),
+            param_grid=tuple({"lookback": lb} for lb in (21, 42, 63)),
+        ),
     }
     if value_scores is not None:
         strategies["xs_value"] = CrossSectionalStrategy(
