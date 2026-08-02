@@ -18,6 +18,16 @@ def reversal_signal(prices: pd.DataFrame, lookback: int) -> pd.DataFrame:
     return -(prices / prices.shift(lookback) - 1.0)
 
 
+def low_volatility_signal(prices: pd.DataFrame, vol_window: int) -> pd.DataFrame:
+    """Low-volatility anomaly (Baker, Bradley & Wurgler 2011; Ang et al. 2006): rank by INVERSE
+    trailing realized volatility -- long low-vol names, short high-vol. The signal is the NEGATED
+    rolling standard deviation of trailing simple returns over ``vol_window`` bars, so the calmest
+    names score highest. Each return uses only prices <= t, so the signal is causal; the first
+    ``vol_window`` rows are NaN (no full return window yet)."""
+    returns = prices.pct_change()
+    return -returns.rolling(vol_window).std()
+
+
 def value_signal(prices: pd.DataFrame, scores: Mapping[str, float]) -> pd.DataFrame:
     """Cross-sectional value (Fama & French 1992; Asness et al. 2013): rank on each symbol's
     UndervaluationScore (ADR-022). The score is a static as-of snapshot broadcast across every

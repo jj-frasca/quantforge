@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from app.research.cross_sectional.strategies import (
+    low_volatility_signal,
     momentum_signal,
     reversal_signal,
     value_signal,
@@ -45,6 +46,11 @@ def default_strategies(
             name="xs_reversal",
             build=lambda p: lambda prices: reversal_signal(prices, int(p["lookback"])),
             param_grid=tuple({"lookback": lb} for lb in (3, 5, 10)),
+        ),
+        "xs_low_volatility": CrossSectionalStrategy(
+            name="xs_low_volatility",
+            build=lambda p: lambda prices: low_volatility_signal(prices, int(p["vol_window"])),
+            param_grid=tuple({"vol_window": vw} for vw in (21, 63, 126)),
         ),
     }
     if value_scores is not None:
