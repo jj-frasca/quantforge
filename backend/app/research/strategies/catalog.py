@@ -1044,4 +1044,53 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="donchian_atr_trail",
+        label="Donchian Breakout + ATR Trailing Stop",
+        category="Breakout",
+        summary="Enters on a breakout to a new multi-week high or low, then rides it with a "
+        "volatility-based trailing stop instead of waiting for the opposite channel.",
+        description=(
+            "Turtle-style entry: long when the close breaks above the prior entry_window-bar "
+            "high, short below the prior low. Exit is a Chandelier stop (LeBeau) -- while long, "
+            "exit when the close drops below highest_high(atr_window) - atr_multiple * ATR; "
+            "symmetric while short. The trailing stop lets winners run while capping give-back. "
+            "Trailing windows and ATR only -- no look-ahead."
+        ),
+        citations=[
+            "Faith, Curtis M. Way of the Turtle. McGraw-Hill, 2007.",
+            "LeBeau, Charles, and David W. Lucas. Technical Traders Guide to Computer Analysis "
+            "of the Futures Markets. Business One Irwin, 1992.",
+        ],
+        parameters=[
+            ParamSchema(
+                name="entry_window",
+                type="int",
+                default=20,
+                minimum=2,
+                maximum=200,
+                label="Entry channel window",
+                description="Bars in the prior high/low channel that defines a breakout entry",
+            ),
+            ParamSchema(
+                name="atr_window",
+                type="int",
+                default=22,
+                minimum=2,
+                maximum=100,
+                label="ATR / stop window",
+                description="Bars in the ATR and the highest-high/lowest-low the stop trails from",
+            ),
+            ParamSchema(
+                name="atr_multiple",
+                type="float",
+                default=3.0,
+                minimum=0.5,
+                maximum=10.0,
+                step=0.5,
+                label="Chandelier ATR multiple",
+                description="How many ATRs the trailing stop sits below the recent high (or above low)",
+            ),
+        ],
+    ),
 ]

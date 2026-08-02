@@ -174,6 +174,13 @@ class OvernightGapConfig(BaseModel):
     threshold: float = Field(default=0.02, gt=0, lt=1)
 
 
+class DonchianATRTrailConfig(BaseModel):
+    name: Literal["donchian_atr_trail"] = "donchian_atr_trail"
+    entry_window: int = Field(default=20, ge=2)
+    atr_window: int = Field(default=22, ge=2)
+    atr_multiple: float = Field(default=3.0, gt=0)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -199,6 +206,7 @@ StrategyConfig = Annotated[
     | UltimateOscillatorConfig
     | VolManagedMomentumConfig
     | ResidualMomentumConfig
-    | OvernightGapConfig,
+    | OvernightGapConfig
+    | DonchianATRTrailConfig,
     Field(discriminator="name"),
 ]
