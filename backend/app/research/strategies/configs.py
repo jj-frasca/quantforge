@@ -181,6 +181,13 @@ class DonchianATRTrailConfig(BaseModel):
     atr_multiple: float = Field(default=3.0, gt=0)
 
 
+class SqueezeBreakoutConfig(BaseModel):
+    name: Literal["squeeze_breakout"] = "squeeze_breakout"
+    window: int = Field(default=20, ge=2)
+    bb_num_std: float = Field(default=2.0, gt=0)
+    kc_multiple: float = Field(default=1.5, gt=0)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -207,6 +214,7 @@ StrategyConfig = Annotated[
     | VolManagedMomentumConfig
     | ResidualMomentumConfig
     | OvernightGapConfig
-    | DonchianATRTrailConfig,
+    | DonchianATRTrailConfig
+    | SqueezeBreakoutConfig,
     Field(discriminator="name"),
 ]

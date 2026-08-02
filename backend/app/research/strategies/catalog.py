@@ -1093,4 +1093,50 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="squeeze_breakout",
+        label="Volatility Squeeze Breakout (TTM)",
+        category="Breakout",
+        summary="Waits for volatility to coil into a tight squeeze, then trades the breakout in "
+        "whichever direction price pops when the squeeze releases.",
+        description=(
+            "John Carter's TTM squeeze: a squeeze is ON when the Bollinger Bands sit entirely "
+            "inside the Keltner Channels (deviation vol < range vol) -- a coiled spring. Stay "
+            "flat while squeezed; when the bands expand back out (release), take the sign of "
+            "momentum (close - midline) and hold until the squeeze re-engages. Trailing rolling "
+            "stats only -- no look-ahead."
+        ),
+        citations=["Carter, John F. Mastering the Trade. McGraw-Hill, 2005."],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=20,
+                minimum=2,
+                maximum=200,
+                label="Window",
+                description="Bars in the shared SMA midline, Bollinger std, and ATR",
+            ),
+            ParamSchema(
+                name="bb_num_std",
+                type="float",
+                default=2.0,
+                minimum=0.5,
+                maximum=5.0,
+                step=0.1,
+                label="Bollinger band width (sigma)",
+                description="Standard deviations for the Bollinger Bands",
+            ),
+            ParamSchema(
+                name="kc_multiple",
+                type="float",
+                default=1.5,
+                minimum=0.5,
+                maximum=5.0,
+                step=0.1,
+                label="Keltner band width (ATR multiple)",
+                description="How many ATRs the Keltner Channels sit from the midline",
+            ),
+        ],
+    ),
 ]
