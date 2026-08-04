@@ -23,6 +23,7 @@ from app.research.strategies.base import BaseStrategy
 from app.research.strategies.bollinger_bands import BollingerBandsStrategy
 from app.research.strategies.cci import CCIStrategy
 from app.research.strategies.chaikin_money_flow import ChaikinMoneyFlowStrategy
+from app.research.strategies.chande_momentum import ChandeMomentumStrategy
 from app.research.strategies.configs import (
     ADXConfig,
     AroonConfig,
@@ -30,6 +31,7 @@ from app.research.strategies.configs import (
     BollingerBandsConfig,
     CCIConfig,
     ChaikinMoneyFlowConfig,
+    ChandeMomentumConfig,
     ConnorsRSIConfig,
     CoppockCurveConfig,
     DonchianATRTrailConfig,
@@ -215,6 +217,8 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
         return TrueStrengthIndexStrategy(
             long_window=config.long_window, short_window=config.short_window
         )
+    if isinstance(config, ChandeMomentumConfig):
+        return ChandeMomentumStrategy(window=config.window, threshold=config.threshold)
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.

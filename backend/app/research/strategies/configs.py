@@ -222,6 +222,12 @@ class TrueStrengthIndexConfig(BaseModel):
     short_window: int = Field(default=13, ge=1)
 
 
+class ChandeMomentumConfig(BaseModel):
+    name: Literal["chande_momentum"] = "chande_momentum"
+    window: int = Field(default=14, ge=2)
+    threshold: float = Field(default=50.0, gt=0, lt=100)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -254,6 +260,7 @@ StrategyConfig = Annotated[
     | DualMomentumConfig
     | RegimeFilteredTrendConfig
     | CoppockCurveConfig
-    | TrueStrengthIndexConfig,
+    | TrueStrengthIndexConfig
+    | ChandeMomentumConfig,
     Field(discriminator="name"),
 ]

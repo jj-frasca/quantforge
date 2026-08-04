@@ -12,6 +12,7 @@ from app.research.strategies.configs import (
     BollingerBandsConfig,
     CCIConfig,
     ChaikinMoneyFlowConfig,
+    ChandeMomentumConfig,
     ConnorsRSIConfig,
     CoppockCurveConfig,
     DonchianATRTrailConfig,
@@ -73,6 +74,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "regime_filtered_trend": RegimeFilteredTrendConfig,
     "coppock_curve": CoppockCurveConfig,
     "true_strength_index": TrueStrengthIndexConfig,
+    "chande_momentum": ChandeMomentumConfig,
 }
 
 

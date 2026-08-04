@@ -1367,4 +1367,42 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="chande_momentum",
+        label="Chande Momentum Oscillator",
+        category="Mean Reversion",
+        summary="Fades extremes — buys after heavy recent selling and sells after a sharp rally.",
+        description=(
+            "Tushar Chande's oscillator: 100 x (sum of up moves - sum of down moves) / (sum of up "
+            "+ down) over `window`, in [-100, 100]. Unsmoothed and symmetric, so it reaches "
+            "extremes faster than RSI. Traded as mean reversion: long when below -threshold "
+            "(oversold), short when above +threshold (overbought), flat between. Trailing sums -- "
+            "no look-ahead."
+        ),
+        citations=[
+            "Chande, Tushar S., and Stanley Kroll. The New Technical Trader. Wiley, 1994 "
+            "(Chande Momentum Oscillator)."
+        ],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=14,
+                minimum=2,
+                maximum=200,
+                label="Lookback window",
+                description="Bars in the trailing up/down move sums",
+            ),
+            ParamSchema(
+                name="threshold",
+                type="float",
+                default=50.0,
+                minimum=10.0,
+                maximum=90.0,
+                step=5.0,
+                label="Extreme threshold",
+                description="Absolute CMO level that triggers a long (below -threshold) or short",
+            ),
+        ],
+    ),
 ]
