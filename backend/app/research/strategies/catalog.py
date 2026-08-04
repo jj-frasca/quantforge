@@ -1225,4 +1225,61 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="regime_filtered_trend",
+        label="Regime-Filtered Trend (SMA x ADX)",
+        category="Combination",
+        summary="Trades a moving-average crossover only when a trend-strength gauge confirms the "
+        "market is actually trending, sitting out choppy ranges.",
+        description=(
+            "A 2-signal combination: the direction is a fast/slow SMA crossover (long fast>slow, "
+            "short fast<slow), but the position is only taken when Wilder's ADX exceeds "
+            "`adx_threshold` -- a trend-STRENGTH regime filter that suppresses the whipsaw a "
+            "moving-average cross suffers in range-bound markets. Trailing means + Wilder-smoothed "
+            "directional movement -- no look-ahead."
+        ),
+        citations=[
+            "Wilder, J. Welles. New Concepts in Technical Trading Systems. Trend Research, 1978 "
+            "(ADX regime filter); SMA crossover is a textbook trend signal."
+        ],
+        parameters=[
+            ParamSchema(
+                name="fast",
+                type="int",
+                default=20,
+                minimum=1,
+                maximum=200,
+                label="Fast SMA window",
+                description="Bars in the fast moving average",
+            ),
+            ParamSchema(
+                name="slow",
+                type="int",
+                default=50,
+                minimum=2,
+                maximum=500,
+                label="Slow SMA window",
+                description="Bars in the slow moving average; must be > fast",
+            ),
+            ParamSchema(
+                name="adx_window",
+                type="int",
+                default=14,
+                minimum=2,
+                maximum=100,
+                label="ADX window",
+                description="Wilder smoothing period for the ADX regime filter",
+            ),
+            ParamSchema(
+                name="adx_threshold",
+                type="float",
+                default=25.0,
+                minimum=10.0,
+                maximum=60.0,
+                step=1.0,
+                label="ADX trend-strength threshold",
+                description="Minimum ADX for the crossover to be taken; below this the signal is flat",
+            ),
+        ],
+    ),
 ]

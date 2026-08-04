@@ -201,6 +201,14 @@ class DualMomentumConfig(BaseModel):
     trend_window: int = Field(default=200, ge=2)
 
 
+class RegimeFilteredTrendConfig(BaseModel):
+    name: Literal["regime_filtered_trend"] = "regime_filtered_trend"
+    fast: int = Field(default=20, ge=1)
+    slow: int = Field(default=50, ge=2)
+    adx_window: int = Field(default=14, ge=2)
+    adx_threshold: float = Field(default=25.0, gt=0, lt=100)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -230,6 +238,7 @@ StrategyConfig = Annotated[
     | DonchianATRTrailConfig
     | SqueezeBreakoutConfig
     | ATRChannelBreakoutConfig
-    | DualMomentumConfig,
+    | DualMomentumConfig
+    | RegimeFilteredTrendConfig,
     Field(discriminator="name"),
 ]

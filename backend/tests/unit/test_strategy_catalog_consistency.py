@@ -22,6 +22,7 @@ from app.research.strategies.configs import (
     MeanReversionConfig,
     MomentumConfig,
     OvernightGapConfig,
+    RegimeFilteredTrendConfig,
     ResidualMomentumConfig,
     RSIMeanReversionConfig,
     SMAConfig,
@@ -67,6 +68,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "squeeze_breakout": SqueezeBreakoutConfig,
     "atr_channel_breakout": ATRChannelBreakoutConfig,
     "dual_momentum": DualMomentumConfig,
+    "regime_filtered_trend": RegimeFilteredTrendConfig,
 }
 
 
