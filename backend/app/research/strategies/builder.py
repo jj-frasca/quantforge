@@ -51,6 +51,7 @@ from app.research.strategies.configs import (
     TrendFilteredMeanReversionConfig,
     TripleMAAlignmentConfig,
     TRIXConfig,
+    TrueStrengthIndexConfig,
     UltimateOscillatorConfig,
     VolManagedMomentumConfig,
     VolTargetedSMAConfig,
@@ -79,6 +80,7 @@ from app.research.strategies.trend_filtered_mean_reversion import (
 )
 from app.research.strategies.triple_ma_alignment import TripleMAAlignmentStrategy
 from app.research.strategies.trix import TRIXStrategy
+from app.research.strategies.true_strength_index import TrueStrengthIndexStrategy
 from app.research.strategies.ultimate_oscillator import UltimateOscillatorStrategy
 from app.research.strategies.vol_managed_momentum import VolManagedMomentumStrategy
 from app.research.strategies.vol_targeted_sma import VolTargetedSMAStrategy
@@ -208,6 +210,10 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
     if isinstance(config, CoppockCurveConfig):
         return CoppockCurveStrategy(
             roc_long=config.roc_long, roc_short=config.roc_short, wma_window=config.wma_window
+        )
+    if isinstance(config, TrueStrengthIndexConfig):
+        return TrueStrengthIndexStrategy(
+            long_window=config.long_window, short_window=config.short_window
         )
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing

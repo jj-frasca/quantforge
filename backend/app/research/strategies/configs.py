@@ -216,6 +216,12 @@ class CoppockCurveConfig(BaseModel):
     wma_window: int = Field(default=10, ge=2)
 
 
+class TrueStrengthIndexConfig(BaseModel):
+    name: Literal["true_strength_index"] = "true_strength_index"
+    long_window: int = Field(default=25, ge=2)
+    short_window: int = Field(default=13, ge=1)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -247,6 +253,7 @@ StrategyConfig = Annotated[
     | ATRChannelBreakoutConfig
     | DualMomentumConfig
     | RegimeFilteredTrendConfig
-    | CoppockCurveConfig,
+    | CoppockCurveConfig
+    | TrueStrengthIndexConfig,
     Field(discriminator="name"),
 ]

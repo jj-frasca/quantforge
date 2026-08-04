@@ -32,6 +32,7 @@ from app.research.strategies.configs import (
     TrendFilteredMeanReversionConfig,
     TripleMAAlignmentConfig,
     TRIXConfig,
+    TrueStrengthIndexConfig,
     UltimateOscillatorConfig,
     VolManagedMomentumConfig,
     VolTargetedSMAConfig,
@@ -71,6 +72,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "dual_momentum": DualMomentumConfig,
     "regime_filtered_trend": RegimeFilteredTrendConfig,
     "coppock_curve": CoppockCurveConfig,
+    "true_strength_index": TrueStrengthIndexConfig,
 }
 
 

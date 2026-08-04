@@ -1329,4 +1329,42 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="true_strength_index",
+        label="True Strength Index",
+        category="Trend",
+        summary="A de-noised momentum gauge — leans long when smoothed momentum is positive and "
+        "short when it turns negative.",
+        description=(
+            "William Blau's TSI double-smooths the bar-over-bar price change with two chained EMAs "
+            "(spans `long_window` then `short_window`) and divides by the same double-smoothing of "
+            "the absolute change, scaled to [-100, 100]. The double smoothing strips most of the "
+            "noise a single-pass momentum carries. Long when TSI is positive, short when negative, "
+            "flat at zero. Recursive EMAs on a shifted diff -- no look-ahead."
+        ),
+        citations=[
+            "Blau, William. 'True Strength Index'. Technical Analysis of Stocks & Commodities "
+            "(1991); Momentum, Direction, and Divergence (Wiley, 1995)."
+        ],
+        parameters=[
+            ParamSchema(
+                name="long_window",
+                type="int",
+                default=25,
+                minimum=2,
+                maximum=200,
+                label="Long EMA span",
+                description="Span of the first (slower) smoothing EMA",
+            ),
+            ParamSchema(
+                name="short_window",
+                type="int",
+                default=13,
+                minimum=1,
+                maximum=100,
+                label="Short EMA span",
+                description="Span of the second smoothing EMA applied to the first",
+            ),
+        ],
+    ),
 ]
