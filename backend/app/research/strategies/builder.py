@@ -31,6 +31,7 @@ from app.research.strategies.configs import (
     CCIConfig,
     ChaikinMoneyFlowConfig,
     ConnorsRSIConfig,
+    CoppockCurveConfig,
     DonchianATRTrailConfig,
     DonchianBreakoutConfig,
     DualMomentumConfig,
@@ -57,6 +58,7 @@ from app.research.strategies.configs import (
     WilliamsRConfig,
 )
 from app.research.strategies.connors_rsi import ConnorsRSIStrategy
+from app.research.strategies.coppock_curve import CoppockCurveStrategy
 from app.research.strategies.donchian_atr_trail import DonchianATRTrailStrategy
 from app.research.strategies.donchian_breakout import DonchianBreakoutStrategy
 from app.research.strategies.dual_momentum import DualMomentumStrategy
@@ -202,6 +204,10 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
             slow=config.slow,
             adx_window=config.adx_window,
             adx_threshold=config.adx_threshold,
+        )
+    if isinstance(config, CoppockCurveConfig):
+        return CoppockCurveStrategy(
+            roc_long=config.roc_long, roc_short=config.roc_short, wma_window=config.wma_window
         )
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing

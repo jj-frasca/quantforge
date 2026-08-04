@@ -209,6 +209,13 @@ class RegimeFilteredTrendConfig(BaseModel):
     adx_threshold: float = Field(default=25.0, gt=0, lt=100)
 
 
+class CoppockCurveConfig(BaseModel):
+    name: Literal["coppock_curve"] = "coppock_curve"
+    roc_long: int = Field(default=14, ge=2)
+    roc_short: int = Field(default=11, ge=1)
+    wma_window: int = Field(default=10, ge=2)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -239,6 +246,7 @@ StrategyConfig = Annotated[
     | SqueezeBreakoutConfig
     | ATRChannelBreakoutConfig
     | DualMomentumConfig
-    | RegimeFilteredTrendConfig,
+    | RegimeFilteredTrendConfig
+    | CoppockCurveConfig,
     Field(discriminator="name"),
 ]

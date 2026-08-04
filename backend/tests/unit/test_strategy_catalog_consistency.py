@@ -13,6 +13,7 @@ from app.research.strategies.configs import (
     CCIConfig,
     ChaikinMoneyFlowConfig,
     ConnorsRSIConfig,
+    CoppockCurveConfig,
     DonchianATRTrailConfig,
     DonchianBreakoutConfig,
     DualMomentumConfig,
@@ -69,6 +70,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "atr_channel_breakout": ATRChannelBreakoutConfig,
     "dual_momentum": DualMomentumConfig,
     "regime_filtered_trend": RegimeFilteredTrendConfig,
+    "coppock_curve": CoppockCurveConfig,
 }
 
 

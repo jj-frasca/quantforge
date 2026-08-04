@@ -1282,4 +1282,51 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="coppock_curve",
+        label="Coppock Curve",
+        category="Trend",
+        summary="A slow long-term momentum gauge — leans long when the market's momentum is "
+        "positive and short when it turns negative.",
+        description=(
+            "Edwin Coppock's 1962 oscillator: a linearly-weighted moving average of the SUM of two "
+            "rate-of-change series (percent change over `roc_long` and `roc_short` bars). Long when "
+            "the curve is above zero (positive long-term momentum), short when below, flat at zero. "
+            "A slow trend-regime signal designed to time major turns. Trailing ROC + weighted MA -- "
+            "no look-ahead."
+        ),
+        citations=[
+            "Coppock, E.S. 'Practical Relative Strength Charting'. Barron's, 1962 (the Coppock "
+            "Curve)."
+        ],
+        parameters=[
+            ParamSchema(
+                name="roc_long",
+                type="int",
+                default=14,
+                minimum=2,
+                maximum=300,
+                label="Long ROC window",
+                description="Bars in the longer rate-of-change; must be > the short ROC",
+            ),
+            ParamSchema(
+                name="roc_short",
+                type="int",
+                default=11,
+                minimum=1,
+                maximum=300,
+                label="Short ROC window",
+                description="Bars in the shorter rate-of-change",
+            ),
+            ParamSchema(
+                name="wma_window",
+                type="int",
+                default=10,
+                minimum=2,
+                maximum=100,
+                label="Weighted-MA window",
+                description="Bars in the linearly-weighted smoothing of the summed ROC",
+            ),
+        ],
+    ),
 ]
