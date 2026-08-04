@@ -30,6 +30,34 @@ def low_volatility_signal(prices: pd.DataFrame, vol_window: int) -> pd.DataFrame
     return -returns.rolling(vol_window).std()
 
 
+def residual_momentum_signal(
+    prices: pd.DataFrame, lookback: int, skip: int = 0, mean_window: int = 60
+) -> pd.DataFrame:
+    """Residual momentum (Blitz, Huij & Martens 2011), cross-sectional analog: momentum of returns
+    net of each name's OWN trailing-mean drift. The residual return is the simple return minus its
+    trailing mean over ``mean_window``; the signal sums the residual over ``lookback`` bars ending
+    ``skip`` bars ago. Long names running above their own trend, short those below -- steadier and
+    less crash-prone than raw price momentum. Every term is trailing / shifted -- no look-ahead.
+    Documented proxy: this removes own-drift, not a market beta (there is no market series in a
+    self-contained panel)."""
+    returns = prices.pct_change()
+    residual = returns - returns.rolling(mean_window).mean()
+    return residual.rolling(lookback).sum().shift(skip)
+
+
+def risk_adjusted_momentum_signal(prices: pd.DataFrame, lookback: int) -> pd.DataFrame:
+    """Volatility-scaled (risk-adjusted) momentum: rank by the trailing mean return DIVIDED by the
+    trailing return volatility over ``lookback`` bars -- a Sharpe-like trend score (cf. the vol
+    scaling of Moskowitz, Ooi & Pedersen 2012). Distinct from raw cumulative-return momentum: two
+    names with the same total return but different volatility rank differently, favouring the
+    steadier trend. Trailing rolling mean/std of returns -- no look-ahead; the first ``lookback``
+    rows are NaN. A zero-volatility window yields NaN and is excluded by the ranker that day."""
+    returns = prices.pct_change()
+    mean = returns.rolling(lookback).mean()
+    std = returns.rolling(lookback).std()
+    return mean / std.replace(0.0, np.nan)
+
+
 def high_proximity_signal(prices: pd.DataFrame, window: int) -> pd.DataFrame:
     """52-week-high factor (George & Hwang 2004), cross-sectional: rank by proximity to the trailing
     ``window``-bar high -- ``price / rolling_max``. Names trading near their running high (ratio -> 1)

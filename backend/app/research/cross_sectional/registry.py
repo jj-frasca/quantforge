@@ -7,7 +7,9 @@ from app.research.cross_sectional.strategies import (
     high_proximity_signal,
     low_volatility_signal,
     momentum_signal,
+    residual_momentum_signal,
     reversal_signal,
+    risk_adjusted_momentum_signal,
     value_signal,
 )
 
@@ -62,6 +64,24 @@ def default_strategies(
             name="xs_52w_high",
             build=lambda p: lambda prices: high_proximity_signal(prices, int(p["window"])),
             param_grid=tuple({"window": w} for w in (126, 189, 252)),
+        ),
+        "xs_residual_momentum": CrossSectionalStrategy(
+            name="xs_residual_momentum",
+            build=lambda p: (
+                lambda prices: residual_momentum_signal(
+                    prices, int(p["lookback"]), int(p["skip"]), int(p["mean_window"])
+                )
+            ),
+            param_grid=tuple(
+                {"lookback": lb, "skip": 21, "mean_window": 60} for lb in (126, 189, 252)
+            ),
+        ),
+        "xs_risk_adjusted_momentum": CrossSectionalStrategy(
+            name="xs_risk_adjusted_momentum",
+            build=lambda p: (
+                lambda prices: risk_adjusted_momentum_signal(prices, int(p["lookback"]))
+            ),
+            param_grid=tuple({"lookback": lb} for lb in (63, 126, 252)),
         ),
     }
     if value_scores is not None:

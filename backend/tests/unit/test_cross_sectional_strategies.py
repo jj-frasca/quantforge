@@ -14,7 +14,9 @@ from app.research.cross_sectional.strategies import (
     high_proximity_signal,
     low_volatility_signal,
     momentum_signal,
+    residual_momentum_signal,
     reversal_signal,
+    risk_adjusted_momentum_signal,
     value_signal,
 )
 
@@ -97,12 +99,62 @@ def test_low_volatility_signal_ranks_calm_name_on_top() -> None:
     assert sig.iloc[-1].idxmin() == "S_wild"  # short the highest-vol name
 
 
+def test_residual_momentum_signal_nets_out_own_trailing_drift() -> None:
+    prices = _prices(n_dates=120)
+    sig = residual_momentum_signal(prices, lookback=20, skip=5, mean_window=30)
+    returns = prices.pct_change()
+    residual = returns - returns.rolling(30).mean()
+    expected = residual.rolling(20).sum().shift(5)
+    pd.testing.assert_frame_equal(sig, expected)
+
+
+def test_residual_momentum_signal_no_lookahead_truncation_invariant() -> None:
+    prices = _prices(n_dates=120)
+    full = residual_momentum_signal(prices, lookback=20, skip=5, mean_window=30)
+    truncated = residual_momentum_signal(prices.iloc[:90], lookback=20, skip=5, mean_window=30)
+    pd.testing.assert_frame_equal(full.iloc[:90], truncated)
+
+
+def test_risk_adjusted_momentum_signal_is_mean_over_vol() -> None:
+    prices = _prices(n_dates=120)
+    sig = risk_adjusted_momentum_signal(prices, lookback=20)
+    returns = prices.pct_change()
+    expected = returns.rolling(20).mean() / returns.rolling(20).std().replace(0.0, np.nan)
+    pd.testing.assert_frame_equal(sig, expected)
+
+
+def test_risk_adjusted_momentum_prefers_the_steadier_of_two_equal_return_names() -> None:
+    # Two names end at the same cumulative return; STEADY rises smoothly, CHOPPY zig-zags there.
+    # Risk-adjusted momentum (mean/vol) ranks the lower-volatility path higher.
+    n = 60
+    idx = pd.date_range("2020-01-01", periods=n, freq="B", tz="UTC")
+    steady = 100.0 * (1.0 + 0.002) ** np.arange(n)
+    chop = steady * (1.0 + 0.03 * np.sin(np.arange(n) * 1.7))  # same trend, added wobble
+    prices = pd.DataFrame({"STEADY": steady, "CHOPPY": chop}, index=idx)
+    sig = risk_adjusted_momentum_signal(prices, lookback=30)
+    assert sig.iloc[-1]["STEADY"] > sig.iloc[-1]["CHOPPY"]
+
+
+def test_risk_adjusted_momentum_no_lookahead_truncation_invariant() -> None:
+    prices = _prices(n_dates=120)
+    full = risk_adjusted_momentum_signal(prices, lookback=20)
+    truncated = risk_adjusted_momentum_signal(prices.iloc[:90], lookback=20)
+    pd.testing.assert_frame_equal(full.iloc[:90], truncated)
+
+
 def test_default_strategies_are_price_only_without_scores() -> None:
     strategies = default_strategies()
     assert {"xs_momentum", "xs_reversal", "xs_low_volatility"} <= set(strategies)
+    assert {"xs_residual_momentum", "xs_risk_adjusted_momentum"} <= set(strategies)
     assert "xs_value" not in strategies
     assert all(isinstance(s, CrossSectionalStrategy) for s in strategies.values())
     assert all(len(s.param_grid) >= 1 for s in strategies.values())
+
+
+def test_new_momentum_factors_registered_with_multi_config_grids() -> None:
+    strategies = default_strategies()
+    assert len(strategies["xs_residual_momentum"].param_grid) >= 2
+    assert len(strategies["xs_risk_adjusted_momentum"].param_grid) >= 2
 
 
 def test_low_volatility_is_registered_with_multi_config_grid() -> None:

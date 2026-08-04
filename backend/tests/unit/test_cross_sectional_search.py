@@ -81,6 +81,16 @@ def test_short_term_reversal_1m_strategy_is_searched_by_name() -> None:
 def test_52w_high_strategy_is_searched_by_name() -> None:
     exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_52w_high"])
     assert [t.strategy_name for t in exp.trials] == ["xs_52w_high"]
+
+
+def test_residual_momentum_strategy_is_searched_by_name() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_residual_momentum"])
+    assert [t.strategy_name for t in exp.trials] == ["xs_residual_momentum"]
+
+
+def test_risk_adjusted_momentum_strategy_is_searched_by_name() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_risk_adjusted_momentum"])
+    assert [t.strategy_name for t in exp.trials] == ["xs_risk_adjusted_momentum"]
     assert exp.best_gate_result is not None
 
 
