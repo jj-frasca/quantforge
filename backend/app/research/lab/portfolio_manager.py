@@ -48,7 +48,15 @@ def manage_portfolio(
         if position.status != "open":
             updated.append(position)
             continue
-        frame = frame_provider(position.symbol)
+        try:
+            frame = frame_provider(position.symbol)
+        except (ValueError, KeyError, OSError, ArithmeticError, TypeError):
+            # A per-position data fetch failure (flaky yfinance: no data, or a malformed bar that
+            # makes the OHLCV normalizer raise decimal.InvalidOperation) must not crash the whole
+            # managed book — leave this position unchanged this cycle and keep monitoring the rest
+            # (prod 2026-08-04; same class of failure the hunts already guard against).
+            updated.append(position)
+            continue
         score = evaluate_forward(position, frame)
         decision = evaluate_lifecycle(position, frame, policy)
         if decision.action == "exit":

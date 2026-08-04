@@ -109,6 +109,28 @@ def test_does_not_re_evaluate_closed_positions() -> None:
     assert out[0].status == "closed" and out[0].exit_reasons == ["prior exit"]
 
 
+def test_a_bad_data_fetch_keeps_the_position_and_does_not_crash_the_book() -> None:
+    # Regression (prod 2026-08-04): the daily consolidation monitors held positions via a live
+    # yfinance fetch. When yfinance is flaky (a malformed bar -> decimal.InvalidOperation, an
+    # ArithmeticError), ONE position's fetch must NOT crash the whole managed book — that position
+    # is left unchanged this cycle while the healthy ones are still monitored.
+    from decimal import InvalidOperation
+
+    good = _open_position().model_copy(update={"symbol": "GOOD"})
+    bad = _open_position().model_copy(update={"symbol": "BAD"})
+
+    def flaky_provider(symbol: str) -> pd.DataFrame:
+        if symbol == "BAD":
+            raise InvalidOperation("[<class 'decimal.ConversionSyntax'>]")
+        return _frame()
+
+    out = manage_portfolio([good, bad], [], flaky_provider, exit_policy=_NEVER_EXIT, now=_NOW)
+    by_symbol = {p.symbol: p for p in out}
+    assert len(out) == 2
+    assert by_symbol["GOOD"].status == "open" and by_symbol["GOOD"].score is not None  # monitored
+    assert by_symbol["BAD"].status == "open"  # left unchanged, not crashed, not exited
+
+
 def test_experiment_without_a_graduate_is_skipped() -> None:
     no_grad = Experiment(
         symbol="X", strategy_names=[], gate_config=GateConfig(), trials=[], lifetime_trials=0
