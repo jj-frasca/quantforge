@@ -42,6 +42,7 @@ from app.research.strategies.configs import (
     MACDCrossoverConfig,
     MeanReversionConfig,
     MomentumConfig,
+    NarrowRangeBreakoutConfig,
     OvernightGapConfig,
     RegimeFilteredTrendConfig,
     ResidualMomentumConfig,
@@ -70,6 +71,7 @@ from app.research.strategies.keltner_channel import KeltnerChannelStrategy
 from app.research.strategies.macd_crossover import MACDCrossoverStrategy
 from app.research.strategies.mean_reversion import MeanReversionStrategy
 from app.research.strategies.momentum import MomentumStrategy
+from app.research.strategies.narrow_range_breakout import NarrowRangeBreakoutStrategy
 from app.research.strategies.overnight_gap import OvernightGapStrategy
 from app.research.strategies.regime_filtered_trend import RegimeFilteredTrendStrategy
 from app.research.strategies.residual_momentum import ResidualMomentumStrategy
@@ -219,6 +221,8 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
         )
     if isinstance(config, ChandeMomentumConfig):
         return ChandeMomentumStrategy(window=config.window, threshold=config.threshold)
+    if isinstance(config, NarrowRangeBreakoutConfig):
+        return NarrowRangeBreakoutStrategy(window=config.window)
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.

@@ -1405,4 +1405,33 @@ STRATEGY_CATALOG: list[StrategySchema] = [
             ),
         ],
     ),
+    StrategySchema(
+        name="narrow_range_breakout",
+        label="Narrow-Range Breakout (NR7)",
+        category="Breakout",
+        summary="Waits for the quietest day in a stretch, then jumps in the direction price breaks "
+        "out of it.",
+        description=(
+            "Volatility contracts before it expands: after the narrowest-range bar of the trailing "
+            "`window` (Crabel's NR7 uses 7), arm a breakout -- go long if the next close breaks "
+            "above that quiet bar's high, short if below its low, flat otherwise. Uses the prior "
+            "bar's range/high/low and a trailing rolling-min -- no look-ahead. The only strategy "
+            "that trades the low-to-high volatility transition rather than a price level or average."
+        ),
+        citations=[
+            "Crabel, Toby. Day Trading with Short Term Price Patterns and Opening Range Breakout. "
+            "Traders Press, 1990 (narrow-range / NR7, popularized by Linda Raschke)."
+        ],
+        parameters=[
+            ParamSchema(
+                name="window",
+                type="int",
+                default=7,
+                minimum=2,
+                maximum=60,
+                label="Range window",
+                description="Bars over which the prior bar must have the narrowest range to arm",
+            ),
+        ],
+    ),
 ]

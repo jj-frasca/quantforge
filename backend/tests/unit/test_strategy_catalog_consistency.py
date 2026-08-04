@@ -23,6 +23,7 @@ from app.research.strategies.configs import (
     MACDCrossoverConfig,
     MeanReversionConfig,
     MomentumConfig,
+    NarrowRangeBreakoutConfig,
     OvernightGapConfig,
     RegimeFilteredTrendConfig,
     ResidualMomentumConfig,
@@ -75,6 +76,7 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "coppock_curve": CoppockCurveConfig,
     "true_strength_index": TrueStrengthIndexConfig,
     "chande_momentum": ChandeMomentumConfig,
+    "narrow_range_breakout": NarrowRangeBreakoutConfig,
 }
 
 

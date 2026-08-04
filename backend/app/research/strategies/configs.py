@@ -228,6 +228,11 @@ class ChandeMomentumConfig(BaseModel):
     threshold: float = Field(default=50.0, gt=0, lt=100)
 
 
+class NarrowRangeBreakoutConfig(BaseModel):
+    name: Literal["narrow_range_breakout"] = "narrow_range_breakout"
+    window: int = Field(default=7, ge=2)
+
+
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -261,6 +266,7 @@ StrategyConfig = Annotated[
     | RegimeFilteredTrendConfig
     | CoppockCurveConfig
     | TrueStrengthIndexConfig
-    | ChandeMomentumConfig,
+    | ChandeMomentumConfig
+    | NarrowRangeBreakoutConfig,
     Field(discriminator="name"),
 ]
