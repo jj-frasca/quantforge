@@ -23,6 +23,11 @@ def _frame(close: pd.Series) -> pd.DataFrame:
     )
 
 
+def test_rejects_roc_short_below_one() -> None:
+    with pytest.raises(ValueError, match="roc_short"):
+        CoppockCurveStrategy(roc_short=0)
+
+
 def test_rejects_bad_roc_pair() -> None:
     with pytest.raises(ValueError, match="roc"):
         CoppockCurveStrategy(roc_long=10, roc_short=14)  # long must be > short
