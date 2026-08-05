@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from app.research.cross_sectional.strategies import (
+    composite_signal,
     high_proximity_signal,
     low_volatility_signal,
     momentum_signal,
@@ -81,6 +82,11 @@ def default_strategies(
             build=lambda p: (
                 lambda prices: risk_adjusted_momentum_signal(prices, int(p["lookback"]))
             ),
+            param_grid=tuple({"lookback": lb} for lb in (63, 126, 252)),
+        ),
+        "xs_composite": CrossSectionalStrategy(
+            name="xs_composite",
+            build=lambda p: lambda prices: composite_signal(prices, int(p["lookback"])),
             param_grid=tuple({"lookback": lb} for lb in (63, 126, 252)),
         ),
     }

@@ -5,13 +5,16 @@ on each name's (as-of) UndervaluationScore."""
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from app.research.cross_sectional.registry import (
     CrossSectionalStrategy,
     default_strategies,
 )
 from app.research.cross_sectional.strategies import (
+    composite_signal,
     cs_rank,
+    cs_zscore,
     high_proximity_signal,
     low_volatility_signal,
     momentum_signal,
@@ -176,10 +179,51 @@ def test_risk_adjusted_momentum_no_lookahead_truncation_invariant() -> None:
     pd.testing.assert_frame_equal(full.iloc[:90], truncated)
 
 
+def test_cs_zscore_standardizes_each_row_to_mean_zero() -> None:
+    df = pd.DataFrame(
+        {"A": [1.0, 2.0], "B": [2.0, 4.0], "C": [3.0, 6.0]},
+        index=pd.date_range("2020-01-01", periods=2, freq="B", tz="UTC"),
+    )
+    z = cs_zscore(df)
+    # each row: mean ~0, and the largest name has the highest z-score.
+    assert z.iloc[0].mean() == pytest.approx(0.0, abs=1e-12)
+    assert z.iloc[0].idxmax() == "C" and z.iloc[0].idxmin() == "A"
+
+
+def test_cs_zscore_degenerate_row_is_nan() -> None:
+    df = pd.DataFrame(
+        {"A": [5.0], "B": [5.0], "C": [5.0]},  # zero cross-sectional std
+        index=pd.date_range("2020-01-01", periods=1, freq="B", tz="UTC"),
+    )
+    assert cs_zscore(df).iloc[0].isna().all()
+
+
+def test_composite_ranks_the_all_round_best_name_on_top() -> None:
+    # STRONG trends up steadily (best momentum + 52w-high + residual mom, low vol); WEAK drifts down
+    # choppily. The averaged z-score composite should rank STRONG highest, WEAK lowest.
+    n = 200
+    idx = pd.date_range("2018-01-01", periods=n, freq="B", tz="UTC")
+    strong = 100.0 * (1.0 + 0.0015) ** np.arange(n)
+    rng = np.random.default_rng(3)
+    weak = 100.0 * np.cumprod(1.0 + rng.normal(-0.0005, 0.02, n))
+    mid = 100.0 * np.cumprod(1.0 + rng.normal(0.0003, 0.01, n))
+    prices = pd.DataFrame({"STRONG": strong, "WEAK": weak, "MID": mid}, index=idx)
+    sig = composite_signal(prices, lookback=126)
+    assert sig.iloc[-1].idxmax() == "STRONG"
+    assert sig.iloc[-1].idxmin() == "WEAK"
+
+
+def test_composite_no_lookahead_truncation_invariant() -> None:
+    prices = _prices(n_dates=200, n_symbols=5)
+    full = composite_signal(prices, lookback=63)
+    truncated = composite_signal(prices.iloc[:150], lookback=63)
+    pd.testing.assert_frame_equal(full.iloc[:150], truncated)
+
+
 def test_default_strategies_are_price_only_without_scores() -> None:
     strategies = default_strategies()
     assert {"xs_momentum", "xs_reversal", "xs_low_volatility"} <= set(strategies)
-    assert {"xs_residual_momentum", "xs_risk_adjusted_momentum"} <= set(strategies)
+    assert {"xs_residual_momentum", "xs_risk_adjusted_momentum", "xs_composite"} <= set(strategies)
     assert "xs_value" not in strategies
     assert all(isinstance(s, CrossSectionalStrategy) for s in strategies.values())
     assert all(len(s.param_grid) >= 1 for s in strategies.values())

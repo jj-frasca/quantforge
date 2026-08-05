@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Mapping
 
 import numpy as np
@@ -11,6 +12,37 @@ def cs_rank(df: pd.DataFrame) -> pd.DataFrame:
     several sub-expressions on a common scale before the engine ranks the result. Per-row, so it is
     trivially causal (a row never references another date); a NaN stays NaN and is excluded."""
     return df.rank(axis=1, pct=True)
+
+
+def cs_zscore(df: pd.DataFrame) -> pd.DataFrame:
+    """Per-row cross-sectional z-score: (x - row mean) / row std. Puts factors on a common scale so
+    they combine fairly (the bias-correction / standardization step of ADR-028). Per-row, so it is
+    causal (a row never references another date); a degenerate row (zero cross-sectional std) yields
+    NaN and is excluded by the ranker that day."""
+    mean = df.mean(axis=1)
+    std = df.std(axis=1).replace(0.0, np.nan)
+    return df.sub(mean, axis=0).div(std, axis=0)
+
+
+def composite_signal(prices: pd.DataFrame, lookback: int = 126) -> pd.DataFrame:
+    """Multi-factor z-score composite (ADR-028): cross-sectionally standardize several established
+    factors each date and rank on their MEAN z-score -- the dependency-free precursor to
+    learning-to-rank. Combining orthogonal factors (momentum + low-volatility + 52-week-high +
+    residual momentum) is more robust than any single sort (raw factors embed biases; standardizing
+    then averaging is the honest first step). Each component is trailing/causal, so the composite is
+    causal; a name missing one factor is averaged over the factors it does have."""
+    components = [
+        cs_zscore(momentum_signal(prices, lookback, skip=21)),
+        cs_zscore(low_volatility_signal(prices, lookback)),
+        cs_zscore(high_proximity_signal(prices, lookback)),
+        cs_zscore(residual_momentum_signal(prices, lookback, skip=21, mean_window=60)),
+    ]
+    stacked = np.stack([c.to_numpy() for c in components])  # (n_factors, n_dates, n_symbols)
+    with warnings.catch_warnings():
+        # An all-NaN cell (no factor available yet, e.g. warmup) -> NaN, excluded by the ranker.
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        composite = np.nanmean(stacked, axis=0)
+    return pd.DataFrame(composite, index=prices.index, columns=prices.columns)
 
 
 def momentum_signal(prices: pd.DataFrame, lookback: int, skip: int = 0) -> pd.DataFrame:
