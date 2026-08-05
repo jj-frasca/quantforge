@@ -32,7 +32,10 @@ class GateConfig(BaseModel):
 
     dsr_min: float = 0.0
     pbo_max: float = 0.5
-    stability_min: float = 0.5
+    # ADR-027: relaxed 0.5 -> 0.4 to widen the funnel modestly (gather more forward-test data).
+    # Stability is the parameter-robustness POLICY knob, not a core anti-overfitting bar; DSR/PBO/
+    # MinTRL/holdout/beat-B&H are unchanged, so graduation still means a statistically real edge.
+    stability_min: float = 0.4
     holdout_sharpe_min: float = 0.0
     # A graduate must beat simply buy-and-holding the same name on the holdout (risk-adjusted),
     # or its "edge" is just poorly-captured beta on a name that went up. Diagnosis 2026-07-02.

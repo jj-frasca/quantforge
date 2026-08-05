@@ -116,6 +116,21 @@ def test_fragile_parameters_fail_stability() -> None:
     assert any("stability" in r.lower() for r in result.reasons)
 
 
+def test_moderately_stable_candidate_graduates_under_the_widened_funnel() -> None:
+    # ADR-027: stability_min is 0.4, so a candidate that clears every CORE statistical bar
+    # (DSR>0, PBO<0.5, MinTRL, holdout>0, beats B&H) but is only moderately stable (0.45,
+    # in [0.4, 0.5)) now graduates. Under the old 0.5 default this was rejected on stability.
+    result = GraduationGate().evaluate(
+        report=_report(dsr=1.0, pbo=0.1, stability=0.45, observed=1.5),
+        track_record_years=12.0,
+        n_trials=50,
+        holdout=_holdout(0.8),
+        config=GateConfig(),
+    )
+    assert result.stability_ok is True
+    assert result.passed is True
+
+
 def test_insufficient_track_record_for_the_trial_count_fails_mintrl() -> None:
     # SR=1, N=1000 -> required ~13.8y; only 5y available.
     result = GraduationGate().evaluate(
