@@ -15,6 +15,14 @@ from app.research.lab.paper import (
 FrameProvider = Callable[[str], pd.DataFrame]
 
 
+def newly_promoted(before: list[PaperPosition], after: list[PaperPosition]) -> list[PaperPosition]:
+    """The positions in `after` whose (symbol, strategy_name) was not in `before` — i.e. the
+    graduates freshly promoted into the managed book this step. Lets the discovery consolidation
+    report which NEW strategies just cleared the gate (visibility into what is working)."""
+    prior = {(p.symbol, p.strategy_name) for p in before}
+    return [p for p in after if (p.symbol, p.strategy_name) not in prior]
+
+
 def manage_portfolio(
     positions: list[PaperPosition],
     graduate_experiments: list[Experiment],

@@ -139,6 +139,24 @@ def test_experiment_without_a_graduate_is_skipped() -> None:
     assert out == []
 
 
+def test_newly_promoted_reports_positions_absent_from_the_prior_book() -> None:
+    from app.research.lab.portfolio_manager import newly_promoted
+
+    held = _open_position().model_copy(update={"symbol": "OLD"})
+    before = [held]
+    fresh = _open_position().model_copy(update={"symbol": "NEW", "strategy_name": "adx"})
+    after = [held, fresh]
+    promoted = newly_promoted(before, after)
+    assert [(p.symbol, p.strategy_name) for p in promoted] == [("NEW", "adx")]
+
+
+def test_newly_promoted_is_empty_when_nothing_new() -> None:
+    from app.research.lab.portfolio_manager import newly_promoted
+
+    held = _open_position()
+    assert newly_promoted([held], [held]) == []
+
+
 def test_closed_name_is_not_re_promoted() -> None:
     closed = _open_position().model_copy(
         update={"symbol": "CRM", "status": "closed", "closed_at": _NOW}

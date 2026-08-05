@@ -20,7 +20,7 @@ from app.research.frames import bars_to_frame
 from app.research.lab.experiment import JsonFileExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.pool_merge import merge_experiments
-from app.research.lab.portfolio_manager import manage_portfolio
+from app.research.lab.portfolio_manager import manage_portfolio, newly_promoted
 
 START = datetime(2005, 1, 1, tzinfo=UTC)
 
@@ -47,14 +47,22 @@ def main() -> None:
         return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
 
     graduates = [e for e in merged if e.graduate is not None]
-    positions = manage_portfolio(portfolio.positions(), graduates, frame_provider, now=now)
+    before = portfolio.positions()
+    positions = manage_portfolio(before, graduates, frame_provider, now=now)
     portfolio.save(positions)
 
     n_open = sum(1 for p in positions if p.status == "open")
+    promoted = newly_promoted(before, positions)
     print(
         f"consolidated {len(shard_files)} shard(s) -> {len(merged)} experiments, "
         f"{len(graduates)} graduate(s); managed book: {n_open} open"
     )
+    if promoted:
+        print(f"NEW this run ({len(promoted)} promoted — what just cleared the gate):")
+        for p in promoted:
+            print(f"  + {p.symbol:<7} {p.strategy_name}")
+    else:
+        print("no new promotions this run.")
 
 
 if __name__ == "__main__":
