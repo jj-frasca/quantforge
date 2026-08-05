@@ -10,7 +10,7 @@ name: Scheduled cross-sectional hunt
 # Alpaca keys are wired here. yfinance can be flaky from cloud IPs → the run step retries.
 on:
   schedule:
-    - cron: "0 10 * * 0" # 10:00 UTC Sunday — 3h after the single-name hunt (07:00)
+    - cron: "0 10 * * 0,3" # 10:00 UTC Sun + Wed — 2x/week so a yfinance-throttled day is compensated
   workflow_dispatch:
     inputs:
       universe:
@@ -45,13 +45,17 @@ jobs:
           UNIVERSE: ${{ github.event.inputs.universe || 'data/universes/large_cap.txt' }}
         run: |
           set +e
-          for attempt in 1 2; do
+          for attempt in 1 2 3; do
             echo "=== cross-sectional hunt attempt $attempt ==="
             PYTHONPATH=. uv run python scripts/cross_sectional_hunt.py "$GITHUB_WORKSPACE/$UNIVERSE" \
               | tee "$GITHUB_WORKSPACE/xs_hunt_out.txt"
             status=${PIPESTATUS[0]}
-            [ "$status" -eq 0 ] && break
-            echo "attempt $attempt failed (status $status); retrying..." && sleep 30
+            # Retry a hard crash; also retry a graceful "skipped" (yfinance throttled -> no usable
+            # panel) so a transient rate-limit gets another chance instead of a wasted run.
+            if [ "$status" -eq 0 ] && ! grep -q "skipped:" "$GITHUB_WORKSPACE/xs_hunt_out.txt"; then
+              break
+            fi
+            echo "attempt $attempt unproductive (status $status); backing off..." && sleep 60
           done
           exit "$status"
 
