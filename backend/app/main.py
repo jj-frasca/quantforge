@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.backtest import router as backtest_router
 from app.api.v1.bars import router as bars_router
 from app.api.v1.cross_sectional import router as cross_sectional_router
+from app.api.v1.equity_curve import router as equity_curve_router
 from app.api.v1.graduates import router as graduates_router
 from app.api.v1.ingest import router as ingest_router
 from app.api.v1.lab import router as lab_router
@@ -28,6 +29,7 @@ app.include_router(monte_carlo_router, prefix="/api/v1")
 app.include_router(lab_router, prefix="/api/v1")
 app.include_router(graduates_router, prefix="/api/v1")
 app.include_router(cross_sectional_router, prefix="/api/v1")
+app.include_router(equity_curve_router, prefix="/api/v1")
 
 
 @app.get("/health")

@@ -1,9 +1,11 @@
 import {
   crossSectionalResponseSchema,
+  equityCurveSchema,
   graduatesSchema,
   leaderboardSchema,
   paperPortfolioSchema,
   type CrossSectionalView,
+  type EquityPoint,
   type GraduateRow,
   type LeaderboardRow,
   type PaperPosition,
@@ -33,6 +35,14 @@ export async function requestCrossSectional(): Promise<CrossSectionalView | null
     throw new Error(`Cross-sectional request failed (${response.status})`)
   }
   return crossSectionalResponseSchema.parse(await response.json())
+}
+
+export async function requestEquityCurve(): Promise<EquityPoint[]> {
+  const response = await fetch(`${API_BASE}/api/v1/equity-curve`)
+  if (!response.ok) {
+    throw new Error(`Equity curve request failed (${response.status})`)
+  }
+  return equityCurveSchema.parse(await response.json())
 }
 
 export async function requestPaperPortfolio(): Promise<PaperPosition[]> {

@@ -1,4 +1,5 @@
 import { CrossSectionalPanel } from './CrossSectionalPanel'
+import { EquityCurvePanel } from './EquityCurvePanel'
 import { GraduatesPanel } from './GraduatesPanel'
 
 export function DiscoveriesPage() {
@@ -13,6 +14,7 @@ export function DiscoveriesPage() {
         </p>
       </header>
 
+      <EquityCurvePanel />
       <GraduatesPanel />
       <CrossSectionalPanel />
     </section>
