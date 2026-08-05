@@ -90,6 +90,22 @@ export type CrossSectionalView = z.infer<typeof crossSectionalViewSchema>
 // The endpoint returns the view object or null (no hunt yet).
 export const crossSectionalResponseSchema = crossSectionalViewSchema.nullable()
 
+// Equity-curve view (backend/app/api/v1/equity-curve, model app/execution/equity_curve.py): one
+// dated snapshot of the REAL paper account — absolute equity/cash, position count, and the cumulative
+// return since the $100k paper starting equity. Oldest-first. This is the headline "are we making
+// money?" series; we validate only what the panel reads and let the backend own the shape.
+export const equityPointSchema = z.object({
+  timestamp: z.string(),
+  equity: z.number(),
+  cash: z.number(),
+  n_positions: z.number().int().nonnegative(),
+  return_since_start: z.number(),
+})
+
+export type EquityPoint = z.infer<typeof equityPointSchema>
+
+export const equityCurveSchema = z.array(equityPointSchema)
+
 export const paperPositionSchema = z.object({
   symbol: z.string(),
   strategy_name: z.string(),

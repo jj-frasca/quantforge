@@ -55,4 +55,5 @@ export const server = setupServer(
   // gets a resolved request out of the box; individual tests server.use(...) to populate.
   http.get('/api/v1/graduates', () => HttpResponse.json([])),
   http.get('/api/v1/cross-sectional', () => HttpResponse.json(null)),
+  http.get('/api/v1/equity-curve', () => HttpResponse.json([])),
 )
