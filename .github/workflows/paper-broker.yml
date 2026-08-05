@@ -10,7 +10,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: paper-broker
@@ -43,3 +43,25 @@ jobs:
         run: |
           jq -Rs '{text: ("*QuantForge paper broker (cloud fills)*\n```" + . + "```")}' broker_out.txt \
             | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+
+      - name: Commit the equity curve (if changed)
+        if: ${{ always() }}
+        run: |
+          git add data/equity_curve.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "no equity-curve change"
+            exit 0
+          fi
+          git config user.name "quantforge-broker-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "chore(paper): equity-curve snapshot $(date +%F)"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin master && git push; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push attempt $attempt failed; retrying..."
+            sleep 5
+          done
+          echo "could not push after retries"
+          exit 1

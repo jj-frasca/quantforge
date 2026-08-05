@@ -22,12 +22,14 @@ import pandas as pd
 from app.config import get_settings
 from app.dependencies import build_data_adapter
 from app.execution.alpaca_broker import AlpacaBroker, AlpacaOrder, reconcile
+from app.execution.equity_curve import JsonFileEquityCurve, append_equity_point
 from app.execution.sizing import TargetPosition, equal_weight_targets, quote_position
 from app.research.frames import bars_to_frame
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 PORTFOLIO = DATA / "paper_portfolio.json"
+EQUITY_CURVE = DATA / "equity_curve.json"
 PAPER_URL = "https://paper-api.alpaca.markets"
 START = datetime(2005, 1, 1, tzinfo=UTC)
 
@@ -61,10 +63,21 @@ def main() -> None:  # pragma: no cover - live wiring, exercised by the @live sm
         return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
 
     broker = AlpacaBroker(PAPER_URL, settings.alpaca_api_key, settings.alpaca_secret_key)
-    equity = float(broker.account().equity)
+    account = broker.account()
+    equity = float(account.equity)
     targets = compute_targets(open_positions, frame_provider, equity)
     orders = reconcile(broker, targets)
+
+    # Snapshot the real account onto the committed equity curve so performance is watchable over
+    # time (the honest "are we making money?" record vs the $100k paper start).
+    curve = JsonFileEquityCurve(EQUITY_CURVE)
+    curve.save(append_equity_point(curve.all(), account, n_positions=len(open_positions), now=now))
     _print_summary(open_positions, targets, orders, equity)
+    latest = curve.all()[-1]
+    print(
+        f"\nequity curve: ${latest.equity:,.2f} "
+        f"({latest.return_since_start:+.2%} since $100k start) -> {EQUITY_CURVE.name}"
+    )
 
 
 def _print_summary(
