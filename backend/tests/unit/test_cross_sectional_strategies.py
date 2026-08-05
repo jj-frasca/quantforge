@@ -11,6 +11,7 @@ from app.research.cross_sectional.registry import (
     default_strategies,
 )
 from app.research.cross_sectional.strategies import (
+    cs_rank,
     high_proximity_signal,
     low_volatility_signal,
     momentum_signal,
@@ -26,6 +27,39 @@ def _prices(n_dates: int = 8, n_symbols: int = 3, seed: int = 0) -> pd.DataFrame
     prices = 100.0 * np.cumprod(1.0 + rng.normal(0.001, 0.01, (n_dates, n_symbols)), axis=0)
     idx = pd.date_range("2020-01-01", periods=n_dates, freq="B", tz="UTC")
     return pd.DataFrame(prices, index=idx, columns=[f"S{i}" for i in range(n_symbols)])
+
+
+def test_cs_rank_ranks_symbols_within_each_row_as_percentile() -> None:
+    df = pd.DataFrame(
+        {"A": [10.0, 5.0], "B": [20.0, 15.0], "C": [30.0, 25.0]},
+        index=pd.date_range("2020-01-01", periods=2, freq="B", tz="UTC"),
+    )
+    ranked = cs_rank(df)
+    # Each row ranks across symbols only; highest value -> 1.0, lowest -> 1/n.
+    pd.testing.assert_series_equal(
+        ranked.iloc[0],
+        pd.Series({"A": 1 / 3, "B": 2 / 3, "C": 1.0}),
+        check_names=False,
+    )
+
+
+def test_cs_rank_excludes_nan_and_ranks_over_valid_names_only() -> None:
+    df = pd.DataFrame(
+        {"A": [10.0], "B": [np.nan], "C": [30.0]},
+        index=pd.date_range("2020-01-01", periods=1, freq="B", tz="UTC"),
+    )
+    ranked = cs_rank(df)
+    assert ranked.iloc[0]["A"] == 0.5 and ranked.iloc[0]["C"] == 1.0
+    assert np.isnan(ranked.iloc[0]["B"])  # unscorable name stays NaN, excluded by the ranker
+
+
+def test_cs_rank_no_lookahead_truncation_invariant() -> None:
+    # Cross-sectional rank is per-row (axis=1), so a row never sees other dates -> truncating the
+    # future cannot change any past row's rank.
+    prices = _prices(n_dates=12)
+    full = cs_rank(prices)
+    truncated = cs_rank(prices.iloc[:8])
+    pd.testing.assert_frame_equal(full.iloc[:8], truncated)
 
 
 def test_momentum_signal_is_trailing_return_and_warms_up_nan() -> None:

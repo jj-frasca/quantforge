@@ -4,6 +4,15 @@ import numpy as np
 import pandas as pd
 
 
+def cs_rank(df: pd.DataFrame) -> pd.DataFrame:
+    """Cross-sectional (per-date) rank of a panel: ``df.rank(axis=1, pct=True)`` — each row is ranked
+    across symbols only and expressed as a percentile in (0, 1], highest value -> 1.0. This is the
+    ``rank(...)`` operator of the WorldQuant formulaic alphas (Kakushadze 2016), used to combine
+    several sub-expressions on a common scale before the engine ranks the result. Per-row, so it is
+    trivially causal (a row never references another date); a NaN stays NaN and is excluded."""
+    return df.rank(axis=1, pct=True)
+
+
 def momentum_signal(prices: pd.DataFrame, lookback: int, skip: int = 0) -> pd.DataFrame:
     """Cross-sectional momentum (Jegadeesh & Titman 1993): trailing return over ``lookback`` bars
     ending ``skip`` bars ago. ``skip`` (typically ~1 month) sidesteps the short-term reversal that
