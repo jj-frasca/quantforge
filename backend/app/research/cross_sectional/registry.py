@@ -4,6 +4,8 @@ from dataclasses import dataclass
 import pandas as pd
 
 from app.research.cross_sectional.strategies import (
+    alpha19_signal,
+    alpha34_signal,
     composite_signal,
     high_proximity_signal,
     low_volatility_signal,
@@ -88,6 +90,20 @@ def default_strategies(
             name="xs_composite",
             build=lambda p: lambda prices: composite_signal(prices, int(p["lookback"])),
             param_grid=tuple({"lookback": lb} for lb in (63, 126, 252)),
+        ),
+        "xs_alpha34": CrossSectionalStrategy(
+            name="xs_alpha34",
+            build=lambda p: (
+                lambda prices: alpha34_signal(prices, int(p["short_window"]), int(p["long_window"]))
+            ),
+            param_grid=tuple(
+                {"short_window": sw, "long_window": lw} for sw, lw in ((2, 5), (3, 10), (5, 20))
+            ),
+        ),
+        "xs_alpha19": CrossSectionalStrategy(
+            name="xs_alpha19",
+            build=lambda p: lambda prices: alpha19_signal(prices, int(p["change_lag"])),
+            param_grid=tuple({"change_lag": cl} for cl in (7, 14, 21)),
         ),
     }
     if value_scores is not None:

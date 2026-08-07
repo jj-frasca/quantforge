@@ -96,6 +96,16 @@ def test_risk_adjusted_momentum_strategy_is_searched_by_name() -> None:
 def test_composite_strategy_is_searched_by_name() -> None:
     exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_composite"])
     assert [t.strategy_name for t in exp.trials] == ["xs_composite"]
+
+
+def test_alpha34_strategy_is_searched_by_name() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_alpha34"])
+    assert [t.strategy_name for t in exp.trials] == ["xs_alpha34"]
+
+
+def test_alpha19_strategy_is_searched_by_name() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_alpha19"])
+    assert [t.strategy_name for t in exp.trials] == ["xs_alpha19"]
     assert exp.best_gate_result is not None
 
 

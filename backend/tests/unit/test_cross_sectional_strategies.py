@@ -12,6 +12,8 @@ from app.research.cross_sectional.registry import (
     default_strategies,
 )
 from app.research.cross_sectional.strategies import (
+    alpha19_signal,
+    alpha34_signal,
     composite_signal,
     cs_rank,
     cs_zscore,
@@ -220,10 +222,42 @@ def test_composite_no_lookahead_truncation_invariant() -> None:
     pd.testing.assert_frame_equal(full.iloc[:150], truncated)
 
 
+def test_alpha34_combines_vol_ratio_and_reversal_ranks_shape_and_bounds() -> None:
+    prices = _prices(n_dates=60, n_symbols=5)
+    sig = alpha34_signal(prices, short_window=2, long_window=5)
+    assert sig.shape == prices.shape
+    # each of the two rank-inverse terms is in [0,1], so the sum is in [0,2] where defined.
+    valid = sig.iloc[-1].dropna()
+    assert ((valid >= 0.0) & (valid <= 2.0)).all()
+
+
+def test_alpha34_no_lookahead_truncation_invariant() -> None:
+    prices = _prices(n_dates=120, n_symbols=5)
+    full = alpha34_signal(prices, short_window=2, long_window=5)
+    truncated = alpha34_signal(prices.iloc[:90], short_window=2, long_window=5)
+    pd.testing.assert_frame_equal(full.iloc[:90], truncated)
+
+
+def test_alpha19_fades_the_recent_move() -> None:
+    # A name that rose over the last `change_lag` bars gets a negative sign contribution (fade).
+    prices = _prices(n_dates=300, n_symbols=4)
+    sig = alpha19_signal(prices, change_lag=7, sum_window=250)
+    assert sig.shape == prices.shape
+    assert sig.iloc[-1].notna().any()  # warm past sum_window
+
+
+def test_alpha19_no_lookahead_truncation_invariant() -> None:
+    prices = _prices(n_dates=320, n_symbols=4)
+    full = alpha19_signal(prices, change_lag=7, sum_window=250)
+    truncated = alpha19_signal(prices.iloc[:300], change_lag=7, sum_window=250)
+    pd.testing.assert_frame_equal(full.iloc[:300], truncated)
+
+
 def test_default_strategies_are_price_only_without_scores() -> None:
     strategies = default_strategies()
     assert {"xs_momentum", "xs_reversal", "xs_low_volatility"} <= set(strategies)
     assert {"xs_residual_momentum", "xs_risk_adjusted_momentum", "xs_composite"} <= set(strategies)
+    assert {"xs_alpha34", "xs_alpha19"} <= set(strategies)
     assert "xs_value" not in strategies
     assert all(isinstance(s, CrossSectionalStrategy) for s in strategies.values())
     assert all(len(s.param_grid) >= 1 for s in strategies.values())

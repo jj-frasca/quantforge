@@ -45,6 +45,35 @@ def composite_signal(prices: pd.DataFrame, lookback: int = 126) -> pd.DataFrame:
     return pd.DataFrame(composite, index=prices.index, columns=prices.columns)
 
 
+def alpha34_signal(
+    prices: pd.DataFrame, short_window: int = 2, long_window: int = 5
+) -> pd.DataFrame:
+    """WorldQuant Alpha#34 (Kakushadze 2016), close-only: combine a declining-volatility signal with
+    a mild reversal. The rank-inverse of the short/long realized-vol ratio favors names whose
+    volatility is falling; the rank-inverse of the 1-bar price change favors recent underperformers.
+    Sum the two (the paper's outer rank is dropped since the engine ranks the result). Trailing std +
+    shift -- no look-ahead."""
+    returns = prices.pct_change()
+    std_short = returns.rolling(short_window).std()
+    std_long = returns.rolling(long_window).std().replace(0.0, np.nan)
+    vol_ratio = std_short / std_long
+    delta_close = prices - prices.shift(1)
+    return (1.0 - cs_rank(vol_ratio)) + (1.0 - cs_rank(delta_close))
+
+
+def alpha19_signal(
+    prices: pd.DataFrame, change_lag: int = 7, sum_window: int = 250
+) -> pd.DataFrame:
+    """WorldQuant Alpha#19 (Kakushadze 2016), close-only: -sign(close - close.shift(change_lag))
+    scaled by (1 + cross-sectional rank of (1 + trailing-sum of returns over sum_window)). Fades the
+    recent `change_lag`-bar move, weighted up for names with strong long-horizon cumulative return.
+    Trailing sum + shift -- no look-ahead; the first sum_window rows are NaN."""
+    returns = prices.pct_change()
+    change = prices - prices.shift(change_lag)
+    long_sum = returns.rolling(sum_window).sum()
+    return -np.sign(change) * (1.0 + cs_rank(1.0 + long_sum))
+
+
 def momentum_signal(prices: pd.DataFrame, lookback: int, skip: int = 0) -> pd.DataFrame:
     """Cross-sectional momentum (Jegadeesh & Titman 1993): trailing return over ``lookback`` bars
     ending ``skip`` bars ago. ``skip`` (typically ~1 month) sidesteps the short-term reversal that
