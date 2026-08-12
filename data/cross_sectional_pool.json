@@ -632,5 +632,219 @@
     },
     "graduate": null,
     "rationale": "scheduled cross-sectional hunt"
+  },
+  {
+    "experiment_id": "154b3a8f-957b-4714-b021-bb9027ebd68e",
+    "created_at": "2026-08-12T10:56:40.359786Z",
+    "universe_symbols": [
+      "AAPL",
+      "MSFT",
+      "NVDA",
+      "GOOGL",
+      "AMZN",
+      "META",
+      "TSLA",
+      "AMD",
+      "CRM",
+      "ORCL",
+      "ADBE",
+      "CSCO",
+      "INTC",
+      "QCOM",
+      "TXN",
+      "AVGO",
+      "JPM",
+      "V",
+      "MA",
+      "BAC",
+      "WFC",
+      "GS",
+      "MS",
+      "AXP",
+      "UNH",
+      "JNJ",
+      "LLY",
+      "ABBV",
+      "MRK",
+      "PFE",
+      "TMO",
+      "ABT",
+      "PG",
+      "KO",
+      "PEP",
+      "WMT",
+      "COST",
+      "MCD",
+      "NKE",
+      "HD",
+      "LOW",
+      "XOM",
+      "CVX",
+      "COP",
+      "DIS",
+      "NFLX",
+      "CMCSA",
+      "T",
+      "VZ",
+      "BA",
+      "CAT"
+    ],
+    "strategy_names": [
+      "xs_momentum",
+      "xs_reversal",
+      "xs_low_volatility",
+      "xs_short_term_reversal_1m",
+      "xs_52w_high",
+      "xs_residual_momentum",
+      "xs_risk_adjusted_momentum",
+      "xs_composite",
+      "xs_alpha34",
+      "xs_alpha19"
+    ],
+    "gate_config": {
+      "dsr_min": 0.0,
+      "pbo_max": 0.5,
+      "stability_min": 0.4,
+      "holdout_sharpe_min": 0.0,
+      "require_beat_buy_and_hold": true,
+      "trial_budget": 200
+    },
+    "trials": [
+      {
+        "strategy_name": "xs_momentum",
+        "parameters": {
+          "lookback": 252,
+          "skip": 0,
+          "quantile": 0.1
+        },
+        "observed_sharpe": 0.17150454808244883,
+        "deflated_sharpe": -0.07786549313492952,
+        "pbo": 0.4722222222222222,
+        "parameter_stability_score": 0.1975849515752059
+      },
+      {
+        "strategy_name": "xs_reversal",
+        "parameters": {
+          "lookback": 10,
+          "quantile": 0.3
+        },
+        "observed_sharpe": -1.089667869595423,
+        "deflated_sharpe": -1.6924391605522207,
+        "pbo": 0.007936507936507936,
+        "parameter_stability_score": 0.7969753789205002
+      },
+      {
+        "strategy_name": "xs_low_volatility",
+        "parameters": {
+          "vol_window": 126,
+          "quantile": 0.2
+        },
+        "observed_sharpe": -0.9709821187793305,
+        "deflated_sharpe": -1.1881985234278496,
+        "pbo": 0.14285714285714285,
+        "parameter_stability_score": 0.8883244440023548
+      },
+      {
+        "strategy_name": "xs_short_term_reversal_1m",
+        "parameters": {
+          "lookback": 42,
+          "quantile": 0.1
+        },
+        "observed_sharpe": -0.38597682750605367,
+        "deflated_sharpe": -0.7406226607052478,
+        "pbo": 0.3968253968253968,
+        "parameter_stability_score": 0.7317517315702996
+      },
+      {
+        "strategy_name": "xs_52w_high",
+        "parameters": {
+          "window": 252,
+          "quantile": 0.3
+        },
+        "observed_sharpe": -0.7742992046856827,
+        "deflated_sharpe": -1.0791835574136144,
+        "pbo": 0.3611111111111111,
+        "parameter_stability_score": 0.8314350930895033
+      },
+      {
+        "strategy_name": "xs_residual_momentum",
+        "parameters": {
+          "lookback": 189,
+          "skip": 21,
+          "mean_window": 60,
+          "quantile": 0.1
+        },
+        "observed_sharpe": -0.39675152606011704,
+        "deflated_sharpe": -0.6452472244191014,
+        "pbo": 0.3968253968253968,
+        "parameter_stability_score": 0.7963544515518887
+      },
+      {
+        "strategy_name": "xs_risk_adjusted_momentum",
+        "parameters": {
+          "lookback": 252,
+          "quantile": 0.1
+        },
+        "observed_sharpe": -0.13080153573473294,
+        "deflated_sharpe": -0.45118267949197277,
+        "pbo": 0.43253968253968256,
+        "parameter_stability_score": 0.6345906818912321
+      },
+      {
+        "strategy_name": "xs_composite",
+        "parameters": {
+          "lookback": 126,
+          "quantile": 0.3
+        },
+        "observed_sharpe": -0.7376812380689919,
+        "deflated_sharpe": -0.9105799519775593,
+        "pbo": 0.7420634920634921,
+        "parameter_stability_score": 0.8870482526818245
+      },
+      {
+        "strategy_name": "xs_alpha34",
+        "parameters": {
+          "short_window": 5,
+          "long_window": 20,
+          "quantile": 0.1
+        },
+        "observed_sharpe": -3.2826684070635745,
+        "deflated_sharpe": -4.514462502796898,
+        "pbo": 0.0,
+        "parameter_stability_score": 0.8422998460993617
+      },
+      {
+        "strategy_name": "xs_alpha19",
+        "parameters": {
+          "change_lag": 14,
+          "quantile": 0.3
+        },
+        "observed_sharpe": -0.8968759934785066,
+        "deflated_sharpe": -1.1566596051987286,
+        "pbo": 0.6904761904761905,
+        "parameter_stability_score": 0.8691230191526998
+      }
+    ],
+    "lifetime_trials": 333,
+    "best_strategy_name": "xs_momentum",
+    "best_gate_result": {
+      "passed": false,
+      "dsr_ok": false,
+      "pbo_ok": true,
+      "stability_ok": false,
+      "mintrl_ok": false,
+      "holdout_ok": true,
+      "beats_buy_and_hold_ok": false,
+      "required_track_record_years": 394.9262259748284,
+      "gate_config_version": "250856983fb58b7f0392157eef5c96960a26d0b2b3f81d063281bf6b18eeb493",
+      "reasons": [
+        "deflated Sharpe -0.078 <= 0.0 (edge vanishes once selection bias is priced in)",
+        "parameter stability 0.198 < 0.4 (edge is fragile to small parameter changes)",
+        "track record 10.9y < MinTRL 394.9y for 333 trials at Sharpe 0.17 (not enough data to justify this claim given the search effort)",
+        "holdout Sharpe 0.940 <= buy-and-hold Sharpe 1.615 (no edge over simply holding the name \u2014 the 'edge' is just beta on a name that went up)"
+      ]
+    },
+    "graduate": null,
+    "rationale": "scheduled cross-sectional hunt"
   }
 ]
