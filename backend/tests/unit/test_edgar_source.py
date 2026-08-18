@@ -83,6 +83,18 @@ def test_ticker_map_is_fetched_once_and_cached() -> None:
     assert sum("company_tickers" in url for url in calls) == 1  # cached after first resolve
 
 
+def test_all_tickers_returns_the_full_sorted_universe() -> None:
+    assert _source([]).all_tickers() == ["AAPL", "MSFT"]  # the CIK sweep universe, sorted
+
+
+def test_all_tickers_shares_the_cached_map_with_cik_resolution() -> None:
+    calls: list[str] = []
+    source = _source(calls)
+    source.all_tickers()
+    source.fetch("AAPL")  # reuses the map all_tickers already loaded
+    assert sum("company_tickers" in url for url in calls) == 1
+
+
 def test_fetch_history_resolves_cik_and_returns_multi_year_history() -> None:
     calls: list[str] = []
     hist = _source(calls).fetch_history("AAPL")

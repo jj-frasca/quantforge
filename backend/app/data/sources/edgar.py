@@ -40,12 +40,23 @@ class SecEdgarFundamentalsSource:
         facts = self._fetch_json(_COMPANY_FACTS_URL.format(cik=cik))
         return parse_company_facts_history(facts, symbol.upper())
 
-    def _cik_for(self, symbol: str) -> int:
+    def all_tickers(self) -> list[str]:
+        """Every ticker in SEC's company_tickers map — the CIK universe the fundamental discovery
+        sweep walks so it eventually gets through every US public filer (ADR-029)."""
+        self._ensure_ticker_map()
+        assert self._ticker_to_cik is not None  # populated by _ensure_ticker_map
+        return sorted(self._ticker_to_cik)
+
+    def _ensure_ticker_map(self) -> None:
         if self._ticker_to_cik is None:
             mapping = self._fetch_json(_TICKERS_URL)
             self._ticker_to_cik = {
                 str(entry["ticker"]).upper(): int(entry["cik_str"]) for entry in mapping.values()
             }
+
+    def _cik_for(self, symbol: str) -> int:
+        self._ensure_ticker_map()
+        assert self._ticker_to_cik is not None  # populated by _ensure_ticker_map
         cik = self._ticker_to_cik.get(symbol.upper())
         if cik is None:
             raise ValueError(f"no CIK found for ticker {symbol!r} in SEC ticker map")
