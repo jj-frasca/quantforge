@@ -74,3 +74,15 @@ def test_a_vendor_fetch_error_is_normalized_to_oserror() -> None:
         adapter.fetch_price_bars(
             "AAPL", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 2, 1, tzinfo=UTC)
         )
+
+
+def test_an_oserror_from_the_downloader_passes_through_unchanged() -> None:
+    # OSError is already the kind the hunt handles -> re-raised as-is, not double-wrapped.
+    def _raises(symbol: str, start: datetime, end: datetime) -> list[RawBar]:
+        raise OSError("no data for symbol")
+
+    adapter = YFinanceAdapter(downloader=_raises)
+    with pytest.raises(OSError, match="no data for symbol"):
+        adapter.fetch_price_bars(
+            "AAPL", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 2, 1, tzinfo=UTC)
+        )
