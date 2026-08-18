@@ -3,6 +3,7 @@ Piotroski F-Score, Novy-Marx gross profitability, a leverage/liquidity safety pr
 into a QualityScore that complements the ADR-022 UndervaluationScore (value). Pure + network-free;
 flags potential, never guarantees (CLAUDE.md rule 6)."""
 
+from app.research.fundamentals.distress import DistressScreen, financial_distress
 from app.research.fundamentals.quality import (
     FScore,
     QualityScore,
@@ -20,11 +21,13 @@ from app.research.fundamentals.record import (
 )
 
 __all__ = [
+    "DistressScreen",
     "FScore",
     "FundamentalRecord",
     "QualityScore",
     "SafetyScore",
     "compute_fundamental_record",
+    "financial_distress",
     "financial_safety",
     "gross_profitability",
     "merge_fundamental_records",
