@@ -74,10 +74,13 @@ Per-date partitioning bounds file size too, but per-symbol matches the *access p
   about the O(n) write or the shard race.
 - **Gzip the monolith.** Rejected: it buys one order of magnitude and loses the diffability that
   makes a committed pool auditable at all. It also leaves both the quadratic write and the race.
-- **Prune old experiments.** Deliberately *not* done here. `_trials_for_symbol` already takes the
-  MAX cumulative `lifetime_trials` precisely so pruning cannot lower the MinTRL bar, so this is
-  available later — but it is lossy and this ADR is not. Partition first; decide on retention with
-  evidence, in its own ADR. Prefer the reversible option (charter §1).
+- **Prune harder.** Retention already exists (`prune_pool`, ADR-026: keep all graduates plus the 5
+  most-recent non-graduates per symbol) and the 105 MB file was the *already-pruned* size — at 607
+  symbols and 206 graduate experiments, that policy no longer bounds the pool below the wall.
+  Tightening it further is lossy, and this ADR is not; partitioning fixes the wall without dropping
+  a single row. Retention is not removed — it moves *into* the store so every writer applies it,
+  rather than only the one script that remembered to call it. A stricter retention policy remains
+  available later, on evidence, in its own ADR. Prefer the reversible option (charter §1).
 - **Move the pool into TimescaleDB.** The right long-term answer (ADR-016 says so) and still the
   plan. It cannot happen now: the discovery workflows run on GitHub Actions with no database, and
   standing up a hosted one costs money the charter forbids.

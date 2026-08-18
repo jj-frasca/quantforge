@@ -13,7 +13,6 @@ Alpaca's free IEX feed only reaches back a few years (ADR-015). Alpaca is for th
 forward/paper loop (scripts/paper.py), NOT the hunt. Do not swap this for build_data_adapter.
 """
 
-import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,7 +27,6 @@ from app.research.frames import bars_to_frame
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.paper import JsonFilePaperPortfolio
-from app.research.lab.pool_merge import prune_pool
 from app.research.lab.scheduled_hunt import hunt_and_promote
 from app.research.lab.universe import rank_experiments
 from app.research.lab.value_wiring import (
@@ -137,12 +135,9 @@ def main() -> None:
             + ", ".join(f"{s} ({why})" for s, why in shown_f)
         )
 
-    # Bound the pool so its JSON stays under GitHub's 100MB file limit (keeps all graduates + recent
-    # non-graduates; the max-lifetime trial count is preserved so the MinTRL bar is unchanged).
-    all_experiments = pool.all()
-    pruned = prune_pool(all_experiments)
-    POOL.write_text(json.dumps([e.model_dump(mode="json") for e in pruned], indent=2) + "\n")
-    print(f"pool pruned: {len(all_experiments)} -> {len(pruned)} experiments")
+    # No pool rewrite here: retention is applied per partition by PartitionedExperimentStore on
+    # every write (ADR-032). The old whole-file prune+overwrite was what raised IsADirectoryError
+    # once the pool became a directory.
 
 
 if __name__ == "__main__":
