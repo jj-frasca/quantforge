@@ -21,6 +21,17 @@ _OCF_TAGS = (
     "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
 )
 _CAPEX_TAGS = ("PaymentsToAcquirePropertyPlantAndEquipment",)
+# Balance-sheet + cash-flow line items for the quality factors (ADR-029, Layer 1).
+_TOTAL_ASSETS_TAGS = ("Assets",)
+_CURRENT_ASSETS_TAGS = ("AssetsCurrent",)
+_CURRENT_LIABILITIES_TAGS = ("LiabilitiesCurrent",)
+_LONG_TERM_DEBT_TAGS = ("LongTermDebtNoncurrent", "LongTermDebt")
+_COGS_TAGS = ("CostOfGoodsAndServicesSold", "CostOfRevenue", "CostOfGoodsSold")
+_RETAINED_EARNINGS_TAGS = ("RetainedEarningsAccumulatedDeficit",)
+_EQUITY_TAGS = (
+    "StockholdersEquity",
+    "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
+)
 
 
 class FundamentalSnapshot(BaseModel):
@@ -59,6 +70,16 @@ class AnnualFundamentals(BaseModel):
     eps: float | None = None
     shares_diluted: float | None = None
     free_cash_flow: float | None = None
+    # Balance-sheet + cash-flow line items for the quality factors (ADR-029). Each is None when
+    # the filer does not report the tag (resilient per-field, like the other optional fields).
+    total_assets: float | None = None
+    total_current_assets: float | None = None
+    total_current_liabilities: float | None = None
+    long_term_debt: float | None = None
+    gross_profit: float | None = None
+    operating_cash_flow: float | None = None
+    retained_earnings: float | None = None
+    total_equity: float | None = None
     price: float | None = None
 
 
@@ -226,6 +247,14 @@ def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> F
     shares = _year_value_map(gaap, _SHARES_TAGS, unit="shares")
     ocf = _year_value_map(gaap, _OCF_TAGS)
     capex = _year_value_map(gaap, _CAPEX_TAGS)
+    total_assets = _year_value_map(gaap, _TOTAL_ASSETS_TAGS)
+    current_assets = _year_value_map(gaap, _CURRENT_ASSETS_TAGS)
+    current_liabilities = _year_value_map(gaap, _CURRENT_LIABILITIES_TAGS)
+    long_term_debt = _year_value_map(gaap, _LONG_TERM_DEBT_TAGS)
+    gross_profit = _year_value_map(gaap, _GROSS_PROFIT_TAGS)
+    cogs = _year_value_map(gaap, _COGS_TAGS)
+    retained_earnings = _year_value_map(gaap, _RETAINED_EARNINGS_TAGS)
+    equity = _year_value_map(gaap, _EQUITY_TAGS)
 
     years: list[AnnualFundamentals] = []
     for fy in sorted(revenue_by_year):
@@ -235,6 +264,10 @@ def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> F
             if cash_from_ops is not None and capital_spend is not None
             else None
         )
+        # GrossProfit direct; else derive revenue - COGS when a COGS tag is present.
+        gp = gross_profit.get(fy)
+        if gp is None and cogs.get(fy) is not None:
+            gp = revenue_by_year[fy] - cogs[fy]
         years.append(
             AnnualFundamentals(
                 fiscal_year=fy,
@@ -244,6 +277,14 @@ def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> F
                 eps=eps.get(fy),
                 shares_diluted=shares.get(fy),
                 free_cash_flow=fcf,
+                total_assets=total_assets.get(fy),
+                total_current_assets=current_assets.get(fy),
+                total_current_liabilities=current_liabilities.get(fy),
+                long_term_debt=long_term_debt.get(fy),
+                gross_profit=gp,
+                operating_cash_flow=cash_from_ops,
+                retained_earnings=retained_earnings.get(fy),
+                total_equity=equity.get(fy),
             )
         )
 

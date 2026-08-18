@@ -111,3 +111,17 @@ def test_live_edgar_fetch_history_for_a_real_symbol() -> None:
     assert len(hist.years) >= 3  # EDGAR carries many years of 10-K facts
     assert hist.years[-1].revenue > 0
     assert hist.accession_number
+
+
+@pytest.mark.live
+def test_live_edgar_history_populates_balance_sheet_line_items() -> None:
+    # ADR-029 Layer 1: the new quality-factor line items must populate for a real large-cap.
+    source = SecEdgarFundamentalsSource(user_agent="QuantForge research jjfrasca10@gmail.com")
+    latest = source.fetch_history("AAPL").years[-1]
+    assert latest.total_assets is not None and latest.total_assets > 0
+    assert latest.total_current_assets is not None and latest.total_current_assets > 0
+    assert latest.total_current_liabilities is not None and latest.total_current_liabilities > 0
+    assert latest.gross_profit is not None and latest.gross_profit > 0
+    assert latest.operating_cash_flow is not None and latest.operating_cash_flow > 0
+    assert latest.retained_earnings is not None
+    assert latest.total_equity is not None and latest.total_equity > 0
