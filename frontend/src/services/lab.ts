@@ -4,11 +4,13 @@ import {
   graduatesSchema,
   leaderboardSchema,
   paperPortfolioSchema,
+  poolReportSchema,
   type CrossSectionalView,
   type EquityPoint,
   type GraduateRow,
   type LeaderboardRow,
   type PaperPosition,
+  type PoolReport,
 } from '../types/lab'
 
 const API_BASE = ''
@@ -51,4 +53,12 @@ export async function requestPaperPortfolio(): Promise<PaperPosition[]> {
     throw new Error(`Paper portfolio request failed (${response.status})`)
   }
   return paperPortfolioSchema.parse(await response.json())
+}
+
+export async function requestPoolReport(): Promise<PoolReport> {
+  const response = await fetch(`${API_BASE}/api/v1/pool-report`)
+  if (!response.ok) {
+    throw new Error(`Pool report request failed (${response.status})`)
+  }
+  return poolReportSchema.parse(await response.json())
 }

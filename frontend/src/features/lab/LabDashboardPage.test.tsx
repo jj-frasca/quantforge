@@ -89,3 +89,46 @@ test('shows a loading indicator while the portfolio is pending', async () => {
   await waitForElementToBeRemoved(() => screen.queryByText(/loading paper portfolio/i))
   expect(await screen.findByLabelText('paper portfolio')).toBeInTheDocument()
 })
+
+const poolReport = {
+  n_experiments: 3208,
+  n_symbols: 607,
+  n_trials: 115009,
+  n_graduate_experiments: 206,
+  n_leaderboard_graduates: 40,
+  n_surviving_deflation: 0,
+  near_misses: [],
+  n_open_positions: 21,
+  book: {
+    n_survivors: 0,
+    n_non_survivors: 0,
+    n_unknown: 21,
+    survivor_mean_forward_sharpe: null,
+    non_survivor_mean_forward_sharpe: null,
+  },
+}
+
+test('leads the dashboard with the universe-deflation headline (ADR-033)', async () => {
+  server.use(
+    http.get('/api/v1/leaderboard', () => HttpResponse.json(leaderboardRows)),
+    http.get('/api/v1/paper-portfolio', () => HttpResponse.json(positions)),
+    http.get('/api/v1/pool-report', () => HttpResponse.json(poolReport)),
+  )
+  renderWithClient(<LabDashboardPage />)
+
+  expect(await screen.findByTestId('deflation-survivors')).toHaveTextContent('0 of 40')
+  expect(screen.getByRole('status')).toHaveTextContent(/not distinguishable from selection luck/i)
+})
+
+test('the dashboard still renders when the pool report is unavailable', async () => {
+  // The headline is a summary, not a precondition — a failing report must not take the page down.
+  server.use(
+    http.get('/api/v1/leaderboard', () => HttpResponse.json(leaderboardRows)),
+    http.get('/api/v1/paper-portfolio', () => HttpResponse.json(positions)),
+    http.get('/api/v1/pool-report', () => new HttpResponse(null, { status: 500 })),
+  )
+  renderWithClient(<LabDashboardPage />)
+
+  expect(await screen.findByLabelText('leaderboard')).toBeInTheDocument()
+  expect(screen.queryByTestId('deflation-survivors')).toBeNull()
+})

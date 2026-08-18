@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
+from app.research.lab.pool_report import PoolReport, summarize_pool
 from app.research.lab.universe import LeaderboardRow, rank_experiments
 
 router = APIRouter(tags=["lab"])
@@ -33,3 +34,17 @@ def paper_portfolio(
     portfolio_path: Annotated[Path, Depends(get_portfolio_path)],
 ) -> list[PaperPosition]:
     return JsonFilePaperPortfolio(portfolio_path).positions()
+
+
+# Sync + read-only: the ADR-033 honest headline over the same committed JSON stores. Leads with how
+# many graduates are distinguishable from best-of-N selection luck, which is the number a reader
+# should see before any leaderboard row.
+@router.get("/pool-report", response_model=PoolReport)
+def pool_report(
+    pool_path: Annotated[Path, Depends(get_pool_path)],
+    portfolio_path: Annotated[Path, Depends(get_portfolio_path)],
+) -> PoolReport:
+    return summarize_pool(
+        PartitionedExperimentStore(pool_path).all(),
+        JsonFilePaperPortfolio(portfolio_path).positions(),
+    )

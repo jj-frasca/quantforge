@@ -96,3 +96,40 @@ def test_endpoints_are_empty_when_files_absent(tmp_path) -> None:
         assert client.get("/api/v1/paper-portfolio").json() == []
     finally:
         app.dependency_overrides.clear()
+
+
+# ---- GET /pool-report (ADR-033: the honest headline) ---------------------------------------------
+
+
+def test_pool_report_returns_the_deflation_headline(tmp_path) -> None:
+    pool = tmp_path / "research_pool"
+    store = PartitionedExperimentStore(pool)
+    store.add(_graduated_experiment())
+    app.dependency_overrides[get_pool_path] = lambda: pool
+    app.dependency_overrides[get_portfolio_path] = lambda: tmp_path / "absent.json"
+    try:
+        response = TestClient(app).get("/api/v1/pool-report")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["n_experiments"] == 1
+    assert body["n_symbols"] == 1
+    assert body["n_leaderboard_graduates"] == 1
+    # A single-symbol pool has no cross-symbol selection to deflate — the bar is 0, so nothing is
+    # reported as a near-miss and the survivor count is not inflated by a vacuous pass.
+    assert body["near_misses"] == []
+    assert body["book"]["n_survivors"] == 0
+
+
+def test_pool_report_is_empty_when_the_pool_is_absent(tmp_path) -> None:
+    app.dependency_overrides[get_pool_path] = lambda: tmp_path / "nope"
+    app.dependency_overrides[get_portfolio_path] = lambda: tmp_path / "nope2.json"
+    try:
+        response = TestClient(app).get("/api/v1/pool-report")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["n_experiments"] == 0

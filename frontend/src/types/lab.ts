@@ -121,3 +121,42 @@ export const paperPositionSchema = z.object({
 export type PaperPosition = z.infer<typeof paperPositionSchema>
 
 export const paperPortfolioSchema = z.array(paperPositionSchema)
+
+// Pool report (backend/app/api/v1/lab.py, ADR-033): the honest headline over the whole research
+// programme. The number that matters is `n_surviving_deflation` out of `n_leaderboard_graduates` —
+// how many graduates are distinguishable from best-of-N selection luck. `near_misses` carries each
+// candidate's OWN bar, because the bar depends on that candidate's holdout length.
+export const nearMissSchema = z.object({
+  symbol: z.string(),
+  strategy_name: z.string(),
+  holdout_sharpe: z.number(),
+  bar: z.number(),
+  ratio_to_bar: z.number(),
+  holdout_years: z.number(),
+})
+
+export type NearMiss = z.infer<typeof nearMissSchema>
+
+export const deflationCohortsSchema = z.object({
+  n_survivors: z.number().int(),
+  n_non_survivors: z.number().int(),
+  n_unknown: z.number().int(),
+  survivor_mean_forward_sharpe: z.number().nullable().optional(),
+  non_survivor_mean_forward_sharpe: z.number().nullable().optional(),
+})
+
+export type DeflationCohorts = z.infer<typeof deflationCohortsSchema>
+
+export const poolReportSchema = z.object({
+  n_experiments: z.number().int(),
+  n_symbols: z.number().int(),
+  n_trials: z.number().int(),
+  n_graduate_experiments: z.number().int(),
+  n_leaderboard_graduates: z.number().int(),
+  n_surviving_deflation: z.number().int(),
+  near_misses: z.array(nearMissSchema),
+  n_open_positions: z.number().int(),
+  book: deflationCohortsSchema,
+})
+
+export type PoolReport = z.infer<typeof poolReportSchema>
