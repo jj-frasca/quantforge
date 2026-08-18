@@ -1,0 +1,120 @@
+name: Fundamental sweep (sharded)
+
+# Token-free (no Claude): ADR-029 Layer 3 fundamental-research division. A matrix of N parallel shard
+# jobs each walks a round-robin slice of the FULL SEC CIK universe (~10.4k US public filers, from
+# SEC's company_tickers map), scores each company on quality (Piotroski + gross profitability +
+# safety) and value (UndervaluationScore), and uploads its FundamentalRecords as an artifact; a
+# single consolidation job folds them into data/fundamentals_pool.json (dedup by CIK, newest filing
+# wins) and prints the "genuinely good, reasonably priced companies" leaderboard — one commit, no
+# shared-pool write race. Public repo => unlimited Actions minutes.
+#
+# Each run covers the WHOLE universe (the matrix partitions it), so a WEEKLY cadence keeps the pool
+# fresh — fundamentals only update quarterly. Every matrix job is a separate runner (separate IP),
+# so parallel shards stay under SEC's 10 req/s ask per source.
+#
+# Honesty (ADR-029): scores cite the filing and flag potential, never guarantee. This pool FEEDS the
+# trading engine (xs_quality factor, quality-value pre-filter, distress veto); it does not itself
+# place orders.
+on:
+  schedule:
+    - cron: "0 6 * * 0" # 06:00 UTC Sunday — weekly full sweep
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fundamental-sweep
+  cancel-in-progress: false
+
+env:
+  N_SHARDS: "10"
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Sweep shard ${{ matrix.shard }} (EDGAR, retried)
+        working-directory: backend
+        run: |
+          set +e
+          OUT="$GITHUB_WORKSPACE/sweep_shards"
+          for attempt in 1 2; do
+            echo "=== shard ${{ matrix.shard }} attempt $attempt ==="
+            PYTHONPATH=. uv run python scripts/fundamental_sweep.py \
+              "${{ matrix.shard }}" "$N_SHARDS" "$OUT"
+            status=$?
+            [ "$status" -eq 0 ] && break
+            echo "attempt $attempt failed ($status); retrying..." && sleep 30
+          done
+          exit "$status"
+      - name: Upload shard records
+        if: ${{ always() && hashFiles(format('sweep_shards/fundamentals_shard_{0}.json', matrix.shard)) != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fundamentals-shard-${{ matrix.shard }}
+          path: sweep_shards/fundamentals_shard_${{ matrix.shard }}.json
+          retention-days: 3
+
+  consolidate:
+    needs: sweep
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Download shard records
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fundamentals-shard-*
+          path: sweep_shards
+          merge-multiple: true
+      - name: Consolidate + leaderboard
+        working-directory: backend
+        run: |
+          PYTHONPATH=. uv run python scripts/consolidate_fundamentals.py \
+            "$GITHUB_WORKSPACE/sweep_shards" \
+            "$GITHUB_WORKSPACE/data/fundamentals_pool.json" | tee "$GITHUB_WORKSPACE/sweep_out.txt"
+      - name: Slack the leaderboard
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -Rs '{text: ("*QuantForge fundamental sweep (cloud)*\n```" + . + "```")}' sweep_out.txt \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+      - name: Commit fundamentals pool (if changed)
+        run: |
+          git add data/fundamentals_pool.json
+          if git diff --cached --quiet; then
+            echo "no fundamentals pool change"
+            exit 0
+          fi
+          git config user.name "quantforge-fundamentals-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "chore(fundamentals): weekly sweep $(date +%F)"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin master && git push; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push attempt $attempt failed; retrying..."
+            sleep 5
+          done
+          echo "could not push after retries"
+          exit 1
