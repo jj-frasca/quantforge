@@ -53,9 +53,17 @@ class LeaderboardRow(BaseModel):
 
 def expected_max_sharpe_under_null(n_symbols: int, holdout_years: float) -> float:
     """The best annualized holdout Sharpe expected from selecting the best of `n_symbols` under
-    the NULL (no skill), given `holdout_years` of data (ADR-018). ~ SE·√(2·ln N), with the
-    annualized-Sharpe standard error SE ≈ √(1/T_years) (Lo 2002, higher-Sharpe term dropped for a
-    conservative bar). A graduate must clear this to be distinguishable from lucky selection."""
+    the NULL (no skill), given `holdout_years` of data (ADR-018). ~ SE·√(2·ln N), the expected
+    maximum of N standard normals scaled by the annualized-Sharpe standard error.
+
+    SE = √(1/T_years) is Lo (2002) √((1 + SR²/2)/T) evaluated AT the null, where the true Sharpe is
+    0 and the SR²/2 term vanishes — it is exact here, not a conservative simplification. (An earlier
+    docstring claimed the term was "dropped for a conservative bar", which is backwards twice over:
+    keeping it would make SE larger, not smaller.)
+
+    A graduate must clear this to be distinguishable from lucky selection. Note that √(2·ln N)
+    treats the N candidates as independent; 607 US equities are far from independent bets, so this
+    bar is conservative in the one way that matters — it never lets selection luck through."""
     if n_symbols < 2 or holdout_years <= 0:
         return 0.0
     se = math.sqrt(1.0 / holdout_years)
