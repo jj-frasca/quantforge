@@ -27,6 +27,9 @@ def _facts(
     years: tuple[int, ...] = (2022, 2023, 2024),
     include_shares: bool = True,
     include_cashflow: bool = True,
+    include_balance_sheet: bool = True,
+    gross_profit_mode: str = "direct",  # "direct" GrossProfit tag / "derive" COGS only / "none"
+    long_term_debt_tag: str = "LongTermDebtNoncurrent",
 ) -> dict:
     rev = {
         "units": {"USD": [_fact(100_000 + 10_000 * i, fy, f"a-{fy}") for i, fy in enumerate(years)]}
@@ -52,6 +55,46 @@ def _facts(
         }
         gaap["PaymentsToAcquirePropertyPlantAndEquipment"] = {
             "units": {"USD": [_fact(5_000, fy, f"a-{fy}") for fy in years]}
+        }
+    if include_balance_sheet:
+        gaap["Assets"] = {
+            "units": {
+                "USD": [_fact(200_000 + 10_000 * i, fy, f"a-{fy}") for i, fy in enumerate(years)]
+            }
+        }
+        gaap["AssetsCurrent"] = {
+            "units": {
+                "USD": [_fact(50_000 + 5_000 * i, fy, f"a-{fy}") for i, fy in enumerate(years)]
+            }
+        }
+        gaap["LiabilitiesCurrent"] = {
+            "units": {
+                "USD": [_fact(30_000 + 2_000 * i, fy, f"a-{fy}") for i, fy in enumerate(years)]
+            }
+        }
+        gaap[long_term_debt_tag] = {
+            "units": {"USD": [_fact(40_000, fy, f"a-{fy}") for fy in years]}
+        }
+        gaap["RetainedEarningsAccumulatedDeficit"] = {
+            "units": {
+                "USD": [_fact(70_000 + 5_000 * i, fy, f"a-{fy}") for i, fy in enumerate(years)]
+            }
+        }
+        gaap["StockholdersEquity"] = {
+            "units": {
+                "USD": [_fact(90_000 + 5_000 * i, fy, f"a-{fy}") for i, fy in enumerate(years)]
+            }
+        }
+    if gross_profit_mode == "direct":
+        gaap["GrossProfit"] = {
+            "units": {
+                "USD": [_fact(60_000 + 5_000 * i, fy, f"a-{fy}") for i, fy in enumerate(years)]
+            }
+        }
+    elif gross_profit_mode == "derive":
+        # No GrossProfit tag; COGS lets the parser derive gross_profit = revenue - COGS.
+        gaap["CostOfGoodsAndServicesSold"] = {
+            "units": {"USD": [_fact(50_000, fy, f"a-{fy}") for fy in years]}
         }
     return {"cik": 320193, "entityName": "Apple Inc.", "facts": {"us-gaap": gaap}}
 
@@ -115,3 +158,58 @@ def test_no_revenue_facts_raises() -> None:
 def test_history_round_trips_json() -> None:
     hist = parse_company_facts_history(_facts(), "AAPL")
     assert FundamentalsHistory.model_validate_json(hist.model_dump_json()) == hist
+
+
+def test_history_parses_balance_sheet_and_cashflow_line_items() -> None:
+    # Quality factors (ADR-029) need the balance-sheet + cash-flow line items per year.
+    hist = parse_company_facts_history(_facts(), "AAPL")
+    latest = hist.years[-1]  # fy 2024, i=2
+    assert latest.total_assets == 220_000
+    assert latest.total_current_assets == 60_000
+    assert latest.total_current_liabilities == 34_000
+    assert latest.long_term_debt == 40_000
+    assert latest.gross_profit == 70_000  # direct GrossProfit tag
+    assert latest.operating_cash_flow == 36_000
+    assert latest.retained_earnings == 80_000
+    assert latest.total_equity == 100_000
+
+
+def test_missing_balance_sheet_tags_leave_new_fields_none() -> None:
+    # Resilience: a filer that omits these tags yields None per field, never an error.
+    hist = parse_company_facts_history(
+        _facts(include_balance_sheet=False, include_cashflow=False, gross_profit_mode="none"),
+        "AAPL",
+    )
+    for y in hist.years:
+        assert y.total_assets is None
+        assert y.total_current_assets is None
+        assert y.total_current_liabilities is None
+        assert y.long_term_debt is None
+        assert y.gross_profit is None
+        assert y.operating_cash_flow is None
+        assert y.retained_earnings is None
+        assert y.total_equity is None
+    assert hist.years[-1].revenue == 120_000  # existing line items still present
+
+
+def test_gross_profit_derived_from_revenue_minus_cogs_when_tag_absent() -> None:
+    hist = parse_company_facts_history(_facts(gross_profit_mode="derive"), "AAPL")
+    latest = hist.years[-1]
+    # revenue 120_000 - COGS 50_000 = 70_000
+    assert latest.gross_profit == 70_000
+
+
+def test_gross_profit_none_when_neither_gross_profit_nor_cogs_present() -> None:
+    hist = parse_company_facts_history(_facts(gross_profit_mode="none"), "AAPL")
+    assert all(y.gross_profit is None for y in hist.years)
+
+
+def test_long_term_debt_falls_back_to_secondary_tag() -> None:
+    hist = parse_company_facts_history(_facts(long_term_debt_tag="LongTermDebt"), "AAPL")
+    assert hist.years[-1].long_term_debt == 40_000
+
+
+def test_operating_cash_flow_exposed_even_without_capex() -> None:
+    # operating_cash_flow stands on its own tag, independent of FCF's capex leg.
+    hist = parse_company_facts_history(_facts(), "AAPL")
+    assert [y.operating_cash_flow for y in hist.years] == [30_000, 33_000, 36_000]
