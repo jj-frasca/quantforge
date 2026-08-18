@@ -28,7 +28,18 @@ class YFinanceAdapter(DataSourceAdapter):
         self._download = downloader or self._download_yf
 
     def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
-        raw = self._download(symbol, start, end)
+        try:
+            raw = self._download(symbol, start, end)
+        except (ValueError, KeyError, OSError):
+            raise  # already the kinds the resilient hunt handles
+        except Exception as exc:
+            # Normalize ANY vendor-specific fetch error into OSError so the per-symbol hunt records
+            # + skips it instead of crashing the whole run. yfinance raises YFRateLimitError (NOT an
+            # OSError) when the cloud IP is rate-limited, which took down the daily discovery
+            # 2026-08-18 — the data adapter is the right place to normalize vendor errors.
+            raise OSError(
+                f"yfinance fetch failed for {symbol!r}: {type(exc).__name__}: {exc}"
+            ) from exc
         return self._normalizer.normalize(raw, symbol, self.source)
 
     def _download_yf(

@@ -57,3 +57,20 @@ def test_yfinance_adapter_fetches_real_bars() -> None:
     )
     assert len(bars) > 0
     assert all(b.symbol == "AAPL" for b in bars)
+
+
+def test_a_vendor_fetch_error_is_normalized_to_oserror() -> None:
+    # Regression (prod 2026-08-18): yfinance raises YFRateLimitError (NOT an OSError) when the cloud
+    # IP is rate-limited. The adapter must normalize ANY downloader error into OSError so the
+    # resilient per-symbol hunt records + skips it instead of crashing the whole sharded run.
+    class _YFRateLimitError(Exception):
+        pass
+
+    def _raises(symbol: str, start: datetime, end: datetime) -> list[RawBar]:
+        raise _YFRateLimitError("Too Many Requests. Rate limited.")
+
+    adapter = YFinanceAdapter(downloader=_raises)
+    with pytest.raises(OSError, match="fetch failed"):
+        adapter.fetch_price_bars(
+            "AAPL", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 2, 1, tzinfo=UTC)
+        )
