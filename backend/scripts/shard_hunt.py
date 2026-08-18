@@ -9,6 +9,11 @@ OUT_POOL into the research pool and promotes once. Local-only / cloud matrix (li
 in CI.
 
 DATA SOURCE: forces YFinanceAdapter (MinTRL needs 15-20yr; Alpaca IEX is too short — ADR-015).
+
+VENDOR THROTTLING (ADR-031): Yahoo rate-limits the shared GitHub-runner egress IPs at the yfinance
+session bootstrap, so one hot minute can wipe out a whole shard. The adapter retries with jittered
+backoff and paces its fetches, and this script EXITS NON-ZERO when the shard's yield falls below
+MIN_YIELD — a green-but-empty run is worse than a red one.
 """
 
 import sys
@@ -19,6 +24,7 @@ import pandas as pd
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.data.sources.edgar import SecEdgarFundamentalsSource
+from app.data.sources.retry import RetryPolicy
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import JsonFileExperimentStore
@@ -30,6 +36,10 @@ from app.research.strategies.catalog import STRATEGY_CATALOG
 
 START = datetime(2005, 1, 1, tzinfo=UTC)
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
+# ADR-031. 4 attempts backing off 5/10/20s (full jitter) recovers a throttled session bootstrap;
+# the 1.5s floor between fetches keeps a 61-symbol shard from provoking the throttle at all.
+CLOUD_RETRY = RetryPolicy(attempts=4, base_delay=5.0, max_delay=60.0, min_interval=1.5)
+MIN_YIELD = 0.25
 
 
 def main() -> None:
@@ -40,7 +50,7 @@ def main() -> None:
 
     symbols = shard_universe(load_universe(universe_file), n_shards, shard_index)
     names = [entry.name for entry in STRATEGY_CATALOG]
-    adapter = YFinanceAdapter()  # forced: the hunt needs 15-20yr of history.
+    adapter = YFinanceAdapter(retry=CLOUD_RETRY)  # forced: the hunt needs 15-20yr of history.
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     store = JsonFileExperimentStore(Path(out_pool))
     now = datetime.now(UTC)
@@ -72,8 +82,18 @@ def main() -> None:
     graduates = [e for e in result.experiments if e.graduate is not None]
     print(
         f"shard {shard_index}: {len(result.experiments)} experiments, {len(graduates)} graduate(s), "
-        f"{len(result.errors)} error(s) -> {out_pool}"
+        f"{len(result.errors)} error(s), yield {result.yield_rate:.0%} -> {out_pool}"
     )
+    if result.yield_rate < MIN_YIELD:
+        # The vendor throttled us. Say so — a shard that silently hunts nothing rots the whole
+        # discovery loop while every dashboard stays green (ADR-031).
+        sample = "; ".join(f"{s}: {e}" for s, e in list(result.errors.items())[:3])
+        print(
+            f"FAILED: yield {result.yield_rate:.0%} < {MIN_YIELD:.0%} floor — "
+            f"{len(result.errors)}/{len(symbols)} symbols unfetchable. First errors: {sample}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":

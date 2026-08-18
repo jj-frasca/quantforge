@@ -5,6 +5,7 @@ from importlib.metadata import version
 from app.data.models import PriceBar
 from app.data.normalizers.ohlcv import OHLCVNormalizer, RawBar
 from app.data.sources.base import DataSourceAdapter
+from app.data.sources.retry import Retrier, RetryPolicy
 
 Downloader = Callable[[str, datetime, datetime], list[RawBar]]
 
@@ -14,6 +15,9 @@ class YFinanceAdapter(DataSourceAdapter):
 
     The network/pandas glue is isolated in ``_download_yf`` so the normalization path is
     unit-testable without hitting the network; inject a ``downloader`` in tests.
+
+    ``retry`` (ADR-031) opts a caller into bounded backoff + inter-request pacing; it defaults to a
+    single attempt with no pacing, so only the cloud discovery drivers change behaviour.
     """
 
     source = "yfinance"
@@ -23,11 +27,16 @@ class YFinanceAdapter(DataSourceAdapter):
         self,
         normalizer: OHLCVNormalizer | None = None,
         downloader: Downloader | None = None,
+        retry: RetryPolicy | None = None,
     ) -> None:
         self._normalizer = normalizer or OHLCVNormalizer()
         self._download = downloader or self._download_yf
+        self._retrier = Retrier(retry or RetryPolicy())
 
     def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+        return self._retrier.call(lambda: self._fetch_once(symbol, start, end))
+
+    def _fetch_once(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
         try:
             raw = self._download(symbol, start, end)
             return self._normalizer.normalize(raw, symbol, self.source)

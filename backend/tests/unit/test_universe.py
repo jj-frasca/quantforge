@@ -14,6 +14,7 @@ from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.experiment import Experiment, Graduate, InMemoryExperimentStore, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.universe import (
+    UniverseHuntResult,
     expected_max_sharpe_under_null,
     rank_experiments,
     run_universe_hunt,
@@ -336,3 +337,36 @@ def test_rank_skips_experiments_with_no_trials() -> None:
         symbol="AAA", strategy_names=[], gate_config=GateConfig(), trials=[], lifetime_trials=0
     )
     assert rank_experiments([empty]) == []
+
+
+# ---- yield_rate: vendor-throttle detection (ADR-031) ----------------------------------------------
+
+
+def test_yield_rate_is_the_share_of_attempted_symbols_that_produced_an_experiment() -> None:
+    result = UniverseHuntResult(
+        experiments=[_exp_with_dsr(s, 0.5) for s in ("A", "B", "C")],
+        errors={"D": "OSError: Too Many Requests"},
+    )
+    assert result.yield_rate == 0.75
+
+
+def test_yield_rate_excludes_deliberately_filtered_names_from_the_denominator() -> None:
+    # A name skipped by the ADR-023 value pre-screen was never fetched — counting it as a miss
+    # would make a perfectly healthy run look throttled.
+    result = UniverseHuntResult(
+        experiments=[_exp_with_dsr("A", 0.5)],
+        filtered={"B": "too expensive", "C": "too expensive"},
+    )
+    assert result.yield_rate == 1.0
+
+
+def test_yield_rate_of_a_total_vendor_wipeout_is_zero() -> None:
+    result = UniverseHuntResult(
+        experiments=[], errors=dict.fromkeys("ABCDE", "OSError: Too Many Requests")
+    )
+    assert result.yield_rate == 0.0
+
+
+def test_yield_rate_is_one_when_nothing_was_attempted() -> None:
+    # An empty shard is vacuously fine — a 0/0 must not trip the min-yield floor.
+    assert UniverseHuntResult(experiments=[]).yield_rate == 1.0

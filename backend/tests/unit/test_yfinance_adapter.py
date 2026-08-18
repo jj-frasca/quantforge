@@ -6,6 +6,7 @@ import pytest
 
 from app.data.models import PriceBar
 from app.data.normalizers.ohlcv import RawBar
+from app.data.sources.retry import RetryPolicy
 from app.data.sources.yfinance import YFinanceAdapter
 
 
@@ -112,3 +113,52 @@ def test_an_oserror_from_the_downloader_passes_through_unchanged() -> None:
         adapter.fetch_price_bars(
             "AAPL", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 2, 1, tzinfo=UTC)
         )
+
+
+def test_adapter_retries_a_throttled_fetch_and_succeeds() -> None:
+    # ADR-031: Yahoo throttles the shared cloud egress IP at the yfinance session bootstrap, so the
+    # SAME transient failure hits every symbol until one call gets through. base_delay=0 keeps the
+    # test instant; the backoff schedule itself is covered in test_source_retry.
+    attempts: list[int] = []
+
+    def flaky(symbol: str, start: datetime, end: datetime) -> list[RawBar]:
+        attempts.append(1)
+        if len(attempts) < 3:
+            raise OSError("Too Many Requests. Rate limited.")
+        return _fake_download(symbol, start, end)
+
+    adapter = YFinanceAdapter(downloader=flaky, retry=RetryPolicy(attempts=3, base_delay=0.0))
+    bars = adapter.fetch_price_bars(
+        "aapl", datetime(2024, 1, 2, tzinfo=UTC), datetime(2024, 1, 4, tzinfo=UTC)
+    )
+    assert len(bars) == 2
+    assert len(attempts) == 3
+
+
+def test_adapter_gives_up_after_the_configured_attempts() -> None:
+    def always_throttled(symbol: str, start: datetime, end: datetime) -> list[RawBar]:
+        raise OSError("Too Many Requests. Rate limited.")
+
+    adapter = YFinanceAdapter(
+        downloader=always_throttled, retry=RetryPolicy(attempts=2, base_delay=0.0)
+    )
+    with pytest.raises(OSError, match="Rate limited"):
+        adapter.fetch_price_bars(
+            "aapl", datetime(2024, 1, 2, tzinfo=UTC), datetime(2024, 1, 4, tzinfo=UTC)
+        )
+
+
+def test_adapter_does_not_retry_a_vendor_exception_that_normalizes_to_a_data_verdict() -> None:
+    # A malformed bar makes the normalizer raise ValueError — retrying re-parses the same bad bytes.
+    attempts: list[int] = []
+
+    def bad_data(symbol: str, start: datetime, end: datetime) -> list[RawBar]:
+        attempts.append(1)
+        raise ValueError("high < low")
+
+    adapter = YFinanceAdapter(downloader=bad_data, retry=RetryPolicy(attempts=5, base_delay=0.0))
+    with pytest.raises(ValueError, match="high < low"):
+        adapter.fetch_price_bars(
+            "aapl", datetime(2024, 1, 2, tzinfo=UTC), datetime(2024, 1, 4, tzinfo=UTC)
+        )
+    assert len(attempts) == 1

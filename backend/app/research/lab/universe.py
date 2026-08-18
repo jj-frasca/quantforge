@@ -25,6 +25,15 @@ class UniverseHuntResult:
     # Names skipped by the ADR-023 value pre-screen (symbol -> why). Empty when value is off.
     filtered: dict[str, str] = field(default_factory=dict)
 
+    @property
+    def yield_rate(self) -> float:
+        """Share of the symbols this run actually FETCHED that produced an experiment (ADR-031).
+        `filtered` names were deliberately screened out before any fetch, so they are not misses.
+        A collapsed yield means the vendor throttled the run, not that the universe was thin — the
+        cloud drivers fail loudly on it rather than reporting a green, empty success."""
+        attempted = len(self.experiments) + len(self.errors)
+        return 1.0 if attempted == 0 else len(self.experiments) / attempted
+
 
 class LeaderboardRow(BaseModel):
     model_config = ConfigDict(frozen=True)
