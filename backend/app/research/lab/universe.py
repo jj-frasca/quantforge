@@ -9,6 +9,7 @@ from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.research.fundamentals.distress import DistressProvider
 from app.research.lab.experiment import Experiment, ExperimentStore
 from app.research.lab.gate import GateConfig
+from app.research.lab.quality_filter import QualityGateConfig, QualityProvider, screen_quality
 from app.research.lab.search import run_search
 from app.research.lab.value_filter import ValueGateConfig, ValueProvider, screen_value
 
@@ -81,6 +82,8 @@ def run_universe_hunt(
     distress_provider: DistressProvider | None = None,
     value_provider: ValueProvider | None = None,
     value_config: ValueGateConfig | None = None,
+    quality_provider: QualityProvider | None = None,
+    quality_config: QualityGateConfig | None = None,
     store: ExperimentStore | None = None,
     n_per_param: int = 3,
     refine: bool = False,
@@ -97,6 +100,12 @@ def run_universe_hunt(
     when a `value_config` is ALSO given, names that fail the value pre-screen are skipped (recorded
     in `filtered`) and never hunted. Both are injectable so unit tests use fakes (no network).
 
+    Optional quality pre-screen (ADR-029 4b, OFF by default, record-first like the value screen):
+    a `quality_provider` alone changes nothing; adding a `quality_config` skips names below the
+    business-quality bar before they are ever fetched. This is the HONEST way to reduce the ADR-018
+    universe-deflation N — testing fewer, better-motivated hypotheses rather than re-describing the
+    same ones as non-independent (ADR-033).
+
     Optional distress veto (ADR-029 3c, OFF by default): when a `distress_provider` is given, a name
     in hard financial distress is blocked from graduation regardless of technicals — a business-
     quality safety rail on top of the ADR-017 fundamentals veto. Injectable for network-free tests.
@@ -111,6 +120,11 @@ def run_universe_hunt(
                 screen = screen_value(value_score, value_config)
                 if not screen.passed:
                     filtered[symbol] = "; ".join(screen.reasons)
+                    continue
+            if quality_provider is not None and quality_config is not None:
+                quality = screen_quality(quality_provider(symbol), quality_config)
+                if not quality.passed:
+                    filtered[symbol] = "; ".join(quality.reasons)
                     continue
             frame = frame_provider(symbol)
             fundamentals = fundamentals_provider(symbol) if fundamentals_provider else None

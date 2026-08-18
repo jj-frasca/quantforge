@@ -11,8 +11,10 @@ import pytest
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.research.fundamentals.distress import DistressScreen
+from app.research.fundamentals.record import FundamentalRecord
 from app.research.lab.experiment import Experiment, Graduate, InMemoryExperimentStore, Trial
 from app.research.lab.gate import GateConfig, GateResult
+from app.research.lab.quality_filter import QualityGateConfig
 from app.research.lab.universe import (
     UniverseHuntResult,
     expected_max_sharpe_under_null,
@@ -370,3 +372,72 @@ def test_yield_rate_of_a_total_vendor_wipeout_is_zero() -> None:
 def test_yield_rate_is_one_when_nothing_was_attempted() -> None:
     # An empty shard is vacuously fine — a 0/0 must not trip the min-yield floor.
     assert UniverseHuntResult(experiments=[]).yield_rate == 1.0
+
+
+# ---- ADR-029 4b: the quality pre-screen (opt-in) --------------------------------------------------
+
+
+def _qrecord(symbol: str, quality: float | None) -> FundamentalRecord:
+    return FundamentalRecord(
+        symbol=symbol,
+        cik=1,
+        fiscal_year=2025,
+        quality_score=quality,
+        value_score=None,
+        combined_score=None,
+        f_score=6,
+        gross_profitability=0.3,
+    )
+
+
+def test_quality_pre_screen_skips_a_low_quality_name_before_it_is_ever_hunted() -> None:
+    # Fewer, better-motivated hypotheses is the HONEST way to reduce the ADR-018 deflation N —
+    # a screened-out name is never fetched, never searched, and never enters the trial count.
+    frames = {"GOOD": _trend(1, 0.0006), "WEAK": _trend(2, 0.0006)}
+    fetched: list[str] = []
+
+    def provider(symbol: str) -> pd.DataFrame:
+        fetched.append(symbol)
+        return frames[symbol]
+
+    records = {"GOOD": _qrecord("GOOD", 0.8), "WEAK": _qrecord("WEAK", 0.1)}
+    result = run_universe_hunt(
+        ["GOOD", "WEAK"],
+        ["sma"],
+        provider,
+        config=_LENIENT,
+        quality_provider=lambda s: records[s],
+        quality_config=QualityGateConfig(min_quality_score=0.5),
+    )
+    assert [e.symbol for e in result.experiments] == ["GOOD"]
+    assert "WEAK" in result.filtered
+    assert fetched == ["GOOD"]  # the screened name was never even fetched
+
+
+def test_quality_provider_without_a_config_does_not_filter_anything() -> None:
+    # Record-first, like the ADR-023 value wiring: supplying a provider alone must not change which
+    # names are hunted. Only an explicit config turns the screen on.
+    frames = {"GOOD": _trend(1, 0.0006), "WEAK": _trend(2, 0.0006)}
+    records = {"GOOD": _qrecord("GOOD", 0.8), "WEAK": _qrecord("WEAK", 0.1)}
+    result = run_universe_hunt(
+        ["GOOD", "WEAK"],
+        ["sma"],
+        _provider(frames),
+        config=_LENIENT,
+        quality_provider=lambda s: records[s],
+    )
+    assert {e.symbol for e in result.experiments} == {"GOOD", "WEAK"}
+    assert result.filtered == {}
+
+
+def test_an_unscored_name_survives_the_quality_screen_by_default() -> None:
+    frames = {"QQQ": _trend(1, 0.0006)}
+    result = run_universe_hunt(
+        ["QQQ"],
+        ["sma"],
+        _provider(frames),
+        config=_LENIENT,
+        quality_provider=lambda s: None,  # an ETF the EDGAR sweep never scored
+        quality_config=QualityGateConfig(min_quality_score=0.9),
+    )
+    assert [e.symbol for e in result.experiments] == ["QQQ"]
