@@ -5,7 +5,7 @@ Usage: PYTHONPATH=. uv run python scripts/hunt.py [SYMBOLS_OR_UNIVERSE.txt]
 
 Runs the StrategyLab universe hunt on the longest available daily history, then hands every pool
 graduate to the managed paper book: new winners are auto-frozen as OPEN positions; open ones are
-monitored/exited by the ADR-020 lifecycle. Findings persist in data/research_pool.json and the book
+monitored/exited by the ADR-020 lifecycle. Findings persist in data/research_pool/ and the book
 in data/paper_portfolio.json — commit both. Local-only / cloud cron (live network); never in CI.
 
 DATA SOURCE (load-bearing): the HUNT forces YFinanceAdapter — MinTRL needs 15-20yr of history and
@@ -24,7 +24,7 @@ from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.data.sources.edgar import SecEdgarFundamentalsSource
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
-from app.research.lab.experiment import JsonFileExperimentStore
+from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.pool_merge import prune_pool
@@ -38,7 +38,7 @@ from app.research.lab.value_wiring import (
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
 DATA = Path(__file__).resolve().parents[2] / "data"
-POOL = DATA / "research_pool.json"
+POOL = DATA / "research_pool"  # per-symbol partitions (ADR-032)
 PORTFOLIO = DATA / "paper_portfolio.json"
 DEFAULT_UNIVERSE = DATA / "universes" / "sp500.txt"
 START = datetime(2005, 1, 1, tzinfo=UTC)
@@ -62,7 +62,7 @@ def main() -> None:
     names = [entry.name for entry in STRATEGY_CATALOG]
     adapter = YFinanceAdapter()  # forced: the hunt needs 15-20yr; Alpaca IEX is too short.
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
-    pool = JsonFileExperimentStore(POOL)
+    pool = PartitionedExperimentStore(POOL)
     portfolio = JsonFilePaperPortfolio(PORTFOLIO)
     now = datetime.now(UTC)
 

@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.api.v1.lab import get_pool_path, get_portfolio_path
 from app.main import app
-from app.research.lab.experiment import Experiment, Graduate, JsonFileExperimentStore, Trial
+from app.research.lab.experiment import Experiment, Graduate, PartitionedExperimentStore, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
 
@@ -50,14 +50,14 @@ def _graduated_experiment() -> Experiment:
 
 
 def test_default_paths_point_at_the_in_repo_data_dir() -> None:
-    assert get_pool_path().name == "research_pool.json"
+    assert get_pool_path().name == "research_pool"  # per-symbol partitions (ADR-032)
     assert get_portfolio_path().name == "paper_portfolio.json"
     assert get_pool_path().parent.name == "data"
 
 
 def test_leaderboard_returns_ranked_rows(tmp_path) -> None:
-    pool = tmp_path / "pool.json"
-    JsonFileExperimentStore(pool).add(_graduated_experiment())
+    pool = tmp_path / "research_pool"
+    PartitionedExperimentStore(pool).add(_graduated_experiment())
     app.dependency_overrides[get_pool_path] = lambda: pool
     try:
         body = TestClient(app).get("/api/v1/leaderboard").json()

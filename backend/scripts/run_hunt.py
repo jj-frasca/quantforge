@@ -26,7 +26,7 @@ from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.data.sources.edgar import SecEdgarFundamentalsSource
 from app.dependencies import build_data_adapter
 from app.research.frames import bars_to_frame
-from app.research.lab.experiment import JsonFileExperimentStore
+from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.universe import rank_experiments, run_universe_hunt
 from app.research.lab.value_wiring import (
@@ -37,7 +37,7 @@ from app.research.lab.value_wiring import (
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
 # In-repo research pool so findings survive and are reviewable in git.
-POOL = Path(__file__).resolve().parents[2] / "data" / "research_pool.json"
+POOL = Path(__file__).resolve().parents[2] / "data" / "research_pool"  # ADR-032
 START = datetime(2005, 1, 1, tzinfo=UTC)
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
 
@@ -83,7 +83,7 @@ def main() -> None:
     names = [entry.name for entry in STRATEGY_CATALOG]
     adapter = build_data_adapter(get_settings())
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
-    store = JsonFileExperimentStore(POOL)
+    store = PartitionedExperimentStore(POOL)
     end = datetime.now(UTC)
 
     def fetch_frame(symbol: str) -> pd.DataFrame:

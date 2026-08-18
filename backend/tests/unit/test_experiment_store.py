@@ -2,12 +2,16 @@
 ALL trials, not just winners — so findings compound and the lifetime trial count stays honest
 for the DSR/MinTRL penalty. In-memory + JSON-file impls; DB is a later drop-in."""
 
+import pytest
+
 from app.research.lab.experiment import (
     Experiment,
     Graduate,
     InMemoryExperimentStore,
     JsonFileExperimentStore,
+    PartitionedExperimentStore,
     Trial,
+    migrate_pool_to_partitions,
 )
 from app.research.lab.gate import GateConfig, GateResult
 
@@ -102,3 +106,164 @@ def test_json_file_store_starts_empty_when_file_absent(tmp_path) -> None:
     store = JsonFileExperimentStore(tmp_path / "does_not_exist.json")
     assert store.all() == []
     assert store.trials_for_symbol("AAPL") == 0
+
+
+# ---- PartitionedExperimentStore (ADR-032) --------------------------------------------------------
+
+
+def test_partitioned_store_writes_one_file_per_symbol(tmp_path) -> None:
+    store = PartitionedExperimentStore(tmp_path / "research_pool")
+    store.add(_experiment("AAPL", 2))
+    store.add(_experiment("AAPL", 3, prior=2))
+    store.add(_experiment("MSFT", 4))
+    written = sorted(p.name for p in (tmp_path / "research_pool").glob("*.json"))
+    assert written == ["AAPL.json", "MSFT.json"]
+
+
+def test_partitioned_store_persists_across_instances(tmp_path) -> None:
+    path = tmp_path / "research_pool"
+    writer = PartitionedExperimentStore(path)
+    writer.add(_experiment("AAPL", 2, graduated=True))
+    writer.add(_experiment("AAPL", 3, prior=2))  # cumulative lifetime 5
+
+    reader = PartitionedExperimentStore(path)
+    assert len(reader.all()) == 2
+    assert reader.trials_for_symbol("AAPL") == 5
+    graduated = [e for e in reader.all() if e.graduate is not None]
+    assert len(graduated) == 1
+    assert graduated[0].graduate.gate_result.passed is True
+
+
+def test_partitioned_store_starts_empty_when_the_directory_is_absent(tmp_path) -> None:
+    store = PartitionedExperimentStore(tmp_path / "never_created")
+    assert store.all() == []
+    assert store.trials_for_symbol("AAPL") == 0
+
+
+def test_partitioned_store_reads_only_the_requested_symbols_partition(tmp_path) -> None:
+    # The hot path in every hunt. A corrupt partition for an unrelated symbol must not break the
+    # lookup — that is the whole point of not parsing the entire 45 MB pool to count one symbol.
+    path = tmp_path / "research_pool"
+    store = PartitionedExperimentStore(path)
+    store.add(_experiment("AAPL", 4, prior=3))
+    (path / "BROKEN.json").write_text("{ not json")
+    assert store.trials_for_symbol("AAPL") == 7
+
+
+def test_partitioned_store_all_is_sorted_by_symbol_for_deterministic_output(tmp_path) -> None:
+    store = PartitionedExperimentStore(tmp_path / "research_pool")
+    for symbol in ("MSFT", "AAPL", "NVDA"):
+        store.add(_experiment(symbol, 2))
+    assert [e.symbol for e in store.all()] == ["AAPL", "MSFT", "NVDA"]
+
+
+def test_partitioned_store_sanitizes_a_symbol_that_could_escape_the_directory(tmp_path) -> None:
+    path = tmp_path / "research_pool"
+    store = PartitionedExperimentStore(path)
+    store.add(_experiment("../../etc/passwd", 1))
+    assert [p.name for p in path.glob("*.json")] == [".._.._ETC_PASSWD.json"]
+    assert not (tmp_path.parent / "etc").exists()
+
+
+def test_partitioned_store_keeps_real_ticker_punctuation(tmp_path) -> None:
+    # BRK-B, BF.B and ^GSPC are legitimate symbols in the universes — they must not be mangled.
+    path = tmp_path / "research_pool"
+    store = PartitionedExperimentStore(path)
+    for symbol in ("BRK-B", "BF.B", "^GSPC"):
+        store.add(_experiment(symbol, 1))
+    assert sorted(p.stem for p in path.glob("*.json")) == ["BF.B", "BRK-B", "^GSPC"]
+
+
+# ---- migrate_pool_to_partitions (ADR-032 one-shot migration) -------------------------------------
+
+
+def test_migration_splits_the_monolith_and_removes_it(tmp_path) -> None:
+    source = tmp_path / "research_pool.json"
+    monolith = JsonFileExperimentStore(source)
+    for symbol in ("AAPL", "AAPL", "MSFT"):
+        monolith.add(_experiment(symbol, 3))
+    original = {e.experiment_id for e in monolith.all()}
+
+    directory = tmp_path / "research_pool"
+    assert migrate_pool_to_partitions(source, directory) == 3
+    assert not source.exists()  # removed only AFTER the partitions verified
+    migrated = PartitionedExperimentStore(directory)
+    assert {e.experiment_id for e in migrated.all()} == original
+    assert sorted(p.name for p in directory.glob("*.json")) == ["AAPL.json", "MSFT.json"]
+
+
+def test_migration_is_a_noop_when_there_is_nothing_to_migrate(tmp_path) -> None:
+    directory = tmp_path / "research_pool"
+    assert migrate_pool_to_partitions(tmp_path / "absent.json", directory) == 0
+    assert not directory.exists()
+
+
+def test_migration_refuses_a_non_empty_destination(tmp_path) -> None:
+    # Re-running the migration must not silently duplicate the whole scientific record.
+    source = tmp_path / "research_pool.json"
+    JsonFileExperimentStore(source).add(_experiment("AAPL", 3))
+    directory = tmp_path / "research_pool"
+    PartitionedExperimentStore(directory).add(_experiment("MSFT", 2))
+
+    with pytest.raises(RuntimeError, match="not empty"):
+        migrate_pool_to_partitions(source, directory)
+    assert source.exists()  # the source is left intact for a human to reconcile
+
+
+def test_partitioned_store_bounds_a_symbols_partition_to_the_recent_non_graduates(tmp_path) -> None:
+    # ADR-032 + ADR-026: unbounded growth is what pushed the pool past GitHub's 100 MB wall.
+    # Retention is per-symbol now, and applied by the STORE so every writer is bounded — not only
+    # the consolidate script that happened to remember to call prune_pool.
+    store = PartitionedExperimentStore(tmp_path / "research_pool", keep_non_graduate_per_symbol=3)
+    for i in range(8):
+        store.add(_experiment("AAPL", 2, prior=i))
+    store.add(_experiment("AAPL", 2, prior=99, graduated=True))
+    kept = store.all()
+    assert len(kept) == 4  # 3 most-recent non-graduates + the graduate
+    assert sum(1 for e in kept if e.graduate is not None) == 1
+
+
+def test_partitioned_store_retention_never_lowers_the_mintrl_bar(tmp_path) -> None:
+    # The dropped experiments carried smaller cumulative counts; the most-recent one carries the
+    # max and is always kept, so the graduation bar is unchanged by retention.
+    store = PartitionedExperimentStore(tmp_path / "research_pool", keep_non_graduate_per_symbol=2)
+    for prior in (0, 10, 20, 30):
+        store.add(_experiment("AAPL", 5, prior=prior))
+    assert store.trials_for_symbol("AAPL") == 35
+
+
+def test_partitioned_store_extend_is_idempotent_on_experiment_id(tmp_path) -> None:
+    # Re-running a shard must replace its experiments, never duplicate the record.
+    store = PartitionedExperimentStore(tmp_path / "research_pool")
+    batch = [_experiment("AAPL", 2), _experiment("MSFT", 3)]
+    store.extend(batch)
+    store.extend(batch)
+    assert {e.experiment_id for e in store.all()} == {e.experiment_id for e in batch}
+    assert len(store.all()) == 2
+
+
+def test_migration_refuses_to_lose_experiments_to_retention(tmp_path) -> None:
+    # Retention is disabled during the move by default. If a caller forces a limit that would drop
+    # rows, the verification must fail and leave the monolith untouched — a migration that silently
+    # loses part of the scientific record is a bug.
+    source = tmp_path / "research_pool.json"
+    monolith = JsonFileExperimentStore(source)
+    for prior in range(6):
+        monolith.add(_experiment("AAPL", 2, prior=prior))
+
+    with pytest.raises(RuntimeError, match="does not match"):
+        migrate_pool_to_partitions(
+            source, tmp_path / "research_pool", keep_non_graduate_per_symbol=2
+        )
+    assert source.exists()
+
+
+def test_migration_keeps_every_experiment_for_a_heavily_hunted_symbol(tmp_path) -> None:
+    source = tmp_path / "research_pool.json"
+    monolith = JsonFileExperimentStore(source)
+    for prior in range(20):
+        monolith.add(_experiment("AAPL", 2, prior=prior))
+
+    directory = tmp_path / "research_pool"
+    assert migrate_pool_to_partitions(source, directory) == 20
+    assert len(PartitionedExperimentStore(directory).all()) == 20

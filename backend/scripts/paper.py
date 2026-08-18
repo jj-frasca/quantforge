@@ -14,18 +14,18 @@ from pathlib import Path
 from app.config import get_settings
 from app.dependencies import build_data_adapter
 from app.research.frames import bars_to_frame
-from app.research.lab.experiment import JsonFileExperimentStore
+from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.portfolio_manager import manage_portfolio
 
 DATA = Path(__file__).resolve().parents[2] / "data"
-POOL = DATA / "research_pool.json"
+POOL = DATA / "research_pool"  # per-symbol partitions (ADR-032)
 PORTFOLIO = DATA / "paper_portfolio.json"
 START = datetime(2005, 1, 1, tzinfo=UTC)
 
 
 def main() -> None:
-    pool = JsonFileExperimentStore(POOL)
+    pool = PartitionedExperimentStore(POOL)
     portfolio = JsonFilePaperPortfolio(PORTFOLIO)
     adapter = build_data_adapter(get_settings())
     now = datetime.now(UTC)

@@ -65,13 +65,13 @@ jobs:
       - name: Commit pool + portfolio (if changed)
         if: ${{ always() }}
         run: |
-          if git diff --quiet -- data/research_pool.json data/paper_portfolio.json; then
+          if git diff --quiet -- data/research_pool data/paper_portfolio.json; then
             echo "no pool/portfolio change"
             exit 0
           fi
           git config user.name "quantforge-hunt-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/research_pool.json data/paper_portfolio.json
+          git add data/research_pool data/paper_portfolio.json
           git commit -m "chore(hunt): scheduled mass-test + auto-promotion $(date +%F)"
           # The hunt is long; master can advance while it runs (paper accrual bot, other pushes).
           # Rebase our data commit onto the latest master before pushing, and retry the race.

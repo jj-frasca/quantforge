@@ -1,0 +1,2592 @@
+[
+  {
+    "experiment_id": "a6806a86-db4a-45c4-b22b-b21cfc73fe87",
+    "created_at": "2026-07-12T09:08:22.958809Z",
+    "symbol": "APA",
+    "strategy_names": [
+      "sma",
+      "momentum",
+      "mean_reversion",
+      "rsi_mean_reversion",
+      "donchian_breakout",
+      "bollinger_bands",
+      "macd_crossover",
+      "keltner_channel",
+      "vol_targeted_sma",
+      "trend_filtered_mean_reversion",
+      "triple_ma_alignment",
+      "trend_filtered_mean_reversion"
+    ],
+    "gate_config": {
+      "dsr_min": 0.0,
+      "pbo_max": 0.5,
+      "stability_min": 0.5,
+      "holdout_sharpe_min": 0.0,
+      "require_beat_buy_and_hold": true,
+      "trial_budget": 200
+    },
+    "trials": [
+      {
+        "strategy_name": "sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 251
+        },
+        "observed_sharpe": 0.03234882461467489,
+        "deflated_sharpe": -0.1084209863612152,
+        "pbo": 0.6428571428571429,
+        "parameter_stability_score": 0.4905990631685573
+      },
+      {
+        "strategy_name": "momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 60
+        },
+        "observed_sharpe": 0.05677525829283024,
+        "deflated_sharpe": -0.3129435215671056,
+        "pbo": 0.6587301587301587,
+        "parameter_stability_score": 0.5066817981846667
+      },
+      {
+        "strategy_name": "mean_reversion",
+        "parameters": {
+          "window": 200,
+          "k": 10.0
+        },
+        "observed_sharpe": 0.06666765055518158,
+        "deflated_sharpe": -0.5193942965584684,
+        "pbo": 0.45634920634920634,
+        "parameter_stability_score": 0.401391368647645
+      },
+      {
+        "strategy_name": "rsi_mean_reversion",
+        "parameters": {
+          "window": 51,
+          "oversold": 25.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.295877546494093,
+        "deflated_sharpe": -0.37004349195518654,
+        "pbo": 0.3055555555555556,
+        "parameter_stability_score": 0.3196565529765112
+      },
+      {
+        "strategy_name": "donchian_breakout",
+        "parameters": {
+          "lookback": 200
+        },
+        "observed_sharpe": -0.0661313816279874,
+        "deflated_sharpe": -0.1677637718637806,
+        "pbo": 0.9523809523809523,
+        "parameter_stability_score": 0.5999836280080372
+      },
+      {
+        "strategy_name": "bollinger_bands",
+        "parameters": {
+          "window": 101,
+          "num_std": 2.75
+        },
+        "observed_sharpe": 0.12627984669489506,
+        "deflated_sharpe": -0.2841671871654924,
+        "pbo": 0.6666666666666666,
+        "parameter_stability_score": 0.20944704758027974
+      },
+      {
+        "strategy_name": "macd_crossover",
+        "parameters": {
+          "fast": 1,
+          "slow": 251,
+          "signal": 50
+        },
+        "observed_sharpe": 0.11170954017767323,
+        "deflated_sharpe": -0.1681681378615467,
+        "pbo": 0.9801587301587301,
+        "parameter_stability_score": 0.4075717359183769
+      },
+      {
+        "strategy_name": "keltner_channel",
+        "parameters": {
+          "ma_window": 1,
+          "atr_window": 2,
+          "multiplier": 0.5
+        },
+        "observed_sharpe": 0.0,
+        "deflated_sharpe": -0.4465106794577737,
+        "pbo": 0.4246031746031746,
+        "parameter_stability_score": 0.47909181532478395
+      },
+      {
+        "strategy_name": "vol_targeted_sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 500,
+          "vol_window": 252,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.1546378462272594,
+        "deflated_sharpe": -0.21024881532759104,
+        "pbo": 0.5436507936507936,
+        "parameter_stability_score": 0.4099676962173799
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 51,
+          "z_threshold": 2.25,
+          "trend_window": 400
+        },
+        "observed_sharpe": 0.472675798889371,
+        "deflated_sharpe": -0.014119680414954927,
+        "pbo": 0.10317460317460317,
+        "parameter_stability_score": 0.2669739755871096
+      },
+      {
+        "strategy_name": "triple_ma_alignment",
+        "parameters": {
+          "fast": 1,
+          "medium": 200,
+          "slow": 202
+        },
+        "observed_sharpe": 0.058774025179186444,
+        "deflated_sharpe": -0.22917275341369314,
+        "pbo": 0.5357142857142857,
+        "parameter_stability_score": 0.5953798377530379
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 64,
+          "z_threshold": 2.25,
+          "trend_window": 300
+        },
+        "observed_sharpe": 0.5767934544083783,
+        "deflated_sharpe": 0.18474568189942714,
+        "pbo": 0.15079365079365079,
+        "parameter_stability_score": 0.508971908943152
+      }
+    ],
+    "lifetime_trials": 12,
+    "best_strategy_name": "trend_filtered_mean_reversion",
+    "best_gate_result": {
+      "passed": true,
+      "dsr_ok": true,
+      "pbo_ok": true,
+      "stability_ok": true,
+      "mintrl_ok": true,
+      "holdout_ok": true,
+      "beats_buy_and_hold_ok": true,
+      "required_track_record_years": 14.938239822076108,
+      "gate_config_version": "031f00b47d228ef04c70b236415161158a290d871ed2d59ae321c886735d7676",
+      "reasons": []
+    },
+    "fundamentals": null,
+    "fundamental_screen": null,
+    "distress_screen": null,
+    "undervaluation_score": null,
+    "graduate": {
+      "strategy_name": "trend_filtered_mean_reversion",
+      "parameters": {
+        "z_window": 64,
+        "z_threshold": 2.25,
+        "trend_window": 300
+      },
+      "gate_result": {
+        "passed": true,
+        "dsr_ok": true,
+        "pbo_ok": true,
+        "stability_ok": true,
+        "mintrl_ok": true,
+        "holdout_ok": true,
+        "beats_buy_and_hold_ok": true,
+        "required_track_record_years": 14.938239822076108,
+        "gate_config_version": "031f00b47d228ef04c70b236415161158a290d871ed2d59ae321c886735d7676",
+        "reasons": []
+      },
+      "holdout_sharpe": 0.6290573556271369,
+      "holdout_total_return": 0.05154173838485687,
+      "holdout_n_bars": 1082
+    },
+    "rationale": "scheduled universe hunt (WP-F)"
+  },
+  {
+    "experiment_id": "b4da6432-1157-41dc-8070-e555c57d2c9c",
+    "created_at": "2026-08-18T19:24:25.763990Z",
+    "symbol": "APA",
+    "strategy_names": [
+      "sma",
+      "momentum",
+      "mean_reversion",
+      "rsi_mean_reversion",
+      "donchian_breakout",
+      "bollinger_bands",
+      "macd_crossover",
+      "keltner_channel",
+      "vol_targeted_sma",
+      "trend_filtered_mean_reversion",
+      "triple_ma_alignment",
+      "williams_r",
+      "cci",
+      "stochastic_oscillator",
+      "trix",
+      "aroon",
+      "chaikin_money_flow",
+      "vwap_reversion",
+      "adx",
+      "connors_rsi",
+      "fifty_two_week_high",
+      "ultimate_oscillator",
+      "vol_managed_momentum",
+      "residual_momentum",
+      "overnight_gap",
+      "donchian_atr_trail",
+      "squeeze_breakout",
+      "atr_channel_breakout",
+      "dual_momentum",
+      "regime_filtered_trend",
+      "coppock_curve",
+      "true_strength_index",
+      "chande_momentum",
+      "narrow_range_breakout",
+      "trend_filtered_mean_reversion"
+    ],
+    "gate_config": {
+      "dsr_min": 0.0,
+      "pbo_max": 0.5,
+      "stability_min": 0.4,
+      "holdout_sharpe_min": 0.0,
+      "require_beat_buy_and_hold": true,
+      "trial_budget": 200
+    },
+    "trials": [
+      {
+        "strategy_name": "sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 251
+        },
+        "observed_sharpe": 0.05358393449025487,
+        "deflated_sharpe": -0.09642688631396701,
+        "pbo": 0.6944444444444444,
+        "parameter_stability_score": 0.42264801997959783
+      },
+      {
+        "strategy_name": "momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 60
+        },
+        "observed_sharpe": 0.07794162398262486,
+        "deflated_sharpe": -0.3033383237378223,
+        "pbo": 0.5793650793650794,
+        "parameter_stability_score": 0.486686450999479
+      },
+      {
+        "strategy_name": "mean_reversion",
+        "parameters": {
+          "window": 200,
+          "k": 5.05
+        },
+        "observed_sharpe": 0.044868910979114766,
+        "deflated_sharpe": -0.5247600129693166,
+        "pbo": 0.4523809523809524,
+        "parameter_stability_score": 0.4207650398991291
+      },
+      {
+        "strategy_name": "rsi_mean_reversion",
+        "parameters": {
+          "window": 51,
+          "oversold": 25.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.29516299292766773,
+        "deflated_sharpe": -0.34702694571824927,
+        "pbo": 0.2222222222222222,
+        "parameter_stability_score": 0.32819130286973663
+      },
+      {
+        "strategy_name": "donchian_breakout",
+        "parameters": {
+          "lookback": 200
+        },
+        "observed_sharpe": -0.0443413951500049,
+        "deflated_sharpe": -0.1454942962409993,
+        "pbo": 0.9047619047619048,
+        "parameter_stability_score": 0.585738787114245
+      },
+      {
+        "strategy_name": "bollinger_bands",
+        "parameters": {
+          "window": 101,
+          "num_std": 2.75
+        },
+        "observed_sharpe": 0.12597495789761062,
+        "deflated_sharpe": -0.283860579213822,
+        "pbo": 0.6587301587301587,
+        "parameter_stability_score": 0.2212346985577984
+      },
+      {
+        "strategy_name": "macd_crossover",
+        "parameters": {
+          "fast": 1,
+          "slow": 251,
+          "signal": 50
+        },
+        "observed_sharpe": 0.1322107007299797,
+        "deflated_sharpe": -0.13662544387656128,
+        "pbo": 0.9206349206349206,
+        "parameter_stability_score": 0.39177607709950496
+      },
+      {
+        "strategy_name": "keltner_channel",
+        "parameters": {
+          "ma_window": 100,
+          "atr_window": 100,
+          "multiplier": 0.5
+        },
+        "observed_sharpe": 0.014744217315691492,
+        "deflated_sharpe": -0.4209579420794998,
+        "pbo": 0.49603174603174605,
+        "parameter_stability_score": 0.4678428061452778
+      },
+      {
+        "strategy_name": "vol_targeted_sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 500,
+          "vol_window": 252,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.17320515880086063,
+        "deflated_sharpe": -0.20608251067424138,
+        "pbo": 0.6190476190476191,
+        "parameter_stability_score": 0.3584547842912028
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 51,
+          "z_threshold": 2.25,
+          "trend_window": 400
+        },
+        "observed_sharpe": 0.4715360268429576,
+        "deflated_sharpe": -0.006541621689730548,
+        "pbo": 0.1111111111111111,
+        "parameter_stability_score": 0.26528182655643556
+      },
+      {
+        "strategy_name": "triple_ma_alignment",
+        "parameters": {
+          "fast": 1,
+          "medium": 200,
+          "slow": 202
+        },
+        "observed_sharpe": 0.08296400744457985,
+        "deflated_sharpe": -0.19994747279188638,
+        "pbo": 0.4246031746031746,
+        "parameter_stability_score": 0.5755099696497664
+      },
+      {
+        "strategy_name": "williams_r",
+        "parameters": {
+          "window": 101,
+          "oversold": -75.0,
+          "overbought": -25.0
+        },
+        "observed_sharpe": 0.19518973648742477,
+        "deflated_sharpe": -0.5128294810324645,
+        "pbo": 0.2896825396825397,
+        "parameter_stability_score": 0.387698251176885
+      },
+      {
+        "strategy_name": "cci",
+        "parameters": {
+          "window": 200,
+          "threshold": 175.0
+        },
+        "observed_sharpe": 0.24805173707259207,
+        "deflated_sharpe": -0.1473695661746783,
+        "pbo": 0.2976190476190476,
+        "parameter_stability_score": 0.33759293946229807
+      },
+      {
+        "strategy_name": "stochastic_oscillator",
+        "parameters": {
+          "k_window": 200,
+          "d_window": 26,
+          "oversold": 25.0,
+          "overbought": 99.0
+        },
+        "observed_sharpe": 0.5371109577712762,
+        "deflated_sharpe": -0.2668501092655571,
+        "pbo": 0.3492063492063492,
+        "parameter_stability_score": 0.07525259981559117
+      },
+      {
+        "strategy_name": "trix",
+        "parameters": {
+          "window": 2,
+          "signal": 50
+        },
+        "observed_sharpe": 0.11895672223119708,
+        "deflated_sharpe": -0.024401731064855547,
+        "pbo": 0.7579365079365079,
+        "parameter_stability_score": 0.2982198243509659
+      },
+      {
+        "strategy_name": "aroon",
+        "parameters": {
+          "window": 200
+        },
+        "observed_sharpe": -0.12910290252245935,
+        "deflated_sharpe": -0.2818662597724556,
+        "pbo": 0.8333333333333334,
+        "parameter_stability_score": 0.638493671157014
+      },
+      {
+        "strategy_name": "chaikin_money_flow",
+        "parameters": {
+          "window": 101,
+          "threshold": 0.255
+        },
+        "observed_sharpe": 0.0,
+        "deflated_sharpe": -0.27057066201712193,
+        "pbo": 0.6507936507936508,
+        "parameter_stability_score": 0.489747118374301
+      },
+      {
+        "strategy_name": "vwap_reversion",
+        "parameters": {
+          "window": 101,
+          "threshold": 0.2
+        },
+        "observed_sharpe": 0.30662856855107534,
+        "deflated_sharpe": -0.17307597605683495,
+        "pbo": 0.27380952380952384,
+        "parameter_stability_score": 0.1707772832763996
+      },
+      {
+        "strategy_name": "adx",
+        "parameters": {
+          "window": 2,
+          "threshold": 60.0
+        },
+        "observed_sharpe": 0.11715688572353594,
+        "deflated_sharpe": -0.18947900427068493,
+        "pbo": 0.873015873015873,
+        "parameter_stability_score": 0.34557427868702983
+      },
+      {
+        "strategy_name": "connors_rsi",
+        "parameters": {
+          "window": 2,
+          "oversold": 1.0,
+          "overbought": 99.0
+        },
+        "observed_sharpe": 0.24998144248859688,
+        "deflated_sharpe": -0.36881803652512246,
+        "pbo": 0.21428571428571427,
+        "parameter_stability_score": 0.429335095423992
+      },
+      {
+        "strategy_name": "fifty_two_week_high",
+        "parameters": {
+          "window": 2,
+          "near_high": 0.75,
+          "near_low": 0.1
+        },
+        "observed_sharpe": 0.27672252669929215,
+        "deflated_sharpe": -0.17354931721317007,
+        "pbo": 0.2777777777777778,
+        "parameter_stability_score": 0.3414105442494157
+      },
+      {
+        "strategy_name": "ultimate_oscillator",
+        "parameters": {
+          "oversold": 1.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.005328393554806479,
+        "deflated_sharpe": -0.31282685083251105,
+        "pbo": 0.46825396825396826,
+        "parameter_stability_score": 0.5484475928365325
+      },
+      {
+        "strategy_name": "vol_managed_momentum",
+        "parameters": {
+          "lookback": 250,
+          "vol_window": 127,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.12432305673381809,
+        "deflated_sharpe": -0.25314614580845923,
+        "pbo": 0.42063492063492064,
+        "parameter_stability_score": 0.5285362361443142
+      },
+      {
+        "strategy_name": "residual_momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 0,
+          "mean_window": 252
+        },
+        "observed_sharpe": 0.12233987393133888,
+        "deflated_sharpe": -0.5094625868605462,
+        "pbo": 0.503968253968254,
+        "parameter_stability_score": 0.5205303427274283
+      },
+      {
+        "strategy_name": "overnight_gap",
+        "parameters": {
+          "threshold": 0.0775
+        },
+        "observed_sharpe": 0.016483657916677136,
+        "deflated_sharpe": -0.10230852707162523,
+        "pbo": 0.8452380952380952,
+        "parameter_stability_score": 0.3917660434043919
+      },
+      {
+        "strategy_name": "donchian_atr_trail",
+        "parameters": {
+          "entry_window": 101,
+          "atr_window": 2,
+          "atr_multiple": 5.25
+        },
+        "observed_sharpe": 0.22968661724425513,
+        "deflated_sharpe": -0.10977913836925965,
+        "pbo": 0.3373015873015873,
+        "parameter_stability_score": 0.5458957635638587
+      },
+      {
+        "strategy_name": "squeeze_breakout",
+        "parameters": {
+          "window": 101,
+          "bb_num_std": 0.5,
+          "kc_multiple": 0.5
+        },
+        "observed_sharpe": 0.24659569412998367,
+        "deflated_sharpe": -0.21901589865894483,
+        "pbo": 0.5317460317460317,
+        "parameter_stability_score": 0.10917356197343721
+      },
+      {
+        "strategy_name": "atr_channel_breakout",
+        "parameters": {
+          "ma_window": 200,
+          "atr_window": 51,
+          "multiplier": 2.75
+        },
+        "observed_sharpe": 0.06309066763405306,
+        "deflated_sharpe": -0.32320951306002943,
+        "pbo": 0.5476190476190477,
+        "parameter_stability_score": 0.48239544452744515
+      },
+      {
+        "strategy_name": "dual_momentum",
+        "parameters": {
+          "lookback": 500,
+          "trend_window": 251
+        },
+        "observed_sharpe": 0.22977942323466072,
+        "deflated_sharpe": -0.17956719155764506,
+        "pbo": 0.4722222222222222,
+        "parameter_stability_score": 0.18930665975211058
+      },
+      {
+        "strategy_name": "regime_filtered_trend",
+        "parameters": {
+          "fast": 1,
+          "slow": 2,
+          "adx_window": 100,
+          "adx_threshold": 10.0
+        },
+        "observed_sharpe": 0.15961336437121437,
+        "deflated_sharpe": -0.1656527336873112,
+        "pbo": 0.8134920634920635,
+        "parameter_stability_score": 0.38581298544237197
+      },
+      {
+        "strategy_name": "coppock_curve",
+        "parameters": {
+          "roc_long": 2,
+          "roc_short": 1,
+          "wma_window": 51
+        },
+        "observed_sharpe": 0.18401707841644555,
+        "deflated_sharpe": -0.054186544109401935,
+        "pbo": 0.6507936507936508,
+        "parameter_stability_score": 0.17576382430745893
+      },
+      {
+        "strategy_name": "true_strength_index",
+        "parameters": {
+          "long_window": 2,
+          "short_window": 50
+        },
+        "observed_sharpe": -0.07380698298819419,
+        "deflated_sharpe": -0.20281926512426984,
+        "pbo": 0.8968253968253969,
+        "parameter_stability_score": 0.6886363349093391
+      },
+      {
+        "strategy_name": "chande_momentum",
+        "parameters": {
+          "window": 101,
+          "threshold": 10.0
+        },
+        "observed_sharpe": 0.33651710916537775,
+        "deflated_sharpe": -0.20265197334665724,
+        "pbo": 0.0,
+        "parameter_stability_score": 0.28197486736185934
+      },
+      {
+        "strategy_name": "narrow_range_breakout",
+        "parameters": {
+          "window": 2
+        },
+        "observed_sharpe": -0.3419207125951759,
+        "deflated_sharpe": -0.35243249672912963,
+        "pbo": 0.9920634920634921,
+        "parameter_stability_score": 0.9664104856247389
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 64,
+          "z_threshold": 2.25,
+          "trend_window": 300
+        },
+        "observed_sharpe": 0.5754028102036585,
+        "deflated_sharpe": 0.18429801219854214,
+        "pbo": 0.15873015873015872,
+        "parameter_stability_score": 0.5089690961996635
+      }
+    ],
+    "lifetime_trials": 35,
+    "best_strategy_name": "trend_filtered_mean_reversion",
+    "best_gate_result": {
+      "passed": false,
+      "dsr_ok": true,
+      "pbo_ok": true,
+      "stability_ok": true,
+      "mintrl_ok": false,
+      "holdout_ok": true,
+      "beats_buy_and_hold_ok": true,
+      "required_track_record_years": 21.476730238958034,
+      "gate_config_version": "250856983fb58b7f0392157eef5c96960a26d0b2b3f81d063281bf6b18eeb493",
+      "reasons": [
+        "track record 17.3y < MinTRL 21.5y for 35 trials at Sharpe 0.58 (not enough data to justify this claim given the search effort)"
+      ]
+    },
+    "fundamentals": null,
+    "fundamental_screen": null,
+    "distress_screen": null,
+    "undervaluation_score": null,
+    "graduate": null,
+    "rationale": "daily discovery shard 6/10"
+  },
+  {
+    "experiment_id": "843cf07c-f051-477c-a50f-05653fbc9f1f",
+    "created_at": "2026-08-18T03:55:28.066673Z",
+    "symbol": "APA",
+    "strategy_names": [
+      "sma",
+      "momentum",
+      "mean_reversion",
+      "rsi_mean_reversion",
+      "donchian_breakout",
+      "bollinger_bands",
+      "macd_crossover",
+      "keltner_channel",
+      "vol_targeted_sma",
+      "trend_filtered_mean_reversion",
+      "triple_ma_alignment",
+      "williams_r",
+      "cci",
+      "stochastic_oscillator",
+      "trix",
+      "aroon",
+      "chaikin_money_flow",
+      "vwap_reversion",
+      "adx",
+      "connors_rsi",
+      "fifty_two_week_high",
+      "ultimate_oscillator",
+      "vol_managed_momentum",
+      "residual_momentum",
+      "overnight_gap",
+      "donchian_atr_trail",
+      "squeeze_breakout",
+      "atr_channel_breakout",
+      "dual_momentum",
+      "regime_filtered_trend",
+      "coppock_curve",
+      "true_strength_index",
+      "chande_momentum",
+      "narrow_range_breakout",
+      "trend_filtered_mean_reversion"
+    ],
+    "gate_config": {
+      "dsr_min": 0.0,
+      "pbo_max": 0.5,
+      "stability_min": 0.4,
+      "holdout_sharpe_min": 0.0,
+      "require_beat_buy_and_hold": true,
+      "trial_budget": 200
+    },
+    "trials": [
+      {
+        "strategy_name": "sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 251
+        },
+        "observed_sharpe": 0.053583751280356674,
+        "deflated_sharpe": -0.09642598432998939,
+        "pbo": 0.6944444444444444,
+        "parameter_stability_score": 0.42264961885559055
+      },
+      {
+        "strategy_name": "momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 60
+        },
+        "observed_sharpe": 0.07794145400199916,
+        "deflated_sharpe": -0.3033386431152934,
+        "pbo": 0.5793650793650794,
+        "parameter_stability_score": 0.48668595522277186
+      },
+      {
+        "strategy_name": "mean_reversion",
+        "parameters": {
+          "window": 200,
+          "k": 5.05
+        },
+        "observed_sharpe": 0.04486826055788625,
+        "deflated_sharpe": -0.5247620091413152,
+        "pbo": 0.44841269841269843,
+        "parameter_stability_score": 0.42076596648564235
+      },
+      {
+        "strategy_name": "rsi_mean_reversion",
+        "parameters": {
+          "window": 51,
+          "oversold": 25.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.29516288992450185,
+        "deflated_sharpe": -0.346670915297188,
+        "pbo": 0.2222222222222222,
+        "parameter_stability_score": 0.32815288278158583
+      },
+      {
+        "strategy_name": "donchian_breakout",
+        "parameters": {
+          "lookback": 200
+        },
+        "observed_sharpe": -0.044341761401236905,
+        "deflated_sharpe": -0.14549427857771915,
+        "pbo": 0.9047619047619048,
+        "parameter_stability_score": 0.5857387266309492
+      },
+      {
+        "strategy_name": "bollinger_bands",
+        "parameters": {
+          "window": 101,
+          "num_std": 2.75
+        },
+        "observed_sharpe": 0.12597338444575604,
+        "deflated_sharpe": -0.2838628844233819,
+        "pbo": 0.6587301587301587,
+        "parameter_stability_score": 0.2212359014334682
+      },
+      {
+        "strategy_name": "macd_crossover",
+        "parameters": {
+          "fast": 1,
+          "slow": 251,
+          "signal": 50
+        },
+        "observed_sharpe": 0.1322096355961114,
+        "deflated_sharpe": -0.13662612638058555,
+        "pbo": 0.9206349206349206,
+        "parameter_stability_score": 0.39177610749575403
+      },
+      {
+        "strategy_name": "keltner_channel",
+        "parameters": {
+          "ma_window": 100,
+          "atr_window": 100,
+          "multiplier": 0.5
+        },
+        "observed_sharpe": 0.014744662160168235,
+        "deflated_sharpe": -0.42095716106996,
+        "pbo": 0.49603174603174605,
+        "parameter_stability_score": 0.4678428161249589
+      },
+      {
+        "strategy_name": "vol_targeted_sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 500,
+          "vol_window": 252,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.1732051878187292,
+        "deflated_sharpe": -0.20608114613694936,
+        "pbo": 0.6190476190476191,
+        "parameter_stability_score": 0.3584442826985954
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 51,
+          "z_threshold": 2.25,
+          "trend_window": 400
+        },
+        "observed_sharpe": 0.47153218816359077,
+        "deflated_sharpe": -0.006545902921482605,
+        "pbo": 0.1111111111111111,
+        "parameter_stability_score": 0.26528360528387845
+      },
+      {
+        "strategy_name": "triple_ma_alignment",
+        "parameters": {
+          "fast": 1,
+          "medium": 200,
+          "slow": 202
+        },
+        "observed_sharpe": 0.08296322006366527,
+        "deflated_sharpe": -0.20005541855124923,
+        "pbo": 0.4246031746031746,
+        "parameter_stability_score": 0.5750019281961734
+      },
+      {
+        "strategy_name": "williams_r",
+        "parameters": {
+          "window": 101,
+          "oversold": -75.0,
+          "overbought": -25.0
+        },
+        "observed_sharpe": 0.1951896524977207,
+        "deflated_sharpe": -0.515937943981831,
+        "pbo": 0.27380952380952384,
+        "parameter_stability_score": 0.38841869351110864
+      },
+      {
+        "strategy_name": "cci",
+        "parameters": {
+          "window": 200,
+          "threshold": 175.0
+        },
+        "observed_sharpe": 0.2480508819318746,
+        "deflated_sharpe": -0.13836429772132167,
+        "pbo": 0.34523809523809523,
+        "parameter_stability_score": 0.23255378336876864
+      },
+      {
+        "strategy_name": "stochastic_oscillator",
+        "parameters": {
+          "k_window": 200,
+          "d_window": 26,
+          "oversold": 25.0,
+          "overbought": 99.0
+        },
+        "observed_sharpe": 0.5371109516815776,
+        "deflated_sharpe": -0.26918418249921705,
+        "pbo": 0.3412698412698413,
+        "parameter_stability_score": 0.07362115151056325
+      },
+      {
+        "strategy_name": "trix",
+        "parameters": {
+          "window": 2,
+          "signal": 50
+        },
+        "observed_sharpe": 0.11895538853162697,
+        "deflated_sharpe": -0.024402370961630823,
+        "pbo": 0.7579365079365079,
+        "parameter_stability_score": 0.29822215547650427
+      },
+      {
+        "strategy_name": "aroon",
+        "parameters": {
+          "window": 200
+        },
+        "observed_sharpe": -0.12910278629780197,
+        "deflated_sharpe": -0.28187312722640656,
+        "pbo": 0.8412698412698413,
+        "parameter_stability_score": 0.6385235353846465
+      },
+      {
+        "strategy_name": "chaikin_money_flow",
+        "parameters": {
+          "window": 101,
+          "threshold": 0.255
+        },
+        "observed_sharpe": 0.0,
+        "deflated_sharpe": -0.2699561424427746,
+        "pbo": 0.6507936507936508,
+        "parameter_stability_score": 0.48997598233769857
+      },
+      {
+        "strategy_name": "vwap_reversion",
+        "parameters": {
+          "window": 101,
+          "threshold": 0.2
+        },
+        "observed_sharpe": 0.30662875123061323,
+        "deflated_sharpe": -0.17307661441031497,
+        "pbo": 0.27380952380952384,
+        "parameter_stability_score": 0.17077741705846772
+      },
+      {
+        "strategy_name": "adx",
+        "parameters": {
+          "window": 2,
+          "threshold": 60.0
+        },
+        "observed_sharpe": 0.11715685494535281,
+        "deflated_sharpe": -0.18947921308932997,
+        "pbo": 0.873015873015873,
+        "parameter_stability_score": 0.34557374891486525
+      },
+      {
+        "strategy_name": "connors_rsi",
+        "parameters": {
+          "window": 2,
+          "oversold": 1.0,
+          "overbought": 99.0
+        },
+        "observed_sharpe": 0.2499825384891979,
+        "deflated_sharpe": -0.3688151746141839,
+        "pbo": 0.21428571428571427,
+        "parameter_stability_score": 0.42933741590687613
+      },
+      {
+        "strategy_name": "fifty_two_week_high",
+        "parameters": {
+          "window": 2,
+          "near_high": 0.75,
+          "near_low": 0.1
+        },
+        "observed_sharpe": 0.27672245590492195,
+        "deflated_sharpe": -0.17354936264086807,
+        "pbo": 0.2777777777777778,
+        "parameter_stability_score": 0.3414096892496404
+      },
+      {
+        "strategy_name": "ultimate_oscillator",
+        "parameters": {
+          "oversold": 1.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.005326190484722765,
+        "deflated_sharpe": -0.3166114273817997,
+        "pbo": 0.4642857142857143,
+        "parameter_stability_score": 0.5473458958364465
+      },
+      {
+        "strategy_name": "vol_managed_momentum",
+        "parameters": {
+          "lookback": 250,
+          "vol_window": 127,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.12432426322583273,
+        "deflated_sharpe": -0.253144751590363,
+        "pbo": 0.42063492063492064,
+        "parameter_stability_score": 0.5285402599184384
+      },
+      {
+        "strategy_name": "residual_momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 0,
+          "mean_window": 252
+        },
+        "observed_sharpe": 0.12234066793612387,
+        "deflated_sharpe": -0.509461900413036,
+        "pbo": 0.503968253968254,
+        "parameter_stability_score": 0.520529657331956
+      },
+      {
+        "strategy_name": "overnight_gap",
+        "parameters": {
+          "threshold": 0.0775
+        },
+        "observed_sharpe": 0.016483647421611708,
+        "deflated_sharpe": -0.10230830382184529,
+        "pbo": 0.8452380952380952,
+        "parameter_stability_score": 0.3917659315889667
+      },
+      {
+        "strategy_name": "donchian_atr_trail",
+        "parameters": {
+          "entry_window": 101,
+          "atr_window": 2,
+          "atr_multiple": 5.25
+        },
+        "observed_sharpe": 0.22968651481815688,
+        "deflated_sharpe": -0.10953964923401466,
+        "pbo": 0.3333333333333333,
+        "parameter_stability_score": 0.546591975868906
+      },
+      {
+        "strategy_name": "squeeze_breakout",
+        "parameters": {
+          "window": 101,
+          "bb_num_std": 0.5,
+          "kc_multiple": 0.5
+        },
+        "observed_sharpe": 0.24659561007916608,
+        "deflated_sharpe": -0.21901540783542428,
+        "pbo": 0.5317460317460317,
+        "parameter_stability_score": 0.10917400863203872
+      },
+      {
+        "strategy_name": "atr_channel_breakout",
+        "parameters": {
+          "ma_window": 200,
+          "atr_window": 51,
+          "multiplier": 2.75
+        },
+        "observed_sharpe": 0.06309097300613153,
+        "deflated_sharpe": -0.3232095566122438,
+        "pbo": 0.5476190476190477,
+        "parameter_stability_score": 0.48239503616326457
+      },
+      {
+        "strategy_name": "dual_momentum",
+        "parameters": {
+          "lookback": 500,
+          "trend_window": 251
+        },
+        "observed_sharpe": 0.22977960023866142,
+        "deflated_sharpe": -0.17956511041759202,
+        "pbo": 0.4722222222222222,
+        "parameter_stability_score": 0.18930358767936284
+      },
+      {
+        "strategy_name": "regime_filtered_trend",
+        "parameters": {
+          "fast": 1,
+          "slow": 2,
+          "adx_window": 100,
+          "adx_threshold": 10.0
+        },
+        "observed_sharpe": 0.15961151378299662,
+        "deflated_sharpe": -0.165654094732506,
+        "pbo": 0.8134920634920635,
+        "parameter_stability_score": 0.3858134853011796
+      },
+      {
+        "strategy_name": "coppock_curve",
+        "parameters": {
+          "roc_long": 2,
+          "roc_short": 1,
+          "wma_window": 51
+        },
+        "observed_sharpe": 0.18401746044218567,
+        "deflated_sharpe": -0.05418589867055451,
+        "pbo": 0.6507936507936508,
+        "parameter_stability_score": 0.17576392543042466
+      },
+      {
+        "strategy_name": "true_strength_index",
+        "parameters": {
+          "long_window": 2,
+          "short_window": 50
+        },
+        "observed_sharpe": -0.07380750715302808,
+        "deflated_sharpe": -0.20281963212114498,
+        "pbo": 0.8968253968253969,
+        "parameter_stability_score": 0.688636173803246
+      },
+      {
+        "strategy_name": "chande_momentum",
+        "parameters": {
+          "window": 101,
+          "threshold": 10.0
+        },
+        "observed_sharpe": 0.3365160273087141,
+        "deflated_sharpe": -0.2023773103041584,
+        "pbo": 0.0,
+        "parameter_stability_score": 0.28191625153235994
+      },
+      {
+        "strategy_name": "narrow_range_breakout",
+        "parameters": {
+          "window": 2
+        },
+        "observed_sharpe": -0.33441696793840986,
+        "deflated_sharpe": -0.34820371493362307,
+        "pbo": 0.9920634920634921,
+        "parameter_stability_score": 0.9557767333019863
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 64,
+          "z_threshold": 2.25,
+          "trend_window": 300
+        },
+        "observed_sharpe": 0.5754009382433973,
+        "deflated_sharpe": 0.18429978510468847,
+        "pbo": 0.15873015873015872,
+        "parameter_stability_score": 0.5089708473011385
+      }
+    ],
+    "lifetime_trials": 35,
+    "best_strategy_name": "trend_filtered_mean_reversion",
+    "best_gate_result": {
+      "passed": false,
+      "dsr_ok": true,
+      "pbo_ok": true,
+      "stability_ok": true,
+      "mintrl_ok": false,
+      "holdout_ok": true,
+      "beats_buy_and_hold_ok": true,
+      "required_track_record_years": 21.47686998030453,
+      "gate_config_version": "250856983fb58b7f0392157eef5c96960a26d0b2b3f81d063281bf6b18eeb493",
+      "reasons": [
+        "track record 17.3y < MinTRL 21.5y for 35 trials at Sharpe 0.58 (not enough data to justify this claim given the search effort)"
+      ]
+    },
+    "fundamentals": null,
+    "fundamental_screen": null,
+    "distress_screen": null,
+    "undervaluation_score": null,
+    "graduate": null,
+    "rationale": "daily discovery shard 6/10"
+  },
+  {
+    "experiment_id": "391d1e49-c525-4952-8d69-46bbddd6d309",
+    "created_at": "2026-08-18T03:31:38.814089Z",
+    "symbol": "APA",
+    "strategy_names": [
+      "sma",
+      "momentum",
+      "mean_reversion",
+      "rsi_mean_reversion",
+      "donchian_breakout",
+      "bollinger_bands",
+      "macd_crossover",
+      "keltner_channel",
+      "vol_targeted_sma",
+      "trend_filtered_mean_reversion",
+      "triple_ma_alignment",
+      "williams_r",
+      "cci",
+      "stochastic_oscillator",
+      "trix",
+      "aroon",
+      "chaikin_money_flow",
+      "vwap_reversion",
+      "adx",
+      "connors_rsi",
+      "fifty_two_week_high",
+      "ultimate_oscillator",
+      "vol_managed_momentum",
+      "residual_momentum",
+      "overnight_gap",
+      "donchian_atr_trail",
+      "squeeze_breakout",
+      "atr_channel_breakout",
+      "dual_momentum",
+      "regime_filtered_trend",
+      "coppock_curve",
+      "true_strength_index",
+      "chande_momentum",
+      "narrow_range_breakout",
+      "trend_filtered_mean_reversion"
+    ],
+    "gate_config": {
+      "dsr_min": 0.0,
+      "pbo_max": 0.5,
+      "stability_min": 0.4,
+      "holdout_sharpe_min": 0.0,
+      "require_beat_buy_and_hold": true,
+      "trial_budget": 200
+    },
+    "trials": [
+      {
+        "strategy_name": "sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 251
+        },
+        "observed_sharpe": 0.0535839872466635,
+        "deflated_sharpe": -0.09642649708743192,
+        "pbo": 0.6944444444444444,
+        "parameter_stability_score": 0.4226485146454889
+      },
+      {
+        "strategy_name": "momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 60
+        },
+        "observed_sharpe": 0.07794077336389021,
+        "deflated_sharpe": -0.303339032420675,
+        "pbo": 0.5793650793650794,
+        "parameter_stability_score": 0.4866860827188095
+      },
+      {
+        "strategy_name": "mean_reversion",
+        "parameters": {
+          "window": 200,
+          "k": 5.05
+        },
+        "observed_sharpe": 0.04486854883460447,
+        "deflated_sharpe": -0.5247604463410758,
+        "pbo": 0.4523809523809524,
+        "parameter_stability_score": 0.42076596319087795
+      },
+      {
+        "strategy_name": "rsi_mean_reversion",
+        "parameters": {
+          "window": 51,
+          "oversold": 25.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.29516231536201293,
+        "deflated_sharpe": -0.3467974145528027,
+        "pbo": 0.2222222222222222,
+        "parameter_stability_score": 0.3282029781993886
+      },
+      {
+        "strategy_name": "donchian_breakout",
+        "parameters": {
+          "lookback": 200
+        },
+        "observed_sharpe": -0.04434202173564966,
+        "deflated_sharpe": -0.1454947191915263,
+        "pbo": 0.9047619047619048,
+        "parameter_stability_score": 0.5857393611760026
+      },
+      {
+        "strategy_name": "bollinger_bands",
+        "parameters": {
+          "window": 101,
+          "num_std": 2.75
+        },
+        "observed_sharpe": 0.12597453208151715,
+        "deflated_sharpe": -0.28386135668860746,
+        "pbo": 0.6587301587301587,
+        "parameter_stability_score": 0.2212353665443677
+      },
+      {
+        "strategy_name": "macd_crossover",
+        "parameters": {
+          "fast": 1,
+          "slow": 251,
+          "signal": 50
+        },
+        "observed_sharpe": 0.13221042395323782,
+        "deflated_sharpe": -0.13662578913933773,
+        "pbo": 0.9206349206349206,
+        "parameter_stability_score": 0.39177582957975543
+      },
+      {
+        "strategy_name": "keltner_channel",
+        "parameters": {
+          "ma_window": 100,
+          "atr_window": 100,
+          "multiplier": 0.5
+        },
+        "observed_sharpe": 0.01474575069546164,
+        "deflated_sharpe": -0.4209560898189485,
+        "pbo": 0.49603174603174605,
+        "parameter_stability_score": 0.46784252006879523
+      },
+      {
+        "strategy_name": "vol_targeted_sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 500,
+          "vol_window": 252,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.17320562132436113,
+        "deflated_sharpe": -0.20608213576996914,
+        "pbo": 0.6190476190476191,
+        "parameter_stability_score": 0.3584489865403805
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 51,
+          "z_threshold": 2.25,
+          "trend_window": 400
+        },
+        "observed_sharpe": 0.47153327244051835,
+        "deflated_sharpe": -0.006544512137192093,
+        "pbo": 0.1111111111111111,
+        "parameter_stability_score": 0.26528296496321674
+      },
+      {
+        "strategy_name": "triple_ma_alignment",
+        "parameters": {
+          "fast": 1,
+          "medium": 200,
+          "slow": 202
+        },
+        "observed_sharpe": 0.08296386896231522,
+        "deflated_sharpe": -0.20014903794250583,
+        "pbo": 0.4246031746031746,
+        "parameter_stability_score": 0.5746114095066118
+      },
+      {
+        "strategy_name": "williams_r",
+        "parameters": {
+          "window": 101,
+          "oversold": -75.0,
+          "overbought": -25.0
+        },
+        "observed_sharpe": 0.19518954074715986,
+        "deflated_sharpe": -0.5142252093781359,
+        "pbo": 0.2896825396825397,
+        "parameter_stability_score": 0.38799110417583643
+      },
+      {
+        "strategy_name": "cci",
+        "parameters": {
+          "window": 200,
+          "threshold": 175.0
+        },
+        "observed_sharpe": 0.248051048677015,
+        "deflated_sharpe": -0.1931875085787853,
+        "pbo": 0.5396825396825397,
+        "parameter_stability_score": 0.07959002919088523
+      },
+      {
+        "strategy_name": "stochastic_oscillator",
+        "parameters": {
+          "k_window": 200,
+          "d_window": 26,
+          "oversold": 25.0,
+          "overbought": 99.0
+        },
+        "observed_sharpe": 0.5371114962026382,
+        "deflated_sharpe": -0.26787854289038104,
+        "pbo": 0.3492063492063492,
+        "parameter_stability_score": 0.07454716231442159
+      },
+      {
+        "strategy_name": "trix",
+        "parameters": {
+          "window": 2,
+          "signal": 50
+        },
+        "observed_sharpe": 0.11895554467165548,
+        "deflated_sharpe": -0.02440229584257758,
+        "pbo": 0.7579365079365079,
+        "parameter_stability_score": 0.2982220809945687
+      },
+      {
+        "strategy_name": "aroon",
+        "parameters": {
+          "window": 200
+        },
+        "observed_sharpe": -0.12910346183067892,
+        "deflated_sharpe": -0.28225911630846046,
+        "pbo": 0.8333333333333334,
+        "parameter_stability_score": 0.6398694267201697
+      },
+      {
+        "strategy_name": "chaikin_money_flow",
+        "parameters": {
+          "window": 101,
+          "threshold": 0.255
+        },
+        "observed_sharpe": 0.0,
+        "deflated_sharpe": -0.26995825081031005,
+        "pbo": 0.6507936507936508,
+        "parameter_stability_score": 0.48997621421224846
+      },
+      {
+        "strategy_name": "vwap_reversion",
+        "parameters": {
+          "window": 101,
+          "threshold": 0.2
+        },
+        "observed_sharpe": 0.30662896619081575,
+        "deflated_sharpe": -0.17307563784154928,
+        "pbo": 0.27380952380952384,
+        "parameter_stability_score": 0.1707771531153106
+      },
+      {
+        "strategy_name": "adx",
+        "parameters": {
+          "window": 2,
+          "threshold": 60.0
+        },
+        "observed_sharpe": 0.11715695098595187,
+        "deflated_sharpe": -0.18947882018291556,
+        "pbo": 0.873015873015873,
+        "parameter_stability_score": 0.34557356710097925
+      },
+      {
+        "strategy_name": "connors_rsi",
+        "parameters": {
+          "window": 2,
+          "oversold": 1.0,
+          "overbought": 99.0
+        },
+        "observed_sharpe": 0.24997928215550586,
+        "deflated_sharpe": -0.3688171888838833,
+        "pbo": 0.21428571428571427,
+        "parameter_stability_score": 0.4293382407714486
+      },
+      {
+        "strategy_name": "fifty_two_week_high",
+        "parameters": {
+          "window": 2,
+          "near_high": 0.75,
+          "near_low": 0.1
+        },
+        "observed_sharpe": 0.27672251660992403,
+        "deflated_sharpe": -0.1735488740746875,
+        "pbo": 0.2777777777777778,
+        "parameter_stability_score": 0.34141006177391364
+      },
+      {
+        "strategy_name": "ultimate_oscillator",
+        "parameters": {
+          "oversold": 1.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.00533047579210835,
+        "deflated_sharpe": -0.31282369742474997,
+        "pbo": 0.46825396825396826,
+        "parameter_stability_score": 0.5484468689428669
+      },
+      {
+        "strategy_name": "vol_managed_momentum",
+        "parameters": {
+          "lookback": 250,
+          "vol_window": 127,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.12432586620559026,
+        "deflated_sharpe": -0.2531423540750842,
+        "pbo": 0.42063492063492064,
+        "parameter_stability_score": 0.528541661633492
+      },
+      {
+        "strategy_name": "residual_momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 0,
+          "mean_window": 252
+        },
+        "observed_sharpe": 0.12233981098529154,
+        "deflated_sharpe": -0.5097079822611139,
+        "pbo": 0.503968253968254,
+        "parameter_stability_score": 0.5204692902263149
+      },
+      {
+        "strategy_name": "overnight_gap",
+        "parameters": {
+          "threshold": 0.0775
+        },
+        "observed_sharpe": 0.016483936773414767,
+        "deflated_sharpe": -0.10230774543922985,
+        "pbo": 0.8452380952380952,
+        "parameter_stability_score": 0.3917653268237404
+      },
+      {
+        "strategy_name": "donchian_atr_trail",
+        "parameters": {
+          "entry_window": 101,
+          "atr_window": 2,
+          "atr_multiple": 5.25
+        },
+        "observed_sharpe": 0.22968657471322707,
+        "deflated_sharpe": -0.10953243732174645,
+        "pbo": 0.3333333333333333,
+        "parameter_stability_score": 0.5466236831536266
+      },
+      {
+        "strategy_name": "squeeze_breakout",
+        "parameters": {
+          "window": 101,
+          "bb_num_std": 0.5,
+          "kc_multiple": 0.5
+        },
+        "observed_sharpe": 0.24659564139251733,
+        "deflated_sharpe": -0.21901546491227608,
+        "pbo": 0.5317460317460317,
+        "parameter_stability_score": 0.10917363755860089
+      },
+      {
+        "strategy_name": "atr_channel_breakout",
+        "parameters": {
+          "ma_window": 200,
+          "atr_window": 51,
+          "multiplier": 2.75
+        },
+        "observed_sharpe": 0.06309034539036022,
+        "deflated_sharpe": -0.3232100454439172,
+        "pbo": 0.5476190476190477,
+        "parameter_stability_score": 0.4823953947807935
+      },
+      {
+        "strategy_name": "dual_momentum",
+        "parameters": {
+          "lookback": 500,
+          "trend_window": 251
+        },
+        "observed_sharpe": 0.22978065017175806,
+        "deflated_sharpe": -0.17956548404290515,
+        "pbo": 0.4722222222222222,
+        "parameter_stability_score": 0.18930452933536235
+      },
+      {
+        "strategy_name": "regime_filtered_trend",
+        "parameters": {
+          "fast": 1,
+          "slow": 2,
+          "adx_window": 100,
+          "adx_threshold": 10.0
+        },
+        "observed_sharpe": 0.15961284258624908,
+        "deflated_sharpe": -0.16565300079176648,
+        "pbo": 0.8134920634920635,
+        "parameter_stability_score": 0.38581309778313605
+      },
+      {
+        "strategy_name": "coppock_curve",
+        "parameters": {
+          "roc_long": 2,
+          "roc_short": 1,
+          "wma_window": 51
+        },
+        "observed_sharpe": 0.1840163198021307,
+        "deflated_sharpe": -0.054187025362002816,
+        "pbo": 0.6507936507936508,
+        "parameter_stability_score": 0.17576468919593558
+      },
+      {
+        "strategy_name": "true_strength_index",
+        "parameters": {
+          "long_window": 2,
+          "short_window": 50
+        },
+        "observed_sharpe": -0.07380793619980332,
+        "deflated_sharpe": -0.2028202575676234,
+        "pbo": 0.8968253968253969,
+        "parameter_stability_score": 0.6886357157437282
+      },
+      {
+        "strategy_name": "chande_momentum",
+        "parameters": {
+          "window": 101,
+          "threshold": 10.0
+        },
+        "observed_sharpe": 0.33651557922305114,
+        "deflated_sharpe": -0.20254611255842897,
+        "pbo": 0.0,
+        "parameter_stability_score": 0.2819524707699327
+      },
+      {
+        "strategy_name": "narrow_range_breakout",
+        "parameters": {
+          "window": 2
+        },
+        "observed_sharpe": -0.32999648671381254,
+        "deflated_sharpe": -0.34090974074694996,
+        "pbo": 0.9920634920634921,
+        "parameter_stability_score": 0.9641171939628022
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 64,
+          "z_threshold": 2.25,
+          "trend_window": 300
+        },
+        "observed_sharpe": 0.5754006220069904,
+        "deflated_sharpe": 0.1842987326137911,
+        "pbo": 0.15873015873015872,
+        "parameter_stability_score": 0.5089703121117918
+      }
+    ],
+    "lifetime_trials": 35,
+    "best_strategy_name": "trend_filtered_mean_reversion",
+    "best_gate_result": {
+      "passed": false,
+      "dsr_ok": true,
+      "pbo_ok": true,
+      "stability_ok": true,
+      "mintrl_ok": false,
+      "holdout_ok": true,
+      "beats_buy_and_hold_ok": true,
+      "required_track_record_years": 21.476893587404703,
+      "gate_config_version": "250856983fb58b7f0392157eef5c96960a26d0b2b3f81d063281bf6b18eeb493",
+      "reasons": [
+        "track record 17.3y < MinTRL 21.5y for 35 trials at Sharpe 0.58 (not enough data to justify this claim given the search effort)"
+      ]
+    },
+    "fundamentals": null,
+    "fundamental_screen": null,
+    "distress_screen": null,
+    "undervaluation_score": null,
+    "graduate": null,
+    "rationale": "daily discovery shard 6/10"
+  },
+  {
+    "experiment_id": "43c48d41-eabf-43ab-a8b3-11515de52a01",
+    "created_at": "2026-08-07T09:08:07.994238Z",
+    "symbol": "APA",
+    "strategy_names": [
+      "sma",
+      "momentum",
+      "mean_reversion",
+      "rsi_mean_reversion",
+      "donchian_breakout",
+      "bollinger_bands",
+      "macd_crossover",
+      "keltner_channel",
+      "vol_targeted_sma",
+      "trend_filtered_mean_reversion",
+      "triple_ma_alignment",
+      "williams_r",
+      "cci",
+      "stochastic_oscillator",
+      "trix",
+      "aroon",
+      "chaikin_money_flow",
+      "vwap_reversion",
+      "adx",
+      "connors_rsi",
+      "fifty_two_week_high",
+      "ultimate_oscillator",
+      "vol_managed_momentum",
+      "residual_momentum",
+      "overnight_gap",
+      "donchian_atr_trail",
+      "squeeze_breakout",
+      "atr_channel_breakout",
+      "dual_momentum",
+      "regime_filtered_trend",
+      "coppock_curve",
+      "true_strength_index",
+      "chande_momentum",
+      "narrow_range_breakout",
+      "trend_filtered_mean_reversion"
+    ],
+    "gate_config": {
+      "dsr_min": 0.0,
+      "pbo_max": 0.5,
+      "stability_min": 0.4,
+      "holdout_sharpe_min": 0.0,
+      "require_beat_buy_and_hold": true,
+      "trial_budget": 200
+    },
+    "trials": [
+      {
+        "strategy_name": "sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 251
+        },
+        "observed_sharpe": 0.04515727439457935,
+        "deflated_sharpe": -0.1015232954059397,
+        "pbo": 0.6984126984126984,
+        "parameter_stability_score": 0.4503279733122055
+      },
+      {
+        "strategy_name": "momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 60
+        },
+        "observed_sharpe": 0.06953266963247708,
+        "deflated_sharpe": -0.3080756123400308,
+        "pbo": 0.5873015873015873,
+        "parameter_stability_score": 0.4960160597563479
+      },
+      {
+        "strategy_name": "mean_reversion",
+        "parameters": {
+          "window": 200,
+          "k": 5.05
+        },
+        "observed_sharpe": 0.053225750550017985,
+        "deflated_sharpe": -0.5220152806105685,
+        "pbo": 0.42063492063492064,
+        "parameter_stability_score": 0.4133905454127683
+      },
+      {
+        "strategy_name": "rsi_mean_reversion",
+        "parameters": {
+          "window": 51,
+          "oversold": 25.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.2953662683455228,
+        "deflated_sharpe": -0.3592270315492573,
+        "pbo": 0.24206349206349206,
+        "parameter_stability_score": 0.32556413983173793
+      },
+      {
+        "strategy_name": "donchian_breakout",
+        "parameters": {
+          "lookback": 200
+        },
+        "observed_sharpe": -0.05294993627268454,
+        "deflated_sharpe": -0.15393393453185275,
+        "pbo": 0.9285714285714286,
+        "parameter_stability_score": 0.5924173771613
+      },
+      {
+        "strategy_name": "bollinger_bands",
+        "parameters": {
+          "window": 101,
+          "num_std": 2.75
+        },
+        "observed_sharpe": 0.12606164772938647,
+        "deflated_sharpe": -0.2835070283911708,
+        "pbo": 0.6507936507936508,
+        "parameter_stability_score": 0.21659555181959494
+      },
+      {
+        "strategy_name": "macd_crossover",
+        "parameters": {
+          "fast": 1,
+          "slow": 251,
+          "signal": 50
+        },
+        "observed_sharpe": 0.1240434771052785,
+        "deflated_sharpe": -0.14849934734398548,
+        "pbo": 0.9285714285714286,
+        "parameter_stability_score": 0.39917149011906816
+      },
+      {
+        "strategy_name": "keltner_channel",
+        "parameters": {
+          "ma_window": 100,
+          "atr_window": 100,
+          "multiplier": 0.5
+        },
+        "observed_sharpe": 0.004418327893925045,
+        "deflated_sharpe": -0.4367863693751193,
+        "pbo": 0.5198412698412699,
+        "parameter_stability_score": 0.47230578485796487
+      },
+      {
+        "strategy_name": "vol_targeted_sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 500,
+          "vol_window": 252,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.16570206009878663,
+        "deflated_sharpe": -0.207641712912166,
+        "pbo": 0.6031746031746031,
+        "parameter_stability_score": 0.3794850408335058
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 51,
+          "z_threshold": 2.25,
+          "trend_window": 400
+        },
+        "observed_sharpe": 0.47186095202107997,
+        "deflated_sharpe": -0.009236547121229732,
+        "pbo": 0.1111111111111111,
+        "parameter_stability_score": 0.26590151028393677
+      },
+      {
+        "strategy_name": "triple_ma_alignment",
+        "parameters": {
+          "fast": 1,
+          "medium": 200,
+          "slow": 202
+        },
+        "observed_sharpe": 0.07335793492257184,
+        "deflated_sharpe": -0.21133922522614237,
+        "pbo": 0.44047619047619047,
+        "parameter_stability_score": 0.5833810523689472
+      },
+      {
+        "strategy_name": "williams_r",
+        "parameters": {
+          "window": 101,
+          "oversold": -75.0,
+          "overbought": -25.0
+        },
+        "observed_sharpe": 0.20626526611791288,
+        "deflated_sharpe": -0.509854409106422,
+        "pbo": 0.2976190476190476,
+        "parameter_stability_score": 0.3807693283516631
+      },
+      {
+        "strategy_name": "cci",
+        "parameters": {
+          "window": 200,
+          "threshold": 175.0
+        },
+        "observed_sharpe": 0.24822330803993944,
+        "deflated_sharpe": -0.1541701615253773,
+        "pbo": 0.2976190476190476,
+        "parameter_stability_score": 0.3326395134366506
+      },
+      {
+        "strategy_name": "stochastic_oscillator",
+        "parameters": {
+          "k_window": 101,
+          "d_window": 50,
+          "oversold": 49.0,
+          "overbought": 51.0
+        },
+        "observed_sharpe": 0.538509208851012,
+        "deflated_sharpe": -0.2700459506526308,
+        "pbo": 0.3492063492063492,
+        "parameter_stability_score": 0.09058179269586128
+      },
+      {
+        "strategy_name": "trix",
+        "parameters": {
+          "window": 2,
+          "signal": 50
+        },
+        "observed_sharpe": 0.1107411406125094,
+        "deflated_sharpe": -0.03386235775856768,
+        "pbo": 0.7738095238095238,
+        "parameter_stability_score": 0.3276166156816184
+      },
+      {
+        "strategy_name": "aroon",
+        "parameters": {
+          "window": 200
+        },
+        "observed_sharpe": -0.13776911131444247,
+        "deflated_sharpe": -0.29037245597678907,
+        "pbo": 0.8571428571428571,
+        "parameter_stability_score": 0.6424812694440591
+      },
+      {
+        "strategy_name": "chaikin_money_flow",
+        "parameters": {
+          "window": 101,
+          "threshold": 0.255
+        },
+        "observed_sharpe": 0.0,
+        "deflated_sharpe": -0.269049055718953,
+        "pbo": 0.6865079365079365,
+        "parameter_stability_score": 0.48840061013829345
+      },
+      {
+        "strategy_name": "vwap_reversion",
+        "parameters": {
+          "window": 101,
+          "threshold": 0.2
+        },
+        "observed_sharpe": 0.321799457779404,
+        "deflated_sharpe": -0.16668907831260604,
+        "pbo": 0.24603174603174602,
+        "parameter_stability_score": 0.15382087357742005
+      },
+      {
+        "strategy_name": "adx",
+        "parameters": {
+          "window": 2,
+          "threshold": 60.0
+        },
+        "observed_sharpe": 0.12550861583307887,
+        "deflated_sharpe": -0.19176156711372816,
+        "pbo": 0.876984126984127,
+        "parameter_stability_score": 0.33776335009594594
+      },
+      {
+        "strategy_name": "connors_rsi",
+        "parameters": {
+          "window": 2,
+          "oversold": 1.0,
+          "overbought": 99.0
+        },
+        "observed_sharpe": 0.25015187679021555,
+        "deflated_sharpe": -0.3739682129043994,
+        "pbo": 0.21825396825396826,
+        "parameter_stability_score": 0.4269617952701424
+      },
+      {
+        "strategy_name": "fifty_two_week_high",
+        "parameters": {
+          "window": 2,
+          "near_high": 0.75,
+          "near_low": 0.1
+        },
+        "observed_sharpe": 0.2686723913208978,
+        "deflated_sharpe": -0.16623866527882758,
+        "pbo": 0.27380952380952384,
+        "parameter_stability_score": 0.3490592958897596
+      },
+      {
+        "strategy_name": "ultimate_oscillator",
+        "parameters": {
+          "oversold": 1.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.005335723876468558,
+        "deflated_sharpe": -0.31534010779509103,
+        "pbo": 0.45634920634920634,
+        "parameter_stability_score": 0.551773349222463
+      },
+      {
+        "strategy_name": "vol_managed_momentum",
+        "parameters": {
+          "lookback": 250,
+          "vol_window": 127,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.11939573658431951,
+        "deflated_sharpe": -0.25389056581802344,
+        "pbo": 0.44047619047619047,
+        "parameter_stability_score": 0.5373811995390871
+      },
+      {
+        "strategy_name": "residual_momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 0,
+          "mean_window": 252
+        },
+        "observed_sharpe": 0.11395036768441605,
+        "deflated_sharpe": -0.5188428132841826,
+        "pbo": 0.5515873015873016,
+        "parameter_stability_score": 0.5224449979360347
+      },
+      {
+        "strategy_name": "overnight_gap",
+        "parameters": {
+          "threshold": 0.0775
+        },
+        "observed_sharpe": 0.016495086584771994,
+        "deflated_sharpe": -0.10098549951878741,
+        "pbo": 0.8452380952380952,
+        "parameter_stability_score": 0.3920080477387494
+      },
+      {
+        "strategy_name": "donchian_atr_trail",
+        "parameters": {
+          "entry_window": 101,
+          "atr_window": 2,
+          "atr_multiple": 5.25
+        },
+        "observed_sharpe": 0.2215776202487791,
+        "deflated_sharpe": -0.10582028538447366,
+        "pbo": 0.32142857142857145,
+        "parameter_stability_score": 0.5548068746175723
+      },
+      {
+        "strategy_name": "squeeze_breakout",
+        "parameters": {
+          "window": 101,
+          "bb_num_std": 0.5,
+          "kc_multiple": 0.5
+        },
+        "observed_sharpe": 0.2385143050545446,
+        "deflated_sharpe": -0.2194069787109623,
+        "pbo": 0.5634920634920635,
+        "parameter_stability_score": 0.09741990432599702
+      },
+      {
+        "strategy_name": "atr_channel_breakout",
+        "parameters": {
+          "ma_window": 200,
+          "atr_window": 51,
+          "multiplier": 2.75
+        },
+        "observed_sharpe": 0.05468827545200403,
+        "deflated_sharpe": -0.3249422253527574,
+        "pbo": 0.5912698412698413,
+        "parameter_stability_score": 0.49214646188121813
+      },
+      {
+        "strategy_name": "dual_momentum",
+        "parameters": {
+          "lookback": 500,
+          "trend_window": 251
+        },
+        "observed_sharpe": 0.20587143936746302,
+        "deflated_sharpe": -0.19982747048885527,
+        "pbo": 0.5317460317460317,
+        "parameter_stability_score": 0.23002668337228066
+      },
+      {
+        "strategy_name": "regime_filtered_trend",
+        "parameters": {
+          "fast": 1,
+          "slow": 2,
+          "adx_window": 100,
+          "adx_threshold": 10.0
+        },
+        "observed_sharpe": 0.15974019650360666,
+        "deflated_sharpe": -0.17446702163882338,
+        "pbo": 0.7936507936507936,
+        "parameter_stability_score": 0.3922539290749425
+      },
+      {
+        "strategy_name": "coppock_curve",
+        "parameters": {
+          "roc_long": 2,
+          "roc_short": 1,
+          "wma_window": 51
+        },
+        "observed_sharpe": 0.1758899948012836,
+        "deflated_sharpe": -0.06213613208698163,
+        "pbo": 0.6706349206349206,
+        "parameter_stability_score": 0.2102995960838228
+      },
+      {
+        "strategy_name": "true_strength_index",
+        "parameters": {
+          "long_window": 2,
+          "short_window": 50
+        },
+        "observed_sharpe": -0.08228461878784661,
+        "deflated_sharpe": -0.2130900645069168,
+        "pbo": 0.9285714285714286,
+        "parameter_stability_score": 0.6929475906563942
+      },
+      {
+        "strategy_name": "chande_momentum",
+        "parameters": {
+          "window": 101,
+          "threshold": 10.0
+        },
+        "observed_sharpe": 0.3486646264610085,
+        "deflated_sharpe": -0.20499591409955598,
+        "pbo": 0.007936507936507936,
+        "parameter_stability_score": 0.277966512315712
+      },
+      {
+        "strategy_name": "narrow_range_breakout",
+        "parameters": {
+          "window": 2
+        },
+        "observed_sharpe": -0.3302960121759953,
+        "deflated_sharpe": -0.341193085254959,
+        "pbo": 0.9920634920634921,
+        "parameter_stability_score": 0.9639479731369632
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 64,
+          "z_threshold": 2.25,
+          "trend_window": 300
+        },
+        "observed_sharpe": 0.5757982151599104,
+        "deflated_sharpe": 0.1844268742829548,
+        "pbo": 0.15476190476190477,
+        "parameter_stability_score": 0.5089718978155409
+      }
+    ],
+    "lifetime_trials": 35,
+    "best_strategy_name": "trend_filtered_mean_reversion",
+    "best_gate_result": {
+      "passed": false,
+      "dsr_ok": true,
+      "pbo_ok": true,
+      "stability_ok": true,
+      "mintrl_ok": false,
+      "holdout_ok": true,
+      "beats_buy_and_hold_ok": true,
+      "required_track_record_years": 21.44724390296366,
+      "gate_config_version": "250856983fb58b7f0392157eef5c96960a26d0b2b3f81d063281bf6b18eeb493",
+      "reasons": [
+        "track record 17.3y < MinTRL 21.4y for 35 trials at Sharpe 0.58 (not enough data to justify this claim given the search effort)"
+      ]
+    },
+    "fundamentals": null,
+    "fundamental_screen": null,
+    "distress_screen": null,
+    "undervaluation_score": null,
+    "graduate": null,
+    "rationale": "daily discovery shard 6/10"
+  },
+  {
+    "experiment_id": "bba982d8-84e9-4b6c-8fa2-49acfd2a05b9",
+    "created_at": "2026-08-06T10:46:54.166240Z",
+    "symbol": "APA",
+    "strategy_names": [
+      "sma",
+      "momentum",
+      "mean_reversion",
+      "rsi_mean_reversion",
+      "donchian_breakout",
+      "bollinger_bands",
+      "macd_crossover",
+      "keltner_channel",
+      "vol_targeted_sma",
+      "trend_filtered_mean_reversion",
+      "triple_ma_alignment",
+      "williams_r",
+      "cci",
+      "stochastic_oscillator",
+      "trix",
+      "aroon",
+      "chaikin_money_flow",
+      "vwap_reversion",
+      "adx",
+      "connors_rsi",
+      "fifty_two_week_high",
+      "ultimate_oscillator",
+      "vol_managed_momentum",
+      "residual_momentum",
+      "overnight_gap",
+      "donchian_atr_trail",
+      "squeeze_breakout",
+      "atr_channel_breakout",
+      "dual_momentum",
+      "regime_filtered_trend",
+      "coppock_curve",
+      "true_strength_index",
+      "chande_momentum",
+      "narrow_range_breakout",
+      "trend_filtered_mean_reversion"
+    ],
+    "gate_config": {
+      "dsr_min": 0.0,
+      "pbo_max": 0.5,
+      "stability_min": 0.4,
+      "holdout_sharpe_min": 0.0,
+      "require_beat_buy_and_hold": true,
+      "trial_budget": 200
+    },
+    "trials": [
+      {
+        "strategy_name": "sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 251
+        },
+        "observed_sharpe": 0.047689180263804795,
+        "deflated_sharpe": -0.10113170560630726,
+        "pbo": 0.6746031746031746,
+        "parameter_stability_score": 0.44153692465476674
+      },
+      {
+        "strategy_name": "momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 60
+        },
+        "observed_sharpe": 0.07207436834854432,
+        "deflated_sharpe": -0.3053240974465506,
+        "pbo": 0.5753968253968254,
+        "parameter_stability_score": 0.49529518470563483
+      },
+      {
+        "strategy_name": "mean_reversion",
+        "parameters": {
+          "window": 200,
+          "k": 5.05
+        },
+        "observed_sharpe": 0.050405307694946305,
+        "deflated_sharpe": -0.5209605375667804,
+        "pbo": 0.42857142857142855,
+        "parameter_stability_score": 0.4159353158988436
+      },
+      {
+        "strategy_name": "rsi_mean_reversion",
+        "parameters": {
+          "window": 51,
+          "oversold": 25.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.29540054683592115,
+        "deflated_sharpe": -0.3598918950004982,
+        "pbo": 0.24206349206349206,
+        "parameter_stability_score": 0.3270046068472441
+      },
+      {
+        "strategy_name": "donchian_breakout",
+        "parameters": {
+          "lookback": 200
+        },
+        "observed_sharpe": -0.050423793952556334,
+        "deflated_sharpe": -0.15149444863129424,
+        "pbo": 0.9126984126984127,
+        "parameter_stability_score": 0.5910406424493697
+      },
+      {
+        "strategy_name": "bollinger_bands",
+        "parameters": {
+          "window": 101,
+          "num_std": 2.75
+        },
+        "observed_sharpe": 0.12607708765830702,
+        "deflated_sharpe": -0.28231396868741476,
+        "pbo": 0.6547619047619048,
+        "parameter_stability_score": 0.2178556257235462
+      },
+      {
+        "strategy_name": "macd_crossover",
+        "parameters": {
+          "fast": 1,
+          "slow": 251,
+          "signal": 50
+        },
+        "observed_sharpe": 0.12654460171032347,
+        "deflated_sharpe": -0.1449722059212656,
+        "pbo": 0.9484126984126984,
+        "parameter_stability_score": 0.397070725771066
+      },
+      {
+        "strategy_name": "keltner_channel",
+        "parameters": {
+          "ma_window": 100,
+          "atr_window": 100,
+          "multiplier": 0.5
+        },
+        "observed_sharpe": 0.008610728339534158,
+        "deflated_sharpe": -0.4311686411454059,
+        "pbo": 0.5119047619047619,
+        "parameter_stability_score": 0.47085094261103905
+      },
+      {
+        "strategy_name": "vol_targeted_sma",
+        "parameters": {
+          "fast": 200,
+          "slow": 500,
+          "vol_window": 252,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.16803068350934613,
+        "deflated_sharpe": -0.20847410016940748,
+        "pbo": 0.5833333333333334,
+        "parameter_stability_score": 0.3732089972545831
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 51,
+          "z_threshold": 2.25,
+          "trend_window": 400
+        },
+        "observed_sharpe": 0.4719125932875183,
+        "deflated_sharpe": -0.00733268486818478,
+        "pbo": 0.1111111111111111,
+        "parameter_stability_score": 0.26546427537011746
+      },
+      {
+        "strategy_name": "triple_ma_alignment",
+        "parameters": {
+          "fast": 1,
+          "medium": 200,
+          "slow": 202
+        },
+        "observed_sharpe": 0.07626435931339866,
+        "deflated_sharpe": -0.20795720717352395,
+        "pbo": 0.4642857142857143,
+        "parameter_stability_score": 0.5814637824834638
+      },
+      {
+        "strategy_name": "williams_r",
+        "parameters": {
+          "window": 101,
+          "oversold": -75.0,
+          "overbought": -25.0
+        },
+        "observed_sharpe": 0.203130346876866,
+        "deflated_sharpe": -0.5104230107018286,
+        "pbo": 0.30158730158730157,
+        "parameter_stability_score": 0.38271691571452127
+      },
+      {
+        "strategy_name": "cci",
+        "parameters": {
+          "window": 200,
+          "threshold": 175.0
+        },
+        "observed_sharpe": 0.24343791536091985,
+        "deflated_sharpe": -0.14996981698739703,
+        "pbo": 0.3611111111111111,
+        "parameter_stability_score": 0.23155849265367592
+      },
+      {
+        "strategy_name": "stochastic_oscillator",
+        "parameters": {
+          "k_window": 200,
+          "d_window": 26,
+          "oversold": 25.0,
+          "overbought": 99.0
+        },
+        "observed_sharpe": 0.5375437668836133,
+        "deflated_sharpe": -0.26969073862708537,
+        "pbo": 0.3611111111111111,
+        "parameter_stability_score": 0.08635072214961158
+      },
+      {
+        "strategy_name": "trix",
+        "parameters": {
+          "window": 2,
+          "signal": 50
+        },
+        "observed_sharpe": 0.11324926917485237,
+        "deflated_sharpe": -0.03139082777756558,
+        "pbo": 0.746031746031746,
+        "parameter_stability_score": 0.31542207907574343
+      },
+      {
+        "strategy_name": "aroon",
+        "parameters": {
+          "window": 200
+        },
+        "observed_sharpe": -0.1352772081201645,
+        "deflated_sharpe": -0.2878033394908569,
+        "pbo": 0.873015873015873,
+        "parameter_stability_score": 0.6395429880892708
+      },
+      {
+        "strategy_name": "chaikin_money_flow",
+        "parameters": {
+          "window": 101,
+          "threshold": 0.255
+        },
+        "observed_sharpe": 0.0,
+        "deflated_sharpe": -0.26972315896427485,
+        "pbo": 0.6825396825396826,
+        "parameter_stability_score": 0.4881519269884305
+      },
+      {
+        "strategy_name": "vwap_reversion",
+        "parameters": {
+          "window": 101,
+          "threshold": 0.2
+        },
+        "observed_sharpe": 0.31764784868398765,
+        "deflated_sharpe": -0.1678916427237851,
+        "pbo": 0.2698412698412698,
+        "parameter_stability_score": 0.15860432820861864
+      },
+      {
+        "strategy_name": "adx",
+        "parameters": {
+          "window": 2,
+          "threshold": 60.0
+        },
+        "observed_sharpe": 0.12552246024047795,
+        "deflated_sharpe": -0.1894315456544531,
+        "pbo": 0.8928571428571429,
+        "parameter_stability_score": 0.3389149635195982
+      },
+      {
+        "strategy_name": "connors_rsi",
+        "parameters": {
+          "window": 2,
+          "oversold": 1.0,
+          "overbought": 99.0
+        },
+        "observed_sharpe": 0.25018294396351515,
+        "deflated_sharpe": -0.3735865399786913,
+        "pbo": 0.1984126984126984,
+        "parameter_stability_score": 0.42767431274489653
+      },
+      {
+        "strategy_name": "fifty_two_week_high",
+        "parameters": {
+          "window": 2,
+          "near_high": 0.75,
+          "near_low": 0.1
+        },
+        "observed_sharpe": 0.27122775335770405,
+        "deflated_sharpe": -0.16557424326130887,
+        "pbo": 0.2857142857142857,
+        "parameter_stability_score": 0.3458449737287825
+      },
+      {
+        "strategy_name": "ultimate_oscillator",
+        "parameters": {
+          "oversold": 1.0,
+          "overbought": 75.0
+        },
+        "observed_sharpe": 0.005334586215374381,
+        "deflated_sharpe": -0.31577512645632616,
+        "pbo": 0.4523809523809524,
+        "parameter_stability_score": 0.550494649795402
+      },
+      {
+        "strategy_name": "vol_managed_momentum",
+        "parameters": {
+          "lookback": 250,
+          "vol_window": 127,
+          "target_vol": 0.01
+        },
+        "observed_sharpe": 0.12091541398726977,
+        "deflated_sharpe": -0.2550489711055811,
+        "pbo": 0.4246031746031746,
+        "parameter_stability_score": 0.5347299548130579
+      },
+      {
+        "strategy_name": "residual_momentum",
+        "parameters": {
+          "lookback": 250,
+          "skip": 0,
+          "mean_window": 252
+        },
+        "observed_sharpe": 0.11651346883124748,
+        "deflated_sharpe": -0.5182609082998962,
+        "pbo": 0.5595238095238095,
+        "parameter_stability_score": 0.5223784415960853
+      },
+      {
+        "strategy_name": "overnight_gap",
+        "parameters": {
+          "threshold": 0.0775
+        },
+        "observed_sharpe": 0.0164967497218535,
+        "deflated_sharpe": -0.10238667926208288,
+        "pbo": 0.8452380952380952,
+        "parameter_stability_score": 0.3917668481100218
+      },
+      {
+        "strategy_name": "donchian_atr_trail",
+        "parameters": {
+          "entry_window": 101,
+          "atr_window": 2,
+          "atr_multiple": 5.25
+        },
+        "observed_sharpe": 0.2241218854408989,
+        "deflated_sharpe": -0.10456146047611087,
+        "pbo": 0.31746031746031744,
+        "parameter_stability_score": 0.5534087352126216
+      },
+      {
+        "strategy_name": "squeeze_breakout",
+        "parameters": {
+          "window": 101,
+          "bb_num_std": 0.5,
+          "kc_multiple": 0.5
+        },
+        "observed_sharpe": 0.24106054093345375,
+        "deflated_sharpe": -0.21865810977476402,
+        "pbo": 0.5634920634920635,
+        "parameter_stability_score": 0.10196621480673378
+      },
+      {
+        "strategy_name": "atr_channel_breakout",
+        "parameters": {
+          "ma_window": 200,
+          "atr_window": 51,
+          "multiplier": 2.75
+        },
+        "observed_sharpe": 0.0572188207552582,
+        "deflated_sharpe": -0.3242749431028559,
+        "pbo": 0.5793650793650794,
+        "parameter_stability_score": 0.4891647812947267
+      },
+      {
+        "strategy_name": "dual_momentum",
+        "parameters": {
+          "lookback": 500,
+          "trend_window": 251
+        },
+        "observed_sharpe": 0.2136335727072675,
+        "deflated_sharpe": -0.19697809427935156,
+        "pbo": 0.503968253968254,
+        "parameter_stability_score": 0.22134925087110424
+      },
+      {
+        "strategy_name": "regime_filtered_trend",
+        "parameters": {
+          "fast": 1,
+          "slow": 2,
+          "adx_window": 100,
+          "adx_threshold": 10.0
+        },
+        "observed_sharpe": 0.15553773480676056,
+        "deflated_sharpe": -0.1765021729453025,
+        "pbo": 0.8055555555555556,
+        "parameter_stability_score": 0.391182803759224
+      },
+      {
+        "strategy_name": "coppock_curve",
+        "parameters": {
+          "roc_long": 2,
+          "roc_short": 1,
+          "wma_window": 51
+        },
+        "observed_sharpe": 0.17840956993871376,
+        "deflated_sharpe": -0.059741204190315644,
+        "pbo": 0.6904761904761905,
+        "parameter_stability_score": 0.19996121494462787
+      },
+      {
+        "strategy_name": "true_strength_index",
+        "parameters": {
+          "long_window": 2,
+          "short_window": 50
+        },
+        "observed_sharpe": -0.07981476422181445,
+        "deflated_sharpe": -0.21016785565073998,
+        "pbo": 0.9166666666666666,
+        "parameter_stability_score": 0.691579809866758
+      },
+      {
+        "strategy_name": "chande_momentum",
+        "parameters": {
+          "window": 101,
+          "threshold": 10.0
+        },
+        "observed_sharpe": 0.3453452213012006,
+        "deflated_sharpe": -0.20763238555908137,
+        "pbo": 0.007936507936507936,
+        "parameter_stability_score": 0.2799250251740009
+      },
+      {
+        "strategy_name": "narrow_range_breakout",
+        "parameters": {
+          "window": 2
+        },
+        "observed_sharpe": -0.3296275941020369,
+        "deflated_sharpe": -0.34084305352996563,
+        "pbo": 0.9920634920634921,
+        "parameter_stability_score": 0.9631668923043032
+      },
+      {
+        "strategy_name": "trend_filtered_mean_reversion",
+        "parameters": {
+          "z_window": 64,
+          "z_threshold": 2.25,
+          "trend_window": 300
+        },
+        "observed_sharpe": 0.5758625449774123,
+        "deflated_sharpe": 0.18444638033046468,
+        "pbo": 0.15476190476190477,
+        "parameter_stability_score": 0.5089709567794831
+      }
+    ],
+    "lifetime_trials": 35,
+    "best_strategy_name": "trend_filtered_mean_reversion",
+    "best_gate_result": {
+      "passed": false,
+      "dsr_ok": true,
+      "pbo_ok": true,
+      "stability_ok": true,
+      "mintrl_ok": false,
+      "holdout_ok": true,
+      "beats_buy_and_hold_ok": true,
+      "required_track_record_years": 21.442452411539247,
+      "gate_config_version": "250856983fb58b7f0392157eef5c96960a26d0b2b3f81d063281bf6b18eeb493",
+      "reasons": [
+        "track record 17.2y < MinTRL 21.4y for 35 trials at Sharpe 0.58 (not enough data to justify this claim given the search effort)"
+      ]
+    },
+    "fundamentals": null,
+    "fundamental_screen": null,
+    "distress_screen": null,
+    "undervaluation_score": null,
+    "graduate": null,
+    "rationale": "daily discovery shard 6/10"
+  }
+]

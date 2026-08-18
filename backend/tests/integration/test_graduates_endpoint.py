@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.api.v1.graduates import get_pool_path
 from app.main import app
-from app.research.lab.experiment import Experiment, Graduate, JsonFileExperimentStore, Trial
+from app.research.lab.experiment import Experiment, Graduate, PartitionedExperimentStore, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.valuation import UndervaluationScore
 
@@ -88,13 +88,13 @@ def _experiment(
 
 
 def test_default_pool_path_points_at_the_in_repo_data_dir() -> None:
-    assert get_pool_path().name == "research_pool.json"
+    assert get_pool_path().name == "research_pool"  # per-symbol partitions (ADR-032)
     assert get_pool_path().parent.name == "data"
 
 
 def test_graduates_returns_only_graduated_experiments_best_first(tmp_path) -> None:
-    pool = tmp_path / "pool.json"
-    store = JsonFileExperimentStore(pool)
+    pool = tmp_path / "research_pool"
+    store = PartitionedExperimentStore(pool)
     store.add(_experiment("LOW", 0.3, graduated=True))
     store.add(_experiment("CRM", 0.6, graduated=True, undervaluation=0.7))
     store.add(_experiment("SPY", -0.1, graduated=False))
@@ -122,8 +122,8 @@ def test_graduates_is_empty_when_pool_file_absent(tmp_path) -> None:
 
 
 def test_graduates_is_empty_when_no_experiment_graduated(tmp_path) -> None:
-    pool = tmp_path / "pool.json"
-    JsonFileExperimentStore(pool).add(_experiment("SPY", -0.1, graduated=False))
+    pool = tmp_path / "research_pool"
+    PartitionedExperimentStore(pool).add(_experiment("SPY", -0.1, graduated=False))
     app.dependency_overrides[get_pool_path] = lambda: pool
     try:
         assert TestClient(app).get("/api/v1/graduates").json() == []

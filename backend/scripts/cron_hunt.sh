@@ -19,8 +19,8 @@ echo "$OUTPUT"
 
 # Persist the pool + managed book in git (scoped to the two data files; token-free).
 cd "$REPO" || exit 1
-if ! git diff --quiet -- data/research_pool.json data/paper_portfolio.json 2>/dev/null; then
-  git add data/research_pool.json data/paper_portfolio.json
+if ! git diff --quiet -- data/research_pool data/paper_portfolio.json 2>/dev/null; then
+  git add data/research_pool data/paper_portfolio.json
   if git commit -q -m "chore(hunt): scheduled mass-test + auto-promotion $(date +%F)"; then
     git push -q origin master || echo "push failed (network?)"
   fi

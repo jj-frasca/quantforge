@@ -94,7 +94,7 @@ jobs:
           for attempt in 1 2; do
             PYTHONPATH=. uv run python scripts/consolidate_pool.py \
               "$GITHUB_WORKSPACE/shards" \
-              "$GITHUB_WORKSPACE/data/research_pool.json" \
+              "$GITHUB_WORKSPACE/data/research_pool" \
               "$GITHUB_WORKSPACE/data/paper_portfolio.json" | tee "$GITHUB_WORKSPACE/consolidate_out.txt"
             status=${PIPESTATUS[0]}
             [ "$status" -eq 0 ] && break
@@ -110,7 +110,7 @@ jobs:
             | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
       - name: Commit pool + portfolio (if changed)
         run: |
-          git add data/research_pool.json data/paper_portfolio.json
+          git add data/research_pool data/paper_portfolio.json
           if git diff --cached --quiet; then
             echo "no pool/portfolio change"
             exit 0

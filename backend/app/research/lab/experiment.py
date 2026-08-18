@@ -1,4 +1,6 @@
 import json
+import string
+from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
@@ -129,3 +131,110 @@ class JsonFileExperimentStore:
 
     def trials_for_symbol(self, symbol: str) -> int:
         return _trials_for_symbol(self._load(), symbol)
+
+
+_SAFE_PARTITION_CHARS = set(string.ascii_uppercase + string.digits + ".^_-")
+
+
+def _partition_name(symbol: str) -> str:
+    """Symbol -> partition filename stem. Real tickers (BRK-B, BF.B, ^GSPC) pass through unchanged;
+    anything else is sanitized so a malformed symbol can never escape the pool directory."""
+    return "".join(c if c in _SAFE_PARTITION_CHARS else "_" for c in symbol.upper())
+
+
+def retain_recent(
+    experiments: list[Experiment], keep_non_graduate_per_symbol: int
+) -> list[Experiment]:
+    """Bound a pool: keep ALL graduates (the valuable output, cheap) plus the most-recent
+    `keep_non_graduate_per_symbol` NON-graduate experiments per symbol. Honest because the MinTRL
+    denominator is the MAX cumulative `lifetime_trials` and the most-recent experiment — always
+    kept — carries that max, so retention can never lower the graduation bar."""
+    graduates = [e for e in experiments if e.graduate is not None]
+    by_symbol: dict[str, list[Experiment]] = defaultdict(list)
+    for e in experiments:
+        if e.graduate is None:
+            by_symbol[e.symbol].append(e)
+    kept: list[Experiment] = list(graduates)
+    for exps in by_symbol.values():
+        kept.extend(
+            sorted(exps, key=lambda e: e.created_at, reverse=True)[:keep_non_graduate_per_symbol]
+        )
+    return kept
+
+
+class PartitionedExperimentStore:
+    """The research pool, one JSON file per symbol (ADR-032). The single-file pool passed GitHub's
+    100 MB push limit, and rewriting all of it per experiment made `add` O(pool). Here `add` and
+    `trials_for_symbol` — the hot path of every hunt — touch exactly one symbol's partition, and
+    ADR-026's round-robin shards write disjoint files, so the write race is structurally impossible
+    rather than orchestrated around."""
+
+    def __init__(self, directory: Path | str, keep_non_graduate_per_symbol: int = 5) -> None:
+        self._dir = Path(directory)
+        self._keep = keep_non_graduate_per_symbol
+
+    def _partition(self, symbol: str) -> Path:
+        return self._dir / f"{_partition_name(symbol)}.json"
+
+    def _load_partition(self, path: Path) -> list[Experiment]:
+        if not path.exists():
+            return []
+        return [Experiment.model_validate(item) for item in json.loads(path.read_text())]
+
+    def add(self, experiment: Experiment) -> None:
+        self.extend([experiment])
+
+    def extend(self, experiments: list[Experiment]) -> None:
+        """Fold a batch in, one partition write per touched symbol. Deduped by `experiment_id`, so
+        re-running a shard replaces its experiments instead of duplicating the record."""
+        incoming: dict[str, list[Experiment]] = defaultdict(list)
+        for experiment in experiments:
+            incoming[experiment.symbol].append(experiment)
+        for symbol, batch in incoming.items():
+            path = self._partition(symbol)
+            by_id = {e.experiment_id: e for e in self._load_partition(path)}
+            by_id.update({e.experiment_id: e for e in batch})
+            self._dir.mkdir(parents=True, exist_ok=True)
+            kept = retain_recent(list(by_id.values()), self._keep)
+            payload = [e.model_dump(mode="json") for e in kept]
+            # Trailing newline so the file satisfies the end-of-file-fixer pre-commit hook.
+            path.write_text(json.dumps(payload, indent=2) + "\n")
+
+    def all(self) -> list[Experiment]:
+        return [
+            exp for path in sorted(self._dir.glob("*.json")) for exp in self._load_partition(path)
+        ]
+
+    def trials_for_symbol(self, symbol: str) -> int:
+        return _trials_for_symbol(self._load_partition(self._partition(symbol)), symbol)
+
+
+def migrate_pool_to_partitions(
+    source: Path, directory: Path, keep_non_graduate_per_symbol: int | None = None
+) -> int:
+    """One-shot ADR-032 migration: split a single-file pool into per-symbol partitions.
+
+    Lossless by default — retention is disabled (`None`) so every experiment survives the move, and
+    the source is removed only after the partitions are verified to hold exactly the same experiment
+    ids. Passing a retention limit that would drop experiments makes the verification fail and leaves
+    the source in place: a migration that silently loses part of the scientific record is a bug, not
+    a feature. Refuses a non-empty destination so a re-run cannot duplicate the record. Returns the
+    count migrated.
+    """
+    monolith = JsonFileExperimentStore(source)
+    experiments = monolith.all()
+    if not experiments:
+        return 0
+    keep = (
+        len(experiments) if keep_non_graduate_per_symbol is None else keep_non_graduate_per_symbol
+    )
+    partitioned = PartitionedExperimentStore(directory, keep)
+    if partitioned.all():
+        raise RuntimeError(f"destination {directory} is not empty — refusing to migrate into it")
+    for experiment in experiments:
+        partitioned.add(experiment)
+    expected = {e.experiment_id for e in experiments}
+    if {e.experiment_id for e in partitioned.all()} != expected:
+        raise RuntimeError(f"partitioned pool does not match {source} — source left in place")
+    source.unlink()
+    return len(experiments)

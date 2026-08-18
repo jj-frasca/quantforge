@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.research.lab.experiment import JsonFileExperimentStore
+from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
 from app.research.lab.universe import LeaderboardRow, rank_experiments
 
@@ -13,8 +13,8 @@ _DATA = Path(__file__).resolve().parents[3].parent / "data"
 
 
 def get_pool_path() -> Path:
-    """Path to the research pool JSON (overridable in tests)."""
-    return _DATA / "research_pool.json"
+    """Path to the research pool directory — one JSON per symbol, ADR-032 (overridable in tests)."""
+    return _DATA / "research_pool"
 
 
 def get_portfolio_path() -> Path:
@@ -25,7 +25,7 @@ def get_portfolio_path() -> Path:
 # Sync + read-only: just reads the committed JSON stores (no running hunt, no DB).
 @router.get("/leaderboard", response_model=list[LeaderboardRow])
 def leaderboard(pool_path: Annotated[Path, Depends(get_pool_path)]) -> list[LeaderboardRow]:
-    return rank_experiments(JsonFileExperimentStore(pool_path).all())
+    return rank_experiments(PartitionedExperimentStore(pool_path).all())
 
 
 @router.get("/paper-portfolio", response_model=list[PaperPosition])

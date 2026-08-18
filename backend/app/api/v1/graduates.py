@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
 
-from app.research.lab.experiment import JsonFileExperimentStore
+from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.universe import rank_experiments
 
 router = APIRouter(tags=["graduates"])
@@ -13,8 +13,8 @@ _DATA = Path(__file__).resolve().parents[3].parent / "data"
 
 
 def get_pool_path() -> Path:
-    """Path to the research pool JSON (overridable in tests)."""
-    return _DATA / "research_pool.json"
+    """Path to the research pool directory — one JSON per symbol, ADR-032 (overridable in tests)."""
+    return _DATA / "research_pool"
 
 
 class GraduateRow(BaseModel):
@@ -35,7 +35,7 @@ class GraduateRow(BaseModel):
 # Sync + read-only: reranks the committed pool and keeps only its graduates (no hunt, no DB).
 @router.get("/graduates", response_model=list[GraduateRow])
 def graduates(pool_path: Annotated[Path, Depends(get_pool_path)]) -> list[GraduateRow]:
-    rows = rank_experiments(JsonFileExperimentStore(pool_path).all())
+    rows = rank_experiments(PartitionedExperimentStore(pool_path).all())
     # rank_experiments already orders graduates first, by deflated Sharpe descending, so filtering
     # preserves best-first order.
     return [
