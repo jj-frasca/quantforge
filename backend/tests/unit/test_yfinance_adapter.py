@@ -76,6 +76,32 @@ def test_a_vendor_fetch_error_is_normalized_to_oserror() -> None:
         )
 
 
+def test_a_nonfinite_price_from_the_vendor_is_normalized_to_oserror() -> None:
+    # Regression (found via the fundamental sweep, 2026-08-18): yfinance returns NaN prices for
+    # partial/recent or delisted bars; the Decimal normalizer then raises decimal.InvalidOperation
+    # (an ArithmeticError, NOT ValueError/OSError). Normalization runs INSIDE the adapter's guard,
+    # so this crash-class becomes an OSError the resilient hunt records + skips — protecting BOTH
+    # the price hunt and the fundamental sweep from one bad name taking down the whole run.
+    def _nan_bar(symbol: str, start: datetime, end: datetime) -> list[RawBar]:
+        return [
+            RawBar(
+                timestamp=datetime(2024, 1, 2, tzinfo=UTC),
+                open=10.0,
+                high=float("nan"),
+                low=9.0,
+                close=9.5,
+                adj_close=9.5,
+                volume=100,
+            )
+        ]
+
+    adapter = YFinanceAdapter(downloader=_nan_bar)
+    with pytest.raises(OSError, match="fetch failed"):
+        adapter.fetch_price_bars(
+            "AAPL", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 2, 1, tzinfo=UTC)
+        )
+
+
 def test_an_oserror_from_the_downloader_passes_through_unchanged() -> None:
     # OSError is already the kind the hunt handles -> re-raised as-is, not double-wrapped.
     def _raises(symbol: str, start: datetime, end: datetime) -> list[RawBar]:
