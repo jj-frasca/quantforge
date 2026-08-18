@@ -20,6 +20,7 @@ from app.research.cross_sectional.strategies import (
     high_proximity_signal,
     low_volatility_signal,
     momentum_signal,
+    quality_signal,
     residual_momentum_signal,
     reversal_signal,
     risk_adjusted_momentum_signal,
@@ -372,3 +373,35 @@ def test_value_strategy_build_uses_the_scores() -> None:
     value = default_strategies(value_scores={"S0": 0.9})["xs_value"]
     panel = value.build(value.param_grid[0])(prices)
     assert (panel["S0"] == 0.9).all()
+
+
+def test_quality_signal_broadcasts_static_scores_across_dates() -> None:
+    prices = _prices(n_symbols=3)
+    scores = {"S0": 0.7, "S1": 0.3}  # S2 unscored
+    sig = quality_signal(prices, scores)
+    assert sig.shape == prices.shape
+    assert (sig["S0"] == 0.7).all() and (sig["S1"] == 0.3).all()
+    assert sig["S2"].isna().all()  # unscored name -> NaN -> excluded by the ranker
+
+
+def test_default_strategies_add_quality_when_scores_given() -> None:
+    strategies = default_strategies(quality_scores={"S0": 0.7, "S1": 0.3})
+    assert "xs_quality" in strategies
+    assert "xs_quality_value" not in strategies  # needs value scores too
+
+
+def test_default_strategies_add_quality_value_only_when_both_given() -> None:
+    both = default_strategies(
+        value_scores={"S0": 0.8, "S1": 0.2}, quality_scores={"S0": 0.5, "S1": 0.4}
+    )
+    assert {"xs_quality", "xs_value", "xs_quality_value"} <= both.keys()
+
+
+def test_quality_value_strategy_multiplies_quality_and_value() -> None:
+    prices = _prices()
+    strat = default_strategies(
+        value_scores={"S0": 0.8, "S2": 0.5}, quality_scores={"S0": 0.5, "S1": 0.9}
+    )["xs_quality_value"]
+    panel = strat.build(strat.param_grid[0])(prices)
+    assert (panel["S0"] == 0.8 * 0.5).all()  # only S0 has BOTH scores
+    assert panel["S1"].isna().all() and panel["S2"].isna().all()

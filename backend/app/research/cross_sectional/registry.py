@@ -10,6 +10,7 @@ from app.research.cross_sectional.strategies import (
     high_proximity_signal,
     low_volatility_signal,
     momentum_signal,
+    quality_signal,
     residual_momentum_signal,
     reversal_signal,
     risk_adjusted_momentum_signal,
@@ -34,10 +35,12 @@ class CrossSectionalStrategy:
 
 def default_strategies(
     value_scores: Mapping[str, float] | None = None,
+    quality_scores: Mapping[str, float] | None = None,
 ) -> dict[str, CrossSectionalStrategy]:
-    """The shipped cross-sectional strategies (ADR-024). Momentum + reversal are price-only and
-    always present; value is included only when an UndervaluationScore map is supplied (an
-    unscored universe cannot rank on value)."""
+    """The shipped cross-sectional strategies (ADR-024, ADR-029). Momentum + reversal are price-only
+    and always present; value / quality are included only when the corresponding score map is
+    supplied (an unscored universe cannot rank on them). When BOTH are supplied, the combined
+    quality*value factor is added too — good businesses that are also cheap."""
     strategies: dict[str, CrossSectionalStrategy] = {
         "xs_momentum": CrossSectionalStrategy(
             name="xs_momentum",
@@ -110,6 +113,23 @@ def default_strategies(
         strategies["xs_value"] = CrossSectionalStrategy(
             name="xs_value",
             build=lambda p: lambda prices: value_signal(prices, value_scores),
+            param_grid=({},),
+        )
+    if quality_scores is not None:
+        strategies["xs_quality"] = CrossSectionalStrategy(
+            name="xs_quality",
+            build=lambda p: lambda prices: quality_signal(prices, quality_scores),
+            param_grid=({},),
+        )
+    if value_scores is not None and quality_scores is not None:
+        # Good AND cheap: multiply the two as-of snapshots over the symbols scored on both.
+        combined = {
+            sym: quality_scores[sym] * value_scores[sym]
+            for sym in quality_scores.keys() & value_scores.keys()
+        }
+        strategies["xs_quality_value"] = CrossSectionalStrategy(
+            name="xs_quality_value",
+            build=lambda p: lambda prices: quality_signal(prices, combined),
             param_grid=({},),
         )
     return strategies

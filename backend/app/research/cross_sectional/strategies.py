@@ -136,11 +136,26 @@ def high_proximity_signal(prices: pd.DataFrame, window: int) -> pd.DataFrame:
     return prices / prices.rolling(window).max()
 
 
+def _broadcast_scores(prices: pd.DataFrame, scores: Mapping[str, float]) -> pd.DataFrame:
+    """Broadcast a static per-symbol score across every date. Unscored symbols become NaN, which
+    the cross-sectional ranker excludes that day."""
+    row = np.array([scores.get(col, np.nan) for col in prices.columns], dtype=float)
+    broadcast = np.repeat(row[None, :], len(prices), axis=0)
+    return pd.DataFrame(broadcast, index=prices.index, columns=prices.columns)
+
+
 def value_signal(prices: pd.DataFrame, scores: Mapping[str, float]) -> pd.DataFrame:
     """Cross-sectional value (Fama & French 1992; Asness et al. 2013): rank on each symbol's
     UndervaluationScore (ADR-022). The score is a static as-of snapshot broadcast across every
     date (point-in-time value history is deferred, ADR-024). An unscored symbol is NaN -> excluded
     by the ranker that day."""
-    row = np.array([scores.get(col, np.nan) for col in prices.columns], dtype=float)
-    broadcast = np.repeat(row[None, :], len(prices), axis=0)
-    return pd.DataFrame(broadcast, index=prices.index, columns=prices.columns)
+    return _broadcast_scores(prices, scores)
+
+
+def quality_signal(prices: pd.DataFrame, scores: Mapping[str, float]) -> pd.DataFrame:
+    """Cross-sectional quality (Piotroski 2000; Novy-Marx 2013; ADR-029): rank on each symbol's
+    fundamental quality_score. Like value, a static as-of snapshot broadcast across every date
+    (point-in-time fundamentals history deferred, ADR-029); an unscored symbol is NaN -> excluded
+    that day. Judged by the SAME DSR/PBO/holdout gate as every technical factor — fundamentals
+    earn their place, they are not assumed."""
+    return _broadcast_scores(prices, scores)
