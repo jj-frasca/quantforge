@@ -136,6 +136,7 @@ def run_cross_sectional_search(
     strategy_names: Sequence[str] | None = None,
     *,
     value_scores: Mapping[str, float] | None = None,
+    quality_scores: Mapping[str, float] | None = None,
     quantiles: Sequence[float] = (0.1, 0.2, 0.3),
     config: GateConfig | None = None,
     prior_trials: int = 0,
@@ -153,7 +154,7 @@ def run_cross_sectional_search(
     holdout and fed to the unmodified GraduationGate.
     """
     gate_config = config or GateConfig()
-    registry = default_strategies(value_scores=value_scores)
+    registry = default_strategies(value_scores=value_scores, quality_scores=quality_scores)
     names = list(strategy_names) if strategy_names is not None else list(registry)
     in_sample, holdout = split_panel_holdout(prices)
 

@@ -14,26 +14,20 @@ import sys
 from pathlib import Path
 
 from app.research.fundamentals.record import (
-    FundamentalRecord,
+    load_fundamentals_pool,
     merge_fundamental_records,
     rank_fundamentals,
 )
-
-
-def _load(path: Path) -> list[FundamentalRecord]:
-    if not path.exists():
-        return []
-    return [FundamentalRecord.model_validate(row) for row in json.loads(path.read_text())]
 
 
 def main() -> None:
     shard_dir = Path(sys.argv[1])
     main_pool = Path(sys.argv[2])
 
-    merged = _load(main_pool)
+    merged = load_fundamentals_pool(main_pool)
     shard_files = sorted(shard_dir.glob("fundamentals_shard_*.json"))
     for shard_file in shard_files:
-        merged = merge_fundamental_records(merged, _load(shard_file))
+        merged = merge_fundamental_records(merged, load_fundamentals_pool(shard_file))
 
     main_pool.parent.mkdir(parents=True, exist_ok=True)
     payload = [r.model_dump(mode="json") for r in merged]

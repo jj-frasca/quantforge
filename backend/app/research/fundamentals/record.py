@@ -8,6 +8,9 @@ and keeping the newest filing — which bounds the pool to one row per company. 
 is the leaderboard: the genuinely good, reasonably priced companies. All network-free (the network
 lives in the sweep script); every score cites its filing and flags potential, never guarantees."""
 
+import json
+from pathlib import Path
+
 from pydantic import BaseModel, ConfigDict
 
 from app.data.fundamentals import FundamentalsHistory
@@ -86,6 +89,26 @@ def merge_fundamental_records(
         if current is None or rec.fiscal_year >= current.fiscal_year:
             by_cik[rec.cik] = rec
     return list(by_cik.values())
+
+
+def load_fundamentals_pool(path: Path) -> list[FundamentalRecord]:
+    """Read the consolidated pool. Absent file -> no records: the pool is written only by the cloud
+    sweep (ADR-030), so a fresh clone or a pre-first-sweep repo must degrade to "no scores" rather
+    than crash whatever is reading it."""
+    if not path.exists():
+        return []
+    return [FundamentalRecord.model_validate(row) for row in json.loads(path.read_text())]
+
+
+def score_maps(
+    records: list[FundamentalRecord],
+) -> tuple[dict[str, float], dict[str, float]]:
+    """Project the fundamentals pool into (quality_scores, value_scores) symbol->score maps for the
+    cross-sectional hunt (ADR-029 4a). A symbol appears in a map only when that leg is not None, so
+    an unscored name is simply absent — the ranker excludes it that day."""
+    quality = {r.symbol: r.quality_score for r in records if r.quality_score is not None}
+    value = {r.symbol: r.value_score for r in records if r.value_score is not None}
+    return quality, value
 
 
 def rank_fundamentals(

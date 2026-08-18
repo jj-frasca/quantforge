@@ -123,3 +123,20 @@ def test_run_cross_sectional_hunt_needs_at_least_two_symbols() -> None:
     store = InMemoryCrossSectionalStore()
     with pytest.raises(ValueError, match="at least 2 symbols"):
         run_cross_sectional_hunt(["A", "BAD"], _provider(frames), store=store)
+
+
+def test_run_cross_sectional_hunt_forwards_quality_scores_to_the_registry() -> None:
+    # ADR-029 4b: the fundamentals pool feeds quality scores into the hunt, so xs_quality is only
+    # searchable when those scores actually reach the registry through the hunt's kwargs.
+    symbols = ["A", "B", "C", "D", "E", "F"]
+    frames = {s: _frame(560, i) for i, s in enumerate(symbols)}
+    store = InMemoryCrossSectionalStore()
+    result = run_cross_sectional_hunt(
+        symbols,
+        _provider(frames),
+        store=store,
+        strategy_names=["xs_quality"],
+        quality_scores={s: (i + 1) / 6.0 for i, s in enumerate(symbols)},
+        quantiles=(0.2, 0.3),
+    )
+    assert [t.strategy_name for t in result.experiment.trials] == ["xs_quality"]

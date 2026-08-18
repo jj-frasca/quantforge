@@ -3,12 +3,17 @@ fundamental discovery sweep. A record is the per-company as-of snapshot the swee
 dedups by CIK keeping the newest filing (bounding the pool to one row per company); the leaderboard
 ranks the "genuinely good, reasonably priced" companies. All pure — the network lives in the script."""
 
+import json
+from pathlib import Path
+
 from app.data.fundamentals import AnnualFundamentals, FundamentalsHistory
 from app.research.fundamentals.record import (
     FundamentalRecord,
     compute_fundamental_record,
+    load_fundamentals_pool,
     merge_fundamental_records,
     rank_fundamentals,
+    score_maps,
 )
 
 
@@ -150,3 +155,42 @@ def test_rank_by_quality_respects_top_n() -> None:
 def test_rank_empty_when_all_scores_none() -> None:
     records = [_record("A", 1, 2024, quality=None, combined=None)]
     assert rank_fundamentals(records, by="quality") == []
+
+
+# ---- score_maps (pool -> cross-sectional score inputs, ADR-029 4b) --------------------------------
+
+
+def test_score_maps_projects_quality_and_value_by_symbol() -> None:
+    records = [
+        _record("AAA", 1, 2024, quality=0.8, value=0.3),
+        _record("BBB", 2, 2024, quality=0.4, value=0.9),
+    ]
+    quality, value = score_maps(records)
+    assert quality == {"AAA": 0.8, "BBB": 0.4}
+    assert value == {"AAA": 0.3, "BBB": 0.9}
+
+
+def test_score_maps_omits_symbols_whose_leg_is_unscored() -> None:
+    # A name with no meaningful valuation (non-positive EPS, no P/S history) has value_score=None.
+    # It must be ABSENT from the value map — never coerced to 0.0, which would rank it as the most
+    # expensive name in the universe and put it in the short leg on missing data.
+    records = [_record("HASQ", 1, 2024, quality=0.7, value=None)]
+    quality, value = score_maps(records)
+    assert quality == {"HASQ": 0.7}
+    assert value == {}
+
+
+# ---- load_fundamentals_pool ----------------------------------------------------------------------
+
+
+def test_load_fundamentals_pool_round_trips_records(tmp_path: Path) -> None:
+    path = tmp_path / "fundamentals_pool.json"
+    records = [_record("AAA", 1, 2024, quality=0.8, value=0.3)]
+    path.write_text(json.dumps([r.model_dump(mode="json") for r in records]))
+    assert load_fundamentals_pool(path) == records
+
+
+def test_load_fundamentals_pool_is_empty_when_the_file_is_absent(tmp_path: Path) -> None:
+    # The pool is written only by the cloud sweep (ADR-030), so a fresh clone has no file yet —
+    # readers must degrade to "no scores" rather than crash the hunt.
+    assert load_fundamentals_pool(tmp_path / "missing.json") == []

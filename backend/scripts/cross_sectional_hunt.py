@@ -24,9 +24,11 @@ from app.data.sources.yfinance import YFinanceAdapter
 from app.research.cross_sectional.hunt import run_cross_sectional_hunt
 from app.research.cross_sectional.store import JsonFileCrossSectionalStore
 from app.research.frames import bars_to_frame
+from app.research.fundamentals.record import load_fundamentals_pool, score_maps
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 POOL = DATA / "cross_sectional_pool.json"
+FUNDAMENTALS_POOL = DATA / "fundamentals_pool.json"
 DEFAULT_UNIVERSE = DATA / "universes" / "sp500.txt"
 START = datetime(2005, 1, 1, tzinfo=UTC)
 
@@ -51,10 +53,22 @@ def main() -> None:
     def frame_provider(symbol: str) -> pd.DataFrame:
         return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
 
-    print(f"Cross-sectional hunt over {len(symbols)} symbols (yfinance max history)...\n")
+    # ADR-029 4b: the weekly EDGAR sweep's pool supplies the fundamental legs. A symbol missing
+    # from a map is simply excluded from that factor's ranking, so an unswept universe degrades to
+    # the price-only factors instead of ranking on zeros.
+    quality_scores, value_scores = score_maps(load_fundamentals_pool(FUNDAMENTALS_POOL))
+    print(
+        f"Cross-sectional hunt over {len(symbols)} symbols (yfinance max history); "
+        f"fundamentals pool: {len(quality_scores)} quality / {len(value_scores)} value scores\n"
+    )
     try:
         result = run_cross_sectional_hunt(
-            symbols, frame_provider, store=store, rationale="scheduled cross-sectional hunt"
+            symbols,
+            frame_provider,
+            store=store,
+            quality_scores=quality_scores or None,
+            value_scores=value_scores or None,
+            rationale="scheduled cross-sectional hunt",
         )
     except ValueError as exc:
         # Not enough usable data to rank cross-sectionally (too few symbols with history, or a thin
