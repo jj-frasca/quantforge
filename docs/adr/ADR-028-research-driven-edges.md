@@ -1,6 +1,6 @@
 # ADR-028: Research-driven edges — Alpha101 factors, multi-factor composite, meta-labeling proposal
 
-- **Status**: Accepted (Alpha101 + composite); Proposed (meta-labeling — needs Joe's sign-off on an ML dependency)
+- **Status**: Accepted (Alpha101 + composite). The meta-labeling proposal is RESOLVED — declined by ADR-034 until a primary graduate clears the ADR-018 universe-deflation bar.
 - **Date**: 2026-08-04
 - **Deciders**: Joe Frasca
 - **Extends**: ADR-024 (cross-sectional dimension), ADR-026 (maximum discovery)
