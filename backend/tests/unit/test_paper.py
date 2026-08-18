@@ -18,6 +18,7 @@ from app.research.lab.paper import (
     evaluate_forward,
     freeze_graduate,
 )
+from app.research.lab.universe import expected_max_sharpe_under_null
 
 _FREEZE = datetime(2020, 1, 1, tzinfo=UTC)
 
@@ -241,3 +242,84 @@ def test_evaluate_lifecycle_holds_when_no_forward_data() -> None:
 def test_evaluate_lifecycle_runs_on_a_real_frame() -> None:
     d = evaluate_lifecycle(_position(), _frame(), ExitPolicy())
     assert d.action in {"hold", "exit"}
+
+
+# ---- ADR-033: the universe-deflation verdict is recorded at freeze time --------------------------
+
+
+def _graduated_experiment(holdout_sharpe: float = 0.44, holdout_n_bars: int = 1000) -> Experiment:
+    return Experiment(
+        symbol="CRM",
+        strategy_names=["rsi_mean_reversion"],
+        gate_config=GateConfig(),
+        trials=[
+            Trial(
+                strategy_name="rsi_mean_reversion",
+                parameters={"window": 14},
+                observed_sharpe=1.0,
+                deflated_sharpe=0.5,
+                pbo=0.1,
+                parameter_stability_score=0.8,
+            )
+        ],
+        lifetime_trials=1,
+        graduate=Graduate(
+            strategy_name="rsi_mean_reversion",
+            parameters={"window": 14},
+            gate_result=GateResult(
+                passed=True,
+                dsr_ok=True,
+                pbo_ok=True,
+                stability_ok=True,
+                mintrl_ok=True,
+                holdout_ok=True,
+                required_track_record_years=1.0,
+                gate_config_version="v",
+            ),
+            holdout_sharpe=holdout_sharpe,
+            holdout_total_return=0.08,
+            holdout_n_bars=holdout_n_bars,
+        ),
+    )
+
+
+def test_freeze_graduate_records_the_universe_deflation_verdict() -> None:
+    exp = _graduated_experiment(holdout_sharpe=2.0, holdout_n_bars=1080)
+    pos = freeze_graduate(exp, frozen_at=_FREEZE, universe_n_symbols=607)
+    # 607 names, 4.3y holdout -> bar ~1.73; a 2.0 holdout Sharpe clears it.
+    assert pos.universe_n_symbols == 607
+    assert pos.universe_deflation_bar == pytest.approx(
+        expected_max_sharpe_under_null(607, 1080 / 252)
+    )
+    assert pos.survives_universe_deflation is True
+
+
+def test_freeze_graduate_records_a_failing_verdict_rather_than_refusing() -> None:
+    # ADR-033 records, it does not block: the non-survivors are the control group that makes the
+    # bar's own calibration measurable.
+    exp = _graduated_experiment(holdout_sharpe=0.9, holdout_n_bars=1080)
+    pos = freeze_graduate(exp, frozen_at=_FREEZE, universe_n_symbols=607)
+    assert pos.survives_universe_deflation is False
+    assert pos.status == "open"
+
+
+def test_freeze_graduate_leaves_the_verdict_unknown_when_no_universe_is_given() -> None:
+    # A single-symbol run selected from nothing — there is no cross-symbol selection to deflate,
+    # so the honest record is "unknown", not a fabricated pass.
+    pos = freeze_graduate(_graduated_experiment(), frozen_at=_FREEZE)
+    assert pos.survives_universe_deflation is None
+    assert pos.universe_deflation_bar is None
+    assert pos.universe_n_symbols is None
+
+
+def test_positions_persisted_before_adr_033_still_validate() -> None:
+    # The committed book has 43 positions written without these fields; they must load as unknown.
+    legacy = {
+        "symbol": "CRM",
+        "strategy_name": "rsi_mean_reversion",
+        "parameters": {"window": 14},
+        "frozen_at": "2026-07-06T16:26:19.227397Z",
+    }
+    position = PaperPosition.model_validate(legacy)
+    assert position.survives_universe_deflation is None
+    assert position.universe_n_symbols is None

@@ -25,9 +25,17 @@ from app.research.lab.experiment import (
 )
 from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.pool_merge import merge_experiments
-from app.research.lab.portfolio_manager import manage_portfolio, newly_promoted
+from app.research.lab.portfolio_manager import (
+    deflation_cohorts,
+    manage_portfolio,
+    newly_promoted,
+)
 
 START = datetime(2005, 1, 1, tzinfo=UTC)
+
+
+def _fmt(value: float | None) -> str:
+    return f"{value:.2f}" if value is not None else "n/a"
 
 
 def main() -> None:
@@ -54,7 +62,11 @@ def main() -> None:
 
     graduates = [e for e in merged if e.graduate is not None]
     before = portfolio.positions()
-    positions = manage_portfolio(before, graduates, frame_provider, now=now)
+    # ADR-033: the universe a graduate was selected from IS the deflation denominator.
+    universe_n_symbols = len({e.symbol for e in merged})
+    positions = manage_portfolio(
+        before, graduates, frame_provider, now=now, universe_n_symbols=universe_n_symbols
+    )
     portfolio.save(positions)
 
     n_open = sum(1 for p in positions if p.status == "open")
@@ -62,6 +74,14 @@ def main() -> None:
     print(
         f"consolidated {len(shard_files)} shard(s) -> {len(merged)} experiments "
         f"({len(incoming)} incoming), {len(graduates)} graduate(s); managed book: {n_open} open"
+    )
+    cohorts = deflation_cohorts([p for p in positions if p.status == "open"])
+    surv = _fmt(cohorts.survivor_mean_forward_sharpe)
+    non = _fmt(cohorts.non_survivor_mean_forward_sharpe)
+    print(
+        f"universe deflation (ADR-033, N={universe_n_symbols}): "
+        f"{cohorts.n_survivors} clear the best-of-N bar (mean fwd Sharpe {surv}), "
+        f"{cohorts.n_non_survivors} do not ({non}), {cohorts.n_unknown} unknown"
     )
     if promoted:
         print(f"NEW this run ({len(promoted)} promoted — what just cleared the gate):")

@@ -2,6 +2,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 import pandas as pd
+from pydantic import BaseModel, ConfigDict
 
 from app.research.lab.experiment import Experiment
 from app.research.lab.paper import (
@@ -23,6 +24,43 @@ def newly_promoted(before: list[PaperPosition], after: list[PaperPosition]) -> l
     return [p for p in after if (p.symbol, p.strategy_name) not in prior]
 
 
+class DeflationCohorts(BaseModel):
+    """The paper book split by the ADR-018 universe-deflation verdict recorded at promotion
+    (ADR-033). The honest headline for any book summary: how many of these positions are actually
+    distinguishable from best-of-N selection luck, and are those the ones performing forward?
+
+    Positions whose verdict is unknown (frozen before ADR-033, or from a single-symbol run) are
+    counted separately and excluded from both means — fabricating a control group out of missing
+    metadata would be worse than reporting less."""
+
+    model_config = ConfigDict(frozen=True)
+
+    n_survivors: int
+    n_non_survivors: int
+    n_unknown: int
+    survivor_mean_forward_sharpe: float | None = None
+    non_survivor_mean_forward_sharpe: float | None = None
+
+
+def _mean_forward_sharpe(positions: list[PaperPosition]) -> float | None:
+    scored = [p.score.forward_sharpe for p in positions if p.score is not None]
+    return sum(scored) / len(scored) if scored else None
+
+
+def deflation_cohorts(positions: list[PaperPosition]) -> DeflationCohorts:
+    """Summarize `positions` by their recorded universe-deflation verdict (ADR-033)."""
+    survivors = [p for p in positions if p.survives_universe_deflation is True]
+    non_survivors = [p for p in positions if p.survives_universe_deflation is False]
+    unknown = [p for p in positions if p.survives_universe_deflation is None]
+    return DeflationCohorts(
+        n_survivors=len(survivors),
+        n_non_survivors=len(non_survivors),
+        n_unknown=len(unknown),
+        survivor_mean_forward_sharpe=_mean_forward_sharpe(survivors),
+        non_survivor_mean_forward_sharpe=_mean_forward_sharpe(non_survivors),
+    )
+
+
 def manage_portfolio(
     positions: list[PaperPosition],
     graduate_experiments: list[Experiment],
@@ -30,6 +68,7 @@ def manage_portfolio(
     *,
     exit_policy: ExitPolicy | None = None,
     now: datetime,
+    universe_n_symbols: int | None = None,
 ) -> list[PaperPosition]:
     """Advance the managed paper book one step (ADR-020): PROMOTE new graduates, MONITOR every open
     position, and EXIT the deteriorating ones. Closed positions are kept as an honest record and a
@@ -47,7 +86,9 @@ def manage_portfolio(
         key = (experiment.symbol, experiment.graduate.strategy_name)
         if key in held:
             continue
-        book.append(freeze_graduate(experiment, frozen_at=now))
+        book.append(
+            freeze_graduate(experiment, frozen_at=now, universe_n_symbols=universe_n_symbols)
+        )
         held.add(key)
 
     # Monitor + exit: only OPEN positions; closed ones are left untouched.

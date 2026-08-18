@@ -10,7 +10,10 @@ from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.backtesting.metrics import max_drawdown, sharpe_ratio
 from app.research.lab.experiment import Experiment
+from app.research.lab.universe import expected_max_sharpe_under_null
 from app.research.strategies.builder import build_strategy_from_dict
+
+_TRADING_DAYS = 252
 
 
 class ForwardEquityPoint(BaseModel):
@@ -60,6 +63,15 @@ class PaperPosition(BaseModel):
     status: Literal["open", "closed"] = "open"
     closed_at: datetime | None = None
     exit_reasons: list[str] = []
+    # ADR-033: the cross-symbol-selection verdict AS OF PROMOTION. Recorded, never recomputed — the
+    # bar depends on the universe size at the moment of selection, so back-computing today's N would
+    # rewrite the test this position actually faced. None = honestly unknown (a single-symbol run,
+    # or a position frozen before ADR-033), which is excluded from cohort comparisons, not assumed
+    # into one. Recorded and reported; it does NOT block promotion — see ADR-033 on why the
+    # non-survivors are the control group.
+    survives_universe_deflation: bool | None = None
+    universe_deflation_bar: float | None = None
+    universe_n_symbols: int | None = None
 
 
 class ExitPolicy(BaseModel):
@@ -153,16 +165,32 @@ def evaluate_lifecycle(
     return lifecycle_from_returns(fwd, bh, policy)
 
 
-def freeze_graduate(experiment: Experiment, frozen_at: datetime) -> PaperPosition:
-    """Turn a graduated Experiment into a paper position frozen as of `frozen_at`."""
+def freeze_graduate(
+    experiment: Experiment, frozen_at: datetime, universe_n_symbols: int | None = None
+) -> PaperPosition:
+    """Turn a graduated Experiment into a paper position frozen as of `frozen_at`.
+
+    `universe_n_symbols` is the number of names this graduate was selected from; given it, the
+    ADR-018 best-of-N-under-the-null bar and the verdict against it are recorded on the position
+    (ADR-033). Omitted (a single-symbol run) leaves the verdict honestly unknown — there was no
+    cross-symbol selection to deflate, which is not the same as passing.
+    """
     if experiment.graduate is None:
         raise ValueError(f"experiment for {experiment.symbol!r} has no graduate to freeze")
     g = experiment.graduate
+    bar: float | None = None
+    survives: bool | None = None
+    if universe_n_symbols is not None:
+        bar = expected_max_sharpe_under_null(universe_n_symbols, g.holdout_n_bars / _TRADING_DAYS)
+        survives = g.holdout_sharpe > bar
     return PaperPosition(
         symbol=experiment.symbol,
         strategy_name=g.strategy_name,
         parameters=g.parameters,
         frozen_at=frozen_at,
+        survives_universe_deflation=survives,
+        universe_deflation_bar=bar,
+        universe_n_symbols=universe_n_symbols,
     )
 
 

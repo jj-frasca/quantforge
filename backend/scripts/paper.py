@@ -16,12 +16,16 @@ from app.dependencies import build_data_adapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio
-from app.research.lab.portfolio_manager import manage_portfolio
+from app.research.lab.portfolio_manager import deflation_cohorts, manage_portfolio
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 POOL = DATA / "research_pool"  # per-symbol partitions (ADR-032)
 PORTFOLIO = DATA / "paper_portfolio.json"
 START = datetime(2005, 1, 1, tzinfo=UTC)
+
+
+def _fmt(value: float | None) -> str:
+    return f"{value:.2f}" if value is not None else "n/a"
 
 
 def main() -> None:
@@ -33,9 +37,18 @@ def main() -> None:
     def frame_provider(symbol: str):
         return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
 
-    graduates = [e for e in pool.all() if e.graduate is not None]
+    experiments = pool.all()
+    graduates = [e for e in experiments if e.graduate is not None]
     before = {p.symbol for p in portfolio.positions()}
-    updated = manage_portfolio(portfolio.positions(), graduates, frame_provider, now=now)
+    # ADR-033: the universe a graduate was selected from IS the deflation denominator.
+    universe_n_symbols = len({e.symbol for e in experiments})
+    updated = manage_portfolio(
+        portfolio.positions(),
+        graduates,
+        frame_provider,
+        now=now,
+        universe_n_symbols=universe_n_symbols,
+    )
     portfolio.save(updated)
 
     for position in updated:
@@ -65,6 +78,15 @@ def main() -> None:
     n_open = sum(1 for p in updated if p.status == "open")
     n_closed = sum(1 for p in updated if p.status == "closed")
     print(f"\n{n_open} open, {n_closed} closed.")
+
+    cohorts = deflation_cohorts([p for p in updated if p.status == "open"])
+    surv = _fmt(cohorts.survivor_mean_forward_sharpe)
+    non = _fmt(cohorts.non_survivor_mean_forward_sharpe)
+    print(
+        f"universe deflation (ADR-033, N={universe_n_symbols}): "
+        f"{cohorts.n_survivors} clear the best-of-N bar (mean fwd Sharpe {surv}), "
+        f"{cohorts.n_non_survivors} do not ({non}), {cohorts.n_unknown} unknown"
+    )
 
 
 if __name__ == "__main__":

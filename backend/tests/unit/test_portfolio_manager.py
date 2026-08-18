@@ -6,11 +6,12 @@ from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult
-from app.research.lab.paper import ExitPolicy, PaperPosition
-from app.research.lab.portfolio_manager import manage_portfolio
+from app.research.lab.paper import ExitPolicy, ForwardScore, PaperPosition
+from app.research.lab.portfolio_manager import deflation_cohorts, manage_portfolio
 
 _NOW = datetime(2024, 6, 1, tzinfo=UTC)
 _ALWAYS_EXIT = ExitPolicy(min_rolling_sharpe=100.0)  # rolling Sharpe never >= 100 -> always exits
@@ -165,3 +166,78 @@ def test_closed_name_is_not_re_promoted() -> None:
         [closed], [_graduate_exp("CRM")], _provider, exit_policy=_NEVER_EXIT, now=_NOW
     )
     assert len(out) == 1 and out[0].status == "closed"  # a cut loser isn't re-added
+
+
+# ---- ADR-033: the deflation verdict is threaded through promotion, and reported by cohort --------
+
+
+def _scored_position(
+    symbol: str, *, survives: bool | None, forward_sharpe: float | None
+) -> PaperPosition:
+    score = None
+    if forward_sharpe is not None:
+        score = ForwardScore(
+            forward_bars=63,
+            forward_return=0.05,
+            forward_sharpe=forward_sharpe,
+            buy_and_hold_return=0.03,
+            buy_and_hold_sharpe=0.4,
+            beats_buy_and_hold=True,
+            as_of=_NOW,
+        )
+    return PaperPosition(
+        symbol=symbol,
+        strategy_name="rsi_mean_reversion",
+        parameters={"window": 14},
+        frozen_at=_NOW,
+        score=score,
+        survives_universe_deflation=survives,
+    )
+
+
+def test_promotion_records_the_universe_deflation_verdict_on_the_new_position() -> None:
+    out = manage_portfolio(
+        [],
+        [_graduate_exp("CRM")],
+        _provider,
+        exit_policy=_NEVER_EXIT,
+        now=_NOW,
+        universe_n_symbols=607,
+    )
+    assert out[0].universe_n_symbols == 607
+    assert out[0].survives_universe_deflation is not None
+
+
+def test_promotion_without_a_universe_leaves_the_verdict_unknown() -> None:
+    out = manage_portfolio([], [_graduate_exp("CRM")], _provider, exit_policy=_NEVER_EXIT, now=_NOW)
+    assert out[0].survives_universe_deflation is None
+
+
+def test_deflation_cohorts_splits_the_book_and_excludes_the_unknowns() -> None:
+    # Positions frozen before ADR-033 carry None. They are NOT assigned a cohort — counting them
+    # as failures would fabricate a control group out of missing metadata.
+    book = [
+        _scored_position("A", survives=True, forward_sharpe=1.5),
+        _scored_position("B", survives=True, forward_sharpe=0.5),
+        _scored_position("C", survives=False, forward_sharpe=-0.4),
+        _scored_position("D", survives=None, forward_sharpe=9.9),
+    ]
+    cohorts = deflation_cohorts(book)
+    assert cohorts.n_survivors == 2
+    assert cohorts.n_non_survivors == 1
+    assert cohorts.n_unknown == 1
+    assert cohorts.survivor_mean_forward_sharpe == pytest.approx(1.0)
+    assert cohorts.non_survivor_mean_forward_sharpe == pytest.approx(-0.4)
+
+
+def test_deflation_cohorts_ignores_positions_with_no_forward_score_yet() -> None:
+    book = [_scored_position("A", survives=True, forward_sharpe=None)]
+    cohorts = deflation_cohorts(book)
+    assert cohorts.n_survivors == 1  # still counted in the book
+    assert cohorts.survivor_mean_forward_sharpe is None  # but no score to average
+
+
+def test_deflation_cohorts_of_an_empty_book_is_all_zeros() -> None:
+    cohorts = deflation_cohorts([])
+    assert (cohorts.n_survivors, cohorts.n_non_survivors, cohorts.n_unknown) == (0, 0, 0)
+    assert cohorts.survivor_mean_forward_sharpe is None

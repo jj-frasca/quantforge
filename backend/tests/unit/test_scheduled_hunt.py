@@ -200,3 +200,21 @@ def test_hunt_and_promote_runs_the_hunt_and_records_experiments() -> None:
 
     assert result.hunt.experiments  # the hunt ran on the universe and produced an experiment
     assert pool.all()  # and accumulated it in the pool (the trial flywheel)
+
+
+def test_hunt_and_promote_records_the_pool_universe_as_the_deflation_denominator() -> None:
+    # ADR-033: promotion draws from the WHOLE pool, so the N a graduate was selected from is the
+    # pool's symbol count — not just this run's symbol list.
+    pool = InMemoryExperimentStore()
+    pool.add(_graduate_exp("CRM"))
+    pool.add(_non_graduate_exp("MSFT"))
+    pool.add(_non_graduate_exp("NVDA"))
+    portfolio = _FakePortfolio()
+
+    result = hunt_and_promote([], ["sma"], _provider, pool=pool, portfolio=portfolio, now=_NOW)
+
+    promoted = result.promoted
+    assert [p.symbol for p in promoted] == ["CRM"]
+    assert promoted[0].universe_n_symbols == 3  # CRM, MSFT, NVDA
+    assert promoted[0].survives_universe_deflation is not None
+    assert promoted[0].universe_deflation_bar is not None

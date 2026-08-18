@@ -72,10 +72,18 @@ def hunt_and_promote(
         refine=refine,
         rationale=rationale,
     )
-    graduates = [e for e in pool.all() if e.graduate is not None]
+    experiments = pool.all()
+    graduates = [e for e in experiments if e.graduate is not None]
     before = {(p.symbol, p.strategy_name) for p in portfolio.positions()}
+    # ADR-033: promotion draws from the whole pool, so the pool's symbol count is the N a graduate
+    # was actually selected from — the honest universe-deflation denominator.
     updated = manage_portfolio(
-        portfolio.positions(), graduates, frame_provider, exit_policy=exit_policy, now=now
+        portfolio.positions(),
+        graduates,
+        frame_provider,
+        exit_policy=exit_policy,
+        now=now,
+        universe_n_symbols=len({e.symbol for e in experiments}),
     )
     portfolio.save(updated)
     promoted = [p for p in updated if (p.symbol, p.strategy_name) not in before]
