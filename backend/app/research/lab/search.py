@@ -7,6 +7,7 @@ from app.data.fundamentals import (
     screen_fundamentals,
 )
 from app.research.backtesting.engine import BacktestEngine
+from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GraduationGate
 from app.research.lab.holdout import score_on_holdout, split_holdout
@@ -51,6 +52,7 @@ def run_search(
     refine_span: float = 0.25,
     fundamentals: FundamentalSnapshot | None = None,
     fundamental_criteria: FundamentalCriteria | None = None,
+    distress_screen: DistressScreen | None = None,
     rationale: str = "",
 ) -> Experiment:
     """Run one search: validate each catalog strategy on the in-sample split, pick the best by
@@ -144,7 +146,10 @@ def run_search(
 
     # Fundamentals veto: a name that fails the 'sane fundamentals' screen cannot graduate no
     # matter how good the technicals look (ADR-017). No screen (e.g. an ETF) = technicals only.
-    fundamentals_ok = screen is None or screen.passed
+    # Distress veto (ADR-029 3c): a name in hard financial distress is also blocked, a business-
+    # quality safety rail on top of the statistical one. No distress screen = not vetoed.
+    distressed = distress_screen is not None and distress_screen.distressed
+    fundamentals_ok = (screen is None or screen.passed) and not distressed
     graduate = None
     if gate_result.passed and fundamentals_ok:
         graduate = Graduate(
@@ -166,6 +171,7 @@ def run_search(
         best_gate_result=gate_result,
         fundamentals=fundamentals,
         fundamental_screen=screen,
+        distress_screen=distress_screen,
         graduate=graduate,
         rationale=rationale,
     )

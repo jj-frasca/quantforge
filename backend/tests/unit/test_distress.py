@@ -3,8 +3,14 @@ blocks graduation regardless of technicals. Calibrated for HIGH PRECISION: a fal
 real statistical edge, so only extreme, multi-signal distress (chronic operating weakness AND a
 balance-sheet failure) trips it. Missing data never vetoes (conservative, like the ADR-017 fallback)."""
 
+import pytest
+
 from app.data.fundamentals import AnnualFundamentals, FundamentalsHistory
-from app.research.fundamentals.distress import DistressScreen, financial_distress
+from app.research.fundamentals.distress import (
+    DistressScreen,
+    financial_distress,
+    make_distress_provider,
+)
 
 
 def _year(fy: int, **overrides: float | None) -> AnnualFundamentals:
@@ -113,3 +119,24 @@ def test_missing_data_never_vetoes() -> None:
 
 def test_empty_history_never_vetoes() -> None:
     assert not financial_distress(_history()).distressed
+
+
+# ---- make_distress_provider ----------------------------------------------------------------------
+
+
+def test_provider_screens_a_fetched_history() -> None:
+    distressed = _history(
+        _year(2024, net_income=-200.0, operating_cash_flow=-100.0, total_equity=-300.0)
+    )
+    provider = make_distress_provider(lambda symbol: distressed)
+    screen = provider("XXX")
+    assert screen is not None and screen.distressed
+
+
+@pytest.mark.parametrize("exc", [ValueError("no CIK"), KeyError("k"), OSError("edgar down")])
+def test_provider_returns_none_when_history_lookup_fails(exc: Exception) -> None:
+    def _raises(symbol: str) -> FundamentalsHistory:
+        raise exc
+
+    # An unscorable name (ETF / unmapped ticker / vendor hiccup) never vetoes -> None, not a crash.
+    assert make_distress_provider(_raises)("XXX") is None

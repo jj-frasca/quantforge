@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
+from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.experiment import Experiment, Graduate, InMemoryExperimentStore, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.universe import (
@@ -119,6 +120,20 @@ def test_fundamentals_provider_applies_the_veto_per_symbol() -> None:
     exp = result.experiments[0]
     assert exp.fundamental_screen is not None and exp.fundamental_screen.passed is False
     assert exp.graduate is None  # vetoed despite lenient technicals
+
+
+def test_distress_provider_applies_the_veto_per_symbol() -> None:
+    frames = {"AAA": _trend(1, 0.0012)}
+    result = run_universe_hunt(
+        ["AAA"],
+        ["sma", "momentum"],
+        _provider(frames),
+        config=_LENIENT,
+        distress_provider=lambda s: DistressScreen(distressed=True, reasons=["negative equity"]),
+    )
+    exp = result.experiments[0]
+    assert exp.distress_screen is not None and exp.distress_screen.distressed is True
+    assert exp.graduate is None  # vetoed by distress despite lenient technicals
 
 
 def test_empty_universe_returns_nothing() -> None:

@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
+from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.experiment import Experiment, InMemoryExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.search import run_search
@@ -138,6 +139,33 @@ def test_healthy_fundamentals_allow_graduation() -> None:
     )
     assert exp.fundamental_screen is not None and exp.fundamental_screen.passed is True
     assert exp.graduate is not None
+
+
+def test_distress_vetoes_graduation_even_when_technicals_pass() -> None:
+    # A lenient gate over a strong trend would graduate on technicals — but a hard financial-distress
+    # screen blocks it (ADR-029 3c), a business-quality rail on top of the statistical gate.
+    exp = run_search(
+        _strong_uptrend_frame(0),
+        "AAPL",
+        ["sma", "momentum"],
+        config=_LENIENT,
+        distress_screen=DistressScreen(distressed=True, reasons=["negative net income"]),
+    )
+    assert exp.best_gate_result is not None and exp.best_gate_result.passed is True
+    assert exp.graduate is None  # vetoed by distress despite lenient technicals
+    assert exp.distress_screen is not None and exp.distress_screen.distressed is True
+
+
+def test_non_distressed_screen_allows_graduation() -> None:
+    exp = run_search(
+        _strong_uptrend_frame(0),
+        "AAPL",
+        ["sma", "momentum"],
+        config=_LENIENT,
+        distress_screen=DistressScreen(distressed=False, reasons=[]),
+    )
+    assert exp.graduate is not None
+    assert exp.distress_screen is not None and exp.distress_screen.distressed is False
 
 
 def test_refine_adds_a_trial_and_raises_the_bar() -> None:

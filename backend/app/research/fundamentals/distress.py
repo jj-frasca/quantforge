@@ -10,10 +10,15 @@ OR illiquid). Negative equity ALONE is not distress — buyback-heavy blue chips
 negative book equity while thriving. Missing inputs never veto (an unscorable name graduates on
 technicals, exactly like the ADR-017 fundamentals fallback). Flags potential distress (rule 6)."""
 
+from collections.abc import Callable
+
 from pydantic import BaseModel, ConfigDict
 
 from app.data.fundamentals import FundamentalsHistory
 from app.research.fundamentals.quality import financial_safety
+
+HistoryProvider = Callable[[str], FundamentalsHistory]
+DistressProvider = Callable[[str], "DistressScreen | None"]
 
 
 class DistressScreen(BaseModel):
@@ -49,3 +54,19 @@ def financial_distress(history: FundamentalsHistory) -> DistressScreen:
     if illiquid:
         reasons.append("current ratio < 1 (cannot cover short-term liabilities)")
     return DistressScreen(distressed=True, reasons=reasons)
+
+
+def make_distress_provider(history_provider: HistoryProvider) -> DistressProvider:
+    """Compose a fundamentals-history lookup into a per-symbol distress screen for the hunt, mirroring
+    `make_value_provider` (ADR-023). Injectable so unit tests use fakes (no network in CI). A name
+    whose history lookup raises (ETF / unmapped ticker / vendor hiccup) yields None — unscorable
+    never vetoes, exactly like the ADR-017 fundamentals fallback."""
+
+    def provide(symbol: str) -> DistressScreen | None:
+        try:
+            history = history_provider(symbol)
+        except (ValueError, KeyError, OSError):
+            return None
+        return financial_distress(history)
+
+    return provide

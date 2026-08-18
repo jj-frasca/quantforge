@@ -6,6 +6,7 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
+from app.research.fundamentals.distress import DistressProvider
 from app.research.lab.experiment import Experiment, ExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.search import run_search
@@ -60,6 +61,7 @@ def run_universe_hunt(
     fundamentals_provider: FundamentalsProvider | None = None,
     config: GateConfig | None = None,
     fundamental_criteria: FundamentalCriteria | None = None,
+    distress_provider: DistressProvider | None = None,
     value_provider: ValueProvider | None = None,
     value_config: ValueGateConfig | None = None,
     store: ExperimentStore | None = None,
@@ -77,6 +79,10 @@ def run_universe_hunt(
     `value_provider` is given, each candidate's `UndervaluationScore` is recorded on its Experiment;
     when a `value_config` is ALSO given, names that fail the value pre-screen are skipped (recorded
     in `filtered`) and never hunted. Both are injectable so unit tests use fakes (no network).
+
+    Optional distress veto (ADR-029 3c, OFF by default): when a `distress_provider` is given, a name
+    in hard financial distress is blocked from graduation regardless of technicals — a business-
+    quality safety rail on top of the ADR-017 fundamentals veto. Injectable for network-free tests.
     """
     experiments: list[Experiment] = []
     errors: dict[str, str] = {}
@@ -91,6 +97,7 @@ def run_universe_hunt(
                     continue
             frame = frame_provider(symbol)
             fundamentals = fundamentals_provider(symbol) if fundamentals_provider else None
+            distress = distress_provider(symbol) if distress_provider else None
             prior = store.trials_for_symbol(symbol) if store else 0
             exp = run_search(
                 frame,
@@ -103,6 +110,7 @@ def run_universe_hunt(
                 refine_span=refine_span,
                 fundamentals=fundamentals,
                 fundamental_criteria=fundamental_criteria,
+                distress_screen=distress,
                 rationale=rationale,
             )
         except (ValueError, KeyError, OSError, ArithmeticError, TypeError) as exc:

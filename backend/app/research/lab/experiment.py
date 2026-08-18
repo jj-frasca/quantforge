@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.data.fundamentals import FundamentalScreen, FundamentalSnapshot
+from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.valuation import UndervaluationScore
 
@@ -59,6 +60,10 @@ class Experiment(BaseModel):
     # 'sane fundamentals' screen. A failed screen vetoes graduation regardless of the technicals.
     fundamentals: FundamentalSnapshot | None = None
     fundamental_screen: FundamentalScreen | None = None
+    # Hard financial-distress rail (ADR-029 Layer 3c): the distress screen computed at hunt time.
+    # A distressed name is vetoed from graduation regardless of technicals — a business-quality
+    # safety rail on top of the ADR-017 fundamentals veto. None when the sweep data was unavailable.
+    distress_screen: DistressScreen | None = None
     # Cited undervaluation score at hunt time (ADR-023), recorded so we can later measure whether
     # value+algo survivors outperform. None when value is off or the name is unscorable (e.g. ETF).
     undervaluation_score: UndervaluationScore | None = None
