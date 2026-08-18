@@ -19,7 +19,7 @@ from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import JsonFileExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio
-from app.research.lab.pool_merge import merge_experiments
+from app.research.lab.pool_merge import merge_experiments, prune_pool
 from app.research.lab.portfolio_manager import manage_portfolio, newly_promoted
 
 START = datetime(2005, 1, 1, tzinfo=UTC)
@@ -35,6 +35,10 @@ def main() -> None:
     for shard_file in shard_files:
         merged = merge_experiments(merged, JsonFileExperimentStore(shard_file).all())
 
+    # Bound the pool so its JSON stays under GitHub's 100MB file limit (keeps all graduates + recent
+    # non-graduates; the max-lifetime trial count is preserved, so the MinTRL bar is unchanged).
+    before_prune = len(merged)
+    merged = prune_pool(merged)
     main_pool.parent.mkdir(parents=True, exist_ok=True)
     payload = [e.model_dump(mode="json") for e in merged]
     main_pool.write_text(json.dumps(payload, indent=2) + "\n")  # trailing newline (eof-fixer)
@@ -54,8 +58,8 @@ def main() -> None:
     n_open = sum(1 for p in positions if p.status == "open")
     promoted = newly_promoted(before, positions)
     print(
-        f"consolidated {len(shard_files)} shard(s) -> {len(merged)} experiments, "
-        f"{len(graduates)} graduate(s); managed book: {n_open} open"
+        f"consolidated {len(shard_files)} shard(s) -> {len(merged)} experiments "
+        f"(pruned from {before_prune}), {len(graduates)} graduate(s); managed book: {n_open} open"
     )
     if promoted:
         print(f"NEW this run ({len(promoted)} promoted — what just cleared the gate):")

@@ -73,8 +73,12 @@ class ExperimentStore(Protocol):
 
 
 def _trials_for_symbol(experiments: list[Experiment], symbol: str) -> int:
-    """Lifetime candidate count for a symbol — the denominator the DSR/MinTRL penalty needs."""
-    return sum(len(e.trials) for e in experiments if e.symbol == symbol)
+    """Lifetime candidate count for a symbol — the DSR/MinTRL penalty denominator. The MAX cumulative
+    ``lifetime_trials`` across the symbol's experiments (each is prior + this run's trials, so it is
+    cumulative and non-decreasing). Max, not a sum of trial-list lengths, so the count SURVIVES pool
+    pruning: dropping old experiments never lowers the bar as long as the most-recent (max) one is
+    kept (ADR-026 pool-size fix). Equivalent to the old sum for an un-pruned cumulative pool."""
+    return max((e.lifetime_trials for e in experiments if e.symbol == symbol), default=0)
 
 
 class InMemoryExperimentStore:

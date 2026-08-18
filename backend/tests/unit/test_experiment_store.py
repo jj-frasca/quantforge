@@ -61,21 +61,31 @@ def test_in_memory_store_adds_and_lists() -> None:
     assert store.all() == [exp]
 
 
-def test_trials_for_symbol_aggregates_across_experiments() -> None:
+def test_trials_for_symbol_uses_max_cumulative_lifetime() -> None:
+    # Real usage is cumulative: the 2nd AAPL run started with prior=3, so its lifetime_trials is 7.
+    # trials_for_symbol returns the MAX cumulative count (prune-safe), not a sum of trial lists.
     store = InMemoryExperimentStore()
-    store.add(_experiment("AAPL", 3))
-    store.add(_experiment("AAPL", 4))
+    store.add(_experiment("AAPL", 3))  # lifetime 3
+    store.add(_experiment("AAPL", 4, prior=3))  # cumulative lifetime 7
     store.add(_experiment("MSFT", 5))
     assert store.trials_for_symbol("AAPL") == 7
     assert store.trials_for_symbol("MSFT") == 5
     assert store.trials_for_symbol("NVDA") == 0
 
 
+def test_trials_for_symbol_survives_pruning_the_earlier_experiment() -> None:
+    # Dropping the older experiment must NOT lower the MinTRL bar — the max cumulative count is
+    # carried by the most-recent experiment, which pruning keeps (ADR-026 pool-size fix).
+    store = InMemoryExperimentStore()
+    store.add(_experiment("AAPL", 4, prior=3))  # only the recent (cumulative 7) experiment remains
+    assert store.trials_for_symbol("AAPL") == 7
+
+
 def test_json_file_store_persists_across_instances(tmp_path) -> None:
     path = tmp_path / "pool.json"
     writer = JsonFileExperimentStore(path)
     writer.add(_experiment("AAPL", 2, graduated=True))
-    writer.add(_experiment("AAPL", 3))
+    writer.add(_experiment("AAPL", 3, prior=2))  # cumulative lifetime 5
 
     # A brand-new instance on the same path sees the persisted experiments + counts.
     reader = JsonFileExperimentStore(path)
