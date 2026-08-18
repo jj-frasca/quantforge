@@ -54,7 +54,7 @@ affect a section below, the section has been edited inline to match.
    current stable is the better engineering choice. Frontend tests run on Vitest + RTL + MSW;
    coverage gate ≥ 75%.
 
-## 0.6 Implementation Status (as of 2026-06-30)
+## 0.6 Implementation Status (as of 2026-06-30 — SUPERSEDED IN PART, see §0.6.1)
 
 The §4 tree below is the **target** layout; not all of it is built yet. Authoritative reality:
 
@@ -115,6 +115,47 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
 
 Synthetic fixtures are a **single `tests/fixtures/synthetic/builders.py`** module (functions
 like `clean_series`, `with_split`, `regime_shift_series`), not the per-file layout in §4/§8.
+
+## 0.6.1 What changed since 2026-06-30 (read this before trusting §0.6)
+
+§0.6 above is a **historical snapshot** and is now materially out of date — it predates the entire
+autonomous-research half of the project. Read this section for current reality; ADRs are the
+authority, and `docs/adr/` is complete.
+
+**The autonomous research loop (the biggest change).** QuantForge now searches on its own, in the
+cloud, for free:
+- **`app/research/lab/`** — `run_search` (coarse-to-fine parameter search), `GraduationGate`
+  (DSR / PBO / parameter stability / MinTRL / locked holdout / beat-buy-and-hold), `run_universe_hunt`
+  across a symbol universe, the `Experiment` research pool, `hunt_and_promote`, and the managed
+  paper book (`portfolio_manager`, ADR-019/020). **34 strategies** in `STRATEGY_CATALOG`, not 11.
+- **`app/research/cross_sectional/`** (ADR-024/025) — a second, orthogonal dimension: rank the whole
+  universe each period into dollar-neutral long/short legs, judged by the SAME gate. Includes
+  forward-testing and a lifecycle book.
+- **`app/research/fundamentals/` + `app/research/valuation/`** (ADR-022/023/029) — EDGAR-sourced
+  quality (Piotroski F-score, Novy-Marx gross profitability), valuation scoring, a financial-distress
+  screen, and a weekly sweep over ~10.4k SEC filers.
+- **`.github/workflows/`** — the loop runs itself: `daily-discovery.yml` (10 sharded jobs over a
+  610-name universe, weekdays), `hunt.yml` (weekly), `cross-sectional-hunt.yml`, `paper-forward.yml`,
+  `paper-broker.yml` (Alpaca **paper only**, ADR-021), `fundamental-sweep.yml`. Public repo =
+  unlimited Actions minutes, so discovery is token-free (ADR-026).
+
+**Data files under `data/` are generated state and part of the record** — `research_pool/` (per-symbol
+partitions, ADR-032), `paper_portfolio.json`, `equity_curve.json`, `cross_sectional_pool.json`,
+`fundamentals_pool.json`. **The cloud workflows are their single writer** (ADR-030); never add a
+second one.
+
+**Operational invariants learned the hard way (2026-08-18):**
+- yfinance rate-limits GitHub-runner IPs at the session bootstrap. Every cloud driver must use the
+  shared `CLOUD` retry policy in `app/data/sources/retry.py`, and a shard whose yield collapses must
+  **fail loudly** rather than report a green no-op (ADR-031).
+- The research pool is partitioned per symbol because a single JSON file hit GitHub's 100 MB push
+  limit (ADR-032). Retention lives in the store, so every writer is bounded.
+- The honest headline is `scripts/pool_report.py`: as of 2026-08-18, **0 of 40 graduates clear the
+  ADR-018 universe-deflation bar**. The paper book records that verdict per position (ADR-033) and
+  the dashboard leads with it. Meta-labeling is declined until a primary graduate clears it (ADR-034).
+
+**Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
+sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.
 
 ---
 
