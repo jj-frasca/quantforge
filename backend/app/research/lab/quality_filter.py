@@ -19,7 +19,7 @@ rule 6: this flags a name as *potentially* low-quality; it never asserts it.
 OFF by default. Wiring it into a scheduled hunt is a separate, evidence-based decision.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from pydantic import BaseModel, ConfigDict
 
@@ -98,3 +98,41 @@ def make_quality_provider(records: list[FundamentalRecord]) -> QualityProvider:
         return by_symbol.get(symbol.upper())
 
     return provide
+
+
+_QUALITY_SCREEN_FLAG = "--quality-screen"
+
+
+def parse_quality_screen(args: Sequence[str]) -> tuple[QualityGateConfig | None, list[str]]:
+    """Parse an optional ``--quality-screen [MIN_SCORE]`` flag out of CLI args (ADR-029 4b).
+
+    Absent -> the screen is OFF and the full universe is hunted. Present -> the hard
+    `QualityGateConfig` gate; a following float overrides ``min_quality_score``, otherwise the
+    permissive 0.5 default. Returns the config and the remaining args (symbols or a universe .txt
+    path). A non-float token after the flag is a symbol, not a threshold — mirrors
+    `parse_value_screen` so both screens read the same way on a command line.
+    """
+    config: QualityGateConfig | None = None
+    rest: list[str] = []
+    tokens = list(args)
+    i = 0
+    while i < len(tokens):
+        if tokens[i] != _QUALITY_SCREEN_FLAG:
+            rest.append(tokens[i])
+            i += 1
+            continue
+        threshold: float | None = None
+        if i + 1 < len(tokens):
+            try:
+                threshold = float(tokens[i + 1])
+            except ValueError:
+                threshold = None
+            else:
+                i += 1  # consume the numeric override
+        config = (
+            QualityGateConfig()
+            if threshold is None
+            else QualityGateConfig(min_quality_score=threshold)
+        )
+        i += 1
+    return config, rest

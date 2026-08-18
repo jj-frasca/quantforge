@@ -10,6 +10,7 @@ from app.research.fundamentals.record import FundamentalRecord
 from app.research.lab.quality_filter import (
     QualityGateConfig,
     make_quality_provider,
+    parse_quality_screen,
     screen_quality,
 )
 
@@ -108,3 +109,36 @@ def test_provider_keeps_the_newest_filing_when_a_symbol_appears_twice() -> None:
     new = _record("AAA", quality=0.9).model_copy(update={"fiscal_year": 2026})
     provider = make_quality_provider([old, new])
     assert provider("AAA").quality_score == pytest.approx(0.9)
+
+
+# ---- CLI flag parsing ----------------------------------------------------------------------------
+
+
+def test_absent_flag_leaves_the_screen_off() -> None:
+    config, rest = parse_quality_screen(["AAPL", "MSFT"])
+    assert config is None
+    assert rest == ["AAPL", "MSFT"]
+
+
+def test_the_flag_turns_the_screen_on_at_the_default_threshold() -> None:
+    config, rest = parse_quality_screen(["--quality-screen", "sp500.txt"])
+    assert config == QualityGateConfig()
+    assert rest == ["sp500.txt"]
+
+
+def test_a_following_float_overrides_the_threshold() -> None:
+    config, rest = parse_quality_screen(["--quality-screen", "0.65", "sp500.txt"])
+    assert config is not None and config.min_quality_score == pytest.approx(0.65)
+    assert rest == ["sp500.txt"]
+
+
+def test_a_following_symbol_is_not_swallowed_as_a_threshold() -> None:
+    config, rest = parse_quality_screen(["--quality-screen", "AAPL"])
+    assert config == QualityGateConfig()
+    assert rest == ["AAPL"]
+
+
+def test_the_flag_can_appear_after_the_symbols() -> None:
+    config, rest = parse_quality_screen(["AAPL", "--quality-screen", "0.7"])
+    assert config is not None and config.min_quality_score == pytest.approx(0.7)
+    assert rest == ["AAPL"]

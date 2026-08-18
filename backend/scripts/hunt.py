@@ -24,9 +24,11 @@ from app.data.sources.edgar import SecEdgarFundamentalsSource
 from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
+from app.research.fundamentals.record import load_fundamentals_pool
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.paper import JsonFilePaperPortfolio
+from app.research.lab.quality_filter import make_quality_provider, parse_quality_screen
 from app.research.lab.scheduled_hunt import hunt_and_promote
 from app.research.lab.universe import rank_experiments
 from app.research.lab.value_wiring import (
@@ -39,6 +41,7 @@ from app.research.strategies.catalog import STRATEGY_CATALOG
 DATA = Path(__file__).resolve().parents[2] / "data"
 POOL = DATA / "research_pool"  # per-symbol partitions (ADR-032)
 PORTFOLIO = DATA / "paper_portfolio.json"
+FUNDAMENTALS_POOL = DATA / "fundamentals_pool.json"
 DEFAULT_UNIVERSE = DATA / "universes" / "sp500.txt"
 START = datetime(2005, 1, 1, tzinfo=UTC)
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
@@ -57,6 +60,7 @@ def _resolve_symbols(args: list[str]) -> list[str]:
 
 def main() -> None:
     value_config, arg_rest = parse_value_screen(sys.argv[1:])
+    quality_config, arg_rest = parse_quality_screen(arg_rest)
     symbols = _resolve_symbols(arg_rest)
     names = [entry.name for entry in STRATEGY_CATALOG]
     # forced: the hunt needs 15-20yr; Alpaca IEX is too short.
@@ -80,9 +84,15 @@ def main() -> None:
 
     # Record-first value (ADR-023): score every name; only enforce the gate when --value-screen given.
     value_provider = make_hunt_value_provider(edgar.fetch_history, frame_provider)
-    screen_note = (
-        "" if value_config is None else f" [value gate min_score={value_config.min_score}]"
-    )
+    # ADR-029 4b: quality scores come from the weekly EDGAR sweep's pool, not a per-symbol fetch.
+    # The screen only bites when --quality-screen is given; a missing pool leaves it inert.
+    quality_provider = make_quality_provider(load_fundamentals_pool(FUNDAMENTALS_POOL))
+    notes = []
+    if value_config is not None:
+        notes.append(f"value gate min_score={value_config.min_score}")
+    if quality_config is not None:
+        notes.append(f"quality gate min_score={quality_config.min_quality_score}")
+    screen_note = f" [{'; '.join(notes)}]" if notes else ""
     print(
         f"Hunting {len(symbols)} symbols x {len(names)} strategies "
         f"(yfinance max history){screen_note}...\n"
@@ -98,6 +108,8 @@ def main() -> None:
         fundamental_criteria=FundamentalCriteria(),
         value_provider=value_provider,
         value_config=value_config,
+        quality_provider=quality_provider,
+        quality_config=quality_config,
         now=now,
         refine=True,
         rationale="scheduled universe hunt (WP-F)",

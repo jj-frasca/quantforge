@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 import numpy as np
 import pandas as pd
 
+from app.research.fundamentals.record import FundamentalRecord
 from app.research.lab.experiment import (
     Experiment,
     Graduate,
@@ -16,11 +17,25 @@ from app.research.lab.experiment import (
 )
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import PaperPosition
+from app.research.lab.quality_filter import QualityGateConfig
 from app.research.lab.scheduled_hunt import hunt_and_promote
 from app.research.lab.value_filter import ValueGateConfig
 from app.research.valuation import UndervaluationScore
 
 _NOW = datetime(2024, 6, 1, tzinfo=UTC)
+
+
+def _qrecord(symbol: str, quality: float) -> FundamentalRecord:
+    return FundamentalRecord(
+        symbol=symbol,
+        cik=1,
+        fiscal_year=2025,
+        quality_score=quality,
+        value_score=None,
+        combined_score=None,
+        f_score=6,
+        gross_profitability=0.3,
+    )
 
 
 class _FakePortfolio:
@@ -218,3 +233,28 @@ def test_hunt_and_promote_records_the_pool_universe_as_the_deflation_denominator
     assert promoted[0].universe_n_symbols == 3  # CRM, MSFT, NVDA
     assert promoted[0].survives_universe_deflation is not None
     assert promoted[0].universe_deflation_bar is not None
+
+
+def test_hunt_and_promote_forwards_the_quality_screen_to_the_hunt() -> None:
+    # ADR-029 4b: same record-first shape as the value screen — the config is what turns it on.
+    pool = InMemoryExperimentStore()
+    portfolio = _FakePortfolio()
+    records = {
+        "GOOD": _qrecord("GOOD", 0.8),
+        "WEAK": _qrecord("WEAK", 0.1),
+    }
+
+    result = hunt_and_promote(
+        ["GOOD", "WEAK"],
+        ["sma"],
+        _long_provider,
+        pool=pool,
+        portfolio=portfolio,
+        now=_NOW,
+        refine=False,
+        quality_provider=lambda s: records[s],
+        quality_config=QualityGateConfig(min_quality_score=0.5),
+    )
+
+    assert {e.symbol for e in result.hunt.experiments} == {"GOOD"}
+    assert "WEAK" in result.hunt.filtered

@@ -10,6 +10,7 @@ from app.research.lab.experiment import ExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.paper import ExitPolicy, PaperPosition
 from app.research.lab.portfolio_manager import manage_portfolio
+from app.research.lab.quality_filter import QualityGateConfig, QualityProvider
 from app.research.lab.universe import UniverseHuntResult, run_universe_hunt
 from app.research.lab.value_filter import ValueGateConfig, ValueProvider
 
@@ -41,6 +42,8 @@ def hunt_and_promote(
     fundamental_criteria: FundamentalCriteria | None = None,
     value_provider: ValueProvider | None = None,
     value_config: ValueGateConfig | None = None,
+    quality_provider: QualityProvider | None = None,
+    quality_config: QualityGateConfig | None = None,
     exit_policy: ExitPolicy | None = None,
     now: datetime,
     refine: bool = True,
@@ -68,6 +71,8 @@ def hunt_and_promote(
         fundamental_criteria=fundamental_criteria,
         value_provider=value_provider,
         value_config=value_config,
+        quality_provider=quality_provider,
+        quality_config=quality_config,
         store=pool,
         refine=refine,
         rationale=rationale,
