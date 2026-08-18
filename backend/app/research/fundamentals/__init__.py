@@ -12,13 +12,23 @@ from app.research.fundamentals.quality import (
     piotroski_f_score,
     quality_score,
 )
+from app.research.fundamentals.record import (
+    FundamentalRecord,
+    compute_fundamental_record,
+    merge_fundamental_records,
+    rank_fundamentals,
+)
 
 __all__ = [
     "FScore",
+    "FundamentalRecord",
     "QualityScore",
     "SafetyScore",
+    "compute_fundamental_record",
     "financial_safety",
     "gross_profitability",
+    "merge_fundamental_records",
     "piotroski_f_score",
     "quality_score",
+    "rank_fundamentals",
 ]
