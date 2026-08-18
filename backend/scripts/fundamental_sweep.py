@@ -21,6 +21,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from app.data.sources.edgar import SecEdgarFundamentalsSource
+from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.fundamentals.record import FundamentalRecord, compute_fundamental_record
 from app.research.lab.sharding import shard_universe
@@ -45,7 +46,7 @@ def main() -> None:
     out_dir = Path(sys.argv[3])
 
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
-    adapter = YFinanceAdapter()
+    adapter = YFinanceAdapter(retry=CLOUD)
     symbols = shard_universe(edgar.all_tickers(), n_shards, shard_index)
     now = datetime.now(UTC)
 

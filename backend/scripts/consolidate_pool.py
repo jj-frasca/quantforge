@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from app.data.sources.retry import RetryPolicy
+from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import (
@@ -28,8 +28,6 @@ from app.research.lab.pool_merge import merge_experiments
 from app.research.lab.portfolio_manager import manage_portfolio, newly_promoted
 
 START = datetime(2005, 1, 1, tzinfo=UTC)
-# ADR-031: same cloud throttle policy as the discovery shards.
-CLOUD_RETRY = RetryPolicy(attempts=4, base_delay=5.0, max_delay=60.0, min_interval=1.5)
 
 
 def main() -> None:
@@ -48,7 +46,7 @@ def main() -> None:
     merged = pool.all()
 
     portfolio = JsonFilePaperPortfolio(portfolio_path)
-    adapter = YFinanceAdapter(retry=CLOUD_RETRY)
+    adapter = YFinanceAdapter(retry=CLOUD)
     now = datetime.now(UTC)
 
     def frame_provider(symbol: str) -> pd.DataFrame:

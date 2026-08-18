@@ -24,7 +24,7 @@ import pandas as pd
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.data.sources.edgar import SecEdgarFundamentalsSource
-from app.data.sources.retry import RetryPolicy
+from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import JsonFileExperimentStore
@@ -36,9 +36,6 @@ from app.research.strategies.catalog import STRATEGY_CATALOG
 
 START = datetime(2005, 1, 1, tzinfo=UTC)
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
-# ADR-031. 4 attempts backing off 5/10/20s (full jitter) recovers a throttled session bootstrap;
-# the 1.5s floor between fetches keeps a 61-symbol shard from provoking the throttle at all.
-CLOUD_RETRY = RetryPolicy(attempts=4, base_delay=5.0, max_delay=60.0, min_interval=1.5)
 MIN_YIELD = 0.25
 
 
@@ -50,7 +47,7 @@ def main() -> None:
 
     symbols = shard_universe(load_universe(universe_file), n_shards, shard_index)
     names = [entry.name for entry in STRATEGY_CATALOG]
-    adapter = YFinanceAdapter(retry=CLOUD_RETRY)  # forced: the hunt needs 15-20yr of history.
+    adapter = YFinanceAdapter(retry=CLOUD)  # forced: the hunt needs 15-20yr of history.
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     store = JsonFileExperimentStore(Path(out_pool))
     now = datetime.now(UTC)

@@ -22,6 +22,7 @@ import pandas as pd
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.data.sources.edgar import SecEdgarFundamentalsSource
+from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import PartitionedExperimentStore
@@ -60,7 +61,8 @@ def main() -> None:
     value_config, arg_rest = parse_value_screen(sys.argv[1:])
     symbols = _resolve_symbols(arg_rest)
     names = [entry.name for entry in STRATEGY_CATALOG]
-    adapter = YFinanceAdapter()  # forced: the hunt needs 15-20yr; Alpaca IEX is too short.
+    # forced: the hunt needs 15-20yr; Alpaca IEX is too short.
+    adapter = YFinanceAdapter(retry=CLOUD)
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     pool = PartitionedExperimentStore(POOL)
     portfolio = JsonFilePaperPortfolio(PORTFOLIO)

@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from app.data.sources.retry import RetryPolicy
+from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.cross_sectional.hunt import run_cross_sectional_hunt
 from app.research.cross_sectional.store import JsonFileCrossSectionalStore
@@ -32,9 +32,6 @@ POOL = DATA / "cross_sectional_pool.json"
 FUNDAMENTALS_POOL = DATA / "fundamentals_pool.json"
 DEFAULT_UNIVERSE = DATA / "universes" / "sp500.txt"
 START = datetime(2005, 1, 1, tzinfo=UTC)
-# ADR-031: same cloud throttle policy as the discovery shards. The cross-sectional rank needs ALL
-# names in ONE panel, so a throttled fetch costs the whole hunt, not one row.
-CLOUD_RETRY = RetryPolicy(attempts=4, base_delay=5.0, max_delay=60.0, min_interval=1.5)
 
 
 def _resolve_symbols(args: list[str]) -> list[str]:
@@ -51,7 +48,7 @@ def _resolve_symbols(args: list[str]) -> list[str]:
 def main() -> None:
     symbols = _resolve_symbols(sys.argv[1:])
     # forced: cross-sectional momentum needs a long common history.
-    adapter = YFinanceAdapter(retry=CLOUD_RETRY)
+    adapter = YFinanceAdapter(retry=CLOUD)
     store = JsonFileCrossSectionalStore(POOL)
     now = datetime.now(UTC)
 

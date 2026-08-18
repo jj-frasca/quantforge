@@ -41,6 +41,13 @@ class RetryPolicy:
             raise ValueError("attempts must be at least 1")
 
 
+CLOUD = RetryPolicy(attempts=4, base_delay=5.0, max_delay=60.0, min_interval=1.5)
+"""The policy every scheduled cloud job uses (ADR-031). Four attempts backing off 5/10/20s under
+full jitter recovers a throttled yfinance session bootstrap; the 1.5s floor between fetches keeps a
+61-symbol shard from provoking the throttle at all. One definition so a calibration change from
+observed yields lands everywhere at once."""
+
+
 class Retrier:
     """Stateful across calls (it remembers when the last one started) so `min_interval` paces a
     whole universe sweep, not just the retries within one symbol. Not thread-safe — the shards are

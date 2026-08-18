@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.cross_sectional.forward import (
     CrossSectionalPosition,
@@ -35,7 +36,8 @@ START = datetime(2005, 1, 1, tzinfo=UTC)
 def main() -> None:
     store = JsonFileCrossSectionalStore(POOL)
     book_store = JsonFileCrossSectionalBook(BOOK)
-    adapter = YFinanceAdapter()  # forced: cross-sectional momentum needs a long common history.
+    # forced: cross-sectional momentum needs a long common history.
+    adapter = YFinanceAdapter(retry=CLOUD)
     now = datetime.now(UTC)
     graduates = [e for e in store.all() if e.graduate is not None]
 
