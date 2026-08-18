@@ -44,7 +44,7 @@ token-free** (pure Python on cron/GitHub Actions); a **dashboard** shows it all.
 - **Autonomy**: `backend/scripts/paper.py` (forward accrual CLI), `backend/scripts/run_hunt.py`
   (universe hunt CLI), local launchd + `.github/workflows/paper-forward.yml` (daily cloud accrual).
 - **Frozen paper positions**: CRM + LOW in `data/paper_portfolio.json`. Research pool in
-  `data/research_pool.json`.
+  `data/research_pool/`.
 
 ## Coordination — shared files (edit carefully, tiny append-only diffs; expect to rebase)
 `backend/app/main.py` (router registration), `frontend/src/App.tsx` (nav), `CLAUDE.md`,
@@ -107,7 +107,7 @@ shapes = `list[LeaderboardRow]` and `list[PaperPosition]` (see the pydantic mode
 **Goal:** read-only endpoints so the frontend can show the lab + paper book.
 **Owns:** `backend/app/api/v1/lab.py`, `backend/tests/integration/test_lab_endpoints.py`; small
 append to `app/main.py` (register router) + `.claude/context/api-contracts.md`.
-**Contract:** `GET /api/v1/leaderboard` → cross-symbol rows from `data/research_pool.json` (reuse
+**Contract:** `GET /api/v1/leaderboard` → cross-symbol rows from `data/research_pool/` (reuse
 `rank_experiments`); `GET /api/v1/paper-portfolio` → `data/paper_portfolio.json` positions + scores
 + lifecycle. Response = typed pydantic; pool/portfolio **paths from a small helper** (default the
 in-repo `data/` dir; make it injectable/overridable for tests). Read-only, sync `def` routes.
