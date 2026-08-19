@@ -20,6 +20,14 @@
 **Assume you will be killed mid-sentence.** The 5-hour limit gives no warning. Every commit must
 leave the repo green, and `RUNNING_STATE.md` must always describe reality as of your last commit.
 
+**You start from a clean tree.** The launchd driver runs a clean-start step before you: if a prior
+session was killed mid-work and left uncommitted files, they were committed to a `rescue/qf-<ts>`
+branch and pushed, then the tree was reset clean. So if `RUNNING_STATE.md` references unfinished work
+you do not see in the tree, it was not lost — run `git branch -r | grep rescue`, inspect the newest
+rescue branch, and cherry-pick or re-do what still matters. This only fires when no peer session is
+live; it never touches a peer's work. The lesson that created it: commit granularly so little of your
+work is ever uncommitted and rescuable in the first place.
+
 ## 1. You have decision authority
 
 Joe delegated decisions, including ones previously flagged "Joe's call." You may resolve them.
