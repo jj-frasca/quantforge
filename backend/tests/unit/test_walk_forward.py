@@ -2,10 +2,12 @@
 
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from app.research.backtesting.metrics import sharpe_ratio
 from app.validation.walk_forward import walk_forward_evaluate, walk_forward_splits
 
 
@@ -182,3 +184,17 @@ def test_a_single_bar_block_has_no_measurable_sharpe() -> None:
 def test_rejects_an_empty_split_list() -> None:
     with pytest.raises(ValueError, match="split"):
         walk_forward_evaluate(_matrix([[0.01] * 10, [0.02] * 10]), [])
+
+
+def test_walk_forward_sharpe_is_annualized_like_every_other_sharpe() -> None:
+    """Same scale as metrics.sharpe_ratio — a per-bar figure sitting next to annualized ones
+    (observed, holdout, buy-and-hold) reads as a 15.9x weaker result than it is."""
+    rng = np.random.default_rng(5)
+    column = rng.normal(0.001, 0.01, 120)
+    performance = _matrix([list(column), list(rng.normal(0.0, 0.01, 120))])
+    splits = [(np.arange(80, dtype=np.intp), np.arange(80, 120, dtype=np.intp))]
+
+    result = walk_forward_evaluate(performance, splits)
+    selected = result.splits[0].selected_config
+    expected = sharpe_ratio(pd.Series(performance[80:120, selected]))
+    assert result.splits[0].oos_sharpe == pytest.approx(expected)

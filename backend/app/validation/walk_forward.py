@@ -2,6 +2,8 @@ import numpy as np
 import numpy.typing as npt
 from pydantic import BaseModel, ConfigDict
 
+from app.research.backtesting.metrics import TRADING_DAYS
+
 IntArray = npt.NDArray[np.intp]
 FloatArray = npt.NDArray[np.float64]
 
@@ -76,10 +78,12 @@ class WalkForwardResult(BaseModel):
 
 
 def _sharpe(returns: FloatArray) -> float:
+    """Annualized, matching metrics.sharpe_ratio — these numbers sit next to the observed and
+    holdout Sharpes, so a per-bar figure would read as a sqrt(252)x weaker result."""
     if len(returns) < 2:
         return 0.0
     std = float(returns.std(ddof=1))
-    return float(returns.mean() / std) if std > 0 else 0.0
+    return float(np.sqrt(TRADING_DAYS) * returns.mean() / std) if std > 0 else 0.0
 
 
 def walk_forward_evaluate(

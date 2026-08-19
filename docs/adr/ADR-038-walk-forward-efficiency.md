@@ -51,6 +51,9 @@ The result carries per-split `selected_config`, `is_sharpe`, `oos_sharpe`, plus:
 
 - **`mean_oos_sharpe`** — the headline. A prequential estimate of what the *selection procedure*
   delivers, averaged over several disjoint forward windows and therefore several regimes.
+  **Annualized (√252), matching `metrics.sharpe_ratio`** — it is rendered beside the observed,
+  holdout and buy-and-hold Sharpes, and a per-bar figure in that row would read as a 15.9x weaker
+  result than it is. (PBO's internal Sharpe stays per-bar: it only ever ranks, so scale cancels.)
 - **`efficiency`** — Pardo's walk-forward efficiency, `mean_oos_sharpe / mean_is_sharpe`. Defined
   **only when `mean_is_sharpe > 0`**, and `None` otherwise: a ratio of two negative Sharpes is
   positive and would read as "efficient" when both halves lost money. Refusing to define it is the
