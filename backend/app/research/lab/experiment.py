@@ -26,6 +26,11 @@ class Trial(BaseModel):
     deflated_sharpe: float
     pbo: float
     parameter_stability_score: float
+    # ADR-038: mean out-of-sample Sharpe across the walk-forward windows — a prequential view
+    # of the SELECTION procedure, independent of the locked holdout. Nullable + defaulted so the
+    # experiments already in the pool deserialize, and so a producer that computed no
+    # walk-forward (the cross-sectional search) reports "not measured" rather than 0.0.
+    walk_forward_oos_sharpe: float | None = None
 
 
 class Graduate(BaseModel):

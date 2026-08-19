@@ -18,8 +18,13 @@ from app.research.strategies.grid_generator import (
     refine_grid,
 )
 from app.validation.engine import ValidationEngine
+from app.validation.report import ValidationReport
 
 _MIN_CONFIGS_FOR_PBO = 2
+
+
+def _walk_forward_oos(report: ValidationReport) -> float | None:
+    return report.walk_forward.mean_oos_sharpe if report.walk_forward else None
 
 
 def _numeric_params(strategy: BaseStrategy) -> dict[str, float | int]:
@@ -87,6 +92,7 @@ def run_search(
                 deflated_sharpe=report.deflated_sharpe,
                 pbo=report.pbo,
                 parameter_stability_score=report.parameter_stability_score,
+                walk_forward_oos_sharpe=_walk_forward_oos(report),
             )
         )
         best_configs.append(best_config)
@@ -126,6 +132,7 @@ def run_search(
                     deflated_sharpe=refined_report.deflated_sharpe,
                     pbo=refined_report.pbo,
                     parameter_stability_score=refined_report.parameter_stability_score,
+                    walk_forward_oos_sharpe=_walk_forward_oos(refined_report),
                 )
             )
             if refined_report.deflated_sharpe > best_report.deflated_sharpe:

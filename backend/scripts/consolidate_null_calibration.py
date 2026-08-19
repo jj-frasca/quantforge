@@ -13,6 +13,19 @@ from pathlib import Path
 from app.research.lab.calibration import NullCalibration, merge_calibrations
 
 
+def _print_walk_forward(result: NullCalibration) -> None:
+    """ADR-038: the walk-forward distribution under a known-zero edge, i.e. what a floor would
+    have to clear before that statistic could become a gate criterion."""
+    pct = result.walk_forward_null_percentiles
+    if pct is None:
+        return
+    median_, p95, max_ = pct
+    print(
+        f"walk-fwd OOS Sharpe : median {median_:+.3f} | p95 {p95:+.3f} | max {max_:+.3f} "
+        f"(n={len(result.walk_forward_oos_sharpes)}, ADR-038 floor evidence)"
+    )
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
@@ -42,6 +55,7 @@ def main() -> None:
         print(f"which               : {', '.join(merged.graduate_symbols[:20])}")
     if merged.errors:
         print(f"unsearchable        : {len(merged.errors)} symbol(s)")
+    _print_walk_forward(merged)
 
     if out:
         out.parent.mkdir(parents=True, exist_ok=True)

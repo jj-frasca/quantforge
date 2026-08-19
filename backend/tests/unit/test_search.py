@@ -182,3 +182,19 @@ def test_experiment_records_into_the_pool_and_counts_trials() -> None:
     exp = run_search(_random_walk_frame(5), "AAPL", ["sma", "momentum"], config=GateConfig())
     store.add(exp)
     assert store.trials_for_symbol("AAPL") == 2
+
+
+def test_every_trial_records_its_walk_forward_estimate() -> None:
+    """ADR-038: the walk-forward number reaches the research pool, not just the report."""
+    exp = run_search(_random_walk_frame(2), "AAPL", ["sma", "momentum"], refine=True)
+    assert len(exp.trials) == 3  # 2 coarse + 1 refined
+    assert all(t.walk_forward_oos_sharpe is not None for t in exp.trials)
+    assert all(np.isfinite(t.walk_forward_oos_sharpe or 0.0) for t in exp.trials)
+
+
+def test_walk_forward_estimate_is_independent_of_the_holdout_sharpe() -> None:
+    """It is a second, prequential out-of-sample view — not a restatement of the locked holdout."""
+    exp = run_search(_random_walk_frame(3), "AAPL", ["sma", "momentum"], config=_LENIENT)
+    assert exp.graduate is not None
+    best = max(exp.trials, key=lambda t: t.deflated_sharpe)
+    assert best.walk_forward_oos_sharpe != exp.graduate.holdout_sharpe

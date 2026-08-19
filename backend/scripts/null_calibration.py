@@ -65,6 +65,9 @@ def _report(result: NullCalibration) -> None:
         print(f"false graduates     : {', '.join(result.graduate_symbols[:20])}")
     if result.errors:
         print(f"unsearchable        : {len(result.errors)} symbol(s)")
+    pct = result.walk_forward_null_percentiles
+    if pct is not None:
+        print(f"walk-fwd OOS Sharpe : median {pct[0]:+.3f} | p95 {pct[1]:+.3f} | max {pct[2]:+.3f}")
 
 
 def main() -> None:

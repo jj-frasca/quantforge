@@ -56,6 +56,10 @@ class NullCalibration(BaseModel):
     # One entry per SEARCHED symbol (not per graduate): the merged bar is reported at the median
     # holdout length, which is only exact if the lengths themselves survive sharding (ADR-037).
     holdout_years: list[float]
+    # ADR-038: the finalist trial's walk-forward mean OOS Sharpe, one per searched symbol. Under a
+    # null this is the distribution a walk-forward floor would have to clear, which is the evidence
+    # ADR-038 requires before promoting the statistic from a diagnostic to a gate criterion.
+    walk_forward_oos_sharpes: list[float] = []
     errors: dict[str, str]
     gate_config_version: str
     null_mode: str = "unspecified"
@@ -63,6 +67,23 @@ class NullCalibration(BaseModel):
     @property
     def graduate_symbols(self) -> list[str]:
         return [g.symbol for g in self.graduates]
+
+    @property
+    def walk_forward_null_percentiles(self) -> tuple[float, float, float] | None:
+        """(median, p95, max) walk-forward OOS Sharpe under the null — ADR-038's candidate floor.
+
+        Notes:
+            None when nothing was measured, so "no walk-forward data" can never be mistaken for
+            "the null walks forward at 0.0".
+        """
+        if not self.walk_forward_oos_sharpes:
+            return None
+        values = np.asarray(self.walk_forward_oos_sharpes, dtype=float)
+        return (
+            float(np.median(values)),
+            float(np.percentile(values, 95)),
+            float(values.max()),
+        )
 
 
 # Widened past the repo's usual NDArray[float64]: numpy types these products as
@@ -154,6 +175,12 @@ def bootstrap_null(
     )
 
 
+def _finalist_walk_forward(experiment: Experiment) -> float | None:
+    """The max-DSR trial's walk-forward estimate — the same trial run_search sends to the gate."""
+    finalist = max(experiment.trials, key=lambda t: t.deflated_sharpe)
+    return finalist.walk_forward_oos_sharpe
+
+
 def calibrate_gate(
     frames: Mapping[str, pd.DataFrame],
     strategy_names: Sequence[str],
@@ -231,6 +258,9 @@ def calibrate_gate(
             if e.graduate is not None
         ],
         holdout_years=holdout_years,
+        walk_forward_oos_sharpes=[
+            wf for e in experiments if (wf := _finalist_walk_forward(e)) is not None
+        ],
         errors=errors,
         gate_config_version=gate_config.version_hash,
         null_mode=null_mode,
@@ -276,6 +306,7 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
         max_holdout_sharpe=max((g.holdout_sharpe for g in graduates), default=None),
         graduates=graduates,
         holdout_years=holdout_years,
+        walk_forward_oos_sharpes=[v for s in shards for v in s.walk_forward_oos_sharpes],
         errors={sym: why for s in shards for sym, why in s.errors.items()},
         gate_config_version=versions.pop(),
         null_mode=modes.pop(),

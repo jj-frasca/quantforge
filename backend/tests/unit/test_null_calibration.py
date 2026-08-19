@@ -276,3 +276,45 @@ def test_calibrate_gate_records_each_graduate_and_every_holdout_length() -> None
     assert len(result.graduates) == result.n_graduates
     assert result.graduate_symbols == [g.symbol for g in result.graduates]
     assert result.null_mode == "unspecified"
+
+
+def test_calibration_records_the_walk_forward_null_distribution() -> None:
+    """ADR-038's revisit trigger: the null run must carry walk-forward numbers to site a floor."""
+    frames = {f"NULL{i}": iid_normal_null(900, seed=i) for i in range(3)}
+    result = calibrate_gate(frames, ["sma", "momentum"], null_mode="iid_normal")
+
+    assert len(result.walk_forward_oos_sharpes) == result.n_symbols
+    assert all(isinstance(v, float) for v in result.walk_forward_oos_sharpes)
+
+
+def test_merging_shards_concatenates_the_walk_forward_distribution() -> None:
+    shards = [
+        calibrate_gate(
+            {f"NULL{i}": iid_normal_null(900, seed=i)}, ["sma", "momentum"], null_mode="iid_normal"
+        )
+        for i in range(2)
+    ]
+    merged = merge_calibrations(shards)
+    assert merged.walk_forward_oos_sharpes == (
+        shards[0].walk_forward_oos_sharpes + shards[1].walk_forward_oos_sharpes
+    )
+
+
+def test_walk_forward_percentiles_site_the_floor_adr_038_would_need() -> None:
+    frames = {f"NULL{i}": iid_normal_null(900, seed=i) for i in range(4)}
+    result = calibrate_gate(frames, ["sma", "momentum"], null_mode="iid_normal")
+
+    pct = result.walk_forward_null_percentiles
+    assert pct is not None
+    median_, p95, max_ = pct
+    assert median_ <= p95 <= max_
+    assert max_ == max(result.walk_forward_oos_sharpes)
+
+
+def test_walk_forward_percentiles_are_none_when_nothing_was_measured() -> None:
+    frames = {f"NULL{i}": iid_normal_null(900, seed=i) for i in range(2)}
+    result = calibrate_gate(frames, ["sma", "momentum"], null_mode="iid_normal")
+    assert (
+        result.model_copy(update={"walk_forward_oos_sharpes": []}).walk_forward_null_percentiles
+        is None
+    )
