@@ -3,8 +3,10 @@
 FastAPI endpoint specifications. Read when working on `backend/app/api/`. Endpoints are
 versioned under `/api/v1`. Response bodies are Pydantic models (auto-documented at `/docs`).
 
-Phase 5 will expand this (data explorer, strategy config, backtest results). The validation
-endpoint below ships first because the ValidationReport is the MVP deliverable.
+The **research-sandbox** endpoints (`/strategies`, `/bars`, `/ingest`, `/backtest`,
+`/monte-carlo`, `/validate`) are documented in full below. The **lab** endpoints — everything the
+autonomous loop produces — are summarized in the last section; they are all read-only GETs over
+committed JSON under `data/`, which is what makes them cheap to reason about.
 
 ---
 
@@ -294,3 +296,39 @@ for the chosen strategy through `ValidationEngine`, and returns the report.
 **DI**: `get_data_adapter` + `get_repository` from `app.dependencies`; tests swap both via
 `app.dependency_overrides` to feed synthetic fixtures and an `InMemoryPriceBarRepository`
 (no network, no DB in CI).
+
+
+---
+
+## Lab endpoints (the autonomous loop's output)
+
+All GET, all **sync `def`** (they read committed JSON, never a DB or a running hunt), all with
+their data paths dependency-injected so tests point them at `tmp_path`. None of them takes a
+parameter today. Reading them together is the fastest way to understand what the loop produces.
+
+| endpoint | router | response | reads |
+|---|---|---|---|
+| `/api/v1/leaderboard` | `lab.py` | `list[LeaderboardRow]` | `data/research_pool/` (ADR-032) |
+| `/api/v1/paper-portfolio` | `lab.py` | `list[PaperPosition]` | `data/paper_portfolio.json` |
+| `/api/v1/pool-report` | `lab.py` | `PoolReport` | pool + portfolio |
+| `/api/v1/null-calibration` | `lab.py` | `list[NullCalibration]` | `data/null_calibration/` |
+| `/api/v1/graduates` | `graduates.py` | `list[GraduateRow]` | `data/research_pool/` |
+| `/api/v1/cross-sectional` | `cross_sectional.py` | `CrossSectionalView \| None` | `data/cross_sectional_pool.json` |
+| `/api/v1/equity-curve` | `equity_curve.py` | `list[EquityPoint]` | `data/equity_curve.json` |
+
+**The honesty contract these encode, which is the reason they exist at all:**
+
+- `/pool-report` leads with `n_surviving_deflation` — how many graduates are distinguishable from
+  best-of-N selection luck (ADR-018/033) — *not* the graduate count, which overstates the funnel.
+  It also carries `walk_forward_graduates` / `purged_cv_graduates` (ADR-038/039), each nullable,
+  where **null means NOT MEASURED and must never be rendered as zero**.
+- `/null-calibration` returns the gate's measured Type-I error on symbols with no edge by
+  construction (ADR-036/037). **A missing data directory returns `[]` with a 200**, deliberately:
+  a 500 here would take the whole dashboard down for the sake of a summary panel. The same
+  degrade-don't-fail rule applies to `/pool-report` on the frontend side.
+- `/cross-sectional` returns `None` (JSON `null`) when the pool has no entry yet — an honest
+  "nothing searched", distinct from an empty result.
+
+**Frontend contract:** every one of these is parsed through a Zod schema in
+`frontend/src/types/lab.ts` at the boundary. Never re-derive or re-validate a backend-computed
+verdict in the frontend — see `[[feedback-frontend-shadow-validators]]`.
