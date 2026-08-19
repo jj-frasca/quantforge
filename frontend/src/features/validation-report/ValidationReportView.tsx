@@ -77,11 +77,23 @@ export function ValidationReportView({ report }: Props) {
         </div>
         <div>
           <dt>
-            <Term definition="How many purged cross-validation folds the sample supports — training rows within an embargo of the test block are removed (López de Prado 2018). This is the fold COUNT: the folds are not currently scored, see ADR-038.">
-              Purged folds
+            <Term definition="Each fold is scored by the config chosen on the remaining rows, with rows within an embargo of the fold removed so a rolling window cannot straddle the boundary (López de Prado 2018). Unlike walk-forward this is NOT causal — the training rows include data from after the fold — so read it as how stable the edge is across regimes, not as what you would have earned. ADR-039.">
+              Purged-CV out-of-sample Sharpe
             </Term>
           </dt>
-          <dd>{report.n_purged_folds}</dd>
+          <dd>
+            {report.purged_cv ? (
+              <>
+                {asRatio(report.purged_cv.mean_oos_sharpe)}{' '}
+                <span className="metric-hint">
+                  (± {asRatio(report.purged_cv.oos_sharpe_std)} across {report.purged_cv.n_folds}{' '}
+                  folds, {report.purged_cv.embargo}-bar embargo)
+                </span>
+              </>
+            ) : (
+              <span className="metric-hint">{report.n_purged_folds} folds, not scored</span>
+            )}
+          </dd>
         </div>
       </dl>
 

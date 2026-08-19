@@ -54,3 +54,29 @@ test('falls back to the split count when nothing walked forward', () => {
   render(<ValidationReportView report={{ ...passingReport, walk_forward: null }} />)
   expect(screen.getByText(/not measured/i)).toBeInTheDocument()
 })
+
+// ADR-039: the purged-folds tile must report the evaluation and the embargo it was purged with.
+test('reports the purged-CV Sharpe, its dispersion, and the embargo', () => {
+  render(
+    <ValidationReportView
+      report={{
+        ...passingReport,
+        purged_cv: {
+          n_folds: 5,
+          embargo: 200,
+          folds: [],
+          mean_oos_sharpe: 0.25,
+          oos_sharpe_std: 0.4,
+          consistency: 0.6,
+        },
+      }}
+    />,
+  )
+  expect(screen.getByText('0.25')).toBeInTheDocument()
+  expect(screen.getByText(/± 0.40 across 5 folds, 200-bar embargo/i)).toBeInTheDocument()
+})
+
+test('says the sample could not be purged when purged_cv is null', () => {
+  render(<ValidationReportView report={{ ...passingReport, purged_cv: null }} />)
+  expect(screen.getByText(/5 folds, not scored/i)).toBeInTheDocument()
+})

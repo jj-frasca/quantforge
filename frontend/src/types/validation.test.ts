@@ -20,8 +20,9 @@ const valid = {
 }
 
 test('validationReportSchema parses a valid report', () => {
-  // walk_forward defaults to null (ADR-038): a response without it is "not measured".
-  expect(validationReportSchema.parse(valid)).toEqual({ ...valid, walk_forward: null })
+  // walk_forward (ADR-038) and purged_cv (ADR-039) default to null: a response without them
+  // is "not measured", which must never be read as a measured zero.
+  expect(validationReportSchema.parse(valid)).toEqual({ ...valid, walk_forward: null, purged_cv: null })
 })
 
 test('validationReportSchema rejects pbo outside [0,1]', () => {
@@ -91,4 +92,24 @@ test('validationReportSchema accepts a null efficiency (undefined under a losing
 
 test('validationReportSchema defaults walk_forward to null for older responses', () => {
   expect(validationReportSchema.parse(valid).walk_forward).toBeNull()
+})
+
+// ADR-039: the purged folds now carry a leakage-controlled evaluation.
+const purgedCv = {
+  n_folds: 5,
+  embargo: 200,
+  folds: [{ selected_config: 1, oos_sharpe: 0.3, n_train: 200, n_test: 60 }],
+  mean_oos_sharpe: 0.25,
+  oos_sharpe_std: 0.4,
+  consistency: 0.6,
+}
+
+test('validationReportSchema parses a purged-CV evaluation', () => {
+  const parsed = validationReportSchema.parse({ ...valid, purged_cv: purgedCv })
+  expect(parsed.purged_cv?.embargo).toBe(200)
+  expect(parsed.purged_cv?.oos_sharpe_std).toBe(0.4)
+})
+
+test('validationReportSchema defaults purged_cv to null when nothing was purged', () => {
+  expect(validationReportSchema.parse(valid).purged_cv).toBeNull()
 })

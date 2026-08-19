@@ -20,6 +20,7 @@ export const passingReport: ValidationReport = {
   n_walk_forward_splits: 5,
   n_purged_folds: 5,
   walk_forward: null,
+  purged_cv: null,
   flags: [],
   interpretations: [
     { metric: 'pbo', message: 'PBO 20% — overfitting risk is low.', verdict: 'good' },
@@ -50,6 +51,7 @@ export const failingReport: ValidationReport = {
   n_walk_forward_splits: 5,
   n_purged_folds: 5,
   walk_forward: null,
+  purged_cv: null,
   flags: ['high overfitting risk (PBO >= 0.5)'],
   interpretations: [
     {

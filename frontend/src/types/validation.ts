@@ -42,6 +42,28 @@ export const walkForwardSchema = z.object({
 
 export type WalkForward = z.infer<typeof walkForwardSchema>
 
+// One purged fold: the config chosen on the purged training rows, scored on the fold. ADR-039.
+export const purgedCvFoldSchema = z.object({
+  selected_config: z.number().int().nonnegative(),
+  oos_sharpe: z.number(),
+  n_train: z.number().int().nonnegative(),
+  n_test: z.number().int().nonnegative(),
+})
+
+// Read this NEXT TO walk_forward, never instead of it: a purged fold's training rows include
+// indices AFTER its test block, so it measures how stable the edge is across regimes with
+// boundary leakage removed — not what the procedure would have earned. ADR-039.
+export const purgedCvSchema = z.object({
+  n_folds: z.number().int().nonnegative(),
+  embargo: z.number().int().nonnegative(),
+  folds: z.array(purgedCvFoldSchema),
+  mean_oos_sharpe: z.number(),
+  oos_sharpe_std: z.number().nonnegative(),
+  consistency: z.number().min(0).max(1),
+})
+
+export type PurgedCv = z.infer<typeof purgedCvSchema>
+
 // Mirrors the backend ValidationReport (api-contracts.md / app/validation/report.py).
 // `passed` is server-computed and authoritative — render the verdict from it.
 export const validationReportSchema = z.object({
@@ -62,6 +84,9 @@ export const validationReportSchema = z.object({
   // Null on any report produced before ADR-038, and on producers that have no per-config
   // return matrix to walk forward. Null means NOT MEASURED — never treat it as zero.
   walk_forward: walkForwardSchema.nullable().default(null),
+  // Null when the sample was too short to hold the folds plus an honest embargo — the backend
+  // refuses to shrink the embargo to fit, which would yield a leaky number labelled "purged".
+  purged_cv: purgedCvSchema.nullable().default(null),
 })
 
 export type ValidationReport = z.infer<typeof validationReportSchema>
