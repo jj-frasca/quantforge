@@ -9,9 +9,10 @@ occasionally gets done wrong.
 Pure — the caller supplies the experiments and the book.
 """
 
+import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from app.research.lab.experiment import Experiment
+from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.paper import PaperPosition
 from app.research.lab.portfolio_manager import DeflationCohorts, deflation_cohorts
 from app.research.lab.universe import expected_max_sharpe_under_null, rank_experiments
@@ -34,6 +35,23 @@ class NearMiss(BaseModel):
     holdout_years: float
 
 
+class DiagnosticSummary(BaseModel):
+    """Distribution of one out-of-sample diagnostic across the pool's gate-passing experiments.
+
+    Notes:
+        Exists to be read against the null-calibration percentiles for the SAME statistic
+        (ADR-038/039). A median below the null's p95 means the gate is admitting results the
+        pipeline produces on data with no edge by construction.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    n: int
+    median: float
+    p95: float
+    maximum: float
+
+
 class PoolReport(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -46,6 +64,24 @@ class PoolReport(BaseModel):
     near_misses: list[NearMiss]
     n_open_positions: int
     book: DeflationCohorts
+    # None when no gate passer carries the statistic — every experiment predating ADR-038/039
+    # is in that state, and "not measured" must never be read as a measured zero.
+    walk_forward_graduates: DiagnosticSummary | None = None
+    purged_cv_graduates: DiagnosticSummary | None = None
+
+
+def _summarize(trials: list[Trial], field: str) -> DiagnosticSummary | None:
+    """Distribution of one nullable Trial diagnostic, or None when none of them carry it."""
+    values = [v for t in trials if (v := getattr(t, field)) is not None]
+    if not values:
+        return None
+    array = np.asarray(values, dtype=float)
+    return DiagnosticSummary(
+        n=len(values),
+        median=float(np.median(array)),
+        p95=float(np.percentile(array, 95)),
+        maximum=float(array.max()),
+    )
 
 
 def summarize_pool(
@@ -86,6 +122,12 @@ def summarize_pool(
             best_miss[key] = miss
     near_misses = sorted(best_miss.values(), key=lambda m: m.ratio_to_bar, reverse=True)
 
+    passing_finalists = [
+        max(e.trials, key=lambda t: t.deflated_sharpe)
+        for e in experiments
+        if e.graduate is not None and e.trials
+    ]
+
     open_positions = [p for p in positions if p.status == "open"]
     return PoolReport(
         n_experiments=len(experiments),
@@ -97,4 +139,6 @@ def summarize_pool(
         near_misses=near_misses[:top_near_misses],
         n_open_positions=len(open_positions),
         book=deflation_cohorts(open_positions),
+        walk_forward_graduates=_summarize(passing_finalists, "walk_forward_oos_sharpe"),
+        purged_cv_graduates=_summarize(passing_finalists, "purged_cv_oos_sharpe"),
     )

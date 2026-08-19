@@ -52,6 +52,22 @@ def main() -> None:
                 f"{m.ratio_to_bar:>7.2f}{m.holdout_years:>6.1f}"
             )
 
+    # ADR-038/039: read these against data/null_calibration/*.json — the same statistics measured
+    # on symbols with no edge by construction. A pool median below the null's p95 means the gate is
+    # admitting what the pipeline produces from noise.
+    for label, summary in (
+        ("walk-forward", report.walk_forward_graduates),
+        ("purged-CV", report.purged_cv_graduates),
+    ):
+        if summary is None:
+            print(f"\n{label:<13} OOS Sharpe of gate passers: not measured (pre-ADR-038/039 pool)")
+        else:
+            print(
+                f"\n{label:<13} OOS Sharpe of gate passers: median {summary.median:+.2f} | "
+                f"p95 {summary.p95:+.2f} | max {summary.maximum:+.2f} (n={summary.n}) "
+                f"-- compare with data/null_calibration/"
+            )
+
     book = report.book
     print(
         f"\nforward book: {report.n_open_positions} open — "

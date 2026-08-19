@@ -179,3 +179,42 @@ def test_near_misses_keep_distinct_strategies_for_the_same_symbol() -> None:
         ("FDX", "tfmr"),
         ("FDX", "rsi"),
     }
+
+
+# --- ADR-038/039: the pool's own out-of-sample diagnostics, for comparison against the null ---
+
+
+def _exp_with_diagnostics(
+    symbol: str, *, walk_forward: float | None, purged_cv: float | None, graduated: bool
+) -> Experiment:
+    experiment = _exp(symbol, holdout_sharpe=1.0 if graduated else None)
+    trial = experiment.trials[0].model_copy(
+        update={"walk_forward_oos_sharpe": walk_forward, "purged_cv_oos_sharpe": purged_cv}
+    )
+    return experiment.model_copy(update={"trials": [trial]})
+
+
+def test_report_summarizes_the_out_of_sample_diagnostics_of_gate_passers() -> None:
+    """ADR-038/039's revisit trigger is 'compare passers against the null', so the pool side of
+    that comparison has to be one command, not a fresh script every session."""
+    experiments = [
+        _exp_with_diagnostics("AAA", walk_forward=1.4, purged_cv=0.9, graduated=True),
+        _exp_with_diagnostics("BBB", walk_forward=0.6, purged_cv=0.2, graduated=True),
+        _exp_with_diagnostics("CCC", walk_forward=-0.3, purged_cv=-0.1, graduated=False),
+    ]
+    report = summarize_pool(experiments, [])
+
+    assert report.walk_forward_graduates is not None
+    assert report.walk_forward_graduates.n == 2  # only the gate passers
+    assert report.walk_forward_graduates.median == pytest.approx(1.0)
+    assert report.walk_forward_graduates.maximum == pytest.approx(1.4)
+    assert report.purged_cv_graduates is not None
+    assert report.purged_cv_graduates.n == 2
+
+
+def test_diagnostics_are_none_when_no_graduate_carries_them() -> None:
+    """The 3,227 experiments predating ADR-038 have no walk-forward number. 'Not measured' must
+    not read as 'measured zero'."""
+    report = summarize_pool([_exp("AAA", holdout_sharpe=1.0)], [])
+    assert report.walk_forward_graduates is None
+    assert report.purged_cv_graduates is None
