@@ -20,7 +20,8 @@ const valid = {
 }
 
 test('validationReportSchema parses a valid report', () => {
-  expect(validationReportSchema.parse(valid)).toEqual(valid)
+  // walk_forward defaults to null (ADR-038): a response without it is "not measured".
+  expect(validationReportSchema.parse(valid)).toEqual({ ...valid, walk_forward: null })
 })
 
 test('validationReportSchema rejects pbo outside [0,1]', () => {
@@ -59,4 +60,35 @@ test('validateRequestSchema rejects an empty strategy name', () => {
       end_date: '2024-01-01T00:00:00Z',
     }),
   ).toThrow()
+})
+
+// ADR-038: the walk-forward splits now carry an evaluation, not just a count.
+const walkForward = {
+  n_splits: 5,
+  splits: [
+    { selected_config: 0, is_sharpe: 1.1, oos_sharpe: 0.4, n_train: 100, n_test: 40 },
+    { selected_config: 2, is_sharpe: 0.9, oos_sharpe: -0.2, n_train: 140, n_test: 40 },
+  ],
+  mean_is_sharpe: 1.0,
+  mean_oos_sharpe: 0.1,
+  consistency: 0.5,
+  efficiency: 0.1,
+}
+
+test('validationReportSchema parses a walk-forward evaluation', () => {
+  const parsed = validationReportSchema.parse({ ...valid, walk_forward: walkForward })
+  expect(parsed.walk_forward?.mean_oos_sharpe).toBe(0.1)
+  expect(parsed.walk_forward?.splits).toHaveLength(2)
+})
+
+test('validationReportSchema accepts a null efficiency (undefined under a losing in-sample)', () => {
+  const parsed = validationReportSchema.parse({
+    ...valid,
+    walk_forward: { ...walkForward, efficiency: null },
+  })
+  expect(parsed.walk_forward?.efficiency).toBeNull()
+})
+
+test('validationReportSchema defaults walk_forward to null for older responses', () => {
+  expect(validationReportSchema.parse(valid).walk_forward).toBeNull()
 })

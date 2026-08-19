@@ -18,6 +18,30 @@ export const regimeBreakdownEntrySchema = z.object({
 
 export type RegimeBreakdownEntry = z.infer<typeof regimeBreakdownEntrySchema>
 
+// One walk-forward window: the config picked on the train block, and how it then did on the
+// block that followed. ADR-038.
+export const walkForwardSplitSchema = z.object({
+  selected_config: z.number().int().nonnegative(),
+  is_sharpe: z.number(),
+  oos_sharpe: z.number(),
+  n_train: z.number().int().nonnegative(),
+  n_test: z.number().int().nonnegative(),
+})
+
+// `efficiency` is null when the mean in-sample Sharpe was not positive — the backend refuses to
+// report a ratio of two negative Sharpes, which would read as "efficient" while both halves lost
+// money. Render the null as "n/a", never as 0.
+export const walkForwardSchema = z.object({
+  n_splits: z.number().int().nonnegative(),
+  splits: z.array(walkForwardSplitSchema),
+  mean_is_sharpe: z.number(),
+  mean_oos_sharpe: z.number(),
+  consistency: z.number().min(0).max(1),
+  efficiency: z.number().nullable().default(null),
+})
+
+export type WalkForward = z.infer<typeof walkForwardSchema>
+
 // Mirrors the backend ValidationReport (api-contracts.md / app/validation/report.py).
 // `passed` is server-computed and authoritative — render the verdict from it.
 export const validationReportSchema = z.object({
@@ -35,6 +59,9 @@ export const validationReportSchema = z.object({
   // per ADR-012 §Consequences). Default {} so test fixtures and older responses
   // still parse.
   regime_breakdown: z.record(z.string(), regimeBreakdownEntrySchema).default({}),
+  // Null on any report produced before ADR-038, and on producers that have no per-config
+  // return matrix to walk forward. Null means NOT MEASURED — never treat it as zero.
+  walk_forward: walkForwardSchema.nullable().default(null),
 })
 
 export type ValidationReport = z.infer<typeof validationReportSchema>

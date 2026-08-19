@@ -28,3 +28,29 @@ test('renders the interpretations panel with each metric verdict', () => {
   expect(interpretations).toHaveTextContent(/Deflated Sharpe.*luck/i)
   expect(interpretations).toHaveTextContent(/Parameter stability.*fragility/i)
 })
+
+// ADR-038: the walk-forward tile must report what the splits MEASURED, not how many there were.
+test('reports the walk-forward out-of-sample Sharpe when one was computed', () => {
+  render(
+    <ValidationReportView
+      report={{
+        ...passingReport,
+        walk_forward: {
+          n_splits: 5,
+          splits: [],
+          mean_is_sharpe: 1.0,
+          mean_oos_sharpe: 0.34,
+          consistency: 0.8,
+          efficiency: 0.34,
+        },
+      }}
+    />,
+  )
+  expect(screen.getByText('0.34')).toBeInTheDocument()
+  expect(screen.getByText(/4 of 5 windows/i)).toBeInTheDocument()
+})
+
+test('falls back to the split count when nothing walked forward', () => {
+  render(<ValidationReportView report={{ ...passingReport, walk_forward: null }} />)
+  expect(screen.getByText(/not measured/i)).toBeInTheDocument()
+})

@@ -33,7 +33,7 @@ export function ValidationReportView({ report }: Props) {
         </div>
         <div>
           <dt>
-            <Term definition="The Sharpe ratio penalized for how many configurations we tried. Bailey & López de Prado (2014). DSR > 0 means the result survives multiple-testing; DSR ≤ 0 means it's plausibly explained by luck.">
+            <Term definition="The Sharpe ratio penalized for how many configurations we tried. Bailey & López de Prado (2014). DSR ≤ 0 means the result is plausibly explained by luck. DSR > 0 is necessary but NOT sufficient: measured against data with no edge by construction, this pipeline still produced a deflated Sharpe as high as +0.92, so the other criteria do the real work.">
               Deflated Sharpe
             </Term>
           </dt>
@@ -57,15 +57,27 @@ export function ValidationReportView({ report }: Props) {
         </div>
         <div>
           <dt>
-            <Term definition="How many independent train/test splits walked forward through time. More splits = more rigorous out-of-sample evidence.">
-              Walk-forward splits
+            <Term definition="Re-pick the best configuration on each expanding training window, then score THAT choice on the window that follows, and average. Unlike the headline Sharpe it measures the selection procedure rather than one hand-picked config. ADR-038.">
+              Walk-forward out-of-sample Sharpe
             </Term>
           </dt>
-          <dd>{report.n_walk_forward_splits}</dd>
+          <dd>
+            {report.walk_forward ? (
+              <>
+                {asRatio(report.walk_forward.mean_oos_sharpe)}{' '}
+                <span className="metric-hint">
+                  (positive in {Math.round(report.walk_forward.consistency * report.walk_forward.n_splits)} of{' '}
+                  {report.walk_forward.n_splits} windows)
+                </span>
+              </>
+            ) : (
+              <span className="metric-hint">not measured</span>
+            )}
+          </dd>
         </div>
         <div>
           <dt>
-            <Term definition="Cross-validation folds with leakage protection: training samples whose labels overlap the test set are purged, with an embargo period after each test fold. López de Prado (2018).">
+            <Term definition="How many purged cross-validation folds the sample supports — training rows within an embargo of the test block are removed (López de Prado 2018). This is the fold COUNT: the folds are not currently scored, see ADR-038.">
               Purged folds
             </Term>
           </dt>
