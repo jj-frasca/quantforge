@@ -1,9 +1,11 @@
 import { DeflationHeadline } from './DeflationHeadline'
 import { ForwardComparisonChart } from './ForwardComparisonChart'
+import { GateCalibrationPanel } from './GateCalibrationPanel'
 import { LeaderboardTable } from './LeaderboardTable'
 import { PaperPortfolioTable } from './PaperPortfolioTable'
 import { PositionEquityCurve } from './PositionEquityCurve'
 import { useLeaderboard } from './useLeaderboard'
+import { useNullCalibration } from './useNullCalibration'
 import { usePaperPortfolio } from './usePaperPortfolio'
 import { usePoolReport } from './usePoolReport'
 
@@ -11,6 +13,7 @@ export function LabDashboardPage() {
   const leaderboard = useLeaderboard()
   const portfolio = usePaperPortfolio()
   const report = usePoolReport()
+  const calibration = useNullCalibration()
 
   return (
     <section aria-label="live dashboard page" className="page lab-dashboard">
@@ -26,6 +29,7 @@ export function LabDashboardPage() {
           not a precondition — if it fails to load the rest of the dashboard still renders. */}
       <section aria-label="honest headline" className="lab-section">
         {report.data && <DeflationHeadline report={report.data} />}
+        {calibration.data && <GateCalibrationPanel calibrations={calibration.data} />}
       </section>
 
       <section aria-label="paper book" className="lab-section">

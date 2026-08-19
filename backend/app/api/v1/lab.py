@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
+from app.research.lab.calibration import NullCalibration
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
 from app.research.lab.pool_report import PoolReport, summarize_pool
@@ -21,6 +22,11 @@ def get_pool_path() -> Path:
 def get_portfolio_path() -> Path:
     """Path to the paper portfolio JSON (overridable in tests)."""
     return _DATA / "paper_portfolio.json"
+
+
+def get_calibration_path() -> Path:
+    """Directory of committed null-model calibrations, one per null mode (overridable in tests)."""
+    return _DATA / "null_calibration"
 
 
 # Sync + read-only: just reads the committed JSON stores (no running hunt, no DB).
@@ -48,3 +54,18 @@ def pool_report(
         PartitionedExperimentStore(pool_path).all(),
         JsonFilePaperPortfolio(portfolio_path).positions(),
     )
+
+
+# Sync + read-only: the measured Type-I error of the WHOLE gate (ADR-036/037), written by the
+# null-calibration workflow. Returns one row per null mode, or [] when none has been measured —
+# an empty list is honest, and a 500 here would take the rest of the dashboard down with it.
+@router.get("/null-calibration", response_model=list[NullCalibration])
+def null_calibration(
+    calibration_path: Annotated[Path, Depends(get_calibration_path)],
+) -> list[NullCalibration]:
+    if not calibration_path.is_dir():
+        return []
+    return [
+        NullCalibration.model_validate_json(path.read_text())
+        for path in sorted(calibration_path.glob("*.json"))
+    ]

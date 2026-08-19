@@ -165,3 +165,24 @@ export const poolReportSchema = z.object({
 })
 
 export type PoolReport = z.infer<typeof poolReportSchema>
+
+// The gate's measured behaviour on symbols with NO EDGE by construction (ADR-036/037), written by
+// the null-calibration workflow. `false_graduation_rate` is a Type-I error for the WHOLE pipeline —
+// search, DSR, PBO, MinTRL, holdout and beat-buy-and-hold together — which no single component's
+// guarantee implies. It is a property of `gate_config_version`; re-measured whenever the gate moves.
+export const nullCalibrationSchema = z.object({
+  n_symbols: z.number().int(),
+  n_graduates: z.number().int(),
+  false_graduation_rate: z.number().min(0).max(1),
+  n_clear_deflation_bar: z.number().int(),
+  deflation_bar: z.number(),
+  max_deflated_sharpe: z.number(),
+  max_holdout_sharpe: z.number().nullable(),
+  holdout_years: z.array(z.number()).default([]),
+  walk_forward_oos_sharpes: z.array(z.number()).default([]),
+  purged_cv_oos_sharpes: z.array(z.number()).default([]),
+  gate_config_version: z.string(),
+  null_mode: z.string(),
+})
+
+export type NullCalibration = z.infer<typeof nullCalibrationSchema>

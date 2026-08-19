@@ -5,8 +5,9 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
-from app.api.v1.lab import get_pool_path, get_portfolio_path
+from app.api.v1.lab import get_calibration_path, get_pool_path, get_portfolio_path
 from app.main import app
+from app.research.lab.calibration import NullCalibration
 from app.research.lab.experiment import Experiment, Graduate, PartitionedExperimentStore, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
@@ -133,3 +134,47 @@ def test_pool_report_is_empty_when_the_pool_is_absent(tmp_path) -> None:
 
     assert response.status_code == 200
     assert response.json()["n_experiments"] == 0
+
+
+def _calibration_json(mode: str, n_graduates: int) -> str:
+    return NullCalibration(
+        n_symbols=200,
+        n_graduates=n_graduates,
+        false_graduation_rate=n_graduates / 200,
+        n_clear_deflation_bar=0,
+        deflation_bar=2.11,
+        max_deflated_sharpe=0.92,
+        max_holdout_sharpe=0.85,
+        graduates=[],
+        holdout_years=[2.4],
+        walk_forward_oos_sharpes=[0.1, 0.2, 0.3],
+        purged_cv_oos_sharpes=[0.2, 0.3, 0.4],
+        errors={},
+        gate_config_version="v1",
+        null_mode=mode,
+    ).model_dump_json()
+
+
+def test_null_calibration_endpoint_returns_every_measured_mode(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    (tmp_path / "iid_normal.json").write_text(_calibration_json("iid_normal", 2))
+    (tmp_path / "bootstrap.json").write_text(_calibration_json("bootstrap:SPY", 2))
+    app.dependency_overrides[get_calibration_path] = lambda: tmp_path
+
+    response = TestClient(app).get("/api/v1/null-calibration")
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert {row["null_mode"] for row in body} == {"iid_normal", "bootstrap:SPY"}
+    assert all(row["false_graduation_rate"] == 0.01 for row in body)
+    assert all(row["n_clear_deflation_bar"] == 0 for row in body)
+
+
+def test_null_calibration_endpoint_is_empty_when_nothing_has_been_measured(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """An empty list is honest; a 500 would take the whole dashboard down with it."""
+    app.dependency_overrides[get_calibration_path] = lambda: tmp_path / "missing"
+    response = TestClient(app).get("/api/v1/null-calibration")
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == []

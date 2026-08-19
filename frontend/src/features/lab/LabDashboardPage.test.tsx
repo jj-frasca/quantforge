@@ -132,3 +132,46 @@ test('the dashboard still renders when the pool report is unavailable', async ()
   expect(await screen.findByLabelText('leaderboard')).toBeInTheDocument()
   expect(screen.queryByTestId('deflation-survivors')).toBeNull()
 })
+
+test('surfaces the measured false-graduation rate alongside the headline (ADR-036/037)', async () => {
+  server.use(
+    http.get('/api/v1/leaderboard', () => HttpResponse.json(leaderboardRows)),
+    http.get('/api/v1/paper-portfolio', () => HttpResponse.json(positions)),
+    http.get('/api/v1/pool-report', () => HttpResponse.json(poolReport)),
+    http.get('/api/v1/null-calibration', () =>
+      HttpResponse.json([
+        {
+          n_symbols: 200,
+          n_graduates: 2,
+          false_graduation_rate: 0.01,
+          n_clear_deflation_bar: 0,
+          deflation_bar: 2.11,
+          max_deflated_sharpe: 0.92,
+          max_holdout_sharpe: 0.85,
+          holdout_years: [2.4],
+          walk_forward_oos_sharpes: [],
+          purged_cv_oos_sharpes: [],
+          gate_config_version: 'v1',
+          null_mode: 'iid_normal',
+        },
+      ]),
+    ),
+  )
+  renderWithClient(<LabDashboardPage />)
+
+  expect(await screen.findByLabelText('gate calibration')).toBeInTheDocument()
+  expect(screen.getByText('1.00%')).toBeInTheDocument()
+})
+
+test('the dashboard still renders when the gate has never been calibrated', async () => {
+  server.use(
+    http.get('/api/v1/leaderboard', () => HttpResponse.json(leaderboardRows)),
+    http.get('/api/v1/paper-portfolio', () => HttpResponse.json(positions)),
+    http.get('/api/v1/pool-report', () => HttpResponse.json(poolReport)),
+    http.get('/api/v1/null-calibration', () => HttpResponse.json([])),
+  )
+  renderWithClient(<LabDashboardPage />)
+
+  expect(await screen.findByLabelText('leaderboard')).toBeInTheDocument()
+  expect(screen.queryByLabelText('gate calibration')).toBeNull()
+})

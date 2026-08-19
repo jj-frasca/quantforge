@@ -1,14 +1,18 @@
+import { z } from 'zod'
+
 import {
   crossSectionalResponseSchema,
   equityCurveSchema,
   graduatesSchema,
   leaderboardSchema,
+  nullCalibrationSchema,
   paperPortfolioSchema,
   poolReportSchema,
   type CrossSectionalView,
   type EquityPoint,
   type GraduateRow,
   type LeaderboardRow,
+  type NullCalibration,
   type PaperPosition,
   type PoolReport,
 } from '../types/lab'
@@ -61,4 +65,12 @@ export async function requestPoolReport(): Promise<PoolReport> {
     throw new Error(`Pool report request failed (${response.status})`)
   }
   return poolReportSchema.parse(await response.json())
+}
+
+export async function requestNullCalibration(): Promise<NullCalibration[]> {
+  const response = await fetch(`${API_BASE}/api/v1/null-calibration`)
+  if (!response.ok) {
+    throw new Error(`Null calibration request failed (${response.status})`)
+  }
+  return z.array(nullCalibrationSchema).parse(await response.json())
 }
