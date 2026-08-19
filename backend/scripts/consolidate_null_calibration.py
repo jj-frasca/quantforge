@@ -59,7 +59,7 @@ def main() -> None:
 
     if out:
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(merged.model_dump_json(indent=2))
+        out.write_text(merged.model_dump_json(indent=2) + "\n")
         print(f"\nwrote {out}")
 
 

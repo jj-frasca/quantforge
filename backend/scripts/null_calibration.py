@@ -102,7 +102,7 @@ def main() -> None:
     _report(result)
 
     if out:
-        Path(out).write_text(result.model_dump_json(indent=2))
+        Path(out).write_text(result.model_dump_json(indent=2) + "\n")
         print(f"\nwrote {out}")
 
 
