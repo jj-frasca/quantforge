@@ -7,7 +7,7 @@ import numpy.typing as npt
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
-from app.research.lab.experiment import Experiment
+from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.gate import GateConfig
 from app.research.lab.holdout import split_holdout
 from app.research.lab.search import run_search
@@ -60,6 +60,9 @@ class NullCalibration(BaseModel):
     # null this is the distribution a walk-forward floor would have to clear, which is the evidence
     # ADR-038 requires before promoting the statistic from a diagnostic to a gate criterion.
     walk_forward_oos_sharpes: list[float] = []
+    # ADR-039: the same, for the purged folds. Separate list because the two statistics have
+    # different null distributions and a floor argued from one says nothing about the other.
+    purged_cv_oos_sharpes: list[float] = []
     errors: dict[str, str]
     gate_config_version: str
     null_mode: str = "unspecified"
@@ -69,6 +72,11 @@ class NullCalibration(BaseModel):
         return [g.symbol for g in self.graduates]
 
     @property
+    def purged_cv_null_percentiles(self) -> tuple[float, float, float] | None:
+        """(median, p95, max) purged-CV OOS Sharpe under the null — ADR-039's candidate floor."""
+        return _percentiles(self.purged_cv_oos_sharpes)
+
+    @property
     def walk_forward_null_percentiles(self) -> tuple[float, float, float] | None:
         """(median, p95, max) walk-forward OOS Sharpe under the null — ADR-038's candidate floor.
 
@@ -76,14 +84,7 @@ class NullCalibration(BaseModel):
             None when nothing was measured, so "no walk-forward data" can never be mistaken for
             "the null walks forward at 0.0".
         """
-        if not self.walk_forward_oos_sharpes:
-            return None
-        values = np.asarray(self.walk_forward_oos_sharpes, dtype=float)
-        return (
-            float(np.median(values)),
-            float(np.percentile(values, 95)),
-            float(values.max()),
-        )
+        return _percentiles(self.walk_forward_oos_sharpes)
 
 
 # Widened past the repo's usual NDArray[float64]: numpy types these products as
@@ -175,10 +176,18 @@ def bootstrap_null(
     )
 
 
-def _finalist_walk_forward(experiment: Experiment) -> float | None:
-    """The max-DSR trial's walk-forward estimate — the same trial run_search sends to the gate."""
-    finalist = max(experiment.trials, key=lambda t: t.deflated_sharpe)
-    return finalist.walk_forward_oos_sharpe
+def _percentiles(values: Sequence[float]) -> tuple[float, float, float] | None:
+    """(median, p95, max), or None when nothing was measured — so "no data" can never be mistaken
+    for "the null scores 0.0"."""
+    if not values:
+        return None
+    array = np.asarray(values, dtype=float)
+    return float(np.median(array)), float(np.percentile(array, 95)), float(array.max())
+
+
+def _finalist(experiment: Experiment) -> Trial:
+    """The max-DSR trial — the same one run_search sends to the gate."""
+    return max(experiment.trials, key=lambda t: t.deflated_sharpe)
 
 
 def calibrate_gate(
@@ -259,7 +268,10 @@ def calibrate_gate(
         ],
         holdout_years=holdout_years,
         walk_forward_oos_sharpes=[
-            wf for e in experiments if (wf := _finalist_walk_forward(e)) is not None
+            wf for e in experiments if (wf := _finalist(e).walk_forward_oos_sharpe) is not None
+        ],
+        purged_cv_oos_sharpes=[
+            cv for e in experiments if (cv := _finalist(e).purged_cv_oos_sharpe) is not None
         ],
         errors=errors,
         gate_config_version=gate_config.version_hash,
@@ -307,6 +319,7 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
         graduates=graduates,
         holdout_years=holdout_years,
         walk_forward_oos_sharpes=[v for s in shards for v in s.walk_forward_oos_sharpes],
+        purged_cv_oos_sharpes=[v for s in shards for v in s.purged_cv_oos_sharpes],
         errors={sym: why for s in shards for sym, why in s.errors.items()},
         gate_config_version=versions.pop(),
         null_mode=modes.pop(),

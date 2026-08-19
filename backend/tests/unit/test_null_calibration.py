@@ -318,3 +318,27 @@ def test_walk_forward_percentiles_are_none_when_nothing_was_measured() -> None:
         result.model_copy(update={"walk_forward_oos_sharpes": []}).walk_forward_null_percentiles
         is None
     )
+
+
+def test_calibration_records_the_purged_cv_null_distribution() -> None:
+    """ADR-039 borrows ADR-038's trigger: measure the statistic under a known-zero edge first."""
+    frames = {f"NULL{i}": iid_normal_null(900, seed=i) for i in range(3)}
+    result = calibrate_gate(frames, ["sma", "momentum"], null_mode="iid_normal")
+
+    assert len(result.purged_cv_oos_sharpes) == result.n_symbols
+    pct = result.purged_cv_null_percentiles
+    assert pct is not None
+    assert pct[0] <= pct[1] <= pct[2]
+
+
+def test_merging_shards_concatenates_the_purged_cv_distribution() -> None:
+    shards = [
+        calibrate_gate(
+            {f"NULL{i}": iid_normal_null(900, seed=i)}, ["sma", "momentum"], null_mode="iid_normal"
+        )
+        for i in range(2)
+    ]
+    merged = merge_calibrations(shards)
+    assert merged.purged_cv_oos_sharpes == (
+        shards[0].purged_cv_oos_sharpes + shards[1].purged_cv_oos_sharpes
+    )

@@ -198,3 +198,16 @@ def test_walk_forward_estimate_is_independent_of_the_holdout_sharpe() -> None:
     assert exp.graduate is not None
     best = max(exp.trials, key=lambda t: t.deflated_sharpe)
     assert best.walk_forward_oos_sharpe != exp.graduate.holdout_sharpe
+
+
+def test_every_trial_records_its_purged_cv_estimate() -> None:
+    """ADR-039: the purged-CV number reaches the pool alongside the walk-forward one."""
+    exp = run_search(_random_walk_frame(4), "AAPL", ["sma", "momentum"], refine=True)
+    assert all(t.purged_cv_oos_sharpe is not None for t in exp.trials)
+
+
+def test_purged_cv_and_walk_forward_are_recorded_separately() -> None:
+    """They answer different questions; collapsing them into one number would hide the gap."""
+    exp = run_search(_random_walk_frame(5), "AAPL", ["sma", "momentum"])
+    best = max(exp.trials, key=lambda t: t.deflated_sharpe)
+    assert best.purged_cv_oos_sharpe != best.walk_forward_oos_sharpe

@@ -31,6 +31,10 @@ class Trial(BaseModel):
     # experiments already in the pool deserialize, and so a producer that computed no
     # walk-forward (the cross-sectional search) reports "not measured" rather than 0.0.
     walk_forward_oos_sharpe: float | None = None
+    # ADR-039: mean out-of-sample Sharpe across the PURGED folds. Kept separate from
+    # walk_forward_oos_sharpe on purpose — the two answer different questions (causal
+    # prequential vs leakage-controlled dispersion) and the GAP between them is diagnostic.
+    purged_cv_oos_sharpe: float | None = None
 
 
 class Graduate(BaseModel):

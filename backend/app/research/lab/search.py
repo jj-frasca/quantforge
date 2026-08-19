@@ -27,6 +27,10 @@ def _walk_forward_oos(report: ValidationReport) -> float | None:
     return report.walk_forward.mean_oos_sharpe if report.walk_forward else None
 
 
+def _purged_cv_oos(report: ValidationReport) -> float | None:
+    return report.purged_cv.mean_oos_sharpe if report.purged_cv else None
+
+
 def _numeric_params(strategy: BaseStrategy) -> dict[str, float | int]:
     return {k: v for k, v in strategy.parameters.items() if isinstance(v, int | float)}
 
@@ -93,6 +97,7 @@ def run_search(
                 pbo=report.pbo,
                 parameter_stability_score=report.parameter_stability_score,
                 walk_forward_oos_sharpe=_walk_forward_oos(report),
+                purged_cv_oos_sharpe=_purged_cv_oos(report),
             )
         )
         best_configs.append(best_config)
@@ -133,6 +138,7 @@ def run_search(
                     pbo=refined_report.pbo,
                     parameter_stability_score=refined_report.parameter_stability_score,
                     walk_forward_oos_sharpe=_walk_forward_oos(refined_report),
+                    purged_cv_oos_sharpe=_purged_cv_oos(refined_report),
                 )
             )
             if refined_report.deflated_sharpe > best_report.deflated_sharpe:
