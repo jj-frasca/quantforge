@@ -21,7 +21,7 @@ down: ## Stop the docker-compose stack
 	docker compose down
 
 test: ## Run tests with coverage — excludes live + integration (DB) tests
-	$(BE) pytest -m "not live and not integration" --cov=app --cov-report=term-missing --cov-fail-under=$(COV_MIN)
+	$(BE) pytest -m "not live and not integration" -n auto --cov=app --cov-report=term-missing --cov-fail-under=$(COV_MIN)
 
 test-live: ## Run live-data tests (yfinance). Local only — never in CI.
 	$(BE) pytest -m live
