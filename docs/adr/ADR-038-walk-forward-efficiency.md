@@ -109,6 +109,25 @@ distribution against the pool's gate-passing experiments. If the pool's passers 
 from the null at the 95th percentile, a walk-forward floor set at that percentile is justified and
 gets its own ADR.
 
+### Measured, 2026-08-19 (run 32292934031, N = 200 per mode, annualized)
+
+| null mode | median | p95 | max |
+|---|---|---|---|
+| `iid_normal` | +0.152 | +0.784 | +1.389 |
+| `bootstrap:SPY` | +0.338 | +0.972 | +1.435 |
+
+A walk-forward out-of-sample Sharpe below roughly **+1.0 is indistinguishable from noise** in this
+pipeline. The gap between the two nulls is the load-bearing detail: the bootstrap null preserves
+SPY's realized **drift** while destroying every serial dependence, and it sits systematically above
+the iid-normal null. The selection is earning drift — a long-biased configuration on an
+upward-drifting series profits even with nothing to trade.
+
+**Consequence for any future gate.** `mean_oos_sharpe` is not benchmark-relative, exactly as the raw
+holdout Sharpe was not before `require_beat_buy_and_hold` was added on 2026-07-02 to kill precisely
+this failure ("positive-Sharpe beta artifacts on names that ripped"). A walk-forward criterion must
+therefore be stated against **buy-and-hold on the same windows**, never against zero, or it
+re-imports that bug under a new name.
+
 ### Purged CV
 `n_purged_folds` is the same species of decorative count, but it is **deliberately left as-is here**.
 Purged K-fold is a *non-sequential* resampling scheme; scoring a causal price strategy on
