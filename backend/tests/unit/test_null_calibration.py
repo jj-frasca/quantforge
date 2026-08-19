@@ -18,11 +18,14 @@ import pytest
 from app.research.lab.calibration import (
     NullCalibration,
     NullGraduate,
+    autocorrelated_edge,
     bootstrap_null,
     calibrate_gate,
     drop_incomplete_bars,
     iid_normal_null,
+    measure_power,
     merge_calibrations,
+    oracle_sharpe,
 )
 from app.research.lab.universe import expected_max_sharpe_under_null
 
@@ -371,3 +374,97 @@ def test_dropping_every_bar_is_refused_rather_than_returning_an_empty_frame() ->
     frame = pd.DataFrame({"close": [1.0]}, index=index)
     with pytest.raises(ValueError, match="no completed bars"):
         drop_incomplete_bars(frame, asof=datetime(2026, 8, 19, tzinfo=UTC))
+
+
+# --- ADR-041: power. The null says the gate rejects noise; this asks whether it detects an edge ---
+
+
+def test_autocorrelated_edge_plants_the_requested_serial_dependence() -> None:
+    frame = autocorrelated_edge(4000, seed=0, phi=-0.25)
+    returns = frame["close"].pct_change().dropna()
+    realized = float(returns.autocorr(lag=1))
+    assert realized < -0.15  # mean-reverting by construction
+
+    trending = autocorrelated_edge(4000, seed=0, phi=0.25)
+    assert float(trending["close"].pct_change().dropna().autocorr(lag=1)) > 0.15
+
+
+def test_an_edge_frame_is_a_valid_price_frame() -> None:
+    frame = autocorrelated_edge(500, seed=1, phi=-0.2)
+    assert list(frame.columns) == ["open", "high", "low", "close", "volume"]
+    assert (frame["high"] >= frame[["open", "close"]].max(axis=1)).all()
+    assert (frame["low"] <= frame[["open", "close"]].min(axis=1)).all()
+    assert (frame["close"] > 0).all()
+
+
+def test_oracle_sharpe_grows_with_the_planted_effect_size() -> None:
+    """The effect size is MEASURED on the same series the search sees — no derivation to get wrong."""
+    weak = oracle_sharpe(autocorrelated_edge(3000, seed=2, phi=-0.05), phi=-0.05)
+    strong = oracle_sharpe(autocorrelated_edge(3000, seed=2, phi=-0.35), phi=-0.35)
+    assert 0.0 < weak < strong
+
+
+def test_oracle_sharpe_of_a_zero_phi_series_is_not_an_edge() -> None:
+    """phi = 0 is the null; the oracle rule has nothing to condition on."""
+    assert abs(oracle_sharpe(autocorrelated_edge(3000, seed=3, phi=0.0), phi=0.0)) < 0.5
+
+
+def test_measure_power_reports_detection_in_two_tiers() -> None:
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(3)}
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+
+    assert result.n_symbols == 3
+    assert 0.0 <= result.detection_rate <= 1.0
+    assert result.detection_rate == result.n_detected / result.n_symbols
+    assert result.n_clear_deflation_bar <= result.n_detected  # the bar is the stricter tier
+    assert len(result.oracle_sharpes) == 3
+    assert result.phi == -0.3
+    assert result.gate_config_version
+
+
+def test_measure_power_refuses_an_empty_universe() -> None:
+    with pytest.raises(ValueError, match="at least one"):
+        measure_power({}, ["sma", "momentum"], phi=-0.3)
+
+
+def test_oracle_sharpe_percentiles_summarize_the_planted_effect_size() -> None:
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(3)}
+    pct = measure_power(frames, ["sma", "momentum"], phi=-0.3).oracle_sharpe_percentiles
+    assert pct is not None
+    assert pct[0] <= pct[1] <= pct[2]
+
+
+def test_autocorrelated_edge_rejects_a_non_stationary_phi() -> None:
+    with pytest.raises(ValueError, match="stationary"):
+        autocorrelated_edge(100, seed=0, phi=1.0)
+    with pytest.raises(ValueError, match="n_bars"):
+        autocorrelated_edge(0, seed=0, phi=-0.2)
+
+
+def test_oracle_sharpe_of_a_frame_too_short_to_score_is_zero() -> None:
+    frame = autocorrelated_edge(2, seed=0, phi=-0.2)
+    assert oracle_sharpe(frame, phi=-0.2) == 0.0
+
+
+def test_a_symbol_that_cannot_be_searched_is_recorded_and_excluded() -> None:
+    """Counting an unsearchable symbol as a non-detection would understate power."""
+    frames = {
+        "EDGE0": autocorrelated_edge(900, seed=0, phi=-0.3),
+        "TOOSHORT": autocorrelated_edge(30, seed=1, phi=-0.3),
+    }
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+    assert result.n_symbols == 1
+    assert "TOOSHORT" in result.errors
+
+
+def test_measure_power_refuses_a_universe_where_nothing_can_be_searched() -> None:
+    with pytest.raises(ValueError, match="at least one symbol that can be searched"):
+        measure_power(
+            {"TOOSHORT": autocorrelated_edge(30, seed=0, phi=-0.3)}, ["sma", "momentum"], phi=-0.3
+        )
+
+
+def test_calibrate_gate_refuses_a_universe_where_nothing_can_be_searched() -> None:
+    """A universe of unsearchable symbols is a broken run, not a 0% false-graduation rate."""
+    with pytest.raises(ValueError, match="at least one null symbol that can be searched"):
+        calibrate_gate({"TOOSHORT": iid_normal_null(30, seed=0)}, ["sma", "momentum"])

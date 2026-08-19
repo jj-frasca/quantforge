@@ -193,6 +193,160 @@ def bootstrap_null(
     )
 
 
+class PowerCalibration(BaseModel):
+    """The gate's measured ability to DETECT a planted edge (ADR-041) — the Type-II half.
+
+    Notes:
+        `detection_rate` is power of the gate as such; `n_clear_deflation_bar` is power against the
+        standard the project actually holds itself to (ADR-018), and it is the number that
+        interprets "0 of 40 graduates clear the bar". An AR(1) edge is stationary and always-on,
+        so this is an UPPER BOUND on power against real, intermittent edges: a low number here is
+        damning, a high one is not a clean bill of health.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    n_symbols: int
+    n_detected: int
+    detection_rate: float
+    n_clear_deflation_bar: int
+    deflation_bar: float
+    phi: float
+    oracle_sharpes: list[float]
+    holdout_years: list[float]
+    errors: dict[str, str]
+    gate_config_version: str
+
+    @property
+    def oracle_sharpe_percentiles(self) -> tuple[float, float, float] | None:
+        """(median, p95, max) of the planted effect size actually realized in these frames."""
+        return _percentiles(self.oracle_sharpes)
+
+
+def autocorrelated_edge(
+    n_bars: int,
+    *,
+    seed: int,
+    phi: float,
+    vol: float = 0.012,
+    drift: float = 0.0003,
+    start_price: float = 100.0,
+) -> pd.DataFrame:
+    """A price frame whose returns follow AR(1) — a planted, tradeable edge (ADR-041).
+
+    Notes:
+        `phi < 0` is mean reversion (the RSI/Bollinger family's claim), `phi > 0` is trend
+        persistence (the SMA/MACD/Donchian family's). Bar geometry is built exactly as
+        `iid_normal_null` builds it, so the ONLY difference from the null is the serial dependence
+        — which is the thing every catalog strategy claims to trade. `phi` must be in (-1, 1) or
+        the process is not stationary.
+    """
+    if n_bars < 1:
+        raise ValueError("n_bars must be >= 1")
+    if not -1.0 < phi < 1.0:
+        raise ValueError("phi must be in (-1, 1) for a stationary process")
+
+    rng = np.random.default_rng(seed)
+    shocks = rng.normal(0.0, vol, n_bars)
+    returns = np.empty(n_bars, dtype=float)
+    previous = 0.0
+    for i, shock in enumerate(shocks):
+        previous = phi * previous + shock
+        returns[i] = drift + previous
+
+    closes = start_price * np.cumprod(1.0 + returns)
+    opens = closes * (1.0 + rng.normal(0.0, vol / 3.0, n_bars))
+    highs = np.maximum(opens, closes) * (1.0 + np.abs(rng.normal(0.0, vol / 2.0, n_bars)))
+    lows = np.minimum(opens, closes) * (1.0 - np.abs(rng.normal(0.0, vol / 2.0, n_bars)))
+    volumes = rng.integers(1_000_000, 5_000_000, n_bars).astype(float)
+    return _ohlcv(closes, opens, highs, lows, volumes)
+
+
+def oracle_sharpe(frame: pd.DataFrame, *, phi: float) -> float:
+    """Annualized Sharpe of `position_t = sign(phi * r_{t-1})` on `frame` (ADR-041).
+
+    Notes:
+        The sign of the AR(1) conditional mean, so it is the best any causal sign-taking strategy
+        could do on this series — scored with the same one-bar lag the backtest engine applies.
+        Measured on the data the search sees rather than derived, so the reported effect size
+        carries no theory that could be silently wrong.
+    """
+    returns = frame["close"].pct_change().dropna()
+    if len(returns) < 3:
+        return 0.0
+    position = np.sign(phi * returns.shift(1))
+    realized = (position * returns).dropna()
+    std = float(realized.std())
+    if std == 0.0:
+        return 0.0
+    return float(np.sqrt(_TRADING_DAYS) * realized.mean() / std)
+
+
+def measure_power(
+    frames: Mapping[str, pd.DataFrame],
+    strategy_names: Sequence[str],
+    *,
+    phi: float,
+    config: GateConfig | None = None,
+    n_per_param: int = 3,
+) -> PowerCalibration:
+    """Run the unmodified search + gate over frames with a PLANTED edge and count detections.
+
+    Notes:
+        Deliberately takes no ExperimentStore, exactly as `calibrate_gate` does not: a synthetic
+        symbol is not a hypothesis about a real one and must never reach the research pool or the
+        MinTRL denominator (ADR-036/041).
+    """
+    if not frames:
+        raise ValueError("need at least one symbol to measure power")
+    gate_config = config or GateConfig()
+
+    experiments: list[Experiment] = []
+    holdout_years: list[float] = []
+    oracles: list[float] = []
+    errors: dict[str, str] = {}
+    for symbol, frame in frames.items():
+        try:
+            experiment = run_search(
+                frame,
+                symbol,
+                list(strategy_names),
+                config=gate_config,
+                n_per_param=n_per_param,
+                rationale="ADR-041 power calibration",
+            )
+            _, sealed = split_holdout(frame, symbol)
+        except ValueError as exc:
+            errors[symbol] = str(exc)
+            continue
+        experiments.append(experiment)
+        holdout_years.append(sealed.n_bars / _TRADING_DAYS)
+        oracles.append(oracle_sharpe(frame, phi=phi))
+
+    if not experiments:
+        raise ValueError("need at least one symbol that can be searched")
+
+    n_symbols = len(experiments)
+    detected = [e for e in experiments if e.graduate is not None]
+    return PowerCalibration(
+        n_symbols=n_symbols,
+        n_detected=len(detected),
+        detection_rate=len(detected) / n_symbols,
+        n_clear_deflation_bar=sum(
+            e.graduate.holdout_sharpe
+            > expected_max_sharpe_under_null(n_symbols, e.graduate.holdout_n_bars / _TRADING_DAYS)
+            for e in detected
+            if e.graduate is not None
+        ),
+        deflation_bar=expected_max_sharpe_under_null(n_symbols, median(holdout_years)),
+        phi=phi,
+        oracle_sharpes=oracles,
+        holdout_years=holdout_years,
+        errors=errors,
+        gate_config_version=gate_config.version_hash,
+    )
+
+
 def _percentiles(values: Sequence[float]) -> tuple[float, float, float] | None:
     """(median, p95, max), or None when nothing was measured — so "no data" can never be mistaken
     for "the null scores 0.0"."""
