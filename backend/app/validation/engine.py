@@ -6,7 +6,7 @@ from app.research.strategies.base import BaseStrategy
 from app.validation.deflated_sharpe import deflated_sharpe
 from app.validation.parameter_stability import parameter_stability
 from app.validation.pbo import probability_of_backtest_overfitting
-from app.validation.purged_cv import purged_kfold_splits
+from app.validation.purged_cv import lookback_embargo, purged_cv_evaluate, purged_kfold_splits
 from app.validation.regime_analysis import analyze_regimes
 from app.validation.report import Interpretation, RegimeBreakdownEntry, ValidationReport
 from app.validation.walk_forward import walk_forward_evaluate, walk_forward_splits
@@ -177,11 +177,27 @@ class ValidationEngine:
         wf_splits = walk_forward_splits(n_obs, self._walk_forward_count)
         walk_forward = walk_forward_evaluate(performance, wf_splits)
 
+        # ADR-039: purge by the grid's longest lookback, not a fixed 2 bars — an embargo shorter
+        # than the rolling window leaves the boundary contaminated, which is what it exists to stop.
+        embargo = lookback_embargo(configs, floor=self._embargo)
+        cv_splits = purged_kfold_splits(n_obs, self._purged_folds, embargo)
+        try:
+            purged_cv = purged_cv_evaluate(performance, cv_splits, embargo=embargo)
+        except ValueError:
+            # Too few bars to hold a fold AND an honest embargo. Reporting nothing is the correct
+            # answer: shrinking the embargo to fit would produce a leaky number labelled "purged".
+            purged_cv = None
+
         flags: list[str] = []
         if n_obs < _SHORT_SAMPLE:
             flags.append(f"short sample (<{_SHORT_SAMPLE} bars): low statistical confidence")
         if pbo >= 0.5:
             flags.append("high overfitting risk (PBO >= 0.5)")
+        if purged_cv is None:
+            flags.append(
+                f"purged CV not measured: {n_obs} bars cannot hold {self._purged_folds} folds "
+                f"plus a {embargo}-bar embargo"
+            )
 
         return ValidationReport(
             strategy_name=strategy_name,
@@ -190,11 +206,12 @@ class ValidationEngine:
             pbo=pbo,
             parameter_stability_score=stability,
             n_walk_forward_splits=len(wf_splits),
-            n_purged_folds=len(purged_kfold_splits(n_obs, self._purged_folds, self._embargo)),
+            n_purged_folds=len(cv_splits),
             flags=flags,
             interpretations=_interpret(pbo, deflated, stability),
             regime_breakdown=regime_breakdown,
             walk_forward=walk_forward,
+            purged_cv=purged_cv,
         )
 
     @staticmethod

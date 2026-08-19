@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
+from app.validation.purged_cv import PurgedCVResult
 from app.validation.walk_forward import WalkForwardResult
 
 Verdict = Literal["good", "warning", "bad"]
@@ -61,6 +62,10 @@ class ValidationReport(BaseModel):
     # Nullable + defaulted so the experiments already in the pool deserialize unchanged, and
     # so a producer with no per-config return matrix can honestly report "not measured".
     walk_forward: WalkForwardResult | None = None
+    # ADR-039: the purged folds, scored. Nullable for the same reason walk_forward is. Read it
+    # NEXT TO walk_forward, never instead of it — purged CV selects using rows after its test
+    # block, so it measures the edge's dispersion, not what the procedure would have earned.
+    purged_cv: PurgedCVResult | None = None
     flags: list[str] = Field(default_factory=list)
     interpretations: list[Interpretation] = Field(default_factory=list)
     # ADR-012: regime breakdown for the BEST config (the one whose Sharpe drives

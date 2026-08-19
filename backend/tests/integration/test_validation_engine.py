@@ -92,3 +92,34 @@ def test_walk_forward_efficiency_is_undefined_when_in_sample_loses() -> None:
     wf = report.walk_forward
     assert wf is not None
     assert (wf.efficiency is None) == (wf.mean_is_sharpe <= 0.0)
+
+
+def test_report_carries_a_purged_cv_evaluation() -> None:
+    """ADR-039: the purged folds judge something, and record how hard they were purged."""
+    frame = bars_to_frame(builders.clean_series(n=300))
+    report = ValidationEngine().validate("sma_crossover", _CONFIGS, frame)
+
+    cv = report.purged_cv
+    assert cv is not None
+    assert cv.n_folds == report.n_purged_folds == 5
+    assert all(0 <= f.selected_config < len(_CONFIGS) for f in cv.folds)
+    assert cv.oos_sharpe_std >= 0.0
+    assert ValidationReport.model_validate_json(report.model_dump_json()) == report
+
+
+def test_embargo_is_sized_from_the_grid_not_the_constructor_default() -> None:
+    """The default embargo of 2 would purge ~1% of a 50-bar strategy's contaminated region."""
+    frame = bars_to_frame(builders.clean_series(n=300))
+    report = ValidationEngine().validate("sma_crossover", _CONFIGS, frame)
+
+    assert report.purged_cv is not None
+    assert report.purged_cv.embargo == max(c.parameters["slow"] for c in _CONFIGS)
+
+
+def test_a_sample_too_short_to_purge_reports_nothing_rather_than_a_leaky_number() -> None:
+    """Shrinking the embargo to fit would produce a leaky number labelled 'purged'."""
+    frame = bars_to_frame(builders.clean_series(n=60))
+    report = ValidationEngine().validate("sma_crossover", _CONFIGS, frame)
+
+    assert report.purged_cv is None
+    assert any("purged CV not measured" in flag for flag in report.flags)
