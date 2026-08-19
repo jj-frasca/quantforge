@@ -64,8 +64,13 @@ because they answer different questions:
   Measured power against a planted stationary edge is therefore an **upper bound** on power against
   a real one. A low number here is damning; a high number here is not a clean bill of health.
 - **The deflation bar grows with the number of symbols searched**, so power against it is only
-  meaningful at a realistic N. It is measured at the same N as the null calibration and merged the
-  same sharded way (ADR-037), for the same reason: a shard cannot judge the bar alone.
+  meaningful at a stated N, and the number reported is power against *that run's own bar*. Unlike
+  ADR-037's null calibration this is deliberately **not sharded**: there, shards of one measurement
+  had to be merged before the bar could be judged at the combined N; here each phi is a separate,
+  self-contained measurement, so a job judges its own bar and there is nothing to merge. The
+  workflow parallelizes across **phi values**, not across slices of one run.
+  N = 50 per phi is well below the 607-symbol production universe, so the bar these runs face is
+  correspondingly lower — state the N whenever the number is quoted.
 - **This measures the gate, not the catalog.** A phi the catalog has no strategy for would measure
   as zero power and mean only that the catalog has a blind spot — which is itself worth knowing,
   and is why the phi sweep spans both signs.

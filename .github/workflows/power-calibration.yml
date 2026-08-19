@@ -1,0 +1,85 @@
+name: Gate power calibration
+
+# Token-free (no Claude): ADR-041, the Type-II half of ADR-036. Plants an AR(1) edge of KNOWN
+# strength, runs the UNMODIFIED search + gate, and reports how often the edge is DETECTED.
+#
+# Read the two tiers separately. `DETECTION RATE` is power of the gate as such. `clear ADR-018 bar`
+# is power against the standard the project actually holds itself to, and it is the number that
+# interprets the standing "0 of 40 graduates clear the bar" finding: if a planted edge cannot clear
+# the bar either, that finding says much less about the strategies than it appears to.
+#
+# NOT sharded, unlike null-calibration.yml. There, shards of ONE measurement had to be merged before
+# the ADR-018 bar could be judged at the combined symbol count. Here each phi is a separate,
+# self-contained measurement judged at its own N, so there is nothing to merge — the matrix
+# parallelizes across EFFECT SIZES instead, which is the axis that actually needs sweeping.
+#
+# phi < 0 is mean reversion (the RSI/Bollinger family's claim), phi > 0 is trend persistence (the
+# SMA/MACD/Donchian family's). Both signs are swept because a phi the catalog cannot trade would
+# measure as zero power and mean only that the catalog has a blind spot there.
+#
+# Manual only: this answers a methodological question, not an operational one. Dispatch it after any
+# GateConfig change, or whenever "0 graduates clear the bar" is about to be interpreted.
+#
+# Results are ARTIFACTS + Slack, deliberately not a commit: six matrix jobs writing one directory
+# would race, and ADR-030 makes a single writer per generated file non-negotiable. If a power
+# number ever becomes a standing published figure rather than an on-demand answer, give it its
+# own consolidation job the way null-calibration.yml has one.
+on:
+  workflow_dispatch:
+    inputs:
+      n_symbols:
+        description: "Planted-edge symbols per phi"
+        required: false
+        default: "50"
+      seed:
+        description: "Base RNG seed"
+        required: false
+        default: "0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: power-calibration
+  cancel-in-progress: false
+
+jobs:
+  power:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        phi: ["-0.30", "-0.20", "-0.10", "0.10", "0.20", "0.30"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Measure power at phi=${{ matrix.phi }}
+        working-directory: backend
+        run: |
+          set -e
+          OUT="$GITHUB_WORKSPACE/power_${{ matrix.phi }}.json"
+          PYTHONPATH=. uv run python scripts/power_calibration.py \
+            "${{ github.event.inputs.n_symbols || '50' }}" "${{ github.event.inputs.seed || '0' }}" \
+            --phi "${{ matrix.phi }}" --out "$OUT" | tee "$GITHUB_WORKSPACE/power_${{ matrix.phi }}.txt"
+      - name: Upload the measurement
+        if: ${{ always() && hashFiles(format('power_{0}.json', matrix.phi)) != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: power-${{ matrix.phi }}
+          path: |
+            power_${{ matrix.phi }}.json
+            power_${{ matrix.phi }}.txt
+          retention-days: 30
+      - name: Slack the result
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -Rs '{text: ("*QuantForge gate power — phi ${{ matrix.phi }}*\n```" + . + "```")}' \
+            "power_${{ matrix.phi }}.txt" \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
