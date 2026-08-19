@@ -157,6 +157,29 @@ second one.
   signal and next-period returns (ADR-035). A dollar-neutral Sharpe cannot distinguish a factor from
   two lucky names; the IC can. Diagnostic only: nothing gates, selects, or sizes on it.
 
+**The gate's Type-I error is measured, not assumed (2026-08-19).** `null-calibration.yml` runs the
+UNMODIFIED search over 200 symbols per null mode with no edge by construction (ADR-036/037), and
+commits the answer to `data/null_calibration/`. Measured: **1.0% false-graduation rate on both
+nulls, and 0 false graduates clear the ADR-018 deflation bar.** Two consequences worth carrying:
+max deflated Sharpe under a pure null was **+0.92**, so DSR > 0 is necessary but nowhere near
+sufficient — the composite gate does the work; and the deflation bar rejecting 100% of *known-false*
+positives is the first evidence it is not merely too strict.
+
+**Walk-forward and purged CV are real as of 2026-08-19 — they used to be counts.** `ValidationReport`
+carried `n_walk_forward_splits` / `n_purged_folds` and nothing was ever trained or scored on those
+splits. Now `walk_forward_evaluate` (ADR-038) selects on each expanding train block and scores the
+block that follows — the only causal out-of-sample number besides the locked holdout, and the only
+one that measures the *selection procedure* — and `purged_cv_evaluate` (ADR-039) scores the purged
+folds with an embargo sized from the grid's longest lookback instead of a fixed 2 bars. Both are
+**diagnostics with explicit revisit triggers, and neither gates anything**; both are recorded per
+`Trial` and summarized by `scripts/pool_report.py` against the null. Their null distributions put
+"indistinguishable from noise" at roughly **+1.0 annualized**, and purged CV sits above walk-forward
+because its selection sees the future — read them side by side, never averaged. Details:
+`.claude/context/validation-methodology.md` §3–§5.
+
+**The backend gate runs in parallel (ADR-040).** `make test` uses `pytest -n auto`; `make check`
+went 8:45 → 4:01. Tests must therefore be order-independent and must not write fixed paths.
+
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.
 
