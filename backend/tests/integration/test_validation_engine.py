@@ -67,3 +67,28 @@ def test_report_carries_a_regime_breakdown_for_the_best_config() -> None:
     for label, entry in report.regime_breakdown.items():
         assert label in {"bull", "bear"}
         assert entry.n_bars >= 0
+
+
+def test_report_carries_a_walk_forward_evaluation() -> None:
+    """ADR-038: the splits judge something — they are not just counted."""
+    frame = bars_to_frame(builders.clean_series(n=300))
+    report = ValidationEngine().validate("sma_crossover", _CONFIGS, frame)
+
+    wf = report.walk_forward
+    assert wf is not None
+    assert wf.n_splits == report.n_walk_forward_splits == 5
+    assert len(wf.splits) == 5
+    assert all(0 <= s.selected_config < len(_CONFIGS) for s in wf.splits)
+    # each window trains on strictly more data than the last, and tests on what follows
+    assert [s.n_train for s in wf.splits] == sorted(s.n_train for s in wf.splits)
+    assert all(s.n_test > 0 for s in wf.splits)
+    assert 0.0 <= wf.consistency <= 1.0
+    assert ValidationReport.model_validate_json(report.model_dump_json()) == report
+
+
+def test_walk_forward_efficiency_is_undefined_when_in_sample_loses() -> None:
+    """Pure noise: a ratio of two negative Sharpes would read as 'efficient'. Refuse it."""
+    report = ValidationEngine().validate("sma_crossover", _CONFIGS, _random_walk_frame(seed=11))
+    wf = report.walk_forward
+    assert wf is not None
+    assert (wf.efficiency is None) == (wf.mean_is_sharpe <= 0.0)

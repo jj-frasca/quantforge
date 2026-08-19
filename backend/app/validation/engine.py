@@ -9,7 +9,7 @@ from app.validation.pbo import probability_of_backtest_overfitting
 from app.validation.purged_cv import purged_kfold_splits
 from app.validation.regime_analysis import analyze_regimes
 from app.validation.report import Interpretation, RegimeBreakdownEntry, ValidationReport
-from app.validation.walk_forward import walk_forward_splits
+from app.validation.walk_forward import walk_forward_evaluate, walk_forward_splits
 
 _SHORT_SAMPLE = 100
 
@@ -123,10 +123,12 @@ class ValidationEngine:
     """Runs the full validation suite over a strategy's config grid (ADR-008).
 
     Notes:
-        Backtests every configuration, builds the (T, N) returns matrix for PBO, deflates the
-        best config's Sharpe by the number of trials, and records walk-forward / purged-CV
-        fold counts. Produces the ValidationReport — the MVP deliverable. A strategy is only
-        "promising" if it survives (low PBO, positive deflated Sharpe).
+        Backtests every configuration, builds the (T, N) returns matrix, and reuses it three
+        ways: PBO over all combinatorial IS/OOS splits, a multiple-testing haircut on the best
+        config's Sharpe, and (ADR-038) a walk-forward evaluation that re-selects on each expanding
+        train block and scores on the block that follows. Purged-CV is still only counted — see
+        ADR-038 §"Purged CV". Produces the ValidationReport — the MVP deliverable. A strategy is
+        only "promising" if it survives (low PBO, positive deflated Sharpe).
     """
 
     def __init__(
@@ -172,6 +174,9 @@ class ValidationEngine:
         regime_breakdown = self._regime_breakdown(returns_series[best], data)
 
         n_obs = len(data)
+        wf_splits = walk_forward_splits(n_obs, self._walk_forward_count)
+        walk_forward = walk_forward_evaluate(performance, wf_splits)
+
         flags: list[str] = []
         if n_obs < _SHORT_SAMPLE:
             flags.append(f"short sample (<{_SHORT_SAMPLE} bars): low statistical confidence")
@@ -184,11 +189,12 @@ class ValidationEngine:
             deflated_sharpe=deflated,
             pbo=pbo,
             parameter_stability_score=stability,
-            n_walk_forward_splits=len(walk_forward_splits(n_obs, self._walk_forward_count)),
+            n_walk_forward_splits=len(wf_splits),
             n_purged_folds=len(purged_kfold_splits(n_obs, self._purged_folds, self._embargo)),
             flags=flags,
             interpretations=_interpret(pbo, deflated, stability),
             regime_breakdown=regime_breakdown,
+            walk_forward=walk_forward,
         )
 
     @staticmethod

@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
+from app.validation.walk_forward import WalkForwardResult
+
 Verdict = Literal["good", "warning", "bad"]
 
 
@@ -55,6 +57,10 @@ class ValidationReport(BaseModel):
     parameter_stability_score: float
     n_walk_forward_splits: int
     n_purged_folds: int
+    # ADR-038: the walk-forward splits now judge something instead of only being counted.
+    # Nullable + defaulted so the experiments already in the pool deserialize unchanged, and
+    # so a producer with no per-config return matrix can honestly report "not measured".
+    walk_forward: WalkForwardResult | None = None
     flags: list[str] = Field(default_factory=list)
     interpretations: list[Interpretation] = Field(default_factory=list)
     # ADR-012: regime breakdown for the BEST config (the one whose Sharpe drives
