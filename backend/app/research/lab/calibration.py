@@ -18,6 +18,23 @@ _COLUMNS = ["open", "high", "low", "close", "volume"]
 _START = "2010-01-04"
 
 
+class NullGraduate(BaseModel):
+    """A false graduate, kept with everything the ADR-018 bar must be recomputed against.
+
+    Notes:
+        The bar is a function of how many symbols were searched in TOTAL, so a shard cannot decide
+        survival on its own — `merge_calibrations` re-judges every graduate at the combined N
+        (ADR-037).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    holdout_sharpe: float
+    holdout_n_bars: int
+    deflated_sharpe: float
+
+
 class NullCalibration(BaseModel):
     """The gate's measured behavior on a universe with no edge by construction (ADR-036).
 
@@ -35,9 +52,17 @@ class NullCalibration(BaseModel):
     deflation_bar: float
     max_deflated_sharpe: float
     max_holdout_sharpe: float | None
-    graduate_symbols: list[str]
+    graduates: list[NullGraduate]
+    # One entry per SEARCHED symbol (not per graduate): the merged bar is reported at the median
+    # holdout length, which is only exact if the lengths themselves survive sharding (ADR-037).
+    holdout_years: list[float]
     errors: dict[str, str]
     gate_config_version: str
+    null_mode: str = "unspecified"
+
+    @property
+    def graduate_symbols(self) -> list[str]:
+        return [g.symbol for g in self.graduates]
 
 
 # Widened past the repo's usual NDArray[float64]: numpy types these products as
@@ -135,6 +160,7 @@ def calibrate_gate(
     *,
     config: GateConfig | None = None,
     n_per_param: int = 3,
+    null_mode: str = "unspecified",
 ) -> NullCalibration:
     """Run the unmodified search + gate over null price frames and report how often it graduates.
 
@@ -192,7 +218,65 @@ def calibrate_gate(
         max_holdout_sharpe=max(
             (e.graduate.holdout_sharpe for e in graduates if e.graduate), default=None
         ),
-        graduate_symbols=[e.symbol for e in graduates],
+        graduates=[
+            NullGraduate(
+                symbol=e.symbol,
+                holdout_sharpe=e.graduate.holdout_sharpe,
+                holdout_n_bars=e.graduate.holdout_n_bars,
+                # The finalist is the max-DSR trial by construction in run_search, and Graduate
+                # does not carry the statistic itself.
+                deflated_sharpe=max(t.deflated_sharpe for t in e.trials),
+            )
+            for e in graduates
+            if e.graduate is not None
+        ],
+        holdout_years=holdout_years,
         errors=errors,
         gate_config_version=gate_config.version_hash,
+        null_mode=null_mode,
+    )
+
+
+def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
+    """Combine sharded null runs into one calibration judged at the COMBINED N (ADR-037).
+
+    Notes:
+        Not an average of the shards' rates. The ADR-018 deflation bar grows with the number of
+        symbols searched, so survival is re-decided here for every false graduate; and the shards'
+        denominators differ whenever a symbol was unsearchable, so the rate is recomputed from the
+        merged counts. Merging is refused across gate configs or null modes — a false-graduation
+        rate describes one gate applied to one kind of null, and silently pooling two of them would
+        produce a number that describes neither.
+    """
+    if not shards:
+        raise ValueError("need at least one shard to merge")
+    versions = {s.gate_config_version for s in shards}
+    if len(versions) > 1:
+        raise ValueError(
+            f"cannot merge shards with different gate_config_version: {sorted(versions)}"
+        )
+    modes = {s.null_mode for s in shards}
+    if len(modes) > 1:
+        raise ValueError(f"cannot merge shards with different null_mode: {sorted(modes)}")
+
+    n_symbols = sum(s.n_symbols for s in shards)
+    graduates = [g for s in shards for g in s.graduates]
+    holdout_years = [y for s in shards for y in s.holdout_years]
+    return NullCalibration(
+        n_symbols=n_symbols,
+        n_graduates=len(graduates),
+        false_graduation_rate=len(graduates) / n_symbols,
+        n_clear_deflation_bar=sum(
+            g.holdout_sharpe
+            > expected_max_sharpe_under_null(n_symbols, g.holdout_n_bars / _TRADING_DAYS)
+            for g in graduates
+        ),
+        deflation_bar=expected_max_sharpe_under_null(n_symbols, median(holdout_years)),
+        max_deflated_sharpe=max(s.max_deflated_sharpe for s in shards),
+        max_holdout_sharpe=max((g.holdout_sharpe for g in graduates), default=None),
+        graduates=graduates,
+        holdout_years=holdout_years,
+        errors={sym: why for s in shards for sym, why in s.errors.items()},
+        gate_config_version=versions.pop(),
+        null_mode=modes.pop(),
     )

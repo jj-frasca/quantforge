@@ -15,10 +15,13 @@ import pytest
 
 from app.research.lab.calibration import (
     NullCalibration,
+    NullGraduate,
     bootstrap_null,
     calibrate_gate,
     iid_normal_null,
+    merge_calibrations,
 )
+from app.research.lab.universe import expected_max_sharpe_under_null
 
 
 def _real_ish_frame(n: int = 900, seed: int = 7) -> pd.DataFrame:
@@ -155,3 +158,121 @@ def test_a_symbol_that_cannot_be_searched_is_reported_not_silently_dropped() -> 
     assert result.n_symbols == 1
     assert list(result.errors) == ["SHORT"]
     assert "insufficient data" in result.errors["SHORT"]
+
+
+# --- sharding + merge (ADR-037) ---------------------------------------------------------------
+
+
+def _shard(
+    *,
+    n_symbols: int = 25,
+    graduates: list[NullGraduate] | None = None,
+    errors: dict[str, str] | None = None,
+    version: str = "v1",
+    mode: str = "iid_normal",
+    max_deflated: float = -0.1,
+) -> NullCalibration:
+    grads = graduates or []
+    return NullCalibration(
+        n_symbols=n_symbols,
+        n_graduates=len(grads),
+        false_graduation_rate=len(grads) / n_symbols,
+        n_clear_deflation_bar=0,
+        deflation_bar=expected_max_sharpe_under_null(n_symbols, 4.0),
+        max_deflated_sharpe=max_deflated,
+        max_holdout_sharpe=max((g.holdout_sharpe for g in grads), default=None),
+        graduates=grads,
+        holdout_years=[4.0] * n_symbols,
+        errors=errors or {},
+        gate_config_version=version,
+        null_mode=mode,
+    )
+
+
+def _graduate(symbol: str, holdout_sharpe: float) -> NullGraduate:
+    return NullGraduate(
+        symbol=symbol, holdout_sharpe=holdout_sharpe, holdout_n_bars=1008, deflated_sharpe=0.2
+    )
+
+
+def test_merge_sums_the_denominators_and_recomputes_the_rate() -> None:
+    merged = merge_calibrations(
+        [
+            _shard(n_symbols=25, graduates=[_graduate("NULL0001", 1.9)]),
+            _shard(n_symbols=25),
+            _shard(n_symbols=30),
+        ]
+    )
+    assert merged.n_symbols == 80
+    assert merged.n_graduates == 1
+    assert merged.false_graduation_rate == pytest.approx(1 / 80)
+    assert merged.graduate_symbols == ["NULL0001"]
+
+
+def test_merge_recomputes_the_deflation_bar_at_the_combined_n() -> None:
+    shard = _shard(n_symbols=25)
+    merged = merge_calibrations([shard, _shard(n_symbols=25)])
+    # The best-of-N bar rises with N: 50 draws under the null beat 25 draws.
+    assert merged.deflation_bar > shard.deflation_bar
+    assert merged.deflation_bar == pytest.approx(expected_max_sharpe_under_null(50, 4.0))
+
+
+def test_a_graduate_that_cleared_its_shard_bar_can_fail_the_merged_bar() -> None:
+    """The whole reason a shard cannot report a final answer (ADR-037)."""
+    lucky = _graduate("NULL0007", 1.60)
+    assert lucky.holdout_sharpe > expected_max_sharpe_under_null(8, 4.0)
+
+    merged = merge_calibrations(
+        [_shard(n_symbols=8, graduates=[lucky])] + [_shard(n_symbols=8) for _ in range(24)]
+    )
+    assert merged.n_symbols == 200
+    assert lucky.holdout_sharpe < merged.deflation_bar
+    assert merged.n_clear_deflation_bar == 0
+
+
+def test_merge_counts_a_graduate_that_clears_the_merged_bar() -> None:
+    merged = merge_calibrations(
+        [_shard(n_symbols=25, graduates=[_graduate("NULL0003", 9.0)]), _shard(n_symbols=25)]
+    )
+    assert merged.n_clear_deflation_bar == 1
+
+
+def test_merge_refuses_shards_from_different_gate_configs() -> None:
+    with pytest.raises(ValueError, match="gate_config_version"):
+        merge_calibrations([_shard(version="v1"), _shard(version="v2")])
+
+
+def test_merge_refuses_shards_from_different_null_modes() -> None:
+    with pytest.raises(ValueError, match="null_mode"):
+        merge_calibrations([_shard(mode="iid_normal"), _shard(mode="bootstrap:AAPL")])
+
+
+def test_merge_refuses_an_empty_sequence() -> None:
+    with pytest.raises(ValueError, match="at least one"):
+        merge_calibrations([])
+
+
+def test_merge_unions_the_errors_and_keeps_the_worst_case_maxima() -> None:
+    merged = merge_calibrations(
+        [
+            _shard(errors={"NULL0001": "too short"}, max_deflated=-0.4),
+            _shard(errors={"NULL0099": "too short"}, max_deflated=0.15),
+        ]
+    )
+    assert merged.errors == {"NULL0001": "too short", "NULL0099": "too short"}
+    assert merged.max_deflated_sharpe == pytest.approx(0.15)
+
+
+def test_merging_one_shard_returns_an_equivalent_calibration() -> None:
+    shard = _shard(n_symbols=25)
+    assert merge_calibrations([shard]).model_dump() == shard.model_dump()
+
+
+def test_calibrate_gate_records_each_graduate_and_every_holdout_length() -> None:
+    frames = {f"NULL{i:03d}": iid_normal_null(700, seed=40 + i) for i in range(3)}
+    result = calibrate_gate(frames, ["sma_crossover", "rsi_mean_reversion"], n_per_param=2)
+    assert len(result.holdout_years) == result.n_symbols
+    assert all(years > 0 for years in result.holdout_years)
+    assert len(result.graduates) == result.n_graduates
+    assert result.graduate_symbols == [g.symbol for g in result.graduates]
+    assert result.null_mode == "unspecified"

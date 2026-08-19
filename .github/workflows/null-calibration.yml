@@ -1,0 +1,149 @@
+name: Null-model gate calibration
+
+# Token-free (no Claude): ADR-036/037. Runs the UNMODIFIED search + graduation gate over synthetic
+# symbols that have NO EDGE BY CONSTRUCTION and counts how often it graduates something — a measured
+# Type-I error for the whole pipeline (search + DSR + PBO + MinTRL + holdout + beat-buy-and-hold),
+# which no individual component's guarantee implies.
+#
+# Two nulls, because each answers the other's criticism: `iid_normal` is the textbook null (exactly
+# zero serial dependence, but unrealistically well-behaved), `bootstrap` resamples a real symbol's
+# own bars iid with replacement (fat tails, gaps and realized vol preserved exactly, serial
+# dependence destroyed exactly). Every catalog strategy trades serial structure, so its true edge on
+# either is zero.
+#
+# Null symbols are independent by construction, so the work shards perfectly: seeds come from the
+# GLOBAL symbol index, making the union of shards identical to one big run. The consolidation job
+# re-judges every false graduate against the ADR-018 bar implied by the COMBINED symbol count.
+#
+# Monthly, because the answer is a property of the GateConfig — dispatch a run whenever the gate
+# changes. NEVER writes the research pool: a null run is not a hypothesis about a real symbol.
+on:
+  schedule:
+    - cron: "0 5 1 * *" # 05:00 UTC on the 1st
+  workflow_dispatch:
+    inputs:
+      n_symbols:
+        description: "Null symbols per mode (across all shards)"
+        required: false
+        default: "200"
+      bootstrap_symbol:
+        description: "Real symbol whose bars the bootstrap null resamples"
+        required: false
+        default: "SPY"
+      seed:
+        description: "Base RNG seed"
+        required: false
+        default: "0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: null-calibration
+  cancel-in-progress: false
+
+env:
+  N_SHARDS: "8"
+  N_SYMBOLS: ${{ github.event.inputs.n_symbols || '200' }}
+  BOOTSTRAP_SYMBOL: ${{ github.event.inputs.bootstrap_symbol || 'SPY' }}
+  SEED: ${{ github.event.inputs.seed || '0' }}
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [iid_normal, bootstrap]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Calibrate ${{ matrix.mode }} shard ${{ matrix.shard }}
+        working-directory: backend
+        run: |
+          set -e
+          OUT="$GITHUB_WORKSPACE/${{ matrix.mode }}__${{ matrix.shard }}.json"
+          EXTRA=""
+          if [ "${{ matrix.mode }}" = "bootstrap" ]; then
+            EXTRA="--bootstrap $BOOTSTRAP_SYMBOL"
+          fi
+          PYTHONPATH=. uv run python scripts/null_calibration.py \
+            "$N_SYMBOLS" "$SEED" --shard "${{ matrix.shard }}/$N_SHARDS" --out "$OUT" $EXTRA
+      - name: Upload shard
+        if: ${{ always() && hashFiles(format('{0}__{1}.json', matrix.mode, matrix.shard)) != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: null-${{ matrix.mode }}-${{ matrix.shard }}
+          path: ${{ matrix.mode }}__${{ matrix.shard }}.json
+          retention-days: 7
+
+  consolidate:
+    needs: calibrate
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Download shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: null-*
+          path: shards
+          merge-multiple: true
+      - name: Merge each mode at its combined N
+        working-directory: backend
+        run: |
+          set -e
+          : > "$GITHUB_WORKSPACE/calibration_out.txt"
+          for mode in iid_normal bootstrap; do
+            dir="$GITHUB_WORKSPACE/shards/$mode"
+            mkdir -p "$dir"
+            # A shard that died leaves no file; merging what survived is still a valid measurement
+            # at the smaller N, and the artifact records the N it was computed at.
+            if ! ls "$GITHUB_WORKSPACE/shards/${mode}__"*.json >/dev/null 2>&1; then
+              echo "no $mode shards — skipping" | tee -a "$GITHUB_WORKSPACE/calibration_out.txt"
+              continue
+            fi
+            mv "$GITHUB_WORKSPACE/shards/${mode}__"*.json "$dir/"
+            PYTHONPATH=. uv run python scripts/consolidate_null_calibration.py \
+              "$dir" "$GITHUB_WORKSPACE/data/null_calibration/${mode}.json" \
+              | tee -a "$GITHUB_WORKSPACE/calibration_out.txt"
+          done
+      - name: Slack the measured Type-I error
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -Rs '{text: ("*QuantForge null-model gate calibration*\n```" + . + "```")}' calibration_out.txt \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+      - name: Commit the calibration (if changed)
+        run: |
+          git add data/null_calibration
+          if git diff --cached --quiet; then
+            echo "no calibration change"
+            exit 0
+          fi
+          git config user.name "quantforge-calibration-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "chore(calibration): null-model gate calibration $(date +%F)"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin master && git push; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push attempt $attempt failed; retrying..."
+            sleep 5
+          done
+          echo "could not push after retries"
+          exit 1

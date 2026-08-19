@@ -30,7 +30,7 @@ every name in one panel) this workload shards perfectly.
 
 ## Decision
 **Shard the null calibration across a GitHub Actions matrix, merge the shards into one calibration
-at the combined N, publish the result to `data/null_calibration.json`, and re-run it on a schedule
+at the combined N, publish the result to `data/null_calibration/`, and re-run it on a schedule
 and on demand. Change no threshold in this ADR.**
 
 Three parts:
@@ -46,10 +46,15 @@ Three parts:
    JSON, and `scripts/consolidate_null_calibration.py` merges a directory of them and prints the
    headline. Seeds are derived from the global symbol index, not the shard index, so the union of
    shards is exactly the same set of null symbols a single 200-symbol run would produce — the
-   sharding is an execution detail with no effect on the measurement.
-3. **`.github/workflows/null-calibration.yml`** — an 8-way matrix over both null modes, monthly and
-   on `workflow_dispatch`, consolidating to `data/null_calibration.json` and Slacking the headline.
-   The workflow is the **sole writer** of that file (ADR-030); no local or session writer may commit it.
+   sharding is an execution detail with no effect on the measurement. (In `bootstrap` mode each
+   shard fetches the source symbol independently, so exact reproduction additionally requires
+   those fetches to return the same bars; a stale-by-one-bar shard is still a valid null, just
+   not a bit-identical one.)
+3. **`.github/workflows/null-calibration.yml`** — a 2x8 matrix (both null modes x 8 shards),
+   monthly and on `workflow_dispatch`. Each mode is consolidated **separately** into
+   `data/null_calibration/<mode>.json`; merging across modes is refused in code, so the two numbers
+   can never be silently pooled. The workflow is the **sole writer** of that directory (ADR-030) —
+   no local or session writer may commit into it, and a local run should write to a scratch path.
 
 **Cadence: monthly, plus manual dispatch.** The result is a property of a `GateConfig`, which
 changes rarely. `gate_config_version` is recorded in the artifact, so a stale number is detectable
@@ -68,14 +73,14 @@ rather than silently trusted, and any session that changes the gate dispatches a
 - **Report each shard separately and eyeball them.** A 25-symbol Type-I estimate is as uninformative
   as the 6-symbol one; the point of the exercise is a single number with a usable interval.
 - **Store the result in the research pool.** Forbidden by ADR-036 — null experiments must never
-  inflate the MinTRL denominator or reach the leaderboard. `data/null_calibration.json` is a
-  separate, summary-only artifact carrying no `Experiment` objects.
+  inflate the MinTRL denominator or reach the leaderboard. `data/null_calibration/` holds
+  summary-only artifacts carrying no `Experiment` objects.
 
 ## Consequences
 - The project can state a measured, seeded, reproducible false-graduation rate for its whole
   pipeline at a sample size that supports a confidence interval, and refresh it whenever the gate
   changes. This is the strongest available answer to "how do you know the gate is honest?".
-- A new generated data file, `data/null_calibration.json`, with exactly one writer.
+- A new generated data directory, `data/null_calibration/`, with exactly one writer.
 - If the measured rate comes back materially above nominal, that is evidence to **tighten** the gate
   in a follow-up ADR citing this number. Charter §4 stands: it is never evidence to loosen one.
 - Merging is refused across gate config versions, so a gate change cannot silently be papered over
