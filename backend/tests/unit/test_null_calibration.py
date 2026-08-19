@@ -9,6 +9,8 @@ destroyed exactly). Every catalog strategy trades on serial structure, so its tr
 is zero.
 """
 
+from datetime import UTC, datetime
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -18,6 +20,7 @@ from app.research.lab.calibration import (
     NullGraduate,
     bootstrap_null,
     calibrate_gate,
+    drop_incomplete_bars,
     iid_normal_null,
     merge_calibrations,
 )
@@ -342,3 +345,29 @@ def test_merging_shards_concatenates_the_purged_cv_distribution() -> None:
     assert merged.purged_cv_oos_sharpes == (
         shards[0].purged_cv_oos_sharpes + shards[1].purged_cv_oos_sharpes
     )
+
+
+def test_incomplete_bars_are_dropped_so_the_bootstrap_null_is_reproducible() -> None:
+    """A calibration is a property of a GateConfig version, so two runs on the same day must agree.
+    Including today's in-progress bar made bootstrap:SPY drift between runs while iid_normal was
+    bit-identical (runs 32292934031 vs 32297042398)."""
+    index = pd.date_range("2026-08-15", periods=5, freq="D", tz=UTC)
+    frame = pd.DataFrame({"close": [1.0, 2.0, 3.0, 4.0, 5.0]}, index=index)
+
+    trimmed = drop_incomplete_bars(frame, asof=datetime(2026, 8, 19, 14, 0, tzinfo=UTC))
+
+    assert len(trimmed) == 4  # the 2026-08-19 bar is still forming
+    assert trimmed.index.max() == pd.Timestamp("2026-08-18", tz=UTC)
+
+
+def test_dropping_incomplete_bars_leaves_a_settled_frame_untouched() -> None:
+    index = pd.date_range("2026-08-10", periods=3, freq="D", tz=UTC)
+    frame = pd.DataFrame({"close": [1.0, 2.0, 3.0]}, index=index)
+    assert len(drop_incomplete_bars(frame, asof=datetime(2026, 8, 19, tzinfo=UTC))) == 3
+
+
+def test_dropping_every_bar_is_refused_rather_than_returning_an_empty_frame() -> None:
+    index = pd.date_range("2026-08-19", periods=1, freq="D", tz=UTC)
+    frame = pd.DataFrame({"close": [1.0]}, index=index)
+    with pytest.raises(ValueError, match="no completed bars"):
+        drop_incomplete_bars(frame, asof=datetime(2026, 8, 19, tzinfo=UTC))

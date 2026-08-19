@@ -32,6 +32,7 @@ from app.research.lab.calibration import (
     NullCalibration,
     bootstrap_null,
     calibrate_gate,
+    drop_incomplete_bars,
     iid_normal_null,
 )
 from app.research.strategies.catalog import STRATEGY_CATALOG
@@ -44,7 +45,12 @@ N_BARS = 3000
 
 def _source_frame(symbol: str) -> pd.DataFrame:
     adapter = YFinanceAdapter(retry=CLOUD)
-    return bars_to_frame(adapter.fetch_price_bars(symbol, START, datetime.now(UTC)))
+    now = datetime.now(UTC)
+    # Today's bar is still forming; resampling it makes the bootstrap null drift between two runs
+    # on the same day, and a calibration is supposed to be a property of the GateConfig version.
+    return drop_incomplete_bars(
+        bars_to_frame(adapter.fetch_price_bars(symbol, START, now)), asof=now
+    )
 
 
 def _flag(name: str) -> str | None:

@@ -1,4 +1,5 @@
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from statistics import median
 from typing import Any
 
@@ -143,6 +144,22 @@ def iid_normal_null(
     lows = np.minimum(opens, closes) * (1.0 - np.abs(rng.normal(0.0, vol / 2.0, n_bars)))
     volumes = rng.integers(1_000_000, 5_000_000, n_bars).astype(float)
     return _ohlcv(closes, opens, highs, lows, volumes)
+
+
+def drop_incomplete_bars(frame: pd.DataFrame, *, asof: datetime) -> pd.DataFrame:
+    """Drop bars dated on or after `asof`'s day — the session still forming (ADR-036).
+
+    Notes:
+        A calibration is a property of a GateConfig version, so two runs on the same day must
+        agree. Without this the bootstrap null resamples a pool that includes today's in-progress
+        bar and drifts intraday, while the iid null stays bit-identical. Across DAYS the source
+        frame still grows, which is correct: a calibration is dated.
+    """
+    cutoff = pd.Timestamp(asof).tz_convert("UTC").normalize()
+    trimmed = frame[frame.index < cutoff]
+    if trimmed.empty:
+        raise ValueError(f"no completed bars before {cutoff.date()}")
+    return trimmed
 
 
 def bootstrap_null(
