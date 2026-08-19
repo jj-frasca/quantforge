@@ -70,6 +70,19 @@ conservative when wrong is better than a constant that is wrong for two thirds o
 whose true lookback exceeds its largest parameter would be under-purged; the fix then is to state
 the lookback on the catalog entry, which is a bigger change than this ADR needs.
 
+### Measured, 2026-08-19 (run 32297042398, N = 200 per mode, annualized)
+
+| null mode | purged-CV median | p95 | max | walk-forward median (ADR-038) |
+|---|---|---|---|---|
+| `iid_normal` | +0.260 | +0.879 | +1.247 | +0.152 |
+| `bootstrap:SPY` | +0.387 | +1.062 | +1.448 | +0.334 |
+
+**Purged CV scores systematically higher than walk-forward under both nulls.** That is this ADR's
+optimistic bias, measured rather than asserted: a fold's training rows include data from after the
+fold, so its selection sees the future and the resulting level is flattering. The gap is the
+concrete reason the two must be read side by side and never averaged. A candidate floor for either
+statistic is the bootstrap p95, ≈ **+1.05** — not zero.
+
 ### Still a diagnostic, not a gate
 Same reasoning as ADR-038 §"Why not a gate — yet", and the same trigger: no experiment has ever
 carried the number, so no threshold can be argued from evidence. `ValidationReport.purged_cv` is
