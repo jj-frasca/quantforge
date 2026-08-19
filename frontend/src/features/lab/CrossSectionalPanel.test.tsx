@@ -18,6 +18,8 @@ const view = {
       deflated_sharpe: -0.08,
       pbo: 0.44,
       parameter_stability_score: 0.22,
+      ic_mean: 0.021,
+      ic_t_stat: 3.42,
     },
     {
       strategy_name: 'xs_reversal',
@@ -73,4 +75,15 @@ test('shows a loading indicator while the hunt is pending', async () => {
 
   await waitForElementToBeRemoved(() => screen.queryByText(/loading cross-sectional hunt/i))
   expect(await screen.findByRole('cell', { name: 'xs_momentum' })).toBeInTheDocument()
+})
+
+test('shows the rank IC per trial, and "not measured" for a pre-ADR-035 trial', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json(view)))
+  renderWithClient(<CrossSectionalPanel />)
+
+  // Mean IC is tiny by nature (a 0.02 IC is a real factor), so it needs 3 decimals.
+  expect(await screen.findByRole('cell', { name: '0.021' })).toBeInTheDocument()
+  expect(screen.getByRole('cell', { name: '3.4' })).toBeInTheDocument()
+  // xs_reversal carries no IC: it must read as absent, never as 0.
+  expect(screen.getAllByRole('cell', { name: '—' })).toHaveLength(2)
 })

@@ -153,6 +153,9 @@ second one.
 - The honest headline is `scripts/pool_report.py`: as of 2026-08-18, **0 of 40 graduates clear the
   ADR-018 universe-deflation bar**. The paper book records that verdict per position (ADR-033) and
   the dashboard leads with it. Meta-labeling is declined until a primary graduate clears it (ADR-034).
+- Every cross-sectional trial records its **rank IC** — the per-date Spearman correlation between the
+  signal and next-period returns (ADR-035). A dollar-neutral Sharpe cannot distinguish a factor from
+  two lucky names; the IC can. Diagnostic only: nothing gates, selects, or sizes on it.
 
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.

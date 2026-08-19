@@ -66,12 +66,17 @@ export const graduatesSchema = z.array(graduateRowSchema)
 // Cross-sectional view (backend/app/api/v1/cross_sectional.py, ADR-024): the latest cross-sectional
 // hunt — its per-strategy finalists, graduation verdict, and universe size. `null` when no hunt has
 // produced a record yet (an empty/missing pool is a normal answer, not an error).
+// `ic_*` (ADR-035) is the per-date rank correlation between the signal and next-period returns —
+// whether the RANKING carried information, which the Sharpe columns cannot distinguish from a
+// couple of names carrying the P&L. Optional: trials recorded before ADR-035 were never measured.
 export const crossSectionalTrialSchema = z.object({
   strategy_name: z.string(),
   observed_sharpe: z.number(),
   deflated_sharpe: z.number(),
   pbo: z.number(),
   parameter_stability_score: z.number(),
+  ic_mean: z.number().nullable().optional(),
+  ic_t_stat: z.number().nullable().optional(),
 })
 
 export type CrossSectionalTrial = z.infer<typeof crossSectionalTrialSchema>

@@ -8,20 +8,21 @@ from fastapi.testclient import TestClient
 
 from app.api.v1.cross_sectional import get_pool_path
 from app.main import app
-from app.research.cross_sectional.search import CrossSectionalExperiment
+from app.research.cross_sectional.ic import ICSummary
+from app.research.cross_sectional.search import CrossSectionalExperiment, CrossSectionalTrial
 from app.research.cross_sectional.store import JsonFileCrossSectionalStore
-from app.research.lab.experiment import Trial
 from app.research.lab.gate import GateConfig
 
 
-def _trial(name: str, deflated: float) -> Trial:
-    return Trial(
+def _trial(name: str, deflated: float, ic: ICSummary | None = None) -> CrossSectionalTrial:
+    return CrossSectionalTrial(
         strategy_name=name,
         parameters={"lookback": 60, "quantile": 0.2},
         observed_sharpe=0.5,
         deflated_sharpe=deflated,
         pbo=0.3,
         parameter_stability_score=0.6,
+        ic=ic,
     )
 
 
@@ -81,5 +82,28 @@ def test_returns_null_when_pool_is_empty(tmp_path) -> None:
     app.dependency_overrides[get_pool_path] = lambda: pool
     try:
         assert TestClient(app).get("/api/v1/cross-sectional").json() is None
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_rank_ic_is_surfaced_per_trial_and_is_null_when_not_measured(tmp_path) -> None:
+    # ADR-035: the IC answers "did the ranking carry information", which the Sharpe columns cannot.
+    # A trial written before that ADR has no IC and must read as absent, never as zero.
+    ic = ICSummary(
+        mean=0.021, std=0.14, information_ratio=0.15, t_stat=3.4, hit_rate=0.54, n_periods=500
+    )
+    experiment = _experiment(datetime(2026, 7, 1, tzinfo=UTC), ["AAPL", "MSFT"], "xs_momentum")
+    scored = experiment.model_copy(
+        update={"trials": [_trial("xs_momentum", 0.1, ic), _trial("xs_reversal", -1.6)]}
+    )
+    pool = tmp_path / "cs.json"
+    JsonFileCrossSectionalStore(pool).add(scored)
+    app.dependency_overrides[get_pool_path] = lambda: pool
+    try:
+        trials = TestClient(app).get("/api/v1/cross-sectional").json()["trials"]
+        assert trials[0]["ic_mean"] == 0.021
+        assert trials[0]["ic_t_stat"] == 3.4
+        assert trials[1]["ic_mean"] is None
+        assert trials[1]["ic_t_stat"] is None
     finally:
         app.dependency_overrides.clear()

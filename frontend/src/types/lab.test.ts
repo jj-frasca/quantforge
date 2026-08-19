@@ -51,11 +51,34 @@ test('crossSectionalResponseSchema parses a hunt view with trials', () => {
         deflated_sharpe: -0.08,
         pbo: 0.44,
         parameter_stability_score: 0.22,
+        ic_mean: 0.021,
+        ic_t_stat: 3.42,
       },
     ],
   })
   expect(parsed?.universe_size).toBe(51)
   expect(parsed?.trials[0].pbo).toBe(0.44)
+  expect(parsed?.trials[0].ic_mean).toBe(0.021)
+})
+
+test('crossSectionalResponseSchema accepts a trial recorded before ADR-035 (no IC)', () => {
+  const parsed = crossSectionalResponseSchema.parse({
+    created_at: '2026-07-26T10:00:00Z',
+    universe_size: 51,
+    best_strategy_name: 'xs_momentum',
+    graduated: false,
+    graduate_holdout_sharpe: null,
+    trials: [
+      {
+        strategy_name: 'xs_momentum',
+        observed_sharpe: 0.5,
+        deflated_sharpe: -0.08,
+        pbo: 0.44,
+        parameter_stability_score: 0.22,
+      },
+    ],
+  })
+  expect(parsed?.trials[0].ic_mean).toBeUndefined()
 })
 
 test('crossSectionalResponseSchema parses null (no hunt yet)', () => {

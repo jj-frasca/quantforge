@@ -153,3 +153,35 @@ def test_experiment_is_json_serializable() -> None:
     dumped = exp.model_dump(mode="json")
     assert dumped["strategy_names"] == ["xs_momentum"]
     assert "best_gate_result" in dumped
+
+
+def test_every_trial_carries_its_finalist_rank_ic() -> None:
+    # ADR-035: the IC measures the ranking claim itself, so it is recorded per finalist trial.
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_momentum", "xs_reversal"])
+    assert len(exp.trials) == 2
+    for trial in exp.trials:
+        assert trial.ic is not None
+        assert trial.ic.n_periods > 0
+        assert -1.0 <= trial.ic.mean <= 1.0
+        assert 0.0 <= trial.ic.hit_rate <= 1.0
+
+
+def test_a_prescient_factor_reports_a_higher_ic_than_noise() -> None:
+    # Same strategy, two panels: the IC separates a real ranking from a spurious one.
+    edge = run_cross_sectional_search(
+        _persistent_momentum_panel(), strategy_names=["xs_momentum"], config=_LENIENT
+    )
+    noise = run_cross_sectional_search(
+        _noise_panel(), strategy_names=["xs_momentum"], config=_LENIENT
+    )
+    assert edge.trials[0].ic is not None and noise.trials[0].ic is not None
+    assert edge.trials[0].ic.mean > noise.trials[0].ic.mean
+
+
+def test_a_trial_persisted_before_adr_035_still_validates_without_an_ic() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_momentum"])
+    dumped = exp.model_dump(mode="json")
+    assert dumped["trials"][0]["ic"] is not None
+    del dumped["trials"][0]["ic"]  # a record written before this ADR
+    revived = CrossSectionalExperiment.model_validate(dumped)
+    assert revived.trials[0].ic is None  # honestly "not measured", never backfilled

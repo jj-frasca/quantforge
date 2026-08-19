@@ -13,6 +13,7 @@ from app.research.cross_sectional.engine import (
     portfolio_returns,
     split_panel_holdout,
 )
+from app.research.cross_sectional.ic import ICSummary, rank_ic, summarize_ic
 from app.research.cross_sectional.registry import (
     CrossSectionalStrategy,
     Params,
@@ -34,6 +35,15 @@ _DAYS_PER_YEAR = 365.25
 _Config = tuple[Params, float]  # (signal params, quantile)
 
 
+class CrossSectionalTrial(Trial):
+    """A cross-sectional finalist (ADR-035). Adds the rank IC of the signal that produced it — the
+    direct measurement of the ranking claim, which the portfolio return series alone cannot
+    distinguish from a two-name concentration story. Nullable: trials persisted before ADR-035 are
+    honestly "not measured", never backfilled. Nothing gates, selects, or sizes on it."""
+
+    ic: ICSummary | None = None
+
+
 class CrossSectionalExperiment(BaseModel):
     """One cross-sectional search run (ADR-024) — the per-strategy/universe analog of the
     single-name `Experiment`. Reproducible: the gate config, every strategy's finalist Trial, the
@@ -46,7 +56,7 @@ class CrossSectionalExperiment(BaseModel):
     universe_symbols: list[str]
     strategy_names: list[str]
     gate_config: GateConfig
-    trials: list[Trial]
+    trials: list[CrossSectionalTrial]
     lifetime_trials: int
     best_strategy_name: str | None = None
     best_gate_result: GateResult | None = None
@@ -158,7 +168,7 @@ def run_cross_sectional_search(
     names = list(strategy_names) if strategy_names is not None else list(registry)
     in_sample, holdout = split_panel_holdout(prices)
 
-    trials: list[Trial] = []
+    trials: list[CrossSectionalTrial] = []
     reports: list[ValidationReport] = []
     finalists: list[tuple[CrossSectionalStrategy, Params, float]] = []
     total_configs = 0
@@ -185,14 +195,18 @@ def run_cross_sectional_search(
         best_i = int(np.argmax(sharpes))
         best_params, best_quantile = configs[best_i]
         total_configs += len(configs)
+        # The IC is a property of the RANKING, so it is computed from the finalist's signal and is
+        # independent of the quantile the portfolio happened to trade (ADR-035).
+        finalist_signal = strategy.build(best_params)(in_sample)
         trials.append(
-            Trial(
+            CrossSectionalTrial(
                 strategy_name=name,
                 parameters=_trial_params(best_params, best_quantile),
                 observed_sharpe=report.observed_sharpe,
                 deflated_sharpe=report.deflated_sharpe,
                 pbo=report.pbo,
                 parameter_stability_score=report.parameter_stability_score,
+                ic=summarize_ic(rank_ic(finalist_signal, in_sample)),
             )
         )
         reports.append(report)

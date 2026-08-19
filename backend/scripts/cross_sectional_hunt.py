@@ -84,11 +84,17 @@ def main() -> None:
         f"panel: {len(exp.universe_symbols)} symbols x {result.panel_bars} bars "
         f"({len(result.errors)} skipped); lifetime trials {exp.lifetime_trials}\n"
     )
-    print(f"{'strategy':<14}{'DSR':>7}{'PBO':>7}{'stability':>11}{'obs Sharpe':>12}")
+    # IC columns (ADR-035): mean rank IC and its t-stat say whether the RANKING carried
+    # information at all — a good Sharpe with a ~0 IC is a concentration story, not a factor.
+    print(
+        f"{'strategy':<14}{'DSR':>7}{'PBO':>7}{'stability':>11}{'obs Sharpe':>12}"
+        f"{'mean IC':>9}{'IC t':>7}"
+    )
     for trial in sorted(exp.trials, key=lambda t: t.deflated_sharpe, reverse=True):
+        ic = f"{trial.ic.mean:>9.3f}{trial.ic.t_stat:>7.1f}" if trial.ic else f"{'—':>9}{'—':>7}"
         print(
             f"{trial.strategy_name:<14}{trial.deflated_sharpe:>7.2f}{trial.pbo:>7.2f}"
-            f"{trial.parameter_stability_score:>11.2f}{trial.observed_sharpe:>12.2f}"
+            f"{trial.parameter_stability_score:>11.2f}{trial.observed_sharpe:>12.2f}{ic}"
         )
 
     if exp.graduate is not None:

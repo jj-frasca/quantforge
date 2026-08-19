@@ -20,8 +20,8 @@ from app.research.cross_sectional.forward import (
     manage_cross_sectional_book,
     score_forward,
 )
-from app.research.cross_sectional.search import CrossSectionalExperiment
-from app.research.lab.experiment import Graduate, Trial
+from app.research.cross_sectional.search import CrossSectionalExperiment, CrossSectionalTrial
+from app.research.lab.experiment import Graduate
 from app.research.lab.gate import GateConfig, GateResult
 
 
@@ -190,7 +190,7 @@ def _graduated_experiment(
         holdout_total_return=0.1,
         holdout_n_bars=252,
     )
-    trial = Trial(
+    trial = CrossSectionalTrial(
         strategy_name=strategy_name,
         parameters=params,
         observed_sharpe=1.0,

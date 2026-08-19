@@ -73,3 +73,23 @@ frontend (Phase 5).
 
 Parameter stability and regime analysis (`parameter_stability.py`, `regime_analysis.py`) are
 secondary and added after the core four are solid.
+
+---
+
+## 6. Rank information coefficient (cross-sectional only)
+
+`app/research/cross_sectional/ic.py`. ADR-035. Per-date Spearman correlation between the signal
+cross-section at *t* and each asset's return from *t* to *t+1* — the same causality
+`portfolio_returns` uses (rank on t, realize t+1). `summarize_ic` returns mean, std, IR (mean/std),
+t-stat (IR·√periods), hit rate and period count.
+
+- Answers the one question a dollar-neutral Sharpe cannot: **did the ranking carry information, or
+  did two names carry the P&L?** At a 0.2 quantile over ~50 names each leg is ~10 positions.
+- Dates with <2 ranked names, or zero dispersion on either side, are **dropped, not scored 0** —
+  "not measurable" is a different observation from "no information", and zeroing biases the mean
+  toward the null.
+- **Diagnostic, not a gate.** An IC floor would change what graduates; per the charter that needs
+  argued methodology with evidence, and no IC distribution exists yet. Trigger to revisit: ≥50
+  cross-sectional trials with an IC, then compare gate-passing vs gate-failing distributions.
+- The t-stat assumes independent periods, so it is **optimistic** for a slow signal whose IC series
+  is autocorrelated. Newey-West adjustment is a noted, unbuilt follow-up.

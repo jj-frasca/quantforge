@@ -28,6 +28,10 @@ class CrossSectionalTrialView(BaseModel):
     deflated_sharpe: float
     pbo: float
     parameter_stability_score: float
+    # Rank IC (ADR-035) — did the RANKING carry information, as opposed to a couple of names
+    # carrying the P&L. None for trials recorded before ADR-035: not measured, not zero.
+    ic_mean: float | None = None
+    ic_t_stat: float | None = None
 
 
 class CrossSectionalView(BaseModel):
@@ -61,6 +65,8 @@ def _view(experiment: CrossSectionalExperiment) -> CrossSectionalView:
                 deflated_sharpe=t.deflated_sharpe,
                 pbo=t.pbo,
                 parameter_stability_score=t.parameter_stability_score,
+                ic_mean=t.ic.mean if t.ic else None,
+                ic_t_stat=t.ic.t_stat if t.ic else None,
             )
             for t in experiment.trials
         ],

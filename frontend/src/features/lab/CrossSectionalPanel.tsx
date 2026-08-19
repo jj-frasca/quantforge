@@ -3,6 +3,9 @@ import { useCrossSectional } from './useCrossSectional'
 
 const fmt = (value: number): string => value.toFixed(2)
 const fmtPct = (value: number): string => `${(value * 100).toFixed(0)}%`
+// A real factor's mean IC is ~0.02-0.05, so two decimals would round most of them to 0.00.
+const fmtIc = (value: number | null | undefined, digits: number): string =>
+  value == null ? '—' : value.toFixed(digits)
 
 export function CrossSectionalPanel() {
   const crossSectional = useCrossSectional()
@@ -12,7 +15,9 @@ export function CrossSectionalPanel() {
       <h3>Cross-sectional hunt</h3>
       <p className="section-lede">
         A dollar-neutral long/short rank across the whole universe (ADR-024) — a per-strategy edge,
-        not a single-name bet. The latest hunt and its graduation verdict.
+        not a single-name bet. The latest hunt and its graduation verdict. Rank IC (ADR-035) is a
+        diagnostic, not a gate: it says whether the ranking itself carried information, which a
+        portfolio Sharpe cannot distinguish from two lucky names.
       </p>
       {crossSectional.isPending && <p role="status">Loading cross-sectional hunt…</p>}
       {crossSectional.isError && (
@@ -53,6 +58,8 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
               <th>Deflated Sharpe</th>
               <th>PBO</th>
               <th>Parameter stability</th>
+              <th>Mean rank IC</th>
+              <th>IC t-stat</th>
             </tr>
           </thead>
           <tbody>
@@ -66,6 +73,8 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
                 <td>{fmt(trial.deflated_sharpe)}</td>
                 <td>{fmtPct(trial.pbo)}</td>
                 <td>{fmtPct(trial.parameter_stability_score)}</td>
+                <td>{fmtIc(trial.ic_mean, 3)}</td>
+                <td>{fmtIc(trial.ic_t_stat, 1)}</td>
               </tr>
             ))}
           </tbody>
