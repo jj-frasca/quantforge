@@ -101,6 +101,22 @@ against the finalist *category mix* at half-lives 1–3, not against capture alo
 - The project now has a worked example of adding a strategy, measuring it against a pre-stated
   criterion, and removing it. That loop is worth more than the strategy would have been.
 
+## Correction (same session, found while running `scripts/pool_report.py`)
+
+Decision 2 said the committed calibration records "already exist" for the restored fingerprint.
+That was true of the *measurements* but not of the **files**: `data/null_calibration/` and
+`data/power_calibration/` had both been overwritten during ADR-056 by runs at `2eede83f…`, so after
+the removal the repo carried a 35-strategy calibration beside a 34-strategy catalog. A calibration
+that describes a catalog the project no longer runs is exactly the mismatch ADR-044's fingerprint
+exists to expose, and the fingerprint did expose it — in the pool report's own NOT COMPARABLE line.
+
+**All three workflows were therefore re-dispatched on the restored catalog** (the two power runs
+happened to already be in flight for ADR-059, which is why only the null needed a separate
+dispatch). The general rule this makes explicit, and which supersedes decision 2's reasoning:
+*matching fingerprints licenses reusing a measurement, not reusing a file that has since been
+overwritten by a different one.* Check `data/*_calibration/*.json`'s recorded
+`search_config_version` against the current catalog before claiming any artifact still applies.
+
 ## Reversal
 
 Restore the file, config, builder branch, catalog entry and tests from commit `c005334` and bump the
