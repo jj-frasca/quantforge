@@ -8,11 +8,13 @@ import numpy.typing as npt
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
+from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.gate import GateConfig
 from app.research.lab.holdout import split_holdout
 from app.research.lab.search import run_search
 from app.research.lab.universe import expected_max_sharpe_under_null
+from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
 
 _TRADING_DAYS = 252
 _COLUMNS = ["open", "high", "low", "close", "volume"]
@@ -41,7 +43,8 @@ class NullCalibration(BaseModel):
 
     `false_graduation_rate` is a Type-I error for the WHOLE pipeline — search, DSR, PBO, MinTRL,
     holdout and beat-buy-and-hold together — which none of those components' individual guarantees
-    implies. It is a property of `gate_config_version`; re-measure whenever the gate changes.
+    implies. ADR-044 versions both the gate thresholds and the resolved search family; re-measure
+    whenever either changes.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -66,6 +69,9 @@ class NullCalibration(BaseModel):
     purged_cv_oos_sharpes: list[float] = []
     errors: dict[str, str]
     gate_config_version: str
+    # ADR-044: the result measures search + gate, not thresholds alone. Old committed artifacts
+    # remain readable but honestly advertise that their resolved hypothesis family was not hashed.
+    search_config_version: str = "legacy-unspecified"
     null_mode: str = "unspecified"
 
     @property
@@ -91,6 +97,34 @@ class NullCalibration(BaseModel):
 # Widened past the repo's usual NDArray[float64]: numpy types these products as
 # floating[Any], and _ohlcv only feeds them to a DataFrame constructor.
 FloatArray = npt.NDArray[np.floating[Any]]
+
+
+def calibration_search_version(
+    strategy_names: Sequence[str], *, n_per_param: int, config: GateConfig
+) -> str:
+    """Fingerprint the exact catalog-derived hypothesis family calibrated by a run (ADR-044).
+
+    Strategy order is preserved because cross-family ties resolve by first occurrence. The concrete
+    grids are hashed rather than catalog bounds: they are the configurations `run_search` actually
+    tests after invalid cross-parameter combinations have been removed.
+    """
+    strategies: list[dict[str, object]] = []
+    for name in strategy_names:
+        entry = find_catalog_entry(name)
+        grid = grid_from_catalog(entry, n_per_param=n_per_param) if entry is not None else []
+        strategies.append(
+            {
+                "name": name,
+                "configs": [strategy.parameters for strategy in grid],
+            }
+        )
+    return compute_parameter_hash(
+        {
+            "gate_config_version": config.version_hash,
+            "n_per_param": n_per_param,
+            "strategies": strategies,
+        }
+    )
 
 
 def _ohlcv(
@@ -221,6 +255,7 @@ class PowerCalibration(BaseModel):
     holdout_years: list[float]
     errors: dict[str, str]
     gate_config_version: str
+    search_config_version: str = "legacy-unspecified"
 
     @property
     def oracle_sharpe_percentiles(self) -> tuple[float, float, float] | None:
@@ -458,6 +493,9 @@ def measure_power(
         holdout_years=holdout_years,
         errors=errors,
         gate_config_version=gate_config.version_hash,
+        search_config_version=calibration_search_version(
+            strategy_names, n_per_param=n_per_param, config=gate_config
+        ),
     )
 
 
@@ -560,6 +598,9 @@ def calibrate_gate(
         ],
         errors=errors,
         gate_config_version=gate_config.version_hash,
+        search_config_version=calibration_search_version(
+            strategy_names, n_per_param=n_per_param, config=gate_config
+        ),
         null_mode=null_mode,
     )
 
@@ -581,6 +622,11 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
     if len(versions) > 1:
         raise ValueError(
             f"cannot merge shards with different gate_config_version: {sorted(versions)}"
+        )
+    search_versions = {s.search_config_version for s in shards}
+    if len(search_versions) > 1:
+        raise ValueError(
+            f"cannot merge shards with different search_config_version: {sorted(search_versions)}"
         )
     modes = {s.null_mode for s in shards}
     if len(modes) > 1:
@@ -607,5 +653,6 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
         purged_cv_oos_sharpes=[v for s in shards for v in s.purged_cv_oos_sharpes],
         errors={sym: why for s in shards for sym, why in s.errors.items()},
         gate_config_version=versions.pop(),
+        search_config_version=search_versions.pop(),
         null_mode=modes.pop(),
     )

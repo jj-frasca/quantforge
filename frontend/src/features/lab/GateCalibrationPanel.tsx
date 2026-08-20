@@ -25,6 +25,7 @@ export function GateCalibrationPanel({ calibrations }: { calibrations: NullCalib
             <th scope="col">False graduates</th>
             <th scope="col">Type-I error</th>
             <th scope="col">Clear the deflation bar</th>
+            <th scope="col">Search version</th>
           </tr>
         </thead>
         <tbody>
@@ -35,6 +36,11 @@ export function GateCalibrationPanel({ calibrations }: { calibrations: NullCalib
               <td>{c.n_graduates}</td>
               <td>{asPercent(c.false_graduation_rate)}</td>
               <td>{c.n_clear_deflation_bar}</td>
+              <td title={c.search_config_version}>
+                {c.search_config_version === 'legacy-unspecified'
+                  ? 'legacy'
+                  : c.search_config_version.slice(0, 8)}
+              </td>
             </tr>
           ))}
         </tbody>

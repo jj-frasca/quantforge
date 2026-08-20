@@ -15,8 +15,9 @@ name: Null-model gate calibration
 # GLOBAL symbol index, making the union of shards identical to one big run. The consolidation job
 # re-judges every false graduate against the ADR-018 bar implied by the COMBINED symbol count.
 #
-# Monthly, because the answer is a property of the GateConfig — dispatch a run whenever the gate
-# changes. NEVER writes the research pool: a null run is not a hypothesis about a real symbol.
+# Monthly, because the answer is a property of the gate AND resolved search family (ADR-044) —
+# dispatch a run whenever thresholds, the catalog, or its grids change. NEVER writes the research
+# pool: a null run is not a hypothesis about a real symbol.
 on:
   schedule:
     - cron: "0 5 1 * *" # 05:00 UTC on the 1st

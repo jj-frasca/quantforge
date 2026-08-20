@@ -60,6 +60,7 @@ def _flag(name: str) -> str | None:
 def _report(result: NullCalibration) -> None:
     print(f"null mode           : {result.null_mode}")
     print(f"gate config version : {result.gate_config_version}")
+    print(f"search config version: {result.search_config_version}")
     print(f"symbols searched    : {result.n_symbols}")
     print(f"graduates           : {result.n_graduates}")
     print(f"FALSE GRADUATION    : {result.false_graduation_rate:.1%}  <- Type-I error, whole gate")

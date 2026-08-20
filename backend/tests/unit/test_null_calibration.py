@@ -21,6 +21,7 @@ from app.research.lab.calibration import (
     autocorrelated_edge,
     bootstrap_null,
     calibrate_gate,
+    calibration_search_version,
     drop_incomplete_bars,
     iid_normal_null,
     mean_reverting_edge,
@@ -29,6 +30,7 @@ from app.research.lab.calibration import (
     oracle_sharpe,
     oracle_sharpe_of,
 )
+from app.research.lab.gate import GateConfig
 from app.research.lab.universe import expected_max_sharpe_under_null
 
 
@@ -134,6 +136,7 @@ def test_calibrate_gate_reports_a_well_formed_false_graduation_rate() -> None:
     assert 0.0 <= result.false_graduation_rate <= 1.0
     assert result.deflation_bar > 0.0
     assert result.n_clear_deflation_bar <= result.n_graduates
+    assert result.search_config_version != "legacy-unspecified"
 
 
 def test_the_default_gate_graduates_nothing_from_a_seeded_null_universe() -> None:
@@ -151,6 +154,15 @@ def test_calibration_is_deterministic_for_the_same_null_universe() -> None:
     first = calibrate_gate(frames, ["sma"], n_per_param=2)
     second = calibrate_gate(frames, ["sma"], n_per_param=2)
     assert first.model_dump() == second.model_dump()
+
+
+def test_calibration_search_version_tracks_the_resolved_hypothesis_family() -> None:
+    gate = GateConfig()
+    baseline = calibration_search_version(["sma"], n_per_param=2, config=gate)
+
+    assert baseline == calibration_search_version(["sma"], n_per_param=2, config=gate)
+    assert baseline != calibration_search_version(["sma", "momentum"], n_per_param=2, config=gate)
+    assert baseline != calibration_search_version(["sma"], n_per_param=3, config=gate)
 
 
 def test_calibrate_gate_rejects_an_empty_universe() -> None:
@@ -177,6 +189,7 @@ def _shard(
     graduates: list[NullGraduate] | None = None,
     errors: dict[str, str] | None = None,
     version: str = "v1",
+    search_version: str = "search-v1",
     mode: str = "iid_normal",
     max_deflated: float = -0.1,
 ) -> NullCalibration:
@@ -193,6 +206,7 @@ def _shard(
         holdout_years=[4.0] * n_symbols,
         errors=errors or {},
         gate_config_version=version,
+        search_config_version=search_version,
         null_mode=mode,
     )
 
@@ -248,6 +262,11 @@ def test_merge_counts_a_graduate_that_clears_the_merged_bar() -> None:
 def test_merge_refuses_shards_from_different_gate_configs() -> None:
     with pytest.raises(ValueError, match="gate_config_version"):
         merge_calibrations([_shard(version="v1"), _shard(version="v2")])
+
+
+def test_merge_refuses_shards_from_different_search_spaces() -> None:
+    with pytest.raises(ValueError, match="search_config_version"):
+        merge_calibrations([_shard(search_version="catalog-a"), _shard(search_version="catalog-b")])
 
 
 def test_merge_refuses_shards_from_different_null_modes() -> None:
