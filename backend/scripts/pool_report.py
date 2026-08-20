@@ -24,6 +24,12 @@ def _fmt(value: float | None) -> str:
     return f"{value:.2f}" if value is not None else "n/a"
 
 
+def _short(version: str) -> str:
+    """Abbreviate a 64-char fingerprint but never the `legacy-unspecified` sentinel, which becomes
+    unreadable and looks like a hash prefix when truncated."""
+    return version if len(version) <= 18 else f"{version[:12]}…"
+
+
 def _diagnostic(summary: DiagnosticSummary | None, finalists: DiagnosticSummary | None) -> str:
     """Three different facts that all used to print as "not measured" (ADR-051).
 
@@ -90,6 +96,15 @@ def main() -> None:
     # measured on symbols with no edge by construction. A pool median at or below the null's is the
     # search producing what it produces from noise. The FINALIST row is the comparable one: the
     # null artifacts record one finalist per searched symbol, graduate or not.
+    # ADR-052: a median over two search families is a blend of two procedures, and the comparison
+    # below is only meaningful against a calibration artifact carrying the SAME fingerprint.
+    if report.search_config_versions:
+        families = " | ".join(
+            f"{_short(version)} ({count})"
+            for version, count in report.search_config_versions.items()
+        )
+        print(f"\nsearch families in the pool (fingerprint, experiments): {families}")
+
     print("\nout-of-sample Sharpe (compare with data/null_calibration/ — same statistic, no edge):")
     for label, finalists, passers in (
         ("walk-forward", report.walk_forward_finalists, report.walk_forward_graduates),

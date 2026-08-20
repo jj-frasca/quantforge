@@ -281,3 +281,47 @@ def test_purged_cv_and_walk_forward_are_recorded_separately() -> None:
     exp = run_search(_random_walk_frame(5), "AAPL", ["sma", "momentum"])
     best = max(exp.trials, key=lambda t: t.deflated_sharpe)
     assert best.purged_cv_oos_sharpe != best.walk_forward_oos_sharpe
+
+
+# --- ADR-052: an experiment must name the search family that produced it ---
+
+
+def test_search_records_the_resolved_hypothesis_family() -> None:
+    """The pool's every comparison against a calibration artifact is a claim that both sides
+    resolved the same family. Before this, establishing that meant diffing commit timestamps
+    against workflow start times."""
+    from app.research.lab.calibration import calibration_search_version
+
+    config = GateConfig()
+    exp = run_search(_random_walk_frame(11), "AAPL", ["sma", "momentum"], config=config)
+
+    assert exp.search_config_version == calibration_search_version(
+        ["sma", "momentum"], n_per_param=3, config=config, refine=False
+    )
+
+
+def test_a_search_over_a_different_family_records_a_different_version() -> None:
+    frame = _random_walk_frame(12)
+    narrow = run_search(frame, "AAPL", ["sma"])
+    wide = run_search(frame, "AAPL", ["sma", "momentum"])
+
+    assert narrow.search_config_version != wide.search_config_version
+
+
+def test_refinement_changes_the_recorded_family() -> None:
+    """Production refines and the null calibration refines; a coarse-only run is a different
+    procedure and must not compare equal to either (ADR-047)."""
+    frame = _random_walk_frame(13)
+    coarse = run_search(frame, "AAPL", ["sma"], refine=False)
+    refined = run_search(frame, "AAPL", ["sma"], refine=True)
+
+    assert coarse.search_config_version != refined.search_config_version
+
+
+def test_an_experiment_written_before_this_field_reads_back_as_unspecified() -> None:
+    """The 3,237 rows already in the pool cannot have their family reconstructed. A synthesized
+    value would be indistinguishable from a measured one."""
+    exp = run_search(_random_walk_frame(14), "AAPL", ["sma"])
+    legacy = Experiment.model_validate_json(exp.model_dump_json(exclude={"search_config_version"}))
+
+    assert legacy.search_config_version == "legacy-unspecified"

@@ -9,6 +9,8 @@ occasionally gets done wrong.
 Pure — the caller supplies the experiments and the book.
 """
 
+from collections import Counter
+
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
@@ -77,6 +79,10 @@ class PoolReport(BaseModel):
     # artifacts record. Independent of graduation, so it survives a pool that graduates nothing.
     walk_forward_finalists: DiagnosticSummary | None = None
     purged_cv_finalists: DiagnosticSummary | None = None
+    # ADR-052: which resolved hypothesis families produced these rows, with their counts. A pool
+    # spanning two families has no single median — it has a blend of two procedures — and this is
+    # what lets a reader match the pool against a calibration artifact instead of against git log.
+    search_config_versions: dict[str, int] = {}
     # ADR-043: the TRUE edge this design can detect, beside the bar an observation must clear.
     # None when no graduate exists to take a holdout length from — inventing one would publish a
     # detectable edge for a design that was never run.
@@ -152,6 +158,8 @@ def summarize_pool(
         else None
     )
 
+    families = Counter(e.search_config_version for e in experiments)
+
     open_positions = [p for p in positions if p.status == "open"]
     return PoolReport(
         n_experiments=len(experiments),
@@ -167,5 +175,6 @@ def summarize_pool(
         purged_cv_graduates=_summarize(passing_finalists, "purged_cv_oos_sharpe"),
         walk_forward_finalists=_summarize(finalists, "walk_forward_oos_sharpe"),
         purged_cv_finalists=_summarize(finalists, "purged_cv_oos_sharpe"),
+        search_config_versions=dict(families.most_common()),
         frontier=frontier,
     )

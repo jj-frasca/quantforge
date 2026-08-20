@@ -86,6 +86,11 @@ class Experiment(BaseModel):
     # value+algo survivors outperform. None when value is off or the name is unscorable (e.g. ETF).
     undervaluation_score: UndervaluationScore | None = None
     graduate: Graduate | None = None
+    # ADR-052: the resolved hypothesis family that produced this row — the same fingerprint the
+    # calibration artifacts carry (ADR-044), so equality of the two strings is the claim a
+    # real-versus-null comparison needs. Rows written before the field cannot have their family
+    # reconstructed and keep the default rather than a synthesized value.
+    search_config_version: str = "legacy-unspecified"
     rationale: str = ""
 
 

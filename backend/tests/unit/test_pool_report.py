@@ -298,3 +298,23 @@ def test_finalist_diagnostics_are_none_when_no_experiment_carries_them() -> None
     report = summarize_pool([_exp("AAA", holdout_sharpe=1.0)], [])
     assert report.walk_forward_finalists is None
     assert report.purged_cv_finalists is None
+
+
+# --- ADR-052: which search families the summarized rows actually came from ---
+
+
+def test_report_counts_the_experiments_of_each_search_family() -> None:
+    """A pool that mixes families has no single median — it has a blend of two procedures, and the
+    reader cannot see that without being told which families are present."""
+    experiments = [
+        _exp("AAA").model_copy(update={"search_config_version": "fam-a"}),
+        _exp("BBB").model_copy(update={"search_config_version": "fam-a"}),
+        _exp("CCC").model_copy(update={"search_config_version": "fam-b"}),
+    ]
+    report = summarize_pool(experiments, [])
+
+    assert report.search_config_versions == {"fam-a": 2, "fam-b": 1}
+
+
+def test_an_empty_pool_reports_no_search_families() -> None:
+    assert summarize_pool([], []).search_config_versions == {}

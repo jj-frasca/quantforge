@@ -201,12 +201,25 @@ def run_search(
             holdout_n_bars=holdout.n_bars,
         )
 
+    # Imported here rather than at module scope: calibration.py imports run_search, so the
+    # fingerprint's home cannot import search.py back without a cycle. Deliberately the SAME
+    # function the calibration path calls — two implementations of one identity would drift
+    # silently, and the whole value of the field is that the strings compare equal (ADR-052).
+    from app.research.lab.calibration import calibration_search_version
+
     return Experiment(
         symbol=symbol,
         strategy_names=[t.strategy_name for t in trials],
         gate_config=gate_config,
         trials=trials,
         lifetime_trials=lifetime_trials,
+        search_config_version=calibration_search_version(
+            strategy_names,
+            n_per_param=n_per_param,
+            config=gate_config,
+            refine=refine,
+            refine_span=refine_span,
+        ),
         best_strategy_name=best_report.strategy_name,
         best_gate_result=gate_result,
         fundamentals=fundamentals,
