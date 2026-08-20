@@ -127,7 +127,7 @@ cloud, for free:
 - **`app/research/lab/`** — `run_search` (coarse-to-fine parameter search), `GraduationGate`
   (DSR / PBO / parameter stability / MinTRL / locked holdout / beat-buy-and-hold), `run_universe_hunt`
   across a symbol universe, the `Experiment` research pool, `hunt_and_promote`, and the managed
-  paper book (`portfolio_manager`, ADR-019/020). **34 strategies** in `STRATEGY_CATALOG`, not 11.
+  paper book (`portfolio_manager`, ADR-019/020). **35 strategies** in `STRATEGY_CATALOG`, not 11.
 - **`app/research/cross_sectional/`** (ADR-024/025) — a second, orthogonal dimension: rank the whole
   universe each period into dollar-neutral long/short legs, judged by the SAME gate. Includes
   forward-testing and a lifecycle book.
