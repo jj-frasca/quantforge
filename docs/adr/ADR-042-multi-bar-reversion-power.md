@@ -105,6 +105,50 @@ catalog turns out to detect nothing at any horizon, **the response is not to loo
 (charter §4). It is to fix or retire the strategies that cannot register the effect they are named
 for, or to state plainly which effects are outside this pipeline's resolution.
 
+## Measured, 2026-08-20 (run 32327295232, N = 50 per half-life, 3000 bars, full 34-strategy catalog)
+
+| tier | half-life | deviation share | oracle Sharpe (median) | detection rate | clear the ADR-018 bar (of 50) |
+|---|---|---|---|---|---|
+| A | 1 bar | 0.169 | +2.76 | **0%** | 0 |
+| A | 2 bars | 0.288 | +2.68 | 2% | 0 |
+| A | 3 bars | 0.409 | +2.73 | 6% | 0 |
+| A | 5 bars | 0.651 | +2.73 | **42%** | 4 |
+| B | 10 bars | 0.75 | +2.05 | 14% | 1 |
+| B | 20 bars | 0.75 | +1.50 | 2% | 0 |
+
+**1. ADR-041's asymmetry was the horizon, not the family.** Across tier A the measured oracle
+Sharpe is essentially constant (+2.68 to +2.76) and realized volatility is 1.2%/day by
+construction, so the *only* thing varying is how long a deviation takes to unwind — and detection
+goes from **0% at a 1-bar half-life to 42% at a 5-bar one**. The catalog's mean-reversion family
+can register mean reversion; it cannot register it at lag 1, which is the only horizon ADR-041 ever
+planted. The reading "half the catalog is decoration" is **not supported** and should not be
+repeated.
+
+**2. The residual family gap is small.** At comparable effect size the trending number from ADR-041
+was 54% (oracle +2.56) against 42% here (oracle +2.73). That is a real but modest difference —
+nothing like the ninefold gap ADR-041 measured — and it is what one would expect from a catalog
+whose trend strategies integrate over many bars while its oscillators need the deviation to persist
+long enough to be seen and short enough to revert inside the window.
+
+**3. Tier B behaves as its ceiling predicts, and is not evidence of a slow-horizon blind spot.**
+Half-life 10 could only be planted at oracle +2.05 and detected 14%; half-life 20 at +1.50 detected
+2%. Both sit on ADR-041's *effect-size* curve (0% at oracle 1.3, ~50% at 2.6), so the fall-off
+across tier B is explained by the effect size the model can reach at those horizons, not by an
+additional weakness at long horizons. The interesting consequence is the ceiling itself: **slow
+band reversion cannot produce a large tradeable Sharpe at equity volatility**, so an edge of that
+shape is outside this pipeline's resolution no matter which strategy is pointed at it.
+
+**4. What this changes about where to search.** The catalog's blind spot is *fast* reversion, not
+reversion. A one-bar effect is invisible to every 14-to-20-bar oscillator in the catalog, and
+adding more oscillators of the same window length will not change that — the fix, if this is ever
+worth fixing, is a short-window strategy, not another indicator. Nothing here licenses touching a
+threshold (charter §4).
+
+**Honest limits.** N = 50 per row, so a 42% rate carries a 95% interval of roughly 28-58% and the
+0%/2% rows roughly 0-7%; the tier-A trend across four rows is far larger than that noise, but no
+single row should be quoted to two digits. The planted process is stationary and always-on, so
+these remain **upper bounds** on power against real, intermittent edges, exactly as in ADR-041.
+
 ## Alternatives considered
 1. **Re-run ADR-041's AR(1) at a high phi to get a long horizon.** AR(1)-on-returns with phi = 0.9
    is persistent over ~7 bars, so it *is* multi-bar — but it is multi-bar *trend*, and its variance
