@@ -177,6 +177,27 @@ folds with an embargo sized from the grid's longest lookback instead of a fixed 
 because its selection sees the future — read them side by side, never averaged. Details:
 `.claude/context/validation-methodology.md` §3–§5.
 
+**The gate's POWER is measured too, and it reframes "0 of 40" (2026-08-19/20).** A Type-I error
+alone cannot say whether "0 of 40 graduates clear the bar" is a fact about the strategies or about
+the bar. `power-calibration.yml` plants an AR(1) edge of measured strength and runs the unmodified
+pipeline (ADR-041): detection is **64% at oracle Sharpe 3.9, 54% at 2.6, and 0% at 1.3** — the gate
+is a conservative instrument with real but limited resolution. `horizon-power-calibration.yml`
+(ADR-042) then separated the confound ADR-041 could not: planting *band* reversion at a stated
+half-life, at a held-constant effect size and volatility, detection goes **0% at a 1-bar half-life
+to 42% at a 5-bar one**. So the catalog's blind spot is **fast** mean reversion, not mean reversion
+— the "half the catalog is decoration" reading is not supported, and more oscillators of the same
+window length would not help.
+
+**The detectable-edge frontier (ADR-043) factors those two numbers.** `app/research/lab/frontier.py`
+solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0
+is exactly the `sqrt(1/T)` the ADR-018 bar already uses. At the current design (607 symbols, 4.3y
+holdout) an edge must be a **true annualized Sharpe of 2.13** to be found 80% of the time. Measured
+power is lower than that frontier, and the gap is the catalog's *capture efficiency*. The design
+lever this exposes: the bar moves as `sqrt(2 ln N)` in hypotheses but `1/sqrt(T)` in holdout length,
+so **halving the universe buys ~4% while doubling the holdout buys ~29%** — history is the stronger
+lever by an order of magnitude. `scripts/pool_report.py` and the dashboard print this beside the
+deflation headline; none of it licenses moving a threshold (charter §4).
+
 **The backend gate runs in parallel (ADR-040).** `make test` uses `pytest -n auto`; `make check`
 went 8:45 → 4:01. Tests must therefore be order-independent and must not write fixed paths.
 
