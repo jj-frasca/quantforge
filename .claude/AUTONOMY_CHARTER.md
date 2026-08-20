@@ -39,12 +39,18 @@ Joe delegated decisions, including ones previously flagged "Joe's call." You may
 - Prefer the **reversible** option when two are close in value. You are optimizing for a project
   Joe can still steer when he comes back, not for your own cleverness.
 
-Open decisions inherited as of 2026-08-17 (all yours now):
-- ADR-028 meta-labeling: build it (needs an ML dep + its own ADR + a purged-CV protocol) or drop it.
-- Dual-writer conflict on `data/paper_portfolio.json` (local launchd vs cloud workflows) — pick ONE
-  writer and disable the other. This one is actively causing rebase conflicts; fix it early.
-- Capital allocation: the paper book is mean-reversion-heavy and ~66% idle cash. Options were
-  (a) graduate more trend-following, (b) deploy idle cash / fewer-fuller positions, (c) wait.
+Open decisions inherited as of 2026-08-17 — **all three are now RESOLVED** (verified 2026-08-20,
+session #10). Left here with their outcomes so no future session re-derives them; §2 priority 3 is
+therefore empty until a new decision is recorded below.
+- ~~ADR-028 meta-labeling~~ → **declined by ADR-034** until a primary graduate clears the ADR-018
+  universe-deflation bar. ADR-028's own Status line records this. Do not re-open it on a whim: the
+  precondition is a *measured* one, so check the bar before arguing about the ML dependency.
+- ~~Dual-writer on `data/paper_portfolio.json`~~ → **resolved by ADR-030** (single writer per
+  generated file). The cloud workflows are the writer; the local launchd paper jobs and
+  `scripts/cron_paper.sh` were deleted and no `com.jjfrasca.*paper*` agent is installed.
+- ~~Capital allocation / ~66% idle cash~~ → **resolved in practice**: `data/equity_curve.json` at
+  2026-08-20 shows 18 positions and $841 cash against $94.5k equity (0.9% idle), i.e. option (b)
+  happened via ADR-020's lifecycle. The live number is the book's return, not its idleness.
 
 ## 2. What to work on, in priority order
 
