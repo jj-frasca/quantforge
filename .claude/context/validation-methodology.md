@@ -167,6 +167,9 @@ tails and vol, destroying serial structure). `null-calibration.yml` shards it an
 - Calibration identity includes the resolved grids AND a trial-accounting-method version
   (ADR-044/046). The same hypotheses priced by a different DSR denominator are a different measured
   procedure and must not reuse an old Type-I/power artifact.
+- Calibration runs production's adaptive winner-family refinement by default (`refine=True`, span
+  0.25) and records those inputs in both the artifact and search identity (ADR-047). Runs before
+  ADR-047 were coarse-only and do not measure the selector daily discovery deploys.
 
 ### 7.2 Power (ADR-041/042) — the Type-II half
 `measure_power` plants an edge of MEASURED (never derived) strength and counts detections in two

@@ -72,6 +72,10 @@ class NullCalibration(BaseModel):
     # ADR-044: the result measures search + gate, not thresholds alone. Old committed artifacts
     # remain readable but honestly advertise that their resolved hypothesis family was not hashed.
     search_config_version: str = "legacy-unspecified"
+    # ADR-047: calibration must say whether it measured production's adaptive second pass.
+    # Legacy artifacts were coarse-only, so False is the truthful compatibility default.
+    refine: bool = False
+    refine_span: float = 0.25
     null_mode: str = "unspecified"
 
     @property
@@ -104,7 +108,12 @@ _TRIAL_ACCOUNTING_VERSION = "whole-search-v1"
 
 
 def calibration_search_version(
-    strategy_names: Sequence[str], *, n_per_param: int, config: GateConfig
+    strategy_names: Sequence[str],
+    *,
+    n_per_param: int,
+    config: GateConfig,
+    refine: bool = True,
+    refine_span: float = 0.25,
 ) -> str:
     """Fingerprint the exact catalog-derived hypothesis family calibrated by a run (ADR-044).
 
@@ -127,6 +136,8 @@ def calibration_search_version(
             "gate_config_version": config.version_hash,
             "trial_accounting_version": _TRIAL_ACCOUNTING_VERSION,
             "n_per_param": n_per_param,
+            "refine": refine,
+            "refine_span": refine_span if refine else None,
             "strategies": strategies,
         }
     )
@@ -265,6 +276,8 @@ class PowerCalibration(BaseModel):
     errors: dict[str, str]
     gate_config_version: str
     search_config_version: str = "legacy-unspecified"
+    refine: bool = False
+    refine_span: float = 0.25
 
     @property
     def oracle_sharpe_percentiles(self) -> tuple[float, float, float] | None:
@@ -446,6 +459,8 @@ def measure_power(
     deviation_share: float | None = None,
     config: GateConfig | None = None,
     n_per_param: int = 3,
+    refine: bool = True,
+    refine_span: float = 0.25,
 ) -> PowerCalibration:
     """Run the unmodified search + gate over frames with a PLANTED edge and count detections.
 
@@ -487,6 +502,8 @@ def measure_power(
                 list(strategy_names),
                 config=gate_config,
                 n_per_param=n_per_param,
+                refine=refine,
+                refine_span=refine_span,
                 rationale="ADR-041 power calibration",
             )
             _, sealed = split_holdout(frame, symbol)
@@ -524,8 +541,14 @@ def measure_power(
         errors=errors,
         gate_config_version=gate_config.version_hash,
         search_config_version=calibration_search_version(
-            strategy_names, n_per_param=n_per_param, config=gate_config
+            strategy_names,
+            n_per_param=n_per_param,
+            config=gate_config,
+            refine=refine,
+            refine_span=refine_span,
         ),
+        refine=refine,
+        refine_span=refine_span,
     )
 
 
@@ -549,6 +572,8 @@ def calibrate_gate(
     *,
     config: GateConfig | None = None,
     n_per_param: int = 3,
+    refine: bool = True,
+    refine_span: float = 0.25,
     null_mode: str = "unspecified",
 ) -> NullCalibration:
     """Run the unmodified search + gate over null price frames and report how often it graduates.
@@ -574,6 +599,8 @@ def calibrate_gate(
                 list(strategy_names),
                 config=gate_config,
                 n_per_param=n_per_param,
+                refine=refine,
+                refine_span=refine_span,
                 rationale="ADR-036 null calibration",
             )
             _, sealed = split_holdout(frame, symbol)
@@ -629,8 +656,14 @@ def calibrate_gate(
         errors=errors,
         gate_config_version=gate_config.version_hash,
         search_config_version=calibration_search_version(
-            strategy_names, n_per_param=n_per_param, config=gate_config
+            strategy_names,
+            n_per_param=n_per_param,
+            config=gate_config,
+            refine=refine,
+            refine_span=refine_span,
         ),
+        refine=refine,
+        refine_span=refine_span,
         null_mode=null_mode,
     )
 
@@ -684,5 +717,7 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
         errors={sym: why for s in shards for sym, why in s.errors.items()},
         gate_config_version=versions.pop(),
         search_config_version=search_versions.pop(),
+        refine=shards[0].refine,
+        refine_span=shards[0].refine_span,
         null_mode=modes.pop(),
     )

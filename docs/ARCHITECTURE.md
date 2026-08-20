@@ -216,6 +216,13 @@ lower bound because generated records cannot be honestly reconstructed. FINDING-
 records that `GateConfig.trial_budget=200` is still inert and needs an order-robust allocation policy
 before enforcement; do not describe it as a cap today.
 
+**Calibration now includes production refinement (ADR-047).** Daily discovery performs an adaptive
+second grid around the coarse winner, but the published null/power runs had silently stopped after
+the coarse pass. New null and power calibrations default to the same `refine=True`, span-0.25
+procedure and include both inputs in their artifacts and ADR-044 fingerprint. The old 1% Type-I and
+power/capture tables remain evidence for their coarse-only selector; they are stale for production
+until the workflow sole writers refresh them after ADR-046/047.
+
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.
 

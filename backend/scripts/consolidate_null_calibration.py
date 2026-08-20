@@ -58,6 +58,7 @@ def main() -> None:
     print(f"null mode           : {merged.null_mode}")
     print(f"gate config version : {merged.gate_config_version}")
     print(f"search config version: {merged.search_config_version}")
+    print(f"adaptive refinement : {merged.refine} (span {merged.refine_span:.2f})")
     print(f"symbols searched    : {merged.n_symbols} (no edge by construction)")
     print(f"false graduates     : {merged.n_graduates}")
     print(f"FALSE GRADUATION    : {merged.false_graduation_rate:.2%}  <- Type-I error, whole gate")

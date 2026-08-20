@@ -44,6 +44,8 @@ def _report(result: PowerCalibration) -> None:
         f"reversion half-life : {result.half_life} bars (deviation share {result.deviation_share})"
     )
     print(f"gate config version : {result.gate_config_version}")
+    print(f"search config version: {result.search_config_version}")
+    print(f"adaptive refinement : {result.refine} (span {result.refine_span:.2f})")
     print(f"symbols searched    : {result.n_symbols}")
     print(f"detected            : {result.n_detected}")
     print(f"DETECTION RATE      : {result.detection_rate:.1%}  <- power of the gate as such")

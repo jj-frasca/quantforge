@@ -165,6 +165,10 @@ def test_calibration_search_version_tracks_the_resolved_hypothesis_family() -> N
     assert baseline == calibration_search_version(["sma"], n_per_param=2, config=gate)
     assert baseline != calibration_search_version(["sma", "momentum"], n_per_param=2, config=gate)
     assert baseline != calibration_search_version(["sma"], n_per_param=3, config=gate)
+    assert baseline != calibration_search_version(["sma"], n_per_param=2, config=gate, refine=False)
+    assert baseline != calibration_search_version(
+        ["sma"], n_per_param=2, config=gate, refine=True, refine_span=0.10
+    )
 
 
 def test_calibration_search_version_tracks_trial_accounting_method(
@@ -174,6 +178,48 @@ def test_calibration_search_version_tracks_trial_accounting_method(
     baseline = calibration_search_version(["sma"], n_per_param=2, config=gate)
     monkeypatch.setattr(calibration_module, "_TRIAL_ACCOUNTING_VERSION", "test-v2")
     assert baseline != calibration_search_version(["sma"], n_per_param=2, config=gate)
+
+
+def test_null_and_power_calibration_run_production_refinement_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[bool | None, float | None]] = []
+    real_run_search = calibration_module.run_search
+
+    def recording_run_search(*args: object, **kwargs: object) -> object:
+        calls.append((kwargs.get("refine"), kwargs.get("refine_span")))
+        return real_run_search(*args, **kwargs)
+
+    monkeypatch.setattr(calibration_module, "run_search", recording_run_search)
+    calibrate_gate({"NULL": iid_normal_null(760, seed=1)}, ["sma"], n_per_param=2)
+    measure_power(
+        {"EDGE": autocorrelated_edge(760, seed=1, phi=0.2)},
+        ["sma"],
+        phi=0.2,
+        n_per_param=2,
+    )
+
+    assert calls == [(True, 0.25), (True, 0.25)]
+
+
+def test_calibration_artifacts_expose_the_refinement_policy() -> None:
+    null = calibrate_gate(
+        {"NULL": iid_normal_null(760, seed=2)},
+        ["sma"],
+        n_per_param=2,
+        refine=False,
+    )
+    power = measure_power(
+        {"EDGE": autocorrelated_edge(760, seed=2, phi=0.2)},
+        ["sma"],
+        phi=0.2,
+        n_per_param=2,
+        refine=True,
+        refine_span=0.1,
+    )
+
+    assert null.refine is False and null.refine_span == pytest.approx(0.25)
+    assert power.refine is True and power.refine_span == pytest.approx(0.1)
 
 
 def test_calibrate_gate_rejects_an_empty_universe() -> None:
@@ -477,11 +523,18 @@ def test_legacy_power_artifact_has_no_capture_measurement() -> None:
     result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
 
     legacy = PowerCalibration.model_validate(
-        result.model_dump(exclude={"finalist_observed_sharpes"})
+        result.model_dump(exclude={"finalist_observed_sharpes", "refine", "refine_span"})
     )
 
     assert legacy.finalist_observed_sharpes == []
     assert legacy.capture_ratio is None
+    assert legacy.refine is False and legacy.refine_span == pytest.approx(0.25)
+
+
+def test_legacy_null_artifact_is_labelled_coarse_only() -> None:
+    current = calibrate_gate({"NULL": iid_normal_null(760, seed=3)}, ["sma"], n_per_param=2)
+    legacy = NullCalibration.model_validate(current.model_dump(exclude={"refine", "refine_span"}))
+    assert legacy.refine is False and legacy.refine_span == pytest.approx(0.25)
 
 
 def test_autocorrelated_edge_rejects_a_non_stationary_phi() -> None:
