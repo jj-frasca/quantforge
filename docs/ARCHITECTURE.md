@@ -240,8 +240,17 @@ ADR-059 then split capture by the kind of strategy that earned it, and the fast 
 meaning: at half-life 1 the headline 32% is carried by **Trend at 31%** (fitting the random-walk
 level, 83% of return variance there) while everything aimed at the planted reversion keeps **22%**.
 From half-life 3 the matched row is the headline. Quote 22% for what the catalog's reverting
-strategies keep of a fast planted reversion. ADR-058 removed the probe strategy for failing its own
-pre-stated criterion (restoring
+strategies keep of a fast planted reversion. **ADR-061 then retired the finding entirely.** The band oracle is computed from the process's LATENT
+deviation and only the level-plus-deviation SUM is observable, so no causal strategy could ever have
+reached it. A Kalman filter given the true parameters — the upper bound on any price-based strategy
+— nets −0.08 / +0.22 / +0.51 / +0.95 / +0.93 / +0.70 at half-lives 1 / 2 / 3 / 5 / 10 / 20 against a
+latent oracle of +1.70 to +2.21. Capture against what is recoverable is **103–105% at half-lives
+5–20**, 130% at 3, and refused at 1. The catalog converts essentially everything convertible; the
+0/50 detection follows from ADR-043's frontier alone (recoverable ≤0.95 against a ≈2.1 requirement),
+with no reference to the catalog. Two follow-ups are closed by the same measurement: a better
+estimator cannot help (Kalman and a naive EWM residual correlate with the truth equally at the
+production shares) and no alternative selection rule recognizes the matched family more often.
+ADR-058 removed the probe strategy for failing its own pre-stated criterion (restoring
 `search_config_version 3f36fda2…`, so the committed calibration artifacts apply unchanged) and
 points the next unit at the selection step, judged against the finalist category mix.
 

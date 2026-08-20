@@ -57,6 +57,16 @@ capture; 94% → 45–56%). **The gap is recognition, not expression:** at fast 
 strategy wins the in-sample comparison, so the search never gets as far as choosing between them.
 Splitting capture by category (ADR-059) makes the size of that plain — at half-life 1 the headline
 32% is carried by trend strategies fitting the level, while the reverting strategies keep 22%.
+
+Then ADR-061 asked what was recoverable at all. The planted process is a random-walk level plus a
+fast deviation, and only their sum is observable, so the oracle every one of those ratios divided by
+knows a state no strategy can see. A Kalman filter given the true process parameters — an upper
+bound on any causal price-based strategy — nets **−0.08** Sharpe at half-life 1 against that
+oracle's +1.70, and +0.95 at half-life 5. Measured against what is actually recoverable, the catalog
+converts **103–105%** of it at half-lives 5–20 and there is nothing to convert at half-lives 1–2.
+**The gap was the benchmark, not the catalog** — and the zero detection rate follows from the
+detectable-edge frontier alone: a recoverable Sharpe of at most ~0.95 against a ~2.1 requirement. A
+gate that graduated any of those cells would have been wrong.
 The added strategy was removed once it failed its own pre-stated criterion — that loop, stating a
 criterion before the measurement and honouring it afterwards, is the point of the project.
 

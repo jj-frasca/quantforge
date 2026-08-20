@@ -300,10 +300,11 @@ Three rules follow. (1) **Never quote "0% power at oracle 1.3"** — net of cost
 achievable edge, and the ratio is refused when the net oracle sits inside Lo (2002)'s Sharpe
 standard error at the cell's own history length. (2) **Net capture above 100% is expected, not a
 bug**: the numerator is selected in-sample from a grid while the denominator is a fixed sign rule
-that pays to flip. It is the clearest demonstration that this ratio is an upper bound. (3) **The
-band gap is the standing finding.** Fast band cells have a higher net oracle than the AR(1) cell
-detected 22% of the time, are detected 0%, and capture rises monotonically with the horizon — so
-what the catalog cannot express is *fast reversion to a slow-moving level*.
+that pays to flip. It is the clearest demonstration that this ratio is an upper bound. (3) ~~**The
+band gap is the standing finding** — what the catalog cannot express is fast reversion to a
+slow-moving level.~~ **RETIRED by ADR-061 (2026-08-20). Do not restate it in any form.** That
+reading divided by an oracle computed from the process's LATENT deviation, which no causal strategy
+can see. See §7.6.
 
 **ADR-057/058: rule 3 above is now SHARPER — the fast-half-life gap is a RECOGNITION failure.**
 `PowerCalibration.finalist_strategy_names` records which strategy won each searched symbol, so a
@@ -350,6 +351,41 @@ Judge the next attempt against the finalist CATEGORY MIX at half-lives 1–3, no
 alone; and use `compare_power_sweeps(before, after)`, which refuses to call a capture delta
 attributable unless the finalist mix moved with it (a larger grid raises an in-sample maximum on its
 own).
+
+### 7.6 The achievable oracle (ADR-061) — the band gap was the benchmark
+
+`mean_reverting_edge` plants `log price = random-walk level + AR(1) deviation` and only the SUM is
+observable, so the oracle every band capture ratio was divided by knows a state no strategy can see.
+`filtered_deviation` runs the two-state Kalman recursion **with the true process parameters** — an
+upper bound on any causal price-based strategy — and `achievable_capture_ratio` divides by that,
+under the same refusal ADR-055 applies to the net ratio. Measured, 50 symbols per cell at 5400 bars:
+
+| band half-life | 1 | 2 | 3 | 5 | 10 | 20 |
+|---|---|---|---|---|---|---|
+| latent-state oracle, net | +1.70 | +1.93 | +2.13 | +2.21 | +1.71 | +1.24 |
+| **achievable (Kalman) oracle, net** | **−0.08** | **+0.22** | **+0.51** | **+0.95** | **+0.93** | **+0.70** |
+| capture vs latent (the headline) | 32% | 29% | 31% | 45% | 56% | 58% |
+| **capture vs achievable** | *refused* | 261% | 130% | 105% | 103% | 104% |
+
+**What to say about band reversion from now on.** The catalog converts essentially all of the
+recoverable edge from half-life 3 onward; at half-lives 1–2 there is nothing recoverable to convert
+(the optimal filter with perfect parameter knowledge nets −0.08 at half-life 1). The 0/50 detection
+in every band cell is then fully explained by ADR-043's frontier — an achievable net Sharpe of at
+most ≈0.95 against a ≈2.1 requirement — **without any reference to the catalog at all. A gate that
+graduated one of these cells would be wrong.**
+
+Two things this closes, so they are not retried:
+- **A better estimator cannot help.** At the production deviation shares the Kalman filter and a
+  naive EWM residual correlate with the true deviation equally (0.270 vs 0.271 at half-life 1). The
+  estimation problem binds, not the estimator. ADR-056's strategy WAS the naive estimator and the
+  per-symbol Kalman gain it proposed as a follow-up is the optimal one.
+- **A different selection rule cannot help.** Matched-family pick rate at half-life 1 is 0% under
+  max-DSR (production), 0% under max in-sample Sharpe, 10% under max walk-forward OOS and 0% under
+  max purged-CV OOS. Every criterion agrees because the reverting families genuinely score lower on
+  all of them.
+
+The AR(1) sweep deliberately records no achievable oracle: its state IS the observed return, which
+is why its capture already exceeds 100%.
 
 ### 7.5 The real universe against the null (ADR-051) — `scripts/pool_report.py`
 ADR-038/039 recorded a walk-forward and a purged-CV OOS Sharpe on every trial with a stated revisit
