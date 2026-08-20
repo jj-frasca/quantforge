@@ -30,6 +30,14 @@ def test_more_lifetime_trials_increase_the_whole_search_haircut() -> None:
     assert repeated < first
 
 
+def test_whole_search_haircut_resists_one_signal_contaminated_tail() -> None:
+    baseline = [-1.0, -0.5, 0.0, 0.5, 1.0]
+    contaminated = [-1.0, -0.5, 0.0, 0.5, 100.0]
+    baseline_price = whole_search_deflated_sharpes([1.0], baseline, 200)[0]
+    contaminated_price = whole_search_deflated_sharpes([1.0], contaminated, 200)[0]
+    assert contaminated_price == pytest.approx(baseline_price)
+
+
 @pytest.mark.parametrize(
     ("finalists", "candidates", "message"),
     [([], [0.0, 1.0], "finalist"), ([1.0], [1.0], "candidate")],

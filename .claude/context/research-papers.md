@@ -149,5 +149,8 @@ SSRN: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2326253
 
 **Bailey & López de Prado (2014)** — "The Deflated Sharpe Ratio".
 SSRN: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551
-- DSR deflates the observed Sharpe for the number of trials, non-normality (skew/kurtosis),
-  and sample length. **DSR ≤ observed Sharpe** always (a §8 invariant).
+- The paper's DSR is a **probability**: PSR evaluated against the expected maximum Sharpe across
+  trials. It incorporates the number and variance of trials plus the selected strategy's sample
+  length, skewness, and kurtosis. QuantForge currently stores a value-form selection-adjusted
+  Sharpe margin instead; FINDING-007 records that source mismatch. The local invariant
+  `margin <= observed Sharpe` is not an invariant of the paper's probability statistic.

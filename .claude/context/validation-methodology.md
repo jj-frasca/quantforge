@@ -8,7 +8,7 @@ Each component encodes a mathematical invariant as a Hypothesis property test.
 
 ## 1. Deflated Sharpe Ratio (DSR) — value form
 
-`app/validation/deflated_sharpe.py`. Bailey & López de Prado (2014).
+`app/validation/deflated_sharpe.py`. Adapted from Bailey & López de Prado (2014).
 
 We report DSR as a **deflated Sharpe value** (not a probability), so the §8 invariant
 **DSR ≤ observed Sharpe** holds by construction: `DSR = observed_SR - haircut`, where the
@@ -25,14 +25,23 @@ DSR = observed_sr - haircut
 - **Invariant**: `DSR ≤ observed_sr` always (haircut ≥ 0); more trials ⇒ larger haircut ⇒
   lower (or equal) DSR; N == 1 ⇒ DSR == observed_sr.
 
-**Search-level accounting (ADR-046).** A StrategyLab run first evaluates parameter configs inside
+**Important source distinction (FINDING-007).** The paper's DSR is a probability-form PSR against
+the expected-max threshold and includes sample length, skewness, and kurtosis. QuantForge's stored
+field is a selection-adjusted Sharpe **margin**, not that probability. Its `> 0` gate asks whether
+observed Sharpe clears the multiplicity threshold. Do not describe the value itself as a
+paper-form probability until FINDING-007 is resolved.
+
+**Search-level accounting (ADR-046/050).** A StrategyLab run first evaluates parameter configs inside
 families and then selects across the family finalists. DSR must price that whole selection, not
 reset inside each family. Both longitudinal and cross-sectional search pool every current candidate
-Sharpe to estimate one `sr_std`, use cumulative concrete-config `lifetime_trials` for N, and apply
-the same haircut to every family finalist before the overall argmax. `Trial` is therefore a compact
-family-finalist summary with `n_evaluated_configs`; the number of stored summaries is NOT the DSR or
-MinTRL denominator. Historical longitudinal pool counters predate this field and remain a lower
-bound; generated records are never guessed/backfilled against today's catalog.
+Sharpe to estimate one Normal-consistent IQR scale for `sr_std`, use cumulative concrete-config
+`lifetime_trials` for N, and apply the same haircut to every family finalist before the overall
+argmax. The robust central scale prevents a minority of real signal-loading strategies from raising
+their own supposed-null haircut without bound (ADR-050); fewer than four candidates retain sample
+standard deviation. `Trial` is therefore a compact family-finalist summary with
+`n_evaluated_configs`; the number of stored summaries is NOT the margin or MinTRL denominator.
+Historical longitudinal pool counters predate this field and remain a lower bound; generated
+records are never guessed/backfilled against today's catalog.
 
 ---
 
@@ -202,6 +211,10 @@ tiers: graduated, and cleared the ADR-018 bar.
   signal widened `sr_std` from 0.510 (matched iid seed) to 1.703 and raised the haircut from 1.410
   to 4.698 against observed Sharpe 2.937. Do not lower `dsr_min`; a null-consistent dispersion
   decision requires its own ADR and full recalibration.
+- ADR-050 replaces whole-search sample standard deviation with a Normal-consistent IQR scale.
+  Preliminary full-catalog local evidence was 0/10 positive margins under iid null and 9/10 at
+  phi +0.30 (3/10 passed the unchanged composite). Those are design checks, not the new published
+  power result; Type-I and both power workflows must refresh before production claims resume.
 - Effect size is bounded by the horizon: only `(1-rho)/2` of a deviation's variance is predictable
   one bar ahead, so slow band reversion cannot reach a large oracle Sharpe at equity volatility.
   Read half-lives ≥ 10 as a statement about that ceiling, not about the catalog.

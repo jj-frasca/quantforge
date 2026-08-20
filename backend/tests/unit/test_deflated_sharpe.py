@@ -4,7 +4,45 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from app.validation.deflated_sharpe import deflated_sharpe
+from app.validation.deflated_sharpe import deflated_sharpe, robust_sharpe_dispersion
+
+
+def test_robust_dispersion_matches_normal_interquartile_scale() -> None:
+    normal_quartile = 0.6744897501960817
+    sharpes = [-2.0, -normal_quartile, 0.0, normal_quartile, 2.0]
+    assert robust_sharpe_dispersion(sharpes) == pytest.approx(1.0)
+
+
+def test_robust_dispersion_resists_a_signal_contaminated_tail() -> None:
+    baseline = [-1.0, -0.5, 0.0, 0.5, 1.0]
+    contaminated = [-1.0, -0.5, 0.0, 0.5, 100.0]
+    assert robust_sharpe_dispersion(contaminated) == pytest.approx(
+        robust_sharpe_dispersion(baseline)
+    )
+
+
+def test_robust_dispersion_rejects_too_few_or_non_finite_sharpes() -> None:
+    with pytest.raises(ValueError, match="at least two"):
+        robust_sharpe_dispersion([0.0])
+    with pytest.raises(ValueError, match="finite"):
+        robust_sharpe_dispersion([0.0, float("nan")])
+
+
+def test_robust_dispersion_keeps_sample_std_for_tiny_families() -> None:
+    assert robust_sharpe_dispersion([-1.0, 1.0]) == pytest.approx(2.0**0.5)
+
+
+@given(
+    sharpes=st.lists(
+        st.floats(min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False),
+        min_size=4,
+        max_size=100,
+    )
+)
+def test_robust_dispersion_is_order_invariant(sharpes: list[float]) -> None:
+    assert robust_sharpe_dispersion(sharpes) == pytest.approx(
+        robust_sharpe_dispersion(list(reversed(sharpes)))
+    )
 
 
 def test_single_trial_has_no_haircut() -> None:

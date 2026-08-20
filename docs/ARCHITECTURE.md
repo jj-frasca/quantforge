@@ -187,8 +187,12 @@ bound. That is the current production-parity result. FINDING-005/ADR-049 add per
 pass counts so the zero can be attributed without guessing or weakening a threshold. The fresh
 diagnostic found DSR passed **0/50 in all 12 cells**. At phi +0.30, PBO passed 43/50, stability
 40/50, and the other four components 50/50, isolating DSR as sufficient for the composite zero.
-FINDING-006 records that current-run candidate dispersion is contaminated by the planted signal;
-it is open pending a null-consistent estimator ADR and fresh Type-I/power comparison.
+FINDING-006 records that current-run candidate dispersion is contaminated by the planted signal.
+ADR-050 replaces whole-search sample standard deviation with a Normal-consistent IQR scale while
+preserving lifetime N and every threshold. Its calibration identity is new, so the prior 0/200
+Type-I and 0/50 power results remain evidence for the old estimator until the cloud refresh lands.
+FINDING-007 separately records that the stored value is a selection-adjusted Sharpe margin rather
+than the primary paper's probability-form DSR; that naming/statistic decision remains open.
 
 **The detectable-edge frontier (ADR-043) factors those two numbers.** `app/research/lab/frontier.py`
 solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0
@@ -216,6 +220,13 @@ apply one comparable haircut before the cross-family argmax. `Trial.n_evaluated_
 the denominator without bloating the partitioned pool; historical longitudinal counts remain a
 lower bound because generated records cannot be honestly reconstructed. FINDING-003 separately
 recorded that `GateConfig.trial_budget=200` was inert.
+
+**Whole-search dispersion is robust as of ADR-050.** Sample standard deviation made the supposed
+null haircut grow without bound when a subset of heterogeneous strategies captured a planted edge;
+DSR consequently passed 0/50 even at median oracle Sharpe +3.92. Whole-search pricing now estimates
+the Normal trial scale from the central IQR (with sample-standard-deviation fallback below four
+candidates). The candidate count, cumulative lifetime N, common cross-family price, and every gate
+threshold are unchanged. Fresh Type-I and power calibration is required for the new identity.
 
 **The candidate budget is enforced as of ADR-048.** Longitudinal and cross-sectional searches
 canonicalize requested families, reserve two PBO-capable configs for each, and water-fill remaining

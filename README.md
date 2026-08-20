@@ -4,8 +4,9 @@ AI-native quantitative research platform focused on **reproducibility, statistic
 validation, and production-grade financial data engineering**. This is research
 *infrastructure* — not a trading app, and it makes no claim to generate alpha. Its value
 is methodological rigor: purged cross-validation, walk-forward analysis, the Probability
-of Backtest Overfitting (PBO), and the Deflated Sharpe Ratio, after López de Prado (2018)
-and Bailey et al.
+of Backtest Overfitting (PBO), and a multiple-testing-adjusted Sharpe margin adapted from
+Bailey and López de Prado (2014). FINDING-007 records why that margin is not yet the paper's
+probability-form Deflated Sharpe Ratio.
 
 > Full design rationale and every decision: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
@@ -17,20 +18,19 @@ with it. Every number below is produced by a committed workflow and can be re-ru
 
 | question | answer | how |
 |---|---|---|
-| **Type-I error** — how often does the whole pipeline graduate a symbol with *no edge by construction*? | **1.0%** at N=200, identical under an iid-normal null and a bootstrap null that preserves SPY's own fat tails and vol | `null-calibration.yml` (ADR-036/037) |
+| **Type-I error** — how often does the whole pipeline graduate a symbol with *no edge by construction*? | **0/200** under both iid-normal and bootstrap nulls for the pre-ADR-050 estimator; ADR-050 refresh pending | `null-calibration.yml` (ADR-036/037/050) |
 | Do those false graduates survive the universe-deflation bar? | **0 of 200**, in both nulls | same run |
-| Is a positive Deflated Sharpe sufficient? | **No.** Max DSR on edge-free data was **+0.92** — DSR > 0 is necessary, not sufficient | same run |
-| **Power** — does the gate detect a *planted* edge? | 64% at oracle Sharpe 3.9, 54% at 2.6, **0% at 1.3** | `power-calibration.yml` (ADR-041) |
-| Is the catalog blind to mean reversion? | **No — it is blind to *fast* mean reversion.** At a fixed effect size, detection goes 0% → 42% as the planted half-life goes 1 → 5 bars | `horizon-power-calibration.yml` (ADR-042) |
+| Did the repaired pre-ADR-050 gate detect a *planted* edge? | **No: 0/50 in all 12 cells.** DSR alone rejected every finalist; ADR-050 refresh pending | `power-calibration.yml` (ADR-041/049/050) |
 | **Resolution** — what must an edge actually *be* to be found here? | a **true annualized Sharpe of 2.13**, at the current 607-symbol universe and 4.3-year holdout | `scripts/pool_report.py` (ADR-043) |
 | How many discovered strategies clear that bar today? | **0 of 40.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
 
 The last row is the point. The pipeline has searched 128,000+ parameter trials across 607 symbols
-and **graduated nothing that is distinguishable from best-of-N selection luck** — and the
-calibration above is what makes that a finding rather than a shrug: the gate rejects 99% of pure
-noise, it does detect edges that are large enough, and the size an edge must be is stated in
-advance. Walk-forward and purged-CV out-of-sample Sharpes are likewise read against their own
-measured null distributions (p95 ≈ +1.05), not against zero.
+and **graduated nothing that is distinguishable from best-of-N selection luck**. The pre-ADR-050
+gate rejected every calibrated null but also every planted edge, so it could not support a claim
+about strategy absence; FINDING-006 and ADR-050 repair the isolated dispersion mechanism, and the
+production-sized refresh is required before stating the new error rates. Walk-forward and purged-CV
+out-of-sample Sharpes are likewise read against their own measured null distributions
+(p95 ≈ +1.05), not against zero.
 
 ## What's shipped
 
@@ -53,7 +53,7 @@ End-to-end, all gates green (backend 99.98% coverage, 1,159 tests; frontend 92.7
   Python 3.12); **34 single-name strategies** and **10 cross-sectional factors**, each with its
   paper citation in `.claude/context/research-papers.md`; adding a strategy is a single backend
   diff (ADR-010); benchmark comparator; Monte Carlo simulator; experiment manifest.
-- **Validation engine**: PBO via CSCV (Bailey 2015), Deflated Sharpe with multiple-testing penalty,
+- **Validation engine**: PBO via CSCV (Bailey 2015), a multiple-testing-adjusted Sharpe margin,
   **scored** walk-forward with Pardo efficiency (ADR-038) and **scored** purged K-fold CV whose
   embargo is sized from the grid's longest lookback (ADR-039), parameter stability, regime
   analysis, universe-level deflation (ADR-018). Every financial-math invariant

@@ -1,7 +1,7 @@
 # FINDING-006: DSR's null haircut is estimated from signal-contaminated trials
 
 - **Severity:** Critical (methodology; the DSR gate has measured zero power against extreme edges)
-- **Status:** Open; requires a separate evidence-backed ADR before implementation
+- **Status:** Remediation implemented by ADR-050; full cloud calibration pending
 - **Affected:** ADR-046 whole-search DSR, longitudinal and cross-sectional search
 
 ## Finding
@@ -48,3 +48,11 @@ Candidate approaches include a versioned null-calibrated dispersion and the samp
 probabilistic/deflated Sharpe; neither may be selected merely because it produces graduates. The
 replacement must preserve the whole-search/lifetime trial count, ship with RED tests, change
 calibration identity, and pass fresh null and power calibration before production claims resume.
+
+## Remediation
+
+ADR-050 uses the Normal-consistent IQR scale of the whole current trial family, with sample standard
+deviation retained below four candidates. It preserves cumulative lifetime N and all thresholds.
+Focused RED tests were observed before implementation. Preliminary 10-seed full-catalog checks
+produced 0/10 positive margins on iid nulls and 9/10 on the strongest AR(1) edge, but the finding is
+not closed until the production-sized iid/bootstrap and both power workflows complete green.
