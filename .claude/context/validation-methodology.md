@@ -133,3 +133,57 @@ t-stat (IR·√periods), hit rate and period count.
   cross-sectional trials with an IC, then compare gate-passing vs gate-failing distributions.
 - The t-stat assumes independent periods, so it is **optimistic** for a slow signal whose IC series
   is autocorrelated. Newey-West adjustment is a noted, unbuilt follow-up.
+
+---
+
+## 7. Gate calibration — Type-I error, power, and the detectable-edge frontier
+
+The three sections above describe statistics. This one describes what has been measured about the
+**gate as a whole**, which is what any claim made with it actually rests on. Re-run every part of it
+after any `GateConfig` change; each is token-free cloud compute.
+
+### 7.1 Type-I error (ADR-036/037) — `app/research/lab/calibration.py`
+`calibrate_gate` runs the UNMODIFIED search + gate over symbols with no edge by construction:
+`iid_normal_null` (textbook) and `bootstrap_null` (resamples a real symbol's bars, preserving fat
+tails and vol, destroying serial structure). `null-calibration.yml` shards it and commits
+`data/null_calibration/*.json`.
+
+- Measured at N = 200 per mode: **1.0% false-graduation rate on both nulls**, **0 false graduates
+  clear the ADR-018 bar**, **max DSR +0.92**.
+- A shard cannot report a final answer — the deflation bar grows with the TOTAL symbols searched,
+  so `merge_calibrations` re-judges every false graduate at the combined N, and refuses to merge
+  across gate config versions or null modes.
+- Null experiments are NEVER written to the research pool: they would inflate the MinTRL
+  denominator for real hypotheses.
+
+### 7.2 Power (ADR-041/042) — the Type-II half
+`measure_power` plants an edge of MEASURED (never derived) strength and counts detections in two
+tiers: graduated, and cleared the ADR-018 bar.
+
+- `autocorrelated_edge(phi)` — AR(1) on returns. phi < 0 is lag-1 mean reversion, phi > 0 trend.
+  Measured at N = 50 per phi: **64% at oracle Sharpe 3.9, 54% at 2.6, 0% at 1.3**, both directions.
+- `mean_reverting_edge(half_life, deviation_share)` — a random-walk level plus an AR(1) deviation,
+  i.e. band reversion at a stated horizon. Parameterized by the deviation's SHARE of return
+  variance so realized volatility is constant across horizons; otherwise a horizon sweep moves the
+  volatility and the effect size with it. Measured: **0% at a 1-bar half-life, 42% at 5 bars**, at
+  a held-constant oracle ≈ 2.7 — so the catalog's blind spot is FAST reversion, not reversion.
+- Both processes are stationary and always-on, so every power number is an **upper bound** on power
+  against real, intermittent edges.
+- Effect size is bounded by the horizon: only `(1-rho)/2` of a deviation's variance is predictable
+  one bar ahead, so slow band reversion cannot reach a large oracle Sharpe at equity volatility.
+  Read half-lives ≥ 10 as a statement about that ceiling, not about the catalog.
+
+### 7.3 The detectable-edge frontier (ADR-043) — `app/research/lab/frontier.py`
+Power measures statistics × capture together. The frontier is the statistics alone:
+`SR_true = bar(N, T) + z_p · SE(SR_true)`, with `SE = sqrt((1 + SR²/504)/T)` (Lo 2002, annualized),
+solved by fixed point. At `SR = 0` that SE is exactly the `sqrt(1/T)` in
+`expected_max_sharpe_under_null` — if the two ever diverge, one of them is wrong.
+
+- Current design (607 symbols, 4.3-year holdout): a **true annualized Sharpe of 2.13** is needed to
+  clear the bar 80% of the time. Printed by `scripts/pool_report.py` and by the dashboard's
+  `DeflationHeadline`, computed at report time and never stored.
+- Design asymmetry, and the reason a session should not "fix" the funnel by trimming the universe:
+  the bar moves as `sqrt(2 ln N)` in hypotheses but `1/sqrt(T)` in holdout length — **halving the
+  universe buys ~4%, doubling the holdout ~29%.**
+- None of this licenses moving a threshold. A frontier the universe cannot reach is a finding to
+  state plainly, not a reason to lower the bar (charter §4).
