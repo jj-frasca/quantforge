@@ -46,12 +46,21 @@ the same transaction costs every catalog strategy pays. Measured net of costs, t
 in-sample config *beats* a cost-paying oracle on AR(1) processes (104–126%) and reaches only
 **29–45% on band reversion at half-lives 1–5**, where it detects 0%. The fast band cells have a
 *higher* net oracle than the AR(1) cell detected 22% of the time (+1.70 vs +1.15), and capture rises
-monotonically with the horizon (31% → 58%). **What the catalog cannot express is fast reversion to a
-slow-moving level** — a strategy-design gap, stated in a measurement, not a statistical one.
+monotonically with the horizon (31% → 58%).
+
+ADR-056/057/058 then took that finding apart. A strategy was added specifically to express fast
+reversion to a slow-moving level, the calibration was re-run, and **net capture moved by at most
+0.7pp** — so the record now says which strategy won each of the 50 searches per cell. At half-life 1
+the search picks a **Trend** strategy 68% of the time on a process that is by construction fast
+reversion, and capture tracks that recognition share almost exactly (18% reverting finalists → 32%
+capture; 94% → 45–56%). **The gap is recognition, not expression:** at fast half-lives no reverting
+strategy wins the in-sample comparison, so the search never gets as far as choosing between them.
+The added strategy was removed once it failed its own pre-stated criterion — that loop, stating a
+criterion before the measurement and honouring it afterwards, is the point of the project.
 
 ## What's shipped
 
-End-to-end, all gates green (backend 99.85% coverage, 1,275 tests; frontend 92.6%, 225 tests):
+End-to-end, all gates green (backend 99.82% coverage, 1,286 tests; frontend 92.6%, 225 tests):
 
 - **15 HTTP endpoints**: health, strategy catalog (single source of truth per ADR-010), ingest,
   bars, backtest, validate, Monte Carlo, plus the research-lab surface — leaderboard, graduates,

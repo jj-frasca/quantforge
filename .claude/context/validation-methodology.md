@@ -305,6 +305,31 @@ band gap is the standing finding.** Fast band cells have a higher net oracle tha
 detected 22% of the time, are detected 0%, and capture rises monotonically with the horizon — so
 what the catalog cannot express is *fast reversion to a slow-moving level*.
 
+**ADR-057/058: rule 3 above is now SHARPER — the fast-half-life gap is a RECOGNITION failure.**
+`PowerCalibration.finalist_strategy_names` records which strategy won each searched symbol, so a
+cell's finalists can be grouped by catalog category. On band reversion (5400 bars, 34-strategy
+catalog + one probe strategy, superseded artifacts `2eede83f…`):
+
+| band half-life | 1 | 2 | 3 | 5 | 10 | 20 |
+|---|---|---|---|---|---|---|
+| finalists from **Mean Reversion** | 18% | 44% | 64% | 94% | 94% | 82% |
+| net capture | 32% | 30% | 31% | 45% | 56% | 58% |
+
+At half-life 1 the max-DSR search selects a **Trend** strategy 68% of the time on a process that is
+by construction fast reversion. Capture tracks the recognition share. The AR(1) control from the
+same dispatch recognizes perfectly (100% Mean Reversion finalists at φ = −0.2/−0.3; 66–74% Trend at
+φ = +0.2/+0.3; a scattered mix only in the |φ| = 0.1 cells that hold no achievable edge).
+
+**Consequences for anyone tempted to close the gap with a new strategy.** ADR-056 added exactly the
+strategy the old reading called for — one that estimates a slow level and a fast deviation on
+independent timescales — and net capture moved ≤ +0.7pp in every cell while the new strategy won
+1–5 of 50 searches. ADR-058 removed it. **At half-lives 1–3 no reverting strategy wins the in-sample
+comparison, so the selection step never gets as far as asking which reverting strategy is best.**
+Judge the next attempt against the finalist CATEGORY MIX at half-lives 1–3, not against capture
+alone; and use `compare_power_sweeps(before, after)`, which refuses to call a capture delta
+attributable unless the finalist mix moved with it (a larger grid raises an in-sample maximum on its
+own).
+
 ### 7.5 The real universe against the null (ADR-051) — `scripts/pool_report.py`
 ADR-038/039 recorded a walk-forward and a purged-CV OOS Sharpe on every trial with a stated revisit
 trigger: read them against `data/null_calibration/*.json`. Two things had to be repaired before that

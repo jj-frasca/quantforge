@@ -223,9 +223,22 @@ clearest possible demonstration that ADR-045's ratio is an upper bound, not a fr
 while reaching only **29–45% on band reversion at half-lives 1–5**. The band gap therefore survives
 both corrections and gets sharper: those fast band cells have a HIGHER net oracle (+1.70) than the
 AR(1) cell detected 22% of the time (+1.15), and capture rises monotonically with the horizon
-(31% → 58%). **What the catalog cannot express is fast reversion to a slow-moving level.** A capture
-ratio is refused outright when the net oracle sits inside its own standard error, so a cell with no
-achievable edge reports no fraction rather than a ratio against noise.
+(31% → 58%). A capture ratio is refused outright when the net oracle sits inside its own standard
+error, so a cell with no achievable edge reports no fraction rather than a ratio against noise.
+
+**ADR-056/057/058 resolved what that gap actually is, and it is not what the wording above implied.**
+ADR-056 added `two_timescale_reversion` — a strategy whose entire design is to estimate the level and
+the deviation on independent timescales — and re-dispatched all three calibrations. Type-I error
+stayed 0/200 on both nulls; net capture moved ≤ +0.7pp in every band cell; detection stayed 0/50.
+ADR-057 then made the reading attributable by recording which strategy won each searched symbol, and
+the answer is decisive: at half-life 1 the max-DSR search selects a **Trend** strategy 68% of the
+time, and the share of *Mean Reversion* finalists (18% / 44% / 64% / 94% / 94% / 82% across
+half-lives 1–20) tracks net capture (32% / 30% / 31% / 45% / 56% / 58%) almost exactly. The AR(1)
+control recognizes perfectly. **The fast-half-life gap is a RECOGNITION failure — at those horizons
+no reverting strategy wins the in-sample comparison, so adding reverting strategies cannot help.**
+ADR-058 removed the probe strategy for failing its own pre-stated criterion (restoring
+`search_config_version 3f36fda2…`, so the committed calibration artifacts apply unchanged) and
+points the next unit at the selection step, judged against the finalist category mix.
 
 FINDING-007 is **resolved** (ADR-054): the paper's probability-form DSR is implemented, every
 user-facing claim now calls the stored value a selection-adjusted Sharpe *margin*, and every new
