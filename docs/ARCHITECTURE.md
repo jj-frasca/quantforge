@@ -213,15 +213,22 @@ evaluated config, use cumulative lifetime N plus the whole current search's Shar
 apply one comparable haircut before the cross-family argmax. `Trial.n_evaluated_configs` preserves
 the denominator without bloating the partitioned pool; historical longitudinal counts remain a
 lower bound because generated records cannot be honestly reconstructed. FINDING-003 separately
-records that `GateConfig.trial_budget=200` is still inert and needs an order-robust allocation policy
-before enforcement; do not describe it as a cap today.
+recorded that `GateConfig.trial_budget=200` was inert.
+
+**The candidate budget is enforced as of ADR-048.** Longitudinal and cross-sectional searches
+canonicalize requested families, reserve two PBO-capable configs for each, and water-fill remaining
+capacity fairly instead of letting high-dimensional Cartesian grids dominate. Oversized family
+grids are reduced with deterministic maximin parameter-space coverage. Adaptive refinement counts
+as one additional family bucket inside the same cap, so coarse plus refined work never exceeds 200
+by default. A budget too small to preserve every requested family's PBO minimum fails before any
+backtest; reordering or duplicating strategy names cannot change the searched hypotheses.
 
 **Calibration now includes production refinement (ADR-047).** Daily discovery performs an adaptive
 second grid around the coarse winner, but the published null/power runs had silently stopped after
 the coarse pass. New null and power calibrations default to the same `refine=True`, span-0.25
 procedure and include both inputs in their artifacts and ADR-044 fingerprint. The old 1% Type-I and
-power/capture tables remain evidence for their coarse-only selector; they are stale for production
-until the workflow sole writers refresh them after ADR-046/047.
+power/capture tables remain evidence for their coarse-only, pre-budget selector; they are stale for
+production until the workflow sole writers refresh them after ADR-046/047/048.
 
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.

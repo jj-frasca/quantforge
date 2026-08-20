@@ -166,6 +166,17 @@ def test_cross_sectional_family_finalists_share_the_lifetime_dsr_haircut() -> No
     )
 
 
+def test_cross_sectional_trial_budget_caps_concrete_configs() -> None:
+    exp = run_cross_sectional_search(
+        _noise_panel(),
+        strategy_names=["xs_reversal", "xs_momentum"],
+        config=GateConfig(trial_budget=10),
+    )
+
+    assert exp.lifetime_trials == sum(t.n_evaluated_configs for t in exp.trials) == 10
+    assert [trial.strategy_name for trial in exp.trials] == ["xs_momentum", "xs_reversal"]
+
+
 def test_experiment_is_json_serializable() -> None:
     exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_momentum"])
     dumped = exp.model_dump(mode="json")

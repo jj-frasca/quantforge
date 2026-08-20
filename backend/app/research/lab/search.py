@@ -8,16 +8,16 @@ from app.data.fundamentals import (
 )
 from app.research.backtesting.engine import BacktestEngine
 from app.research.fundamentals.distress import DistressScreen
+from app.research.lab.candidate_budget import (
+    allocate_catalog_candidate_budget,
+    select_space_filling_candidates,
+)
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GraduationGate
 from app.research.lab.holdout import score_on_holdout, split_holdout
 from app.research.lab.trial_accounting import whole_search_deflated_sharpes
 from app.research.strategies.base import BaseStrategy
-from app.research.strategies.grid_generator import (
-    find_catalog_entry,
-    grid_from_catalog,
-    refine_grid,
-)
+from app.research.strategies.grid_generator import find_catalog_entry, refine_grid
 from app.validation.engine import ValidationEngine
 from app.validation.report import ValidationReport
 
@@ -81,17 +81,18 @@ def run_search(
     engine = BacktestEngine()
     validator = ValidationEngine()
 
+    allocation = allocate_catalog_candidate_budget(
+        strategy_names,
+        n_per_param=n_per_param,
+        budget=gate_config.trial_budget,
+        refine=refine,
+    )
     trials: list[Trial] = []
     best_configs: list[BaseStrategy] = []
     reports: list[ValidationReport] = []
     candidate_sharpes: list[float] = []
-    for name in strategy_names:
-        entry = find_catalog_entry(name)
-        if entry is None:
-            continue
-        configs = grid_from_catalog(entry, n_per_param=n_per_param)
-        if len(configs) < _MIN_CONFIGS_FOR_PBO:
-            continue
+    for name, allocated_configs in allocation.families.items():
+        configs = list(allocated_configs)
         report = validator.validate(name, configs, handle.frame)
         best_config, config_sharpes = _score_configs(configs, handle.frame, engine)
         candidate_sharpes.extend(config_sharpes)
@@ -130,7 +131,13 @@ def run_search(
             if entry is not None
             else []
         )
-        if len(refined_configs) >= _MIN_CONFIGS_FOR_PBO:
+        budgeted_refined = select_space_filling_candidates(
+            refined_configs,
+            allocation.refinement_reserve,
+            parameters=_numeric_params,
+        )
+        if len(budgeted_refined) >= _MIN_CONFIGS_FOR_PBO:
+            refined_configs = list(budgeted_refined)
             refined_report = validator.validate(
                 trials[best_idx].strategy_name, refined_configs, handle.frame
             )

@@ -170,6 +170,12 @@ tails and vol, destroying serial structure). `null-calibration.yml` shards it an
 - Calibration runs production's adaptive winner-family refinement by default (`refine=True`, span
   0.25) and records those inputs in both the artifact and search identity (ADR-047). Runs before
   ADR-047 were coarse-only and do not measure the selector daily discovery deploys.
+- Production enforces `GateConfig.trial_budget` across coarse and refined candidates (ADR-048).
+  Families are canonicalized, receive a two-config PBO minimum, and share remaining capacity by
+  fair water-filling; oversized grids use deterministic maximin parameter-space coverage. The
+  refinement pass is one family-sized bucket inside the same cap. Calibration identity hashes the
+  budgeted grids, refinement reserve, and allocation-method version. Pre-ADR-048 artifacts measure
+  the uncapped 667-config coarse family and are stale for production.
 
 ### 7.2 Power (ADR-041/042) — the Type-II half
 `measure_power` plants an edge of MEASURED (never derived) strength and counts detections in two

@@ -171,6 +171,19 @@ def test_calibration_search_version_tracks_the_resolved_hypothesis_family() -> N
     )
 
 
+def test_calibration_search_version_is_order_robust_and_tracks_the_budget() -> None:
+    baseline = calibration_search_version(
+        ["momentum", "sma", "momentum"], n_per_param=3, config=GateConfig(trial_budget=20)
+    )
+
+    assert baseline == calibration_search_version(
+        ["sma", "momentum"], n_per_param=3, config=GateConfig(trial_budget=20)
+    )
+    assert baseline != calibration_search_version(
+        ["sma", "momentum"], n_per_param=3, config=GateConfig(trial_budget=21)
+    )
+
+
 def test_calibration_search_version_tracks_trial_accounting_method(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

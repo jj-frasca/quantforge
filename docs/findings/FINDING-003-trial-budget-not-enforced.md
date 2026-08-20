@@ -1,7 +1,7 @@
 # FINDING-003: GateConfig's trial budget is inert
 
 - **Severity:** High (methodology contract and compute bound)
-- **Status:** Open; deliberately separated from ADR-046
+- **Status:** Fixed by ADR-048; calibration refresh pending
 - **Affected:** ADR-015/016, `GateConfig`, longitudinal and cross-sectional search
 
 ## Finding
@@ -22,3 +22,12 @@ null/power calibration; it is not folded into the denominator correction in ADR-
 Define a deterministic, order-robust allocation policy for the candidate budget, enforce it before
 backtesting, fingerprint the resolved budgeted grids, and re-run null and power calibration. Until
 then, `trial_budget` must not be described as an enforced cap.
+
+## Resolution
+
+ADR-048 assigns every eligible family a two-config PBO minimum, distributes remaining capacity by
+canonical-name water-filling, uses deterministic maximin parameter-space coverage inside oversized
+grids, and budgets adaptive refinement as one additional family. Longitudinal and cross-sectional
+search will fail before backtesting when the requested budget cannot preserve those minima. The
+implementation is green; null and power calibration refreshes remain required before their old
+measurements can be described as production results.

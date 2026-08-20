@@ -85,6 +85,48 @@ def test_family_finalists_share_one_whole_search_dsr_haircut() -> None:
     )
 
 
+def test_trial_budget_caps_concrete_configs_and_is_order_robust() -> None:
+    gate = GateConfig(trial_budget=10)
+    first = run_search(
+        _random_walk_frame(8), "AAPL", ["sma", "momentum"], config=gate, refine=False
+    )
+    reordered = run_search(
+        _random_walk_frame(8), "AAPL", ["momentum", "sma", "momentum"], config=gate, refine=False
+    )
+
+    assert first.lifetime_trials == sum(t.n_evaluated_configs for t in first.trials) == 10
+    assert [
+        (trial.strategy_name, trial.parameters, trial.n_evaluated_configs) for trial in first.trials
+    ] == [
+        (trial.strategy_name, trial.parameters, trial.n_evaluated_configs)
+        for trial in reordered.trials
+    ]
+    assert first.best_strategy_name == reordered.best_strategy_name
+
+
+def test_refinement_reserve_keeps_both_search_stages_inside_trial_budget() -> None:
+    exp = run_search(
+        _random_walk_frame(8),
+        "AAPL",
+        ["sma", "momentum"],
+        config=GateConfig(trial_budget=12),
+        refine=True,
+    )
+
+    assert exp.lifetime_trials == sum(t.n_evaluated_configs for t in exp.trials)
+    assert exp.lifetime_trials <= 12
+
+
+def test_trial_budget_too_small_for_requested_families_fails_loudly() -> None:
+    with pytest.raises(ValueError, match="at least 4"):
+        run_search(
+            _random_walk_frame(8),
+            "AAPL",
+            ["sma", "momentum"],
+            config=GateConfig(trial_budget=3),
+        )
+
+
 def test_search_rejects_an_empty_strategy_set() -> None:
     with pytest.raises(ValueError):
         run_search(_random_walk_frame(2), "AAPL", [])

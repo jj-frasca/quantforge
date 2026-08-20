@@ -19,6 +19,7 @@ from app.research.cross_sectional.registry import (
     Params,
     default_strategies,
 )
+from app.research.lab.candidate_budget import allocate_candidate_budget
 from app.research.lab.experiment import Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult, GraduationGate
 from app.research.lab.holdout import HoldoutScore
@@ -169,18 +170,25 @@ def run_cross_sectional_search(
     names = list(strategy_names) if strategy_names is not None else list(registry)
     in_sample, holdout = split_panel_holdout(prices)
 
+    full_families: dict[str, list[_Config]] = {}
+    for name in sorted(set(names)):
+        strategy = registry.get(name)
+        if strategy is not None:
+            full_families[name] = [(p, q) for p in strategy.param_grid for q in quantiles]
+    allocation = allocate_candidate_budget(
+        full_families,
+        budget=gate_config.trial_budget,
+        parameters=lambda candidate: _trial_params(candidate[0], candidate[1]),
+    )
+
     trials: list[CrossSectionalTrial] = []
     reports: list[ValidationReport] = []
     finalists: list[tuple[CrossSectionalStrategy, Params, float]] = []
     total_configs = 0
     candidate_sharpes: list[float] = []
-    for name in names:
-        strategy = registry.get(name)
-        if strategy is None:
-            continue
-        configs: list[_Config] = [(p, q) for p in strategy.param_grid for q in quantiles]
-        if len(configs) < _MIN_CONFIGS_FOR_PBO:
-            continue
+    for name, allocated_configs in allocation.families.items():
+        strategy = registry[name]
+        configs = list(allocated_configs)
         series = [_config_returns(strategy, p, q, in_sample, cost_rate) for p, q in configs]
         matrix = np.column_stack([s.to_numpy() for s in series])
         sharpes = [sharpe_ratio(s) for s in series]

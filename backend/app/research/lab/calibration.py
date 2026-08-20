@@ -9,12 +9,12 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
 from app.research.backtesting.manifest import compute_parameter_hash
+from app.research.lab.candidate_budget import allocate_catalog_candidate_budget
 from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.gate import GateConfig
 from app.research.lab.holdout import split_holdout
 from app.research.lab.search import run_search
 from app.research.lab.universe import expected_max_sharpe_under_null
-from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
 
 _TRADING_DAYS = 252
 _COLUMNS = ["open", "high", "low", "close", "volume"]
@@ -104,7 +104,8 @@ FloatArray = npt.NDArray[np.floating[Any]]
 
 # Changes whenever the procedure that counts/prices searched hypotheses changes. The resolved grid
 # alone is insufficient identity when the same configs receive a different multiple-testing price.
-_TRIAL_ACCOUNTING_VERSION = "whole-search-v1"
+_TRIAL_ACCOUNTING_VERSION = "whole-search-budgeted-v2"
+_CANDIDATE_BUDGET_VERSION = "fair-family-maximin-v1"
 
 
 def calibration_search_version(
@@ -117,27 +118,32 @@ def calibration_search_version(
 ) -> str:
     """Fingerprint the exact catalog-derived hypothesis family calibrated by a run (ADR-044).
 
-    Strategy order is preserved because cross-family ties resolve by first occurrence. The concrete
+    Families are canonicalized because ADR-048 makes caller order irrelevant. The concrete budgeted
     grids are hashed rather than catalog bounds: they are the configurations `run_search` actually
-    tests after invalid cross-parameter combinations have been removed.
+    tests after invalid combinations and fair allocation have been applied.
     """
-    strategies: list[dict[str, object]] = []
-    for name in strategy_names:
-        entry = find_catalog_entry(name)
-        grid = grid_from_catalog(entry, n_per_param=n_per_param) if entry is not None else []
-        strategies.append(
-            {
-                "name": name,
-                "configs": [strategy.parameters for strategy in grid],
-            }
-        )
+    allocation = allocate_catalog_candidate_budget(
+        strategy_names,
+        n_per_param=n_per_param,
+        budget=config.trial_budget,
+        refine=refine,
+    )
+    strategies = [
+        {
+            "name": name,
+            "configs": [strategy.parameters for strategy in grid],
+        }
+        for name, grid in allocation.families.items()
+    ]
     return compute_parameter_hash(
         {
             "gate_config_version": config.version_hash,
             "trial_accounting_version": _TRIAL_ACCOUNTING_VERSION,
+            "candidate_budget_version": _CANDIDATE_BUDGET_VERSION,
             "n_per_param": n_per_param,
             "refine": refine,
             "refine_span": refine_span if refine else None,
+            "refinement_reserve": allocation.refinement_reserve,
             "strategies": strategies,
         }
     )
