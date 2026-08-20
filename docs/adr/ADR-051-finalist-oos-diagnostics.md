@@ -90,3 +90,52 @@ Delete `walk_forward_finalists` / `purged_cv_finalists` from `PoolReport` and th
 from `scripts/pool_report.py`; restore `N_BARS = 3000` as a constant and drop the `n_bars` field
 (defaulted, so artifacts written under this ADR still load). ADR-038/039's original gate-passer path
 is untouched throughout and continues to work the moment a graduate appears.
+
+## Measured (2026-08-20) — the ADR-038/039 revisit trigger, executed
+
+Both sides carry `search_config_version 3f36fda2…` and `gate_config_version 2508569…`, and both
+were judged at 5400 bars, so this is the matched comparison the ADR above was written to make
+possible. Real side: the max-DSR finalist of every experiment from the 2026-08-20 daily discovery
+run (603 experiments over the 607-name universe, 0 graduates). Null side: run 32354284731, 200
+symbols per mode.
+
+| series | n | median | p95 | max |
+|---|---|---|---|---|
+| **real universe — walk-forward OOS Sharpe** | 603 | **+0.561** | +0.945 | +2.065 |
+| bootstrap null (SPY's bars resampled iid) | 200 | +0.652 | +0.983 | +1.350 |
+| iid-normal null | 200 | +0.414 | +0.796 | +1.055 |
+| **real universe — purged-CV OOS Sharpe** | 601 | **+0.597** | +0.942 | +1.344 |
+| bootstrap null | 200 | +0.661 | +1.003 | +1.411 |
+| iid-normal null | 200 | +0.475 | +0.803 | +1.130 |
+
+Mann-Whitney U, one-sided for *real greater than null*: **p = 1.0000 against the bootstrap null on
+both statistics** (walk-forward and purged-CV), and **p < 0.0001 against the iid-normal null on
+both**. The real universe's finalists are decisively *better* than a Gaussian random walk's and
+decisively *worse* than the same search's output on a series that keeps SPY's return distribution
+exactly and destroys its serial structure exactly.
+
+**The reading.** Every strategy in the catalog trades serial structure, and the bootstrap null has
+none by construction. So the increment the search shows over the iid-normal null is attributable to
+the *shape* of real returns — fat tails, volatility clustering — and not to predictability, because
+the bootstrap null preserves that shape and the search does no better on the real thing. The two
+nulls together separate what one null alone cannot.
+
+**What this does and does not license.** It is not evidence that any threshold is too tight
+(charter §4 forbids reading it that way, and this measurement is not about the bar at all: the bar
+was never reached because nothing graduated). It also does not say the catalog cannot capture
+serial structure — ADR-042 measured 42% detection on a planted half-life-5 band reversion at oracle
+Sharpe 2.73, so it demonstrably can. It says the search is not finding, in this universe, structure
+of the size the catalog can detect. That is a statement about the universe and the catalog jointly.
+
+**Limitations, stated because they bound the claim:**
+
+1. The bootstrap null resamples **SPY**, an index. Its kurtosis and volatility are not a typical
+   single name's, and Sharpe is scale-free but not shape-free. A per-symbol bootstrap would be the
+   stronger design and is not what ran.
+2. The null is a fixed 5400 bars; real names vary, and `Experiment` does not record its own history
+   length (only `Graduate` does, and there were no graduates), so the real side's length
+   distribution is unknown rather than matched symbol by symbol.
+3. Both sides' finalists are selected in-sample by max DSR, so neither is an unbiased estimate of a
+   true edge. The comparison is fair — the same selection acts on both — but the levels are not.
+4. `n` differs (603 vs 200). Mann-Whitney does not require equal samples; the medians and
+   percentiles above are not adjusted for it either way.
