@@ -9,35 +9,59 @@ and Bailey et al.
 
 > Full design rationale and every decision: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
+## What has been measured
+
+Most backtesting projects report the strategies they found. This one reports **what its own gate
+does**, because a graduation criterion whose error rates are unknown cannot support any claim made
+with it. Every number below is produced by a committed workflow and can be re-run.
+
+| question | answer | how |
+|---|---|---|
+| **Type-I error** — how often does the whole pipeline graduate a symbol with *no edge by construction*? | **1.0%** at N=200, identical under an iid-normal null and a bootstrap null that preserves SPY's own fat tails and vol | `null-calibration.yml` (ADR-036/037) |
+| Do those false graduates survive the universe-deflation bar? | **0 of 200**, in both nulls | same run |
+| Is a positive Deflated Sharpe sufficient? | **No.** Max DSR on edge-free data was **+0.92** — DSR > 0 is necessary, not sufficient | same run |
+| **Power** — does the gate detect a *planted* edge? | 64% at oracle Sharpe 3.9, 54% at 2.6, **0% at 1.3** | `power-calibration.yml` (ADR-041) |
+| Is the catalog blind to mean reversion? | **No — it is blind to *fast* mean reversion.** At a fixed effect size, detection goes 0% → 42% as the planted half-life goes 1 → 5 bars | `horizon-power-calibration.yml` (ADR-042) |
+| **Resolution** — what must an edge actually *be* to be found here? | a **true annualized Sharpe of 2.13**, at the current 607-symbol universe and 4.3-year holdout | `scripts/pool_report.py` (ADR-043) |
+| How many discovered strategies clear that bar today? | **0 of 40.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
+
+The last row is the point. The pipeline has searched 128,000+ parameter trials across 607 symbols
+and **graduated nothing that is distinguishable from best-of-N selection luck** — and the
+calibration above is what makes that a finding rather than a shrug: the gate rejects 99% of pure
+noise, it does detect edges that are large enough, and the size an edge must be is stated in
+advance. Walk-forward and purged-CV out-of-sample Sharpes are likewise read against their own
+measured null distributions (p95 ≈ +1.05), not against zero.
+
 ## What's shipped
 
-End-to-end, all gates green (100% backend coverage; frontend ≥ 75%):
+End-to-end, all gates green (backend 99.98% coverage, 1,159 tests; frontend 92.7%, 217 tests):
 
-- **6 HTTP endpoints**: `GET /health`, `GET /api/v1/strategies` (catalog — single source
-  of truth per ADR-010), `POST /api/v1/ingest`, `GET /api/v1/bars`, `POST /api/v1/backtest`,
-  `POST /api/v1/validate` — cache-aside through the price-bar repository, sync `def` per
-  ADR-009 so blocking yfinance + DB calls go through FastAPI's threadpool.
-- **3 product pages**: **Data Explorer** (fetch + quality-gate + price chart), **Backtest
-  Results** (per-strategy param form, equity curve with buy-and-hold overlay + trade-marker
-  triangles, underwater drawdown, rolling Sharpe, daily-return distribution; customizable
-  `initial_capital` + `cost_rate`), **Validation Report** (full statistical suite +
-  plain-English verdicts per metric). Strategy dropdowns are catalog-driven and grouped
-  by category (Trend / Mean Reversion / Breakout / Combination).
-- **Data layer**: PriceBar / FundamentalData / quality models; yfinance adapter +
-  OHLCV normalizer with split/dividend adjustment; 6-active-check DataQualityEngine
-  (honest "flags potential X" wording — never "guarantees"); ingestion pipeline; **sync
-  TimescaleDB repository on psycopg3** with Alembic migration (hypertable + index),
-  Docker-gated integration tests.
-- **Research engine**: vectorized pandas/numpy backtester (ADR-007 — vectorbt rejected:
-  fails on Python 3.12); **11 strategies** in the catalog (SMA, Momentum, Mean Reversion
-  z-score, RSI Mean Reversion, Donchian Breakout, Bollinger Bands, MACD, Vol-Targeted SMA,
-  Keltner Channel, Trend-Filtered Mean Reversion, Triple MA Alignment) — each with the
-  paper citation in `.claude/context/research-papers.md`; adding a strategy is a single
-  backend diff (ADR-010); benchmark comparator; Monte Carlo simulator; experiment manifest.
-- **Validation engine**: PBO via CSCV (Bailey 2015), Deflated Sharpe Ratio with
-  multiple-testing penalty, walk-forward splits, purged K-fold CV with embargo, parameter
-  stability, regime analysis. Every financial-math invariant (`docs/ARCHITECTURE.md` §8)
-  is a Hypothesis property test.
+- **14 HTTP endpoints**: health, strategy catalog (single source of truth per ADR-010), ingest,
+  bars, backtest, validate, Monte Carlo, plus the research-lab surface — leaderboard, graduates,
+  pool report, paper portfolio, equity curve, cross-sectional factors, null calibration. Sync `def`
+  per ADR-009, so blocking yfinance + DB calls go through FastAPI's threadpool.
+- **7 product pages**: **Validation Report** (full statistical suite + plain-English verdicts),
+  **Data Explorer**, **Backtest Results** (equity curve with buy-and-hold overlay, underwater
+  drawdown, rolling Sharpe, return distribution), **Compare Configs**, **Lab dashboard** (the
+  deflation headline, the measured gate calibration, the paper book, cross-sectional factors),
+  **Discoveries**, **About**.
+- **Data layer**: PriceBar / FundamentalData / quality models; yfinance adapter + OHLCV normalizer
+  with split/dividend adjustment; 6-active-check DataQualityEngine (honest "flags potential X"
+  wording — never "guarantees"); SEC EDGAR fundamentals; **sync TimescaleDB repository on
+  psycopg3** with Alembic migration (hypertable + index), Docker-gated integration tests.
+- **Research engine**: vectorized pandas/numpy backtester (ADR-007 — vectorbt rejected: fails on
+  Python 3.12); **34 single-name strategies** and **10 cross-sectional factors**, each with its
+  paper citation in `.claude/context/research-papers.md`; adding a strategy is a single backend
+  diff (ADR-010); benchmark comparator; Monte Carlo simulator; experiment manifest.
+- **Validation engine**: PBO via CSCV (Bailey 2015), Deflated Sharpe with multiple-testing penalty,
+  **scored** walk-forward with Pardo efficiency (ADR-038) and **scored** purged K-fold CV whose
+  embargo is sized from the grid's longest lookback (ADR-039), parameter stability, regime
+  analysis, universe-level deflation (ADR-018). Every financial-math invariant
+  (`docs/ARCHITECTURE.md` §8) is a Hypothesis property test.
+- **Autonomous research loop**: sharded daily discovery, weekly cross-sectional and fundamental
+  sweeps, and paper forward-testing run as scheduled GitHub Actions with no human in the loop;
+  graduates are frozen into a paper book (ADR-019 — paper only, never real money) and retired on
+  measured decay.
 
 The engine is calibrated to be honest: a random walk yields PBO ≈ 0.9 and does not pass.
 
@@ -49,7 +73,7 @@ The engine is calibrated to be honest: a random walk yields PBO ≈ 0.9 and does
 - **Frontend**: React 19 + TypeScript strict, Vite, Tanstack Query 5, Zustand 5,
   Recharts 3, Zod 4
 - **Testing**: pytest + Hypothesis (backend); Vitest + React Testing Library + MSW
-  (frontend); coverage gates 85% backend / 75% frontend, currently 100% / ~89%
+  (frontend); coverage gates 85% backend / 75% frontend, currently 99.98% / 92.7%
 - **Tooling**: uv (Python env), ruff (lint + format), mypy (strict), pre-commit, GitHub
   Actions CI (backend + frontend + pre-commit, gating every commit)
 
@@ -58,7 +82,7 @@ The engine is calibrated to be honest: a random walk yields PBO ≈ 0.9 and does
 ```
 backend/    FastAPI app, data layer, research engine, validation engine
 frontend/   React dashboard (Vite + TS strict + Vitest)
-docs/       ARCHITECTURE.md, ADRs (ADR-001..009), C4 diagrams
+docs/       ARCHITECTURE.md, ADRs (ADR-001..043), C4 diagrams
 .claude/    Codified context: constitution (CLAUDE.md), domain agents,
             cold-memory docs, playbooks — drives AI-assisted sessions
 ```
@@ -108,5 +132,7 @@ and Docker-gated integration tests (`@pytest.mark.integration`) run locally via
   integration-tested (`make test-integration`)
 - **Phase 3** (research engine) — done; oracle tests pass on every invariant
 - **Phase 4** (validation engine) — done; ValidationReport is the MVP deliverable
-- **Phase 5** (product surface) — three pages shipped end-to-end (Data Explorer, Backtest
-  Results, Validation); next: deploy + a Polygon adapter to enable vendor cross-validation
+- **Phase 5** (product surface) — done; seven pages shipped end-to-end
+- **Phase 6** (autonomous research) — running; scheduled discovery, forward testing, and the
+  gate-calibration measurements above. The open question is not "does it find strategies" but
+  "is anything it finds distinguishable from luck" — and the answer is currently, honestly, no.
