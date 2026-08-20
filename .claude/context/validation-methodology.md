@@ -275,13 +275,35 @@ the denominator.
 
 - This is an **upper bound**, not holdout capture: the finalist is selected in-sample from a grid,
   so selection works in its favour. Low capture is therefore conclusive; high capture is not.
-- Measured upper bounds: **0.18–0.29 at a 1-bar band-reversion half-life, 0.45–0.50 at 5 bars**.
-  The grid searches 2-bar configurations at both horizons and they win at neither. Fast reversion
+- The grid searches 2-bar configurations at both horizons and they win at neither. Fast reversion
   is a smaller, noisier state-estimation target at held-constant oracle Sharpe, not a missing-window
   problem (ADR-045's correction to ADR-042).
 - Capture ≈ 0.47 against the frontier's required true Sharpe 2.13 implies an underlying oracle
   Sharpe around **4.5** before the current pipeline is likely to find an edge. Because capture is an
   upper bound, the real requirement is worse. This is a diagnosis, never permission to lower a bar.
+
+**ADR-055: take the ratio against the NET oracle.** `oracle_sharpes` is cost-free; every finalist in
+the numerator was charged 10bp on turnover by `BacktestEngine`, and the oracle is a *sign* strategy
+turning over up to 1.19 per bar. `net_oracle_sharpes` charges it the same rate, and
+`net_capture_ratio` is the comparable ratio. Both are pydantic computed fields, so they are served
+rather than re-derived by each reader — do not reimplement the division in a script or a component.
+
+| planted (2026-08-20, 5400 bars) | oracle | net oracle | detected | capture | net capture |
+|---|---|---|---|---|---|
+| AR(1) φ = +0.30 / −0.30 | +3.90 / +3.97 | +2.83 / +2.42 | 64% / 34% | 76% / 70% | 105% / 114% |
+| AR(1) φ = +0.20 / −0.20 | +2.54 / +2.63 | +1.38 / +1.15 | 14% / 22% | 64% / 55% | 118% / 126% |
+| AR(1) φ = ±0.10 | +1.25 / +1.33 | **+0.02 / −0.09** | 0% | 50% / 40% | *refused* |
+| band, half-life 1 / 3 / 5 | +2.60 / +2.70 / +2.65 | +1.70 / +2.13 / +2.21 | 0% | 21% / 25% / 37% | **32% / 31% / 45%** |
+| band, half-life 10 / 20 | +2.03 / +1.45 | +1.71 / +1.24 | 0% | 47% / 50% | 56% / 58% |
+
+Three rules follow. (1) **Never quote "0% power at oracle 1.3"** — net of costs that cell held no
+achievable edge, and the ratio is refused when the net oracle sits inside Lo (2002)'s Sharpe
+standard error at the cell's own history length. (2) **Net capture above 100% is expected, not a
+bug**: the numerator is selected in-sample from a grid while the denominator is a fixed sign rule
+that pays to flip. It is the clearest demonstration that this ratio is an upper bound. (3) **The
+band gap is the standing finding.** Fast band cells have a higher net oracle than the AR(1) cell
+detected 22% of the time, are detected 0%, and capture rises monotonically with the horizon — so
+what the catalog cannot express is *fast reversion to a slow-moving level*.
 
 ### 7.5 The real universe against the null (ADR-051) — `scripts/pool_report.py`
 ADR-038/039 recorded a walk-forward and a purged-CV OOS Sharpe on every trial with a stated revisit

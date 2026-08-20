@@ -103,6 +103,48 @@ the search changes.
   alternative above is how the bracket gets tightened.
 - Type-I error is untouched: the null calibration plants no edge and has no oracle.
 
+## Measured (2026-08-20, runs 32392338394 / 32392341396, both at 5,400 bars, search family `3f36fda2…`)
+
+The re-dispatched sweeps, with the net oracle recorded for the first time. `capture` is the
+published gross ratio; `net cap` divides the same numerator by the achievable denominator.
+
+| planted | oracle | net oracle | detected | capture | net cap | DSR passes |
+|---|---|---|---|---|---|---|
+| AR(1) φ = +0.30 | +3.90 | +2.83 | 64% | 75.8% | 104.6% | 44/50 |
+| AR(1) φ = −0.30 | +3.97 | +2.42 | 34% | 69.5% | 114.1% | 50/50 |
+| AR(1) φ = +0.20 | +2.54 | +1.38 | 14% | 64.0% | 117.5% | 23/50 |
+| AR(1) φ = −0.20 | +2.63 | +1.15 | 22% | 55.1% | 125.7% | 39/50 |
+| AR(1) φ = +0.10 | +1.25 | **+0.02** | 0% | 50.0% | *refused* | 0/50 |
+| AR(1) φ = −0.10 | +1.33 | **−0.09** | 0% | 40.0% | *refused* | 0/50 |
+| band, half-life 1 | +2.60 | +1.70 | 0% | 20.7% | **31.6%** | 0/50 |
+| band, half-life 2 | +2.61 | +1.93 | 0% | 21.8% | **29.5%** | 0/50 |
+| band, half-life 3 | +2.70 | +2.13 | 0% | 24.6% | **31.1%** | 0/50 |
+| band, half-life 5 | +2.65 | +2.21 | 0% | 37.2% | **44.6%** | 0/50 |
+| band, half-life 10 | +2.03 | +1.71 | 0% | 47.4% | 56.1% | 0/50 |
+| band, half-life 20 | +1.45 | +1.24 | 0% | 50.0% | 58.4% | 0/50 |
+
+**1. The |φ| = 0.10 cells are confirmed empty.** Net oracle +0.02 and −0.09 against a Sharpe
+standard error of ≈0.22 at this length. They were being cited as "zero power against an oracle of
+1.3"; there was no achievable edge in them at all. The ratio is refused rather than printed,
+because the first draft of this change printed **2855%** for the +0.10 cell — a ratio against noise
+presented as a measurement. That refusal is not a cutoff invented for the occasion: it is Lo
+(2002)'s Sharpe standard error, the same scale ADR-043's frontier already uses.
+
+**2. Against AR(1), the catalog's in-sample finalist BEATS a cost-paying sign oracle** — net capture
+104–126% in every measurable cell. That is not the catalog being superhuman; it is the numerator
+being selected in-sample from a grid while the denominator is a fixed sign rule that pays to flip.
+It is the sharpest available demonstration that ADR-045's ratio is an upper bound and must never be
+read as a fraction achieved.
+
+**3. The band-reversion gap is the finding, and it survives both corrections.** At the same net
+accounting that puts AR(1) above 100%, band reversion sits at **29–45% for half-lives 1–5**. Two
+control facts make it hard to explain away: the fast band cells have a *higher* net oracle than
+AR(1) φ = −0.20 (+1.70 vs +1.15) and are detected 0% against its 22%; and the effect is monotone in
+the horizon (31% → 58% from half-life 1 to 20), which is a statement about what the catalog's
+windows can resolve rather than about how much edge is present. **What the catalog cannot express
+is fast reversion to a slow-moving level.** That is a strategy-design target, stated in a
+measurement, and it is where the next unit of work in this area belongs.
+
 ## Reversal
 
 Drop `net_oracle_sharpes` (defaulted, so artifacts written under this ADR still load), the two

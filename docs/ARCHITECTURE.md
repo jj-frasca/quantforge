@@ -211,9 +211,28 @@ rejection is priced selection acting on a smaller captured Sharpe, not a differe
 failing. FINDING-006 (dispersion contaminated by the planted signal) and its ADR-050 IQR repair are
 included in every number quoted here. **ADR-053 commits both sweeps to `data/power_calibration/`
 and serves them at `GET /api/v1/power-calibration`,** so this curve no longer survives only as
-transcribed prose — which is how the superseded zero propagated. FINDING-007 separately records
-that the stored value is a selection-adjusted Sharpe margin rather than the primary paper's
-probability-form DSR; that naming/statistic decision remains open.
+transcribed prose — which is how the superseded zero propagated.
+
+**ADR-055 corrected the denominator those capture numbers are taken against.** The oracle was scored
+cost-free while every catalog finalist pays 10bp on turnover, and the oracle is a *sign* strategy
+turning over up to 1.19 per bar. Charged the same cost, two readings change. The zero-power cells at
+|φ| = 0.10 have a net oracle of **+0.02 / −0.09** against a Sharpe standard error of ≈0.22 — they
+contained no achievable edge, so "0% at oracle ≈ 1.3" was never a miss. And at net accounting the
+catalog's in-sample finalist *beats* a cost-paying oracle on AR(1) (net capture **104–126%**, the
+clearest possible demonstration that ADR-045's ratio is an upper bound, not a fraction achieved)
+while reaching only **29–45% on band reversion at half-lives 1–5**. The band gap therefore survives
+both corrections and gets sharper: those fast band cells have a HIGHER net oracle (+1.70) than the
+AR(1) cell detected 22% of the time (+1.15), and capture rises monotonically with the horizon
+(31% → 58%). **What the catalog cannot express is fast reversion to a slow-moving level.** A capture
+ratio is refused outright when the net oracle sits inside its own standard error, so a cell with no
+achievable edge reports no fraction rather than a ratio against noise.
+
+FINDING-007 is **resolved** (ADR-054): the paper's probability-form DSR is implemented, every
+user-facing claim now calls the stored value a selection-adjusted Sharpe *margin*, and every new
+trial records both. What remains is the threshold question — whether the gate should switch to the
+probability — which needs a fresh Type-I error and power curve for the new statistic and its own
+ADR. `PoolReport.statistic_agreement` measures the two statistics' disagreement so that case can be
+made with numbers.
 
 **The detectable-edge frontier (ADR-043) factors those two numbers.** `app/research/lab/frontier.py`
 solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0
@@ -222,8 +241,9 @@ holdout) an edge must be a **true annualized Sharpe of 2.13** to be found 80% of
 power is lower than that frontier, and the gap is the catalog's *capture efficiency*. ADR-045 now
 records the max-DSR finalist's in-sample Sharpe for every searched power-calibration symbol and
 reports median finalist / median oracle as a selection-biased **upper bound** on capture. Measured
-capture is 0.18–0.29 at a 1-bar reversion half-life and 0.45–0.50 at 5 bars; the 2-bar configs are
-searched but do not win, so the fast-reversion weakness is estimation, not a missing short window.
+gross capture is 0.21–0.25 at 1–3 bar reversion half-lives and 0.37 at 5 bars (0.32/0.31/0.45 net of
+ADR-055's cost correction); the 2-bar configs are searched but do not win, so the fast-reversion
+weakness is estimation, not a missing short window.
 The design lever this exposes: the bar moves as `sqrt(2 ln N)` in hypotheses but `1/sqrt(T)` in
 holdout length, so **halving the universe buys ~4% while doubling the holdout buys ~29%** — history
 is the stronger lever by an order of magnitude. `scripts/pool_report.py` and the dashboard print

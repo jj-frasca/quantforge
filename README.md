@@ -22,6 +22,7 @@ with it. Every number below is produced by a committed workflow and can be re-ru
 | **Type-I error** — how often does the whole pipeline graduate a symbol with *no edge by construction*? | **0/200** under both iid-normal and bootstrap nulls, with ADR-050's dispersion and judged at the hunt's own 5400-bar history. Max DSR -0.415 (iid) / -0.269 (bootstrap) | `null-calibration.yml` (ADR-036/037/050/051) |
 | Do those false graduates survive the universe-deflation bar? | **0 of 200**, in both nulls | same run |
 | **Power** — does the gate detect a *planted* edge at production parity? | **Yes, and it is measured: 64%** at AR(1) oracle Sharpe 3.9 (32/50 also clear the deflation bar), 34% at oracle 4.0 in the reverting direction, **0%** at oracle 1.3. The earlier 0/50-everywhere result was measured on 3000 bars against a hunt that gets 5400 | `power-calibration.yml` (ADR-041/049/050/051) |
+| **Is the effect size those rates are quoted against achievable?** | Not always. Charged the same 10bp turnover cost the catalog pays, the oracle at \|φ\| = 0.10 is **+0.02 / −0.09** — the two zero-power cells contained no tradeable edge at all | `power-calibration.yml` (ADR-055) |
 | **Resolution** — what must an edge actually *be* to be found here? | a **true annualized Sharpe of 2.13**, at the current 607-symbol universe and 4.3-year holdout | `scripts/pool_report.py` (ADR-043) |
 | How many discovered strategies clear that bar today? | **0 of 40.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
 | **Does what the search proposes beat a no-edge surrogate?** | **No.** Its 603 finalists lose to a bootstrap null built from SPY's own return distribution (p = 1.0000 one-sided, both walk-forward and purged CV) and beat only an iid-normal one | `scripts/pool_report.py` vs `null-calibration.yml` (ADR-051) |
@@ -38,14 +39,19 @@ an iid-normal null is **distributional rather than predictive** (ADR-051).
 That is a claim about this universe and this catalog jointly, not about the thresholds. The power
 row is what makes it sayable: a gate that detects nothing could not distinguish "no edge here" from
 "no ability to see one", and this one detects a planted edge 64% of the time and clears its own
-deflation bar 32 times in 50. Where it still fails is **capture** — on planted band reversion the
-catalog converts only 21–37% of the available edge and detects 0% at every horizon, against 55% and
-22% for an AR(1) process at the same oracle Sharpe. That is a strategy-design gap, not a
-statistical one (ADR-051).
+deflation bar 32 times in 50.
+
+Where it still fails is **capture**, and ADR-055 sharpened that considerably by charging the oracle
+the same transaction costs every catalog strategy pays. Measured net of costs, the catalog's best
+in-sample config *beats* a cost-paying oracle on AR(1) processes (104–126%) and reaches only
+**29–45% on band reversion at half-lives 1–5**, where it detects 0%. The fast band cells have a
+*higher* net oracle than the AR(1) cell detected 22% of the time (+1.70 vs +1.15), and capture rises
+monotonically with the horizon (31% → 58%). **What the catalog cannot express is fast reversion to a
+slow-moving level** — a strategy-design gap, stated in a measurement, not a statistical one.
 
 ## What's shipped
 
-End-to-end, all gates green (backend 99.87% coverage, 1,220 tests; frontend 92.3%, 221 tests):
+End-to-end, all gates green (backend 99.85% coverage, 1,275 tests; frontend 92.6%, 225 tests):
 
 - **15 HTTP endpoints**: health, strategy catalog (single source of truth per ADR-010), ingest,
   bars, backtest, validate, Monte Carlo, plus the research-lab surface — leaderboard, graduates,
