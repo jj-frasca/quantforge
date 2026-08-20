@@ -340,6 +340,12 @@ parameter today. Reading them together is the fastest way to understand what the
   pays (ADR-055). A capture ratio must be taken against the NET one — the finalist Sharpe in the
   numerator already paid those costs — and an empty `net_oracle_sharpes` means a cell measured
   before the correction, never an oracle of zero.
+  Each cell also carries **who won and what kind of strategy they were**: `finalist_strategy_names`
+  with the served `finalist_strategy_counts` (ADR-057) and `finalist_sharpes_by_category` with the
+  served `net_capture_by_category` (ADR-059). Both are empty on artifacts predating them, which
+  must read as *not recorded* rather than as an empty distribution. They exist because a capture
+  number cannot otherwise say whether the strategy that earned it was trading the planted process
+  at all — on fast band reversion it usually is not.
 - `/pool-report` also carries `statistic_agreement` (ADR-054): how often the selection-adjusted
   Sharpe margin the gate uses and the paper's probability-form DSR reach the same verdict on the
   same finalist. Its `probability_reference` is a stated reading level; **nothing gates on it**.
