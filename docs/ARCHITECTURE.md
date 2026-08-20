@@ -236,7 +236,12 @@ time, and the share of *Mean Reversion* finalists (18% / 44% / 64% / 94% / 94% /
 half-lives 1–20) tracks net capture (32% / 30% / 31% / 45% / 56% / 58%) almost exactly. The AR(1)
 control recognizes perfectly. **The fast-half-life gap is a RECOGNITION failure — at those horizons
 no reverting strategy wins the in-sample comparison, so adding reverting strategies cannot help.**
-ADR-058 removed the probe strategy for failing its own pre-stated criterion (restoring
+ADR-059 then split capture by the kind of strategy that earned it, and the fast cells change
+meaning: at half-life 1 the headline 32% is carried by **Trend at 31%** (fitting the random-walk
+level, 83% of return variance there) while everything aimed at the planted reversion keeps **22%**.
+From half-life 3 the matched row is the headline. Quote 22% for what the catalog's reverting
+strategies keep of a fast planted reversion. ADR-058 removed the probe strategy for failing its own
+pre-stated criterion (restoring
 `search_config_version 3f36fda2…`, so the committed calibration artifacts apply unchanged) and
 points the next unit at the selection step, judged against the finalist category mix.
 

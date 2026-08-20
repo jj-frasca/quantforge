@@ -55,6 +55,8 @@ the search picks a **Trend** strategy 68% of the time on a process that is by co
 reversion, and capture tracks that recognition share almost exactly (18% reverting finalists → 32%
 capture; 94% → 45–56%). **The gap is recognition, not expression:** at fast half-lives no reverting
 strategy wins the in-sample comparison, so the search never gets as far as choosing between them.
+Splitting capture by category (ADR-059) makes the size of that plain — at half-life 1 the headline
+32% is carried by trend strategies fitting the level, while the reverting strategies keep 22%.
 The added strategy was removed once it failed its own pre-stated criterion — that loop, stating a
 criterion before the measurement and honouring it afterwards, is the point of the project.
 

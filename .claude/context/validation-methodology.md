@@ -320,6 +320,27 @@ by construction fast reversion. Capture tracks the recognition share. The AR(1) 
 same dispatch recognizes perfectly (100% Mean Reversion finalists at φ = −0.2/−0.3; 66–74% Trend at
 φ = +0.2/+0.3; a scattered mix only in the |φ| = 0.1 cells that hold no achievable edge).
 
+**ADR-059: the headline capture at fast half-lives is not the MATCHED capture.** Each cell now
+records the best in-sample Sharpe per catalog category and serves `net_capture_by_category` under
+the same ADR-055 refusal. Measured on the 34-strategy catalog at 5400 bars:
+
+| band half-life | 1 | 2 | 3 | 5 | 10 | 20 |
+|---|---|---|---|---|---|---|
+| headline net capture | 32% | 29% | 31% | 45% | 56% | 58% |
+| **Mean Reversion (the matched row)** | **22%** | 26% | 29% | 44% | 56% | 58% |
+| Trend | 31% | 25% | 21% | 20% | 26% | 35% |
+
+At half-life 1 the headline is carried by Trend — strategies fitting the random-walk level, 83% of
+return variance there — while everything aimed at the planted reversion keeps 22%. **Quote 22%, not
+32%, for what the catalog's reverting strategies keep of a fast planted reversion.** The AR(1) sweep
+self-checks the taxonomy: Mean Reversion is the maximum row at φ = −0.3/−0.2 (114%/126%) and Trend
+or Breakout at φ = +0.2/+0.3 (116%/103%, Mean Reversion 14%/5%).
+
+**These sweeps are deterministic** — fixed seeds, no RNG in the search — so two runs of the same
+catalog agree to the symbol, and a difference between two catalogs is a real effect on that sample
+rather than sampling noise. Generalizing its MAGNITUDE to the population still carries ±6.6pp at
+n = 50.
+
 **Consequences for anyone tempted to close the gap with a new strategy.** ADR-056 added exactly the
 strategy the old reading called for — one that estimates a slow level and a fast deviation on
 independent timescales — and net capture moved ≤ +0.7pp in every cell while the new strategy won
