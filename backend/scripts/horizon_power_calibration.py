@@ -88,6 +88,26 @@ def _report(result: PowerCalibration) -> None:
             f"  net of costs      : {net_capture:.1%}  <- the comparable ratio: both sides now "
             "pay the same costs (ADR-055)"
         )
+    # ADR-061: the oracle above knows the process's LATENT deviation. This one is what an optimal
+    # causal filter could have formed from prices, which is the only benchmark a strategy could
+    # ever have reached — at a one-bar half-life it is essentially zero.
+    if result.achievable_oracle_sharpes:
+        achievable = median(result.achievable_oracle_sharpes)
+        print(
+            f"oracle a FILTER could form: {achievable:+.2f} net "
+            "(ADR-061: Kalman with true parameters — the recoverable edge)"
+        )
+    achievable_capture = result.achievable_capture_ratio
+    if achievable_capture is not None:
+        print(
+            f"  capture vs achievable: {achievable_capture:.1%}  <- the honest ratio for a "
+            "process whose state is latent"
+        )
+    elif result.achievable_oracle_sharpes:
+        print(
+            "  capture vs achievable: REFUSED -- the recoverable edge is inside its own Sharpe "
+            "standard error, so there is nothing to express a fraction of"
+        )
     if result.errors:
         print(f"unsearchable        : {len(result.errors)} symbol(s)")
 
