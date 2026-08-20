@@ -205,3 +205,34 @@ export const nullCalibrationSchema = z.object({
 })
 
 export type NullCalibration = z.infer<typeof nullCalibrationSchema>
+
+// ADR-041/042/053: one cell of a power sweep — a planted process at one effect size, judged at its
+// own N. `phi` indexes an AR(1) sweep and `half_life` a band-reversion one; exactly one is set.
+export const powerCellSchema = z.object({
+  n_symbols: z.number().int(),
+  n_detected: z.number().int(),
+  detection_rate: z.number().min(0).max(1),
+  n_clear_deflation_bar: z.number().int(),
+  deflation_bar: z.number(),
+  edge: z.string(),
+  phi: z.number().nullable().default(null),
+  half_life: z.number().nullable().default(null),
+  oracle_sharpes: z.array(z.number()).default([]),
+  finalist_observed_sharpes: z.array(z.number()).default([]),
+  gate_pass_counts: z.record(z.string(), z.number()).default({}),
+  n_bars: z.array(z.number()).default([]),
+  gate_config_version: z.string(),
+  search_config_version: z.string().default('legacy-unspecified'),
+})
+
+export type PowerCell = z.infer<typeof powerCellSchema>
+
+export const powerSweepSchema = z.object({
+  edge: z.string(),
+  gate_config_version: z.string(),
+  search_config_version: z.string(),
+  n_bars: z.number().int(),
+  cells: z.array(powerCellSchema),
+})
+
+export type PowerSweep = z.infer<typeof powerSweepSchema>

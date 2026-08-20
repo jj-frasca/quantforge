@@ -6,6 +6,7 @@ import {
   graduatesSchema,
   leaderboardSchema,
   nullCalibrationSchema,
+  powerSweepSchema,
   paperPortfolioSchema,
   poolReportSchema,
   type CrossSectionalView,
@@ -15,6 +16,7 @@ import {
   type NullCalibration,
   type PaperPosition,
   type PoolReport,
+  type PowerSweep,
 } from '../types/lab'
 
 const API_BASE = ''
@@ -73,4 +75,12 @@ export async function requestNullCalibration(): Promise<NullCalibration[]> {
     throw new Error(`Null calibration request failed (${response.status})`)
   }
   return z.array(nullCalibrationSchema).parse(await response.json())
+}
+
+export async function requestPowerCalibration(): Promise<PowerSweep[]> {
+  const response = await fetch(`${API_BASE}/api/v1/power-calibration`)
+  if (!response.ok) {
+    throw new Error(`Power calibration request failed (${response.status})`)
+  }
+  return z.array(powerSweepSchema).parse(await response.json())
 }

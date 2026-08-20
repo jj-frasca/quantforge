@@ -1,6 +1,7 @@
 import { DeflationHeadline } from './DeflationHeadline'
 import { ForwardComparisonChart } from './ForwardComparisonChart'
 import { GateCalibrationPanel } from './GateCalibrationPanel'
+import { GatePowerPanel } from './GatePowerPanel'
 import { LeaderboardTable } from './LeaderboardTable'
 import { PaperPortfolioTable } from './PaperPortfolioTable'
 import { PositionEquityCurve } from './PositionEquityCurve'
@@ -8,12 +9,14 @@ import { useLeaderboard } from './useLeaderboard'
 import { useNullCalibration } from './useNullCalibration'
 import { usePaperPortfolio } from './usePaperPortfolio'
 import { usePoolReport } from './usePoolReport'
+import { usePowerCalibration } from './usePowerCalibration'
 
 export function LabDashboardPage() {
   const leaderboard = useLeaderboard()
   const portfolio = usePaperPortfolio()
   const report = usePoolReport()
   const calibration = useNullCalibration()
+  const power = usePowerCalibration()
 
   return (
     <section aria-label="live dashboard page" className="page lab-dashboard">
@@ -30,6 +33,7 @@ export function LabDashboardPage() {
       <section aria-label="honest headline" className="lab-section">
         {report.data && <DeflationHeadline report={report.data} />}
         {calibration.data && <GateCalibrationPanel calibrations={calibration.data} />}
+        {power.data && <GatePowerPanel sweeps={power.data} />}
       </section>
 
       <section aria-label="paper book" className="lab-section">
