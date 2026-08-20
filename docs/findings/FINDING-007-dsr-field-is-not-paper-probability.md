@@ -1,7 +1,9 @@
 # FINDING-007: The reported DSR is not the paper's Deflated Sharpe Ratio statistic
 
 - **Severity:** High (methodology naming and omitted uncertainty correction)
-- **Status:** Open; separate from ADR-050's null-dispersion repair
+- **Status:** Resolved in part by ADR-054 (2026-08-20) — the probability form is implemented and
+  every user-facing claim now names the margin correctly. The remaining piece is recording the
+  probability per trial (ADR-054 decision 3), which is blocked on plumbing per-period moments
 - **Affected:** `deflated_sharpe`, `ValidationReport.deflated_sharpe`, gate and UI descriptions
 
 ## Finding
@@ -44,3 +46,23 @@ A separate ADR must either:
 Do not resolve this by silently reinterpreting `dsr_min=0`: probability-form DSR is non-negative,
 so that would remove the gate. ADR-050 deliberately preserves the existing margin and threshold
 while repairing its signal-contaminated dispersion.
+
+## Resolution (ADR-054, 2026-08-20)
+
+Both of the required behaviours were taken, not one of them.
+
+- **Implemented**, per option 1: `probabilistic_sharpe_ratio` (Eq. 1, raw-kurtosis convention,
+  guarded against a degenerate estimator variance) and `deflated_sharpe_probability` (PSR against
+  the existing calibrated expected-maximum haircut), with a Hypothesis invariant that the result is
+  always in [0, 1] — the invariant that distinguishes it from the margin's `DSR <= observed`.
+- **Renamed in every claim**, per option 2's substance: `ValidationEngine`'s interpretation
+  messages, the About glossary, the Validation Report term and tooltip, the README, and
+  `deflated_sharpe`'s own docstring now say *selection-adjusted Sharpe margin*, and "Deflated Sharpe
+  Ratio" refers only to the probability.
+
+Deliberately NOT done, and why: the stored field keeps its name (a schema migration across 3,237
+committed pool files buys a name, while the defect was in what the name claimed), and the gate still
+gates on the margin at `dsr_min` (a gate change is a threshold change, which charter §4 forbids
+arguing without evidence — and it would have invalidated ADR-051's matched Type-I and power runs in
+the same commit). Recording the probability per trial is the precondition for making that case with
+measurements instead of argument.
