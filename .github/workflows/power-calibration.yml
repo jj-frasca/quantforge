@@ -42,7 +42,7 @@ on:
         default: ""
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: power-calibration
@@ -92,3 +92,64 @@ jobs:
           jq -Rs '{text: ("*QuantForge gate power — phi ${{ matrix.phi }}*\n```" + . + "```")}' \
             "power_${{ matrix.phi }}.txt" \
             | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+
+  consolidate:
+    needs: power
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Download cells
+        uses: actions/download-artifact@v4
+        with:
+          pattern: power-*
+          path: cells
+          merge-multiple: true
+      - name: Collect the sweep
+        working-directory: backend
+        run: |
+          set -e
+          DIR="$GITHUB_WORKSPACE/cells"
+          # A cell that died leaves no file. The collector refuses an incoherent sweep but a
+          # partial one is still a valid curve at the cells that ran, and the record says which.
+          if ! ls "$DIR"/power_*.json >/dev/null 2>&1; then
+            echo "no cells produced — nothing to collect"
+            exit 0
+          fi
+          rm -f "$DIR"/*.txt
+          PYTHONPATH=. uv run python scripts/consolidate_power_calibration.py \
+            "$DIR" "$GITHUB_WORKSPACE/data/power_calibration/ar1.json" \
+            | tee "$GITHUB_WORKSPACE/sweep.txt"
+      - name: Slack the collected sweep
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' && hashFiles('sweep.txt') != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -Rs '{text: ("*QuantForge gate power sweep*\n```" + . + "```")}' sweep.txt \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+      - name: Commit the sweep (if changed)
+        run: |
+          git add data/power_calibration
+          if git diff --cached --quiet; then
+            echo "no power calibration change"
+            exit 0
+          fi
+          git config user.name "quantforge-calibration-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "chore(calibration): gate power sweep $(date +%F)"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin master && git push; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push attempt $attempt failed; retrying..."
+            sleep 5
+          done
+          echo "could not push after retries"
+          exit 1

@@ -700,6 +700,64 @@ def calibrate_gate(
     )
 
 
+class PowerSweep(BaseModel):
+    """One power curve: the cells of a single planted process, at one procedure and one history.
+
+    Notes:
+        A list, not a merge. Null shards are draws from one experiment and pool into a single rate;
+        power cells plant different effect sizes and are each judged at their own N, so pooling
+        them would report a detection rate for no stated effect size (ADR-053).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    edge: str
+    gate_config_version: str
+    search_config_version: str
+    n_bars: int
+    cells: list[PowerCalibration]
+
+
+def collect_power_sweep(cells: Sequence[PowerCalibration]) -> PowerSweep:
+    """Order one process's power cells into a committed record, refusing incoherent sweeps.
+
+    Notes:
+        The three refusals are the whole value of the function. Cells of different processes,
+        different resolved procedures, or different history lengths are not points on one curve,
+        and a file that silently held them would be read as if they were.
+    """
+    if not cells:
+        raise ValueError("need at least one power cell to collect a sweep")
+    edges = {c.edge for c in cells}
+    if len(edges) > 1:
+        raise ValueError(f"cannot collect cells with different edge: {sorted(edges)}")
+    versions = {c.gate_config_version for c in cells}
+    if len(versions) > 1:
+        raise ValueError(
+            f"cannot collect cells with different gate_config_version: {sorted(versions)}"
+        )
+    search_versions = {c.search_config_version for c in cells}
+    if len(search_versions) > 1:
+        raise ValueError(
+            f"cannot collect cells with different search_config_version: {sorted(search_versions)}"
+        )
+    lengths = {int(median(c.n_bars)) for c in cells if c.n_bars}
+    if len(lengths) > 1:
+        raise ValueError(f"cannot collect cells with different n_bars: {sorted(lengths)}")
+
+    def _key(cell: PowerCalibration) -> float:
+        # An AR(1) sweep is indexed by phi and a band sweep by half-life; the other is None on each.
+        return cell.phi if cell.phi is not None else (cell.half_life or 0.0)
+
+    return PowerSweep(
+        edge=edges.pop(),
+        gate_config_version=versions.pop(),
+        search_config_version=search_versions.pop(),
+        n_bars=lengths.pop() if lengths else 0,
+        cells=sorted(cells, key=_key),
+    )
+
+
 def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
     """Combine sharded null runs into one calibration judged at the COMBINED N (ADR-037).
 

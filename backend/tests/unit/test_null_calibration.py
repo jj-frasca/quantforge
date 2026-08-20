@@ -24,6 +24,7 @@ from app.research.lab.calibration import (
     bootstrap_null,
     calibrate_gate,
     calibration_search_version,
+    collect_power_sweep,
     drop_incomplete_bars,
     iid_normal_null,
     mean_reverting_edge,
@@ -780,3 +781,68 @@ def test_a_legacy_power_artifact_states_no_bar_count() -> None:
     legacy = PowerCalibration.model_validate(result.model_dump(exclude={"n_bars"}))
 
     assert legacy.n_bars == []
+
+
+# --- ADR-053: the power sweep as a committed, re-readable record ---
+
+
+def _power(
+    *,
+    edge: str = "ar1",
+    phi: float | None = -0.2,
+    half_life: float | None = None,
+    version: str = "v1",
+    search_version: str = "search-v1",
+    n_bars: int = 5400,
+) -> PowerCalibration:
+    return PowerCalibration(
+        n_symbols=2,
+        n_detected=1,
+        detection_rate=0.5,
+        n_clear_deflation_bar=0,
+        deflation_bar=1.5,
+        edge=edge,
+        phi=phi,
+        half_life=half_life,
+        oracle_sharpes=[2.0, 2.5],
+        holdout_years=[4.3, 4.3],
+        n_bars=[n_bars, n_bars],
+        errors={},
+        gate_config_version=version,
+        search_config_version=search_version,
+    )
+
+
+def test_a_power_sweep_sorts_ar1_cells_by_phi() -> None:
+    sweep = collect_power_sweep([_power(phi=0.3), _power(phi=-0.3), _power(phi=0.1)])
+    assert [c.phi for c in sweep.cells] == [-0.3, 0.1, 0.3]
+
+
+def test_a_power_sweep_sorts_band_cells_by_half_life() -> None:
+    cells = [_power(edge="band_reversion", phi=None, half_life=hl) for hl in (10.0, 1.0, 5.0)]
+    sweep = collect_power_sweep(cells)
+    assert [c.half_life for c in sweep.cells] == [1.0, 5.0, 10.0]
+    assert sweep.edge == "band_reversion"
+
+
+def test_a_sweep_refuses_to_mix_planted_processes() -> None:
+    """An AR(1) cell and a band cell are different experiments; one file holding both would report
+    a curve that no single sweep produced."""
+    with pytest.raises(ValueError, match="edge"):
+        collect_power_sweep([_power(), _power(edge="band_reversion", phi=None, half_life=5.0)])
+
+
+def test_a_sweep_refuses_cells_measured_by_different_procedures() -> None:
+    with pytest.raises(ValueError, match="search_config_version"):
+        collect_power_sweep([_power(phi=-0.3), _power(phi=0.3, search_version="search-v2")])
+
+
+def test_a_sweep_refuses_cells_measured_on_different_histories() -> None:
+    """ADR-051: detection rates measured at different bar counts are not points on one curve."""
+    with pytest.raises(ValueError, match="n_bars"):
+        collect_power_sweep([_power(phi=-0.3), _power(phi=0.3, n_bars=3000)])
+
+
+def test_an_empty_sweep_is_refused_rather_than_written_as_a_curve() -> None:
+    with pytest.raises(ValueError, match="at least one"):
+        collect_power_sweep([])
