@@ -204,16 +204,16 @@ oracle ≈ 2.6, and 0% at oracle ≈ 1.3 — which is what ADR-043's frontier pr
 and must not be requoted. The remaining zero is band reversion: 0% at every half-life at oracle
 ≈ 2.6, with DSR passing 0/50, while capture is 20.7–37.2% against 55.1% for AR(1) at the same
 oracle. That is a capture gap — a statement about what the catalog can express, not about the
-statistics. FINDING-005/ADR-049 add per-component gate
-pass counts so the zero can be attributed without guessing or weakening a threshold. The fresh
-diagnostic found DSR passed **0/50 in all 12 cells**. At phi +0.30, PBO passed 43/50, stability
-40/50, and the other four components 50/50, isolating DSR as sufficient for the composite zero.
-FINDING-006 records that current-run candidate dispersion is contaminated by the planted signal.
-ADR-050 replaces whole-search sample standard deviation with a Normal-consistent IQR scale while
-preserving lifetime N and every threshold. Its calibration identity is new, so the prior 0/200
-Type-I and 0/50 power results remain evidence for the old estimator until the cloud refresh lands.
-FINDING-007 separately records that the stored value is a selection-adjusted Sharpe margin rather
-than the primary paper's probability-form DSR; that naming/statistic decision remains open.
+statistics — and it is the first calibrated result that points at a concrete strategy-design action
+rather than at the gate. FINDING-005/ADR-049's per-component pass counts are what make it
+attributable: DSR passes 0/50 in every band cell and 39/50 for AR(1) at the same oracle, so the
+rejection is priced selection acting on a smaller captured Sharpe, not a different component
+failing. FINDING-006 (dispersion contaminated by the planted signal) and its ADR-050 IQR repair are
+included in every number quoted here. **ADR-053 commits both sweeps to `data/power_calibration/`
+and serves them at `GET /api/v1/power-calibration`,** so this curve no longer survives only as
+transcribed prose — which is how the superseded zero propagated. FINDING-007 separately records
+that the stored value is a selection-adjusted Sharpe margin rather than the primary paper's
+probability-form DSR; that naming/statistic decision remains open.
 
 **The detectable-edge frontier (ADR-043) factors those two numbers.** `app/research/lab/frontier.py`
 solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0
@@ -256,15 +256,20 @@ grids are reduced with deterministic maximin parameter-space coverage. Adaptive 
 as one additional family bucket inside the same cap, so coarse plus refined work never exceeds 200
 by default. A budget too small to preserve every requested family's PBO minimum fails before any
 backtest; reordering or duplicating strategy names cannot change the searched hypotheses.
-The post-change cloud refresh measured 0/200 false graduates in each null mode and 0/50 power in
-every planted-edge cell; those results are conservative and current, not grounds to move a bar.
+The post-change cloud refresh measured 0/200 false graduates in each null mode. Its companion 0/50
+power result was superseded within hours by ADR-051's history-length repair — the identity was
+right and the measurement was too short.
 
 **Calibration now includes production refinement (ADR-047).** Daily discovery performs an adaptive
 second grid around the coarse winner, but the published null/power runs had silently stopped after
 the coarse pass. New null and power calibrations default to the same `refine=True`, span-0.25
 procedure and include both inputs in their artifacts and ADR-044 fingerprint. The workflow sole
 writers refreshed the evidence after ADR-046/047/048 on 2026-08-20; older Type-I and power/capture
-tables remain historical evidence for their coarse-only, pre-budget selector only.
+tables remain historical evidence for their coarse-only, pre-budget selector only. **ADR-051 adds
+the third axis of that identity: the history length.** Every calibration is now planted at the
+hunt's own ~5400 bars, `n_bars` is recorded on both artifact types, and a sweep refuses to collect
+cells measured at different lengths. Any change to the estimator, the catalog, or the grids
+invalidates Type-I and both power results together — re-dispatch all three, at the same `n_bars`.
 
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.
