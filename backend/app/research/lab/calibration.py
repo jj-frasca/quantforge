@@ -843,6 +843,119 @@ def collect_power_sweep(cells: Sequence[PowerCalibration]) -> PowerSweep:
     )
 
 
+class PowerSweepComparison(BaseModel):
+    """One cell read across two sweeps — the paired reading of a catalog change (ADR-057).
+
+    Notes:
+        `attributable` is the load-bearing field. Capture's numerator is an in-sample maximum over
+        the searched grid, so it rises when the catalog grows even if the addition never wins; a
+        delta is only attributable to the change when the finalist mix moved with it.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    key: float
+    net_capture_before: float | None
+    net_capture_after: float | None
+    net_capture_delta: float | None
+    capture_delta: float | None
+    detection_before: float | None
+    detection_after: float | None
+    detection_delta: float | None
+    finalists_before: dict[str, int]
+    finalists_after: dict[str, int]
+    attributable: bool
+    reason: str | None
+
+
+def compare_power_sweeps(before: PowerSweep, after: PowerSweep) -> list[PowerSweepComparison]:
+    """Read two power sweeps of the SAME process against each other, cell by cell (ADR-057).
+
+    Notes:
+        Refuses a pair that plants different processes, was measured at different history lengths,
+        or resolved different gate configs — those deltas mix the change with the measurement.
+        Refuses an IDENTICAL `search_config_version` too, for the opposite reason: with the same
+        search family there is no catalog change to read and any delta is noise.
+    """
+    if before.edge != after.edge:
+        raise ValueError(f"cannot compare sweeps of different edge: {before.edge} vs {after.edge}")
+    if before.n_bars != after.n_bars:
+        raise ValueError(
+            f"cannot compare sweeps measured at different n_bars: {before.n_bars} vs {after.n_bars}"
+        )
+    if before.gate_config_version != after.gate_config_version:
+        raise ValueError("cannot compare sweeps judged by different gate_config_version")
+    if before.search_config_version == after.search_config_version:
+        raise ValueError(
+            "cannot compare sweeps with the same search_config_version — there is no catalog "
+            "change to read, so any capture delta is noise"
+        )
+
+    def _key(cell: PowerCalibration) -> float:
+        return cell.phi if cell.phi is not None else (cell.half_life or 0.0)
+
+    before_cells = {_key(c): c for c in before.cells}
+    after_cells = {_key(c): c for c in after.cells}
+    rows: list[PowerSweepComparison] = []
+    for key in sorted(set(before_cells) | set(after_cells)):
+        old = before_cells.get(key)
+        new = after_cells.get(key)
+        if old is None or new is None:
+            side = "after" if old is None else "before"
+            rows.append(
+                PowerSweepComparison(
+                    key=key,
+                    net_capture_before=old.net_capture_ratio if old else None,
+                    net_capture_after=new.net_capture_ratio if new else None,
+                    net_capture_delta=None,
+                    capture_delta=None,
+                    detection_before=old.detection_rate if old else None,
+                    detection_after=new.detection_rate if new else None,
+                    detection_delta=None,
+                    finalists_before=old.finalist_strategy_counts if old else {},
+                    finalists_after=new.finalist_strategy_counts if new else {},
+                    attributable=False,
+                    reason=f"cell present only in the {side} sweep",
+                )
+            )
+            continue
+
+        counts_before = old.finalist_strategy_counts
+        counts_after = new.finalist_strategy_counts
+        if not counts_before or not counts_after:
+            reason = "no finalist attribution recorded on both sides"
+        elif counts_before == counts_after:
+            reason = (
+                "the finalist mix did not move — a capture delta here is grid size, not expression"
+            )
+        else:
+            reason = None
+        rows.append(
+            PowerSweepComparison(
+                key=key,
+                net_capture_before=old.net_capture_ratio,
+                net_capture_after=new.net_capture_ratio,
+                net_capture_delta=_delta(old.net_capture_ratio, new.net_capture_ratio),
+                capture_delta=_delta(old.capture_ratio, new.capture_ratio),
+                detection_before=old.detection_rate,
+                detection_after=new.detection_rate,
+                detection_delta=new.detection_rate - old.detection_rate,
+                finalists_before=counts_before,
+                finalists_after=counts_after,
+                attributable=reason is None,
+                reason=reason,
+            )
+        )
+    return rows
+
+
+def _delta(before: float | None, after: float | None) -> float | None:
+    """A difference only when BOTH sides measured it — a missing side is not a zero change."""
+    if before is None or after is None:
+        return None
+    return after - before
+
+
 def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
     """Combine sharded null runs into one calibration judged at the COMBINED N (ADR-037).
 

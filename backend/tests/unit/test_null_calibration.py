@@ -26,6 +26,7 @@ from app.research.lab.calibration import (
     calibrate_gate,
     calibration_search_version,
     collect_power_sweep,
+    compare_power_sweeps,
     drop_incomplete_bars,
     iid_normal_null,
     mean_reverting_edge,
@@ -1108,3 +1109,131 @@ def test_a_partial_attribution_reports_nothing_rather_than_a_wrong_share() -> No
         {**result.model_dump(), "finalist_strategy_names": result.finalist_strategy_names[:1]}
     )
     assert truncated.finalist_strategy_counts == {}
+
+
+def _cell(
+    key: float,
+    *,
+    names: list[str] | None = None,
+    finalists: list[float] | None = None,
+    detected: int = 0,
+    edge: str = "band_reversion",
+    n_bars: int = 5400,
+    search_version: str = "before",
+) -> PowerCalibration:
+    """A hand-built power cell — comparison is pure arithmetic over recorded fields, so building
+    the cells directly keeps the ADR-057 refusals testable without running 50 searches."""
+    finalist_sharpes = finalists if finalists is not None else [1.0, 1.0]
+    n = len(finalist_sharpes)
+    return PowerCalibration(
+        n_symbols=n,
+        n_detected=detected,
+        detection_rate=detected / n,
+        n_clear_deflation_bar=0,
+        deflation_bar=1.0,
+        edge=edge,
+        half_life=key if edge == "band_reversion" else None,
+        phi=key if edge == "ar1" else None,
+        oracle_sharpes=[2.0] * n,
+        net_oracle_sharpes=[2.0] * n,
+        finalist_observed_sharpes=finalist_sharpes,
+        finalist_strategy_names=names if names is not None else [],
+        holdout_years=[4.0] * n,
+        n_bars=[n_bars] * n,
+        errors={},
+        gate_config_version="gate-v1",
+        search_config_version=search_version,
+    )
+
+
+def test_a_paired_sweep_reports_the_capture_delta_per_cell() -> None:
+    """ADR-057 amendment. The comparison the project kept doing by eye, with the qualifications
+    attached to the number rather than remembered alongside it."""
+    before = collect_power_sweep([_cell(1.0), _cell(5.0)])
+    after = collect_power_sweep(
+        [
+            _cell(1.0, finalists=[1.2, 1.2], search_version="after"),
+            _cell(5.0, finalists=[1.0, 1.0], search_version="after"),
+        ]
+    )
+
+    rows = compare_power_sweeps(before, after)
+    assert [r.key for r in rows] == [1.0, 5.0]
+    assert rows[0].net_capture_before == pytest.approx(0.5)
+    assert rows[0].net_capture_after == pytest.approx(0.6)
+    assert rows[0].net_capture_delta == pytest.approx(0.1)
+    assert rows[1].net_capture_delta == pytest.approx(0.0)
+
+
+def test_a_capture_rise_is_not_attributable_without_the_finalist_names() -> None:
+    """The whole point of the amendment: a bigger grid raises an in-sample maximum on its own."""
+    before = collect_power_sweep([_cell(1.0)])
+    after = collect_power_sweep([_cell(1.0, finalists=[1.6, 1.6], search_version="after")])
+
+    row = compare_power_sweeps(before, after)[0]
+    assert row.net_capture_delta > 0
+    assert row.attributable is False
+    assert "finalist" in (row.reason or "")
+
+
+def test_an_unchanged_finalist_mix_refuses_attribution_even_when_capture_rises() -> None:
+    before = collect_power_sweep([_cell(1.0, names=["sma", "sma"])])
+    after = collect_power_sweep(
+        [_cell(1.0, names=["sma", "sma"], finalists=[1.6, 1.6], search_version="after")]
+    )
+
+    row = compare_power_sweeps(before, after)[0]
+    assert row.net_capture_delta > 0
+    assert row.attributable is False
+    assert "mix" in (row.reason or "")
+
+
+def test_a_moved_finalist_mix_makes_the_capture_change_attributable() -> None:
+    before = collect_power_sweep([_cell(1.0, names=["sma", "sma"])])
+    after = collect_power_sweep(
+        [
+            _cell(
+                1.0,
+                names=["two_timescale_reversion", "sma"],
+                finalists=[1.6, 1.0],
+                search_version="after",
+            )
+        ]
+    )
+
+    row = compare_power_sweeps(before, after)[0]
+    assert row.attributable is True
+    assert row.reason is None
+    assert row.finalists_before == {"sma": 2}
+    assert row.finalists_after == {"two_timescale_reversion": 1, "sma": 1}
+
+
+def test_a_cell_on_only_one_side_is_reported_not_dropped() -> None:
+    before = collect_power_sweep([_cell(1.0), _cell(5.0)])
+    after = collect_power_sweep([_cell(1.0, search_version="after")])
+
+    rows = compare_power_sweeps(before, after)
+    assert [r.key for r in rows] == [1.0, 5.0]
+    unmatched = rows[1]
+    assert unmatched.net_capture_after is None
+    assert unmatched.attributable is False
+    assert "only" in (unmatched.reason or "")
+
+
+def test_comparing_sweeps_of_different_processes_or_lengths_is_refused() -> None:
+    band = collect_power_sweep([_cell(1.0)])
+    ar1 = collect_power_sweep([_cell(0.3, edge="ar1", search_version="after")])
+    with pytest.raises(ValueError, match="edge"):
+        compare_power_sweeps(band, ar1)
+
+    short = collect_power_sweep([_cell(1.0, n_bars=3000, search_version="after")])
+    with pytest.raises(ValueError, match="n_bars"):
+        compare_power_sweeps(band, short)
+
+
+def test_comparing_a_sweep_with_itself_is_refused() -> None:
+    """Identical search families cannot produce a capture delta that means anything — the whole
+    comparison exists to read a CATALOG change."""
+    sweep = collect_power_sweep([_cell(1.0)])
+    with pytest.raises(ValueError, match="search_config_version"):
+        compare_power_sweeps(sweep, sweep)
