@@ -152,6 +152,22 @@ export const deflationCohortsSchema = z.object({
 
 export type DeflationCohorts = z.infer<typeof deflationCohortsSchema>
 
+// ADR-043: what an edge must BE for the pipeline to detect it, beside the bar an observation must
+// clear. `bar` is what must be OBSERVED; `detectable_sharpe` is the TRUE annualized Sharpe that
+// clears it with probability `power`. Their difference is estimation noise — which is why an edge
+// sitting exactly at the bar is a coin flip, not a graduate. Null when no graduate fixes a holdout
+// length to quote it at.
+export const detectionFrontierSchema = z.object({
+  n_symbols: z.number().int(),
+  holdout_years: z.number(),
+  power: z.number(),
+  bar: z.number(),
+  detectable_sharpe: z.number(),
+  standard_error: z.number(),
+})
+
+export type DetectionFrontier = z.infer<typeof detectionFrontierSchema>
+
 export const poolReportSchema = z.object({
   n_experiments: z.number().int(),
   n_symbols: z.number().int(),
@@ -161,6 +177,7 @@ export const poolReportSchema = z.object({
   n_surviving_deflation: z.number().int(),
   near_misses: z.array(nearMissSchema),
   n_open_positions: z.number().int(),
+  frontier: detectionFrontierSchema.nullable().default(null),
   book: deflationCohortsSchema,
 })
 

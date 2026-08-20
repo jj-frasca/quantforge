@@ -22,6 +22,16 @@ export function DeflationHeadline({ report }: { report: PoolReport }) {
         {count(report.n_trials)} lifetime trials, which is the denominator the deflated Sharpe and
         MinTRL penalties are charged against.
       </p>
+      {report.frontier && (
+        <p data-testid="detection-frontier">
+          Resolution (ADR-043): an edge must be a <strong>true annualized Sharpe of{' '}
+          {report.frontier.detectable_sharpe.toFixed(2)}</strong> to clear that bar{' '}
+          {Math.round(report.frontier.power * 100)}% of the time on a{' '}
+          {report.frontier.holdout_years.toFixed(1)}-year holdout. The bar is what must be{' '}
+          <em>observed</em>; this is what must be <em>true</em>, and the gap between them is
+          estimation noise (standard error {report.frontier.standard_error.toFixed(2)}).
+        </p>
+      )}
       {survivors === 0 && (
         <p role="status" className="deflation-warning">
           Every graduate in the pool is currently <strong>not distinguishable from selection

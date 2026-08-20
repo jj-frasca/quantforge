@@ -22,6 +22,14 @@ const report: PoolReport = {
     },
   ],
   n_open_positions: 21,
+  frontier: {
+    n_symbols: 607,
+    holdout_years: 4.3,
+    power: 0.8,
+    bar: 1.73,
+    detectable_sharpe: 2.13,
+    standard_error: 0.48,
+  },
   book: {
     n_survivors: 0,
     n_non_survivors: 0,
@@ -60,6 +68,19 @@ describe('DeflationHeadline', () => {
   it('does not claim selection luck when something does clear the bar', () => {
     render(<DeflationHeadline report={{ ...report, n_surviving_deflation: 3 }} />)
     expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('states what an edge must BE, not just what it must show (ADR-043)', () => {
+    render(<DeflationHeadline report={report} />)
+    const resolution = screen.getByTestId('detection-frontier')
+    expect(resolution).toHaveTextContent('2.13')
+    expect(resolution).toHaveTextContent('80%')
+    expect(resolution).toHaveTextContent('4.3')
+  })
+
+  it('omits the resolution line when no graduate fixes a holdout length', () => {
+    render(<DeflationHeadline report={{ ...report, frontier: null }} />)
+    expect(screen.queryByTestId('detection-frontier')).toBeNull()
   })
 
   it('omits the near-miss table when there are none', () => {
