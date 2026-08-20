@@ -35,7 +35,6 @@ from app.research.strategies.configs import (
     TripleMAAlignmentConfig,
     TRIXConfig,
     TrueStrengthIndexConfig,
-    TwoTimescaleReversionConfig,
     UltimateOscillatorConfig,
     VolManagedMomentumConfig,
     VolTargetedSMAConfig,
@@ -78,7 +77,6 @@ _CONFIG_FOR_NAME: dict[str, type[BaseModel]] = {
     "true_strength_index": TrueStrengthIndexConfig,
     "chande_momentum": ChandeMomentumConfig,
     "narrow_range_breakout": NarrowRangeBreakoutConfig,
-    "two_timescale_reversion": TwoTimescaleReversionConfig,
 }
 
 

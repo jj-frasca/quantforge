@@ -1237,3 +1237,17 @@ def test_comparing_a_sweep_with_itself_is_refused() -> None:
     sweep = collect_power_sweep([_cell(1.0)])
     with pytest.raises(ValueError, match="search_config_version"):
         compare_power_sweeps(sweep, sweep)
+
+
+def test_the_search_fingerprint_is_stable_across_code_changes() -> None:
+    """ADR-058 decision 2 reuses committed calibration artifacts by matching their recorded
+    `search_config_version` to the restored catalog's. That only works if the hash is a function of
+    the resolved search family and nothing else — a silent drift in how it is computed would let a
+    stale artifact be reused under a new number, or force a needless re-dispatch under an old one.
+    The literal is a fixed two-name family, so a legitimate CATALOG change does not touch it."""
+    assert (
+        calibration_search_version(
+            ["sma", "momentum"], n_per_param=3, config=GateConfig(), refine=True, refine_span=0.25
+        )
+        == "b8a2326836973064d20581b449629aa26be30bec31d3c6fad6f2420c433ce470"
+    )

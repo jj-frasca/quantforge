@@ -233,13 +233,6 @@ class NarrowRangeBreakoutConfig(BaseModel):
     window: int = Field(default=7, ge=2)
 
 
-class TwoTimescaleReversionConfig(BaseModel):
-    name: Literal["two_timescale_reversion"] = "two_timescale_reversion"
-    level_span: int = Field(default=60, ge=2)
-    scale_window: int = Field(default=10, ge=2)
-    k: float = Field(default=2.0, gt=0)
-
-
 StrategyConfig = Annotated[
     SMAConfig
     | MomentumConfig
@@ -274,7 +267,6 @@ StrategyConfig = Annotated[
     | CoppockCurveConfig
     | TrueStrengthIndexConfig
     | ChandeMomentumConfig
-    | NarrowRangeBreakoutConfig
-    | TwoTimescaleReversionConfig,
+    | NarrowRangeBreakoutConfig,
     Field(discriminator="name"),
 ]

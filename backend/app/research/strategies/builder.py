@@ -55,7 +55,6 @@ from app.research.strategies.configs import (
     TripleMAAlignmentConfig,
     TRIXConfig,
     TrueStrengthIndexConfig,
-    TwoTimescaleReversionConfig,
     UltimateOscillatorConfig,
     VolManagedMomentumConfig,
     VolTargetedSMAConfig,
@@ -86,7 +85,6 @@ from app.research.strategies.trend_filtered_mean_reversion import (
 from app.research.strategies.triple_ma_alignment import TripleMAAlignmentStrategy
 from app.research.strategies.trix import TRIXStrategy
 from app.research.strategies.true_strength_index import TrueStrengthIndexStrategy
-from app.research.strategies.two_timescale_reversion import TwoTimescaleReversionStrategy
 from app.research.strategies.ultimate_oscillator import UltimateOscillatorStrategy
 from app.research.strategies.vol_managed_momentum import VolManagedMomentumStrategy
 from app.research.strategies.vol_targeted_sma import VolTargetedSMAStrategy
@@ -225,10 +223,6 @@ def build_strategy(config: StrategyConfig) -> BaseStrategy:
         return ChandeMomentumStrategy(window=config.window, threshold=config.threshold)
     if isinstance(config, NarrowRangeBreakoutConfig):
         return NarrowRangeBreakoutStrategy(window=config.window)
-    if isinstance(config, TwoTimescaleReversionConfig):
-        return TwoTimescaleReversionStrategy(
-            level_span=config.level_span, scale_window=config.scale_window, k=config.k
-        )
     # Defensive catch-all. Unreachable as long as StrategyConfig stays in lockstep with
     # the isinstance chain above; the catalog-consistency test enforces that. A missing
     # branch here would surface as this exception in dev rather than a silent wrong type.
