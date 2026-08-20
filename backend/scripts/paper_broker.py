@@ -69,14 +69,38 @@ def main() -> None:  # pragma: no cover - live wiring, exercised by the @live sm
     orders = reconcile(broker, targets)
 
     # Snapshot the real account onto the committed equity curve so performance is watchable over
-    # time (the honest "are we making money?" record vs the $100k paper start).
+    # time. Benchmark it against SPY over the SAME since-inception window so the curve records ALPHA
+    # — the only honest "are we beating the market?" number, not an absolute return a rising tide
+    # would flatter. Best-effort: a benchmark fetch failure leaves alpha unmeasured, not the snapshot.
     curve = JsonFileEquityCurve(EQUITY_CURVE)
-    curve.save(append_equity_point(curve.all(), account, n_positions=len(open_positions), now=now))
+    history = curve.all()
+    inception = history[0].timestamp if history else now
+    benchmark_return: float | None = None
+    try:
+        spy = adapter.fetch_price_bars("SPY", inception, now)
+        if len(spy) >= 2:
+            benchmark_return = float(spy[-1].close) / float(spy[0].close) - 1.0
+    except (ValueError, OSError):
+        benchmark_return = None
+    curve.save(
+        append_equity_point(
+            history,
+            account,
+            n_positions=len(open_positions),
+            now=now,
+            benchmark_return=benchmark_return,
+        )
+    )
     _print_summary(open_positions, targets, orders, equity)
     latest = curve.all()[-1]
+    alpha_str = (
+        f", alpha {latest.alpha_since_start:+.2%} vs SPY"
+        if latest.alpha_since_start is not None
+        else ""
+    )
     print(
         f"\nequity curve: ${latest.equity:,.2f} "
-        f"({latest.return_since_start:+.2%} since $100k start) -> {EQUITY_CURVE.name}"
+        f"({latest.return_since_start:+.2%} since $100k start{alpha_str}) -> {EQUITY_CURVE.name}"
     )
 
 

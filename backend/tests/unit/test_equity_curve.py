@@ -61,3 +61,29 @@ def test_json_store_round_trips_with_trailing_newline(tmp_path: Path) -> None:
 
 def test_json_store_is_empty_before_first_write(tmp_path: Path) -> None:
     assert JsonFileEquityCurve(tmp_path / "absent.json").all() == []
+
+
+def test_append_without_a_benchmark_leaves_alpha_unmeasured() -> None:
+    # Backward-compatible default: no benchmark supplied -> both fields None (honestly "not
+    # measured", never backfilled), exactly like other nullable additive fields in the codebase.
+    pt = append_equity_point([], _account("95000"), n_positions=2, now=_NOW)[0]
+    assert pt.benchmark_return_since_start is None
+    assert pt.alpha_since_start is None
+
+
+def test_append_records_benchmark_and_alpha_when_supplied() -> None:
+    # The account is down 5% from $100k while the benchmark returned +1% over the same window ->
+    # the honest verdict is NEGATIVE alpha of ~6 points, invisible in absolute return alone.
+    pt = append_equity_point([], _account("95000"), n_positions=2, now=_NOW, benchmark_return=0.01)[
+        0
+    ]
+    assert pt.return_since_start == pytest.approx(-0.05)
+    assert pt.benchmark_return_since_start == pytest.approx(0.01)
+    assert pt.alpha_since_start == pytest.approx(-0.06)  # return_since_start - benchmark_return
+
+
+def test_alpha_is_positive_only_when_the_book_beats_the_benchmark() -> None:
+    beat = append_equity_point(
+        [], _account("108000"), n_positions=1, now=_NOW, benchmark_return=0.03
+    )[0]
+    assert beat.alpha_since_start == pytest.approx(0.05)  # +8% book vs +3% market = +5% alpha
