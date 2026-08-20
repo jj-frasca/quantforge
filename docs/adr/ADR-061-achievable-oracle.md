@@ -97,6 +97,29 @@ read capture against it.**
 - ADR-045's capture ratio keeps its meaning and its published values. What changes is which
   denominator a *reader* should use for a process whose state is latent.
 
+## Measured (run 32429958109, committed `68b33cb`)
+
+The production sweep — 50 symbols per cell rather than the 10 seeds of §Context, same 5400 bars,
+`search_config_version 3f36fda2…` — reproduces the probe and settles the reading:
+
+| band half-life | 1 | 2 | 3 | 5 | 10 | 20 |
+|---|---|---|---|---|---|---|
+| latent-state oracle, net | +1.70 | +1.93 | +2.13 | +2.21 | +1.71 | +1.24 |
+| **achievable (Kalman) oracle, net** | **−0.08** | **+0.22** | **+0.51** | **+0.95** | **+0.93** | **+0.70** |
+| capture vs latent (headline) | 32% | 29% | 31% | 45% | 56% | 58% |
+| **capture vs achievable** | *refused* | 261% | 130% | 105% | 103% | 104% |
+| matched-family (Mean Reversion) vs achievable | *refused* | 228% | 121% | 102% | 103% | 103% |
+
+**The catalog converts essentially all of the recoverable edge at every half-life from 3 onward, and
+at half-lives 1–2 there is nothing recoverable to convert** — the ratio is refused at half-life 1
+because the achievable oracle sits inside its own Sharpe standard error, and the 261%/228% at
+half-life 2 is the in-sample selection bias of a numerator divided by a denominator of +0.22.
+
+The zero detection rate across every band cell is therefore fully explained without any reference to
+the catalog: an achievable net Sharpe of at most ≈0.95 is far below the ≈2.1 ADR-043's frontier
+requires at this universe size and holdout length. **A gate that graduated any of these cells would
+be wrong.**
+
 ## Reversal
 
 Drop `filtered_deviation`, the `achievable_conditional_mean` field, the two `PowerCalibration`
