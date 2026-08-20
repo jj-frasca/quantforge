@@ -139,10 +139,20 @@ band reversion cannot produce a large tradeable Sharpe at equity volatility**, s
 shape is outside this pipeline's resolution no matter which strategy is pointed at it.
 
 **4. What this changes about where to search.** The catalog's blind spot is *fast* reversion, not
-reversion. A one-bar effect is invisible to every 14-to-20-bar oscillator in the catalog, and
-adding more oscillators of the same window length will not change that — the fix, if this is ever
-worth fixing, is a short-window strategy, not another indicator. Nothing here licenses touching a
-threshold (charter §4).
+reversion. Nothing here licenses touching a threshold (charter §4).
+
+> **CORRECTED 2026-08-20 (ADR-045).** This reading originally continued: "a one-bar effect is
+> invisible to every 14-to-20-bar oscillator in the catalog [...] the fix, if this is ever worth
+> fixing, is a short-window strategy". That mechanism was asserted without checking and is wrong.
+> `grid_from_catalog` resolves `window = 2` as the FIRST coarse grid point for
+> `rsi_mean_reversion`, `connors_rsi`, `bollinger_bands` and `mean_reversion`, and `connors_rsi`
+> defaults to a 2-bar window by design — the short-window configurations are searched at both
+> horizons and win at neither (the winning window is 26-100 bars in both cases). The real mechanism
+> is this ADR's own arithmetic: holding the oracle Sharpe fixed while shortening the half-life
+> forces the deviation's amplitude from 1.9% of price at 5 bars down to **0.49% at 1 bar**, so a
+> fast band worth the same per bar is a smaller, noisier target to infer from prices. What degrades
+> is estimation, not window length, and **a short-window strategy would not fix it.** Measured
+> capture: 0.18-0.29 at a 1-bar half-life against 0.45-0.50 at 5 bars (ADR-045).
 
 **Honest limits.** N = 50 per row, so a 42% rate carries a 95% interval of roughly 28-58% and the
 0%/2% rows roughly 0-7%; the tier-A trend across four rows is far larger than that noise, but no
