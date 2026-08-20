@@ -5,9 +5,18 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
-from app.api.v1.lab import get_calibration_path, get_pool_path, get_portfolio_path
+from app.api.v1.lab import (
+    get_calibration_path,
+    get_pool_path,
+    get_portfolio_path,
+    get_power_calibration_path,
+)
 from app.main import app
-from app.research.lab.calibration import NullCalibration
+from app.research.lab.calibration import (
+    NullCalibration,
+    PowerCalibration,
+    collect_power_sweep,
+)
 from app.research.lab.experiment import Experiment, Graduate, PartitionedExperimentStore, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
@@ -175,6 +184,58 @@ def test_null_calibration_endpoint_is_empty_when_nothing_has_been_measured(tmp_p
     """An empty list is honest; a 500 would take the whole dashboard down with it."""
     app.dependency_overrides[get_calibration_path] = lambda: tmp_path / "missing"
     response = TestClient(app).get("/api/v1/null-calibration")
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+# --- ADR-053: the measured power curve, served beside the measured Type-I error ---
+
+
+def _sweep_json(edge: str, keys: list[float]) -> str:
+    cells = [
+        PowerCalibration(
+            n_symbols=50,
+            n_detected=int(50 * rate),
+            detection_rate=rate,
+            n_clear_deflation_bar=0,
+            deflation_bar=2.11,
+            edge=edge,
+            phi=key if edge == "ar1" else None,
+            half_life=None if edge == "ar1" else key,
+            oracle_sharpes=[2.0] * 50,
+            holdout_years=[4.3] * 50,
+            n_bars=[5400] * 50,
+            errors={},
+            gate_config_version="v1",
+            search_config_version="search-v1",
+        )
+        for key, rate in zip(keys, (0.1, 0.2), strict=True)
+    ]
+    return collect_power_sweep(cells).model_dump_json()
+
+
+def test_power_calibration_endpoint_returns_every_measured_sweep(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    (tmp_path / "ar1.json").write_text(_sweep_json("ar1", [-0.3, 0.3]))
+    (tmp_path / "band_reversion.json").write_text(_sweep_json("band_reversion", [1.0, 5.0]))
+    app.dependency_overrides[get_power_calibration_path] = lambda: tmp_path
+
+    response = TestClient(app).get("/api/v1/power-calibration")
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert {sweep["edge"] for sweep in body} == {"ar1", "band_reversion"}
+    assert all(sweep["n_bars"] == 5400 for sweep in body)
+    assert [cell["detection_rate"] for cell in body[0]["cells"]] == [0.1, 0.2]
+
+
+def test_power_calibration_endpoint_is_empty_when_nothing_has_been_measured(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Same contract as the null endpoint: an absent measurement is [] and 200, never a 500 that
+    takes the dashboard down."""
+    app.dependency_overrides[get_power_calibration_path] = lambda: tmp_path / "missing"
+    response = TestClient(app).get("/api/v1/power-calibration")
     app.dependency_overrides.clear()
 
     assert response.status_code == 200

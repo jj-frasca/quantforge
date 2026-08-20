@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.research.lab.calibration import NullCalibration
+from app.research.lab.calibration import NullCalibration, PowerSweep
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
 from app.research.lab.pool_report import PoolReport, summarize_pool
@@ -56,6 +56,11 @@ def pool_report(
     )
 
 
+def get_power_calibration_path() -> Path:
+    """Directory of committed power sweeps, one per planted process — ADR-053 (overridable)."""
+    return _DATA / "power_calibration"
+
+
 # Sync + read-only: the measured Type-I error of the WHOLE gate (ADR-036/037), written by the
 # null-calibration workflow. Returns one row per null mode, or [] when none has been measured —
 # an empty list is honest, and a 500 here would take the rest of the dashboard down with it.
@@ -68,4 +73,19 @@ def null_calibration(
     return [
         NullCalibration.model_validate_json(path.read_text())
         for path in sorted(calibration_path.glob("*.json"))
+    ]
+
+
+# Sync + read-only: the measured POWER of the whole gate (ADR-041/042/053), written by the two
+# power workflows. Served beside the Type-I error deliberately: a visible false-graduation rate
+# with no visible detection rate reads as strength when it is only conservatism.
+@router.get("/power-calibration", response_model=list[PowerSweep])
+def power_calibration(
+    power_calibration_path: Annotated[Path, Depends(get_power_calibration_path)],
+) -> list[PowerSweep]:
+    if not power_calibration_path.is_dir():
+        return []
+    return [
+        PowerSweep.model_validate_json(path.read_text())
+        for path in sorted(power_calibration_path.glob("*.json"))
     ]
