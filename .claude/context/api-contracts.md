@@ -335,7 +335,15 @@ parameter today. Reading them together is the fastest way to understand what the
   PLANTED edge (ADR-041/042/053), one sweep per planted process, cells listed rather than merged
   because each plants a different effect size and is judged at its own N. Same `[]`-and-200
   contract. Serving it beside `/null-calibration` is deliberate — a false-graduation rate with no
-  detection rate beside it reads conservatism as strength.
+  detection rate beside it reads conservatism as strength. Each cell carries **two** effect sizes:
+  `oracle_sharpes` is cost-free and `net_oracle_sharpes` charges the same turnover cost the catalog
+  pays (ADR-055). A capture ratio must be taken against the NET one — the finalist Sharpe in the
+  numerator already paid those costs — and an empty `net_oracle_sharpes` means a cell measured
+  before the correction, never an oracle of zero.
+- `/pool-report` also carries `statistic_agreement` (ADR-054): how often the selection-adjusted
+  Sharpe margin the gate uses and the paper's probability-form DSR reach the same verdict on the
+  same finalist. Its `probability_reference` is a stated reading level; **nothing gates on it**.
+  Null means no finalist in the pool carries a probability yet.
 - `/cross-sectional` returns `None` (JSON `null`) when the pool has no entry yet — an honest
   "nothing searched", distinct from an empty result.
 

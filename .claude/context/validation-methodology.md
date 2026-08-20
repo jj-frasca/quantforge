@@ -25,11 +25,31 @@ DSR = observed_sr - haircut
 - **Invariant**: `DSR ≤ observed_sr` always (haircut ≥ 0); more trials ⇒ larger haircut ⇒
   lower (or equal) DSR; N == 1 ⇒ DSR == observed_sr.
 
-**Important source distinction (FINDING-007).** The paper's DSR is a probability-form PSR against
-the expected-max threshold and includes sample length, skewness, and kurtosis. QuantForge's stored
-field is a selection-adjusted Sharpe **margin**, not that probability. Its `> 0` gate asks whether
-observed Sharpe clears the multiplicity threshold. Do not describe the value itself as a
-paper-form probability until FINDING-007 is resolved.
+**Important source distinction (FINDING-007, resolved by ADR-054).** The paper's DSR is a
+probability-form PSR against the expected-max threshold and includes sample length, skewness, and
+kurtosis. QuantForge's stored `deflated_sharpe` field is a selection-adjusted Sharpe **margin**, not
+that probability, and its `> 0` gate asks whether observed Sharpe clears the multiplicity threshold.
+**Never call the margin the Deflated Sharpe Ratio.** Both statistics now exist:
+
+- `probabilistic_sharpe_ratio(observed_sr, benchmark_sr, n_returns, skew, kurtosis)` — Eq. 1, with
+  **RAW** kurtosis (a Normal series is 3.0, which reduces the denominator to `1/sqrt(n-1)`). pandas
+  reports EXCESS kurtosis; `return_moments()` in `backtesting/metrics.py` does the conversion and is
+  the only thing that should be feeding this function.
+- `deflated_sharpe_probability(...)` — the paper's Eq. 2: PSR against `expected_max_sharpe`.
+- `Trial.deflated_sharpe_probability` records it on every new search, nullable so the ~3,200
+  pre-ADR-054 pool rows read as *not measured* rather than as a probability of zero.
+
+**The scale trap, which is why this took two attempts.** Everything on a `Trial` is ANNUALIZED; the
+PSR is a function of the PER-PERIOD Sharpe and the per-period moments TOGETHER. Mixing one
+annualized input with two per-period ones silently rescales the probability instead of failing.
+`whole_search_deflated_sharpe_probabilities()` divides the observed Sharpe AND the trial dispersion
+by the same `sqrt(252)`; do not add a caller that skips one of them.
+
+**The gate still gates on the MARGIN.** `PoolReport.statistic_agreement` counts how often the two
+statistics reach the same verdict on the same finalist, at a stated `probability_reference` that
+nothing gates on. Switching the gate to the probability is a threshold change: it requires a fresh
+Type-I error and a fresh power curve for the new statistic, all three calibration workflows
+re-dispatched together at the same `n_bars` (§7.2), and its own ADR.
 
 **Search-level accounting (ADR-046/050).** A StrategyLab run first evaluates parameter configs inside
 families and then selects across the family finalists. DSR must price that whole selection, not
