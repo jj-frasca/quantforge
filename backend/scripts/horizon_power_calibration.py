@@ -20,6 +20,7 @@ is not a hypothesis about a real one.
 
 import sys
 from pathlib import Path
+from statistics import median
 
 from app.research.lab.calibration import (
     PowerCalibration,
@@ -29,9 +30,11 @@ from app.research.lab.calibration import (
 )
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
-# Same shape a real hunt sees, matching the null and ADR-041 power drivers so the three are
-# comparable without an adjustment.
-N_BARS = 3000
+# ADR-051: the length a real hunt actually sees, matching the null and ADR-041 power drivers so the
+# three stay comparable without an adjustment. The previous 3000 was 55% of the hunt's history, and
+# a power number measured short bounds the power available rather than reporting it. `--n-bars`
+# overrides it.
+N_BARS = 5400
 
 
 def _flag(name: str) -> str | None:
@@ -47,6 +50,8 @@ def _report(result: PowerCalibration) -> None:
     print(f"search config version: {result.search_config_version}")
     print(f"adaptive refinement : {result.refine} (span {result.refine_span:.2f})")
     print(f"symbols searched    : {result.n_symbols}")
+    if result.n_bars:
+        print(f"bars per symbol     : {median(result.n_bars):.0f} (the hunt's own history length)")
     print(f"detected            : {result.n_detected}")
     print(f"DETECTION RATE      : {result.detection_rate:.1%}  <- power of the gate as such")
     if result.gate_pass_counts:
@@ -78,23 +83,25 @@ def main() -> None:
     out = _flag("--out")
     half_life_flag = _flag("--half-life")
     share_flag = _flag("--deviation-share")
-    consumed = {out, half_life_flag, share_flag} - {None}
+    n_bars_flag = _flag("--n-bars")
+    consumed = {out, half_life_flag, share_flag, n_bars_flag} - {None}
     positional = [a for a in sys.argv[1:] if not a.startswith("--") and a not in consumed]
 
     n_symbols = int(positional[0]) if positional else 50
     seed = int(positional[1]) if len(positional) > 1 else 0
     half_life = float(half_life_flag) if half_life_flag else 3.0
     share = float(share_flag) if share_flag else 0.409
+    n_bars = int(n_bars_flag) if n_bars_flag else N_BARS
 
     planted = {
         f"BAND{i:04d}": mean_reverting_edge(
-            N_BARS, seed=seed + i, half_life=half_life, deviation_share=share
+            n_bars, seed=seed + i, half_life=half_life, deviation_share=share
         )
         for i in range(n_symbols)
     }
     strategies = [entry.name for entry in STRATEGY_CATALOG]
     print(
-        f"measuring power against {n_symbols} band-reverting symbols x {N_BARS} bars over "
+        f"measuring power against {n_symbols} band-reverting symbols x {n_bars} bars over "
         f"{len(strategies)} strategies (half-life {half_life} bars, deviation share {share}, "
         f"seed {seed})...\n"
     )

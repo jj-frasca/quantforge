@@ -34,6 +34,10 @@ on:
         description: "Base RNG seed"
         required: false
         default: "0"
+      n_bars:
+        description: "Bars of history per planted-edge symbol (blank = the hunt's own length)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -80,10 +84,14 @@ jobs:
         run: |
           set -e
           OUT="$GITHUB_WORKSPACE/horizon_${{ matrix.half_life }}.json"
+          BARS=""
+          if [ -n "${{ github.event.inputs.n_bars }}" ]; then
+            BARS="--n-bars ${{ github.event.inputs.n_bars }}"
+          fi
           PYTHONPATH=. uv run python scripts/horizon_power_calibration.py \
             "${{ github.event.inputs.n_symbols || '50' }}" "${{ github.event.inputs.seed || '0' }}" \
             --half-life "${{ matrix.half_life }}" --deviation-share "${{ matrix.share }}" \
-            --out "$OUT" | tee "$GITHUB_WORKSPACE/horizon_${{ matrix.half_life }}.txt"
+            $BARS --out "$OUT" | tee "$GITHUB_WORKSPACE/horizon_${{ matrix.half_life }}.txt"
       - name: Upload the measurement
         if: ${{ always() && hashFiles(format('horizon_{0}.json', matrix.half_life)) != '' }}
         uses: actions/upload-artifact@v4

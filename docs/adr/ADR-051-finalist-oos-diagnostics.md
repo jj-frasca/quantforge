@@ -51,10 +51,17 @@ window onto the statistic.
 `no experiment passed the gate` and `median … over N finalists` are three different facts and the
 report must not print the first when the third is true.
 
-**3. Judge the null on the hunt's history.** `n_bars` becomes a driver argument and a recorded field
-on `NullCalibration`, defaulting to the hunt's span rather than to 3000, so an artifact
-self-documents the length it was judged at and old artifacts read back as `None` instead of
-silently claiming the new default.
+**3. Judge every calibration on the hunt's history.** `n_bars` becomes a driver argument and a
+recorded field on `NullCalibration` and `PowerCalibration` alike, defaulting to the hunt's span
+rather than to 3000, so an artifact self-documents the length it was judged at and old artifacts
+read back as empty instead of silently claiming the new default.
+
+The power drivers carry the identical defect and it bites harder there. `power_calibration.py` and
+`horizon_power_calibration.py` both plant their edge in 3000 bars, so the published *zero* power
+result — 0/50 detected in all twelve cells — was measured on 55% of the history a real hunt gets,
+against a MinTRL requirement that grows with the trial count but not with the record. A power
+number measured short is a lower bound on the power available, and the project's headline claim
+about strategy absence rests on it.
 
 ## Alternatives considered
 

@@ -761,3 +761,22 @@ def test_a_legacy_artifact_states_no_bar_count_rather_than_a_wrong_one() -> None
         _shard(n_symbols=2).model_dump_json(exclude={"n_bars"})
     )
     assert legacy.n_bars == []
+
+
+def test_power_records_the_bar_count_of_every_searched_symbol() -> None:
+    """The published zero-power result was measured on 3000 bars against a hunt that gets ~5400.
+    A power artifact that does not state its history length cannot be read as a bound on anything
+    (ADR-051)."""
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(2)}
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+
+    assert result.n_bars == [900, 900]
+    assert len(result.n_bars) == result.n_symbols
+
+
+def test_a_legacy_power_artifact_states_no_bar_count() -> None:
+    frames = {"EDGE0": autocorrelated_edge(900, seed=0, phi=-0.3)}
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+    legacy = PowerCalibration.model_validate(result.model_dump(exclude={"n_bars"}))
+
+    assert legacy.n_bars == []

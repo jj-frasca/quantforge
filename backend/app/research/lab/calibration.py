@@ -286,6 +286,10 @@ class PowerCalibration(BaseModel):
     # Empty means a legacy artifact did not preserve attribution; it never means zero passes.
     gate_pass_counts: dict[str, int] = Field(default_factory=dict)
     holdout_years: list[float]
+    # ADR-051: the history each planted-edge symbol was searched over, one entry per SEARCHED
+    # symbol. Power measured short is a lower bound on the power available, so an artifact that
+    # does not state its length cannot bound anything. Empty means a run predating the field.
+    n_bars: list[int] = []
     errors: dict[str, str]
     gate_config_version: str
     search_config_version: str = "legacy-unspecified"
@@ -504,6 +508,7 @@ def measure_power(
 
     experiments: list[Experiment] = []
     holdout_years: list[float] = []
+    n_bars: list[int] = []
     oracles: list[float] = []
     finalist_observed_sharpes: list[float] = []
     errors: dict[str, str] = {}
@@ -525,6 +530,7 @@ def measure_power(
             continue
         experiments.append(experiment)
         holdout_years.append(sealed.n_bars / _TRADING_DAYS)
+        n_bars.append(len(frame))
         oracles.append(oracle_sharpes[symbol])
         finalist_observed_sharpes.append(_finalist(experiment).observed_sharpe)
 
@@ -551,6 +557,7 @@ def measure_power(
         deviation_share=deviation_share,
         oracle_sharpes=oracles,
         finalist_observed_sharpes=finalist_observed_sharpes,
+        n_bars=n_bars,
         gate_pass_counts={
             "dsr": sum(result.dsr_ok for result in gate_results),
             "pbo": sum(result.pbo_ok for result in gate_results),

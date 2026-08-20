@@ -36,6 +36,10 @@ on:
         description: "Base RNG seed"
         required: false
         default: "0"
+      n_bars:
+        description: "Bars of history per planted-edge symbol (blank = the hunt's own length)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -64,9 +68,13 @@ jobs:
         run: |
           set -e
           OUT="$GITHUB_WORKSPACE/power_${{ matrix.phi }}.json"
+          BARS=""
+          if [ -n "${{ github.event.inputs.n_bars }}" ]; then
+            BARS="--n-bars ${{ github.event.inputs.n_bars }}"
+          fi
           PYTHONPATH=. uv run python scripts/power_calibration.py \
             "${{ github.event.inputs.n_symbols || '50' }}" "${{ github.event.inputs.seed || '0' }}" \
-            --phi "${{ matrix.phi }}" --out "$OUT" | tee "$GITHUB_WORKSPACE/power_${{ matrix.phi }}.txt"
+            --phi "${{ matrix.phi }}" $BARS --out "$OUT" | tee "$GITHUB_WORKSPACE/power_${{ matrix.phi }}.txt"
       - name: Upload the measurement
         if: ${{ always() && hashFiles(format('power_{0}.json', matrix.phi)) != '' }}
         uses: actions/upload-artifact@v4

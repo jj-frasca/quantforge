@@ -20,12 +20,17 @@ in CI; writes no pooled data — a synthetic symbol is not a hypothesis about a 
 
 import sys
 from pathlib import Path
+from statistics import median
 
 from app.research.lab.calibration import PowerCalibration, autocorrelated_edge, measure_power
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
-# Same shape a real hunt sees, matching the null driver so power and Type-I error are comparable.
-N_BARS = 3000
+# ADR-051: the length a real hunt actually sees (scripts/shard_hunt.py starts at 2005-01-01, so a
+# long-lived name carries ~5400 trading days by 2026), matching the null driver so power and Type-I
+# error stay comparable. The previous 3000 measured power on 55% of the hunt's history against a
+# MinTRL requirement that grows with the trial count but not with the record, which makes a zero
+# result a lower bound rather than a finding. `--n-bars` overrides it.
+N_BARS = 5400
 
 
 def _flag(name: str) -> str | None:
@@ -42,6 +47,8 @@ def _report(result: PowerCalibration) -> None:
     print(f"search config version: {result.search_config_version}")
     print(f"adaptive refinement : {result.refine} (span {result.refine_span:.2f})")
     print(f"symbols searched    : {result.n_symbols}")
+    if result.n_bars:
+        print(f"bars per symbol     : {median(result.n_bars):.0f} (the hunt's own history length)")
     print(f"detected            : {result.n_detected}")
     print(f"DETECTION RATE      : {result.detection_rate:.1%}  <- power of the gate as such")
     if result.gate_pass_counts:
@@ -73,19 +80,21 @@ def main() -> None:
     shard_spec = _flag("--shard")
     out = _flag("--out")
     phi_flag = _flag("--phi")
-    consumed = {shard_spec, out, phi_flag} - {None}
+    n_bars_flag = _flag("--n-bars")
+    consumed = {shard_spec, out, phi_flag, n_bars_flag} - {None}
     positional = [a for a in sys.argv[1:] if not a.startswith("--") and a not in consumed]
 
     n_symbols = int(positional[0]) if positional else 50
     seed = int(positional[1]) if len(positional) > 1 else 0
     phi = float(phi_flag) if phi_flag else -0.20
     shard, n_shards = (int(x) for x in shard_spec.split("/")) if shard_spec else (0, 1)
+    n_bars = int(n_bars_flag) if n_bars_flag else N_BARS
     indices = [i for i in range(n_symbols) if i % n_shards == shard]
 
-    frames = {f"EDGE{i:04d}": autocorrelated_edge(N_BARS, seed=seed + i, phi=phi) for i in indices}
+    frames = {f"EDGE{i:04d}": autocorrelated_edge(n_bars, seed=seed + i, phi=phi) for i in indices}
     strategies = [entry.name for entry in STRATEGY_CATALOG]
     print(
-        f"measuring power against {len(indices)} of {n_symbols} planted-edge symbols x {N_BARS} "
+        f"measuring power against {len(indices)} of {n_symbols} planted-edge symbols x {n_bars} "
         f"bars over {len(strategies)} strategies (phi {phi:+.3f}, seed {seed}, "
         f"shard {shard}/{n_shards})...\n"
     )
