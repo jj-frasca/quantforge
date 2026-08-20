@@ -1,7 +1,7 @@
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from statistics import median
-from typing import Any
+from typing import Any, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
@@ -211,7 +211,12 @@ class PowerCalibration(BaseModel):
     detection_rate: float
     n_clear_deflation_bar: int
     deflation_bar: float
-    phi: float
+    # Which process was planted, so an artifact is reproducible without its workflow file. `phi`
+    # describes ADR-041's AR(1); `half_life`/`deviation_share` describe ADR-042's band reversion.
+    edge: str = "ar1"
+    phi: float | None = None
+    half_life: float | None = None
+    deviation_share: float | None = None
     oracle_sharpes: list[float]
     holdout_years: list[float]
     errors: dict[str, str]
@@ -272,9 +277,22 @@ def oracle_sharpe(frame: pd.DataFrame, *, phi: float) -> float:
         carries no theory that could be silently wrong.
     """
     returns = frame["close"].pct_change().dropna()
+    return oracle_sharpe_of(frame, phi * returns.shift(1))
+
+
+def oracle_sharpe_of(frame: pd.DataFrame, conditional_mean: "pd.Series[float]") -> float:
+    """Annualized Sharpe of `position_t = sign(E[r_t | F_{t-1}])` on `frame` (ADR-042).
+
+    Notes:
+        The generic form of `oracle_sharpe`: any planted process can report its effect size on the
+        same scale as ADR-041's AR(1) one by handing over its own conditional mean. `conditional_mean`
+        must already be lagged — indexed by the bar it PREDICTS, using only information available
+        before that bar.
+    """
+    returns = frame["close"].pct_change().dropna()
     if len(returns) < 3:
         return 0.0
-    position = np.sign(phi * returns.shift(1))
+    position = np.sign(conditional_mean.reindex(returns.index))
     realized = (position * returns).dropna()
     std = float(realized.std())
     if std == 0.0:
@@ -282,23 +300,116 @@ def oracle_sharpe(frame: pd.DataFrame, *, phi: float) -> float:
     return float(np.sqrt(_TRADING_DAYS) * realized.mean() / std)
 
 
+class PlantedEdge(NamedTuple):
+    """A planted-edge frame with the latent state that makes its effect size measurable.
+
+    Notes:
+        `conditional_mean` is `E[r_t | F_{t-1}]`, indexed by the bar it predicts — what an oracle
+        with knowledge of the process, but not of the future, would act on. `deviation` is the
+        latent distance from the level, kept because `half_life` is a statement about IT and not
+        about the returns.
+    """
+
+    frame: pd.DataFrame
+    conditional_mean: "pd.Series[float]"
+    deviation: "pd.Series[float]"
+
+
+def mean_reverting_edge(
+    n_bars: int,
+    *,
+    seed: int,
+    half_life: float,
+    deviation_share: float,
+    total_vol: float = 0.012,
+    drift: float = 0.0003,
+    start_price: float = 100.0,
+) -> PlantedEdge:
+    """A price that wanders (random-walk level) and reverts to where it wandered (ADR-042).
+
+    Notes:
+        `half_life` is the number of bars in which a deviation from the level decays by half, i.e.
+        the horizon a band/oscillator strategy is meant to trade — the parameter ADR-041's lag-1
+        AR(1) process could not express. `deviation_share` is the share of total return variance
+        the reverting component contributes; the level volatility is solved for so realized
+        volatility stays at `total_vol` at every horizon, without which a horizon sweep would move
+        the volatility and the effect size at the same time and confound all three.
+
+        Effect size is bounded by the horizon: only `(1 - rho) / 2` of the deviation's variance is
+        predictable one bar ahead, so a slow band cannot be as tradeable as a fast one — see
+        ADR-042 for why the sweep is therefore read in two tiers.
+    """
+    if n_bars < 1:
+        raise ValueError("n_bars must be >= 1")
+    if half_life <= 0.0:
+        raise ValueError("half_life must be > 0 bars")
+    if not 0.0 < deviation_share <= 1.0:
+        raise ValueError("deviation_share must be in (0, 1]")
+
+    rho = 0.5 ** (1.0 / half_life)
+    deviation_vol = total_vol * np.sqrt(deviation_share / (2.0 * (1.0 - rho)))
+    level_vol = total_vol * np.sqrt(1.0 - deviation_share)
+
+    rng = np.random.default_rng(seed)
+    shocks = rng.normal(0.0, deviation_vol * np.sqrt(1.0 - rho**2), n_bars)
+    deviations = np.empty(n_bars, dtype=float)
+    previous = 0.0
+    for i, shock in enumerate(shocks):
+        previous = rho * previous + shock
+        deviations[i] = previous
+
+    levels = np.cumsum(rng.normal(drift, level_vol, n_bars))
+    closes = start_price * np.exp(levels + deviations)
+    opens = closes * (1.0 + rng.normal(0.0, total_vol / 3.0, n_bars))
+    highs = np.maximum(opens, closes) * (1.0 + np.abs(rng.normal(0.0, total_vol / 2.0, n_bars)))
+    lows = np.minimum(opens, closes) * (1.0 - np.abs(rng.normal(0.0, total_vol / 2.0, n_bars)))
+    volumes = rng.integers(1_000_000, 5_000_000, n_bars).astype(float)
+    frame = _ohlcv(closes, opens, highs, lows, volumes)
+
+    deviation = pd.Series(deviations, index=frame.index)
+    # E[r_t | F_{t-1}] = drift + (rho - 1) * dev_{t-1}: the level is a martingale, so everything
+    # predictable about the next bar is the part of the deviation that is about to decay away.
+    conditional_mean = drift + (rho - 1.0) * deviation.shift(1)
+    return PlantedEdge(frame=frame, conditional_mean=conditional_mean, deviation=deviation)
+
+
 def measure_power(
     frames: Mapping[str, pd.DataFrame],
     strategy_names: Sequence[str],
     *,
-    phi: float,
+    phi: float | None = None,
+    oracle_sharpes: Mapping[str, float] | None = None,
+    edge: str = "ar1",
+    half_life: float | None = None,
+    deviation_share: float | None = None,
     config: GateConfig | None = None,
     n_per_param: int = 3,
 ) -> PowerCalibration:
     """Run the unmodified search + gate over frames with a PLANTED edge and count detections.
 
     Notes:
+        Give `phi` for ADR-041's AR(1) process and the effect size is measured here; give
+        `oracle_sharpes` for any other planted process (ADR-042) and the caller supplies the effect
+        size it measured with `oracle_sharpe_of`. Exactly one, because defaulting either way would
+        mislabel the effect size of a whole published run.
+
         Deliberately takes no ExperimentStore, exactly as `calibrate_gate` does not: a synthetic
         symbol is not a hypothesis about a real one and must never reach the research pool or the
         MinTRL denominator (ADR-036/041).
     """
     if not frames:
         raise ValueError("need at least one symbol to measure power")
+    one_source = "pass exactly one of phi (AR(1)) or oracle_sharpes (any other process)"
+    if oracle_sharpes is None:
+        if phi is None:
+            raise ValueError(one_source)
+        oracle_sharpes = {symbol: oracle_sharpe(frame, phi=phi) for symbol, frame in frames.items()}
+    elif phi is not None:
+        raise ValueError(one_source)
+    else:
+        missing = sorted(set(frames) - set(oracle_sharpes))
+        if missing:
+            raise ValueError(f"no measured oracle Sharpe for {', '.join(missing)}")
     gate_config = config or GateConfig()
 
     experiments: list[Experiment] = []
@@ -321,7 +432,7 @@ def measure_power(
             continue
         experiments.append(experiment)
         holdout_years.append(sealed.n_bars / _TRADING_DAYS)
-        oracles.append(oracle_sharpe(frame, phi=phi))
+        oracles.append(oracle_sharpes[symbol])
 
     if not experiments:
         raise ValueError("need at least one symbol that can be searched")
@@ -339,7 +450,10 @@ def measure_power(
             if e.graduate is not None
         ),
         deflation_bar=expected_max_sharpe_under_null(n_symbols, median(holdout_years)),
+        edge=edge,
         phi=phi,
+        half_life=half_life,
+        deviation_share=deviation_share,
         oracle_sharpes=oracles,
         holdout_years=holdout_years,
         errors=errors,

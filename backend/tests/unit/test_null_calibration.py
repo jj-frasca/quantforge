@@ -23,9 +23,11 @@ from app.research.lab.calibration import (
     calibrate_gate,
     drop_incomplete_bars,
     iid_normal_null,
+    mean_reverting_edge,
     measure_power,
     merge_calibrations,
     oracle_sharpe,
+    oracle_sharpe_of,
 )
 from app.research.lab.universe import expected_max_sharpe_under_null
 
@@ -468,3 +470,129 @@ def test_calibrate_gate_refuses_a_universe_where_nothing_can_be_searched() -> No
     """A universe of unsearchable symbols is a broken run, not a 0% false-graduation rate."""
     with pytest.raises(ValueError, match="at least one null symbol that can be searched"):
         calibrate_gate({"TOOSHORT": iid_normal_null(30, seed=0)}, ["sma", "momentum"])
+
+
+# --- ADR-042: the same power question, with the reversion HORIZON as the parameter ---
+
+
+def test_mean_reverting_edge_reverts_at_the_requested_half_life() -> None:
+    """A deviation with a 10-bar half-life still shows ~half of itself 10 bars later; a 1-bar one
+    is long gone. Measured on the latent deviation, which is what `half_life` is about."""
+    slow = mean_reverting_edge(6000, seed=0, half_life=10.0, deviation_share=0.75)
+    fast = mean_reverting_edge(6000, seed=0, half_life=1.0, deviation_share=0.75)
+    assert slow.deviation.autocorr(lag=10) == pytest.approx(0.5, abs=0.1)
+    assert abs(float(fast.deviation.autocorr(lag=10))) < 0.1
+
+
+def test_mean_reverting_edge_is_mean_reverting_in_returns_at_every_horizon() -> None:
+    """The point of the process: whatever the half-life, next-bar returns lean AGAINST the
+    deviation. A positive lag-1 return autocorrelation would mean it plants trend, not reversion."""
+    for half_life in (1.0, 5.0, 20.0):
+        frame = mean_reverting_edge(6000, seed=1, half_life=half_life, deviation_share=0.75).frame
+        assert float(frame["close"].pct_change().dropna().autocorr(lag=1)) < 0.0
+
+
+def test_mean_reverting_edge_holds_total_volatility_across_horizons() -> None:
+    """The reason the generator takes a variance SHARE and not a deviation volatility: if realized
+    volatility moved with the horizon, every detection rate in the sweep would confound the two."""
+    vols = [
+        float(
+            mean_reverting_edge(6000, seed=2, half_life=h, deviation_share=0.6)
+            .frame["close"]
+            .pct_change()
+            .dropna()
+            .std()
+        )
+        for h in (1.0, 5.0, 20.0)
+    ]
+    for vol in vols:
+        assert vol == pytest.approx(0.012, rel=0.15)
+
+
+def test_a_mean_reverting_edge_frame_is_a_valid_price_frame() -> None:
+    planted = mean_reverting_edge(500, seed=3, half_life=5.0, deviation_share=0.5)
+    frame = planted.frame
+    assert list(frame.columns) == ["open", "high", "low", "close", "volume"]
+    assert (frame["high"] >= frame[["open", "close"]].max(axis=1)).all()
+    assert (frame["low"] <= frame[["open", "close"]].min(axis=1)).all()
+    assert (frame["close"] > 0).all()
+    assert planted.conditional_mean.index.equals(frame.index)
+
+
+def test_mean_reverting_edge_rejects_impossible_parameters() -> None:
+    with pytest.raises(ValueError, match="half_life"):
+        mean_reverting_edge(500, seed=0, half_life=0.0, deviation_share=0.5)
+    with pytest.raises(ValueError, match="deviation_share"):
+        mean_reverting_edge(500, seed=0, half_life=5.0, deviation_share=0.0)
+    with pytest.raises(ValueError, match="deviation_share"):
+        mean_reverting_edge(500, seed=0, half_life=5.0, deviation_share=1.5)
+    with pytest.raises(ValueError, match="n_bars"):
+        mean_reverting_edge(0, seed=0, half_life=5.0, deviation_share=0.5)
+
+
+def test_oracle_sharpe_of_scores_the_conditional_mean_the_engine_could_act_on() -> None:
+    """Same rule as ADR-041's AR(1) oracle — sign of E[r_t | F_{t-1}], one-bar lagged — so power
+    at a planted half-life is comparable with power at a planted phi."""
+    planted = mean_reverting_edge(3000, seed=4, half_life=3.0, deviation_share=0.7)
+    assert oracle_sharpe_of(planted.frame, planted.conditional_mean) > 1.0
+
+
+def test_the_oracle_sharpe_ceiling_falls_as_the_horizon_lengthens() -> None:
+    """ADR-042's stated bound: the one-bar-predictable share of the deviation's variance is
+    (1-rho)/2, so a slow band cannot be as tradeable as a fast one at the same volatility. This is
+    the reason the sweep is read in two tiers, so it is asserted rather than assumed."""
+    at_share_one = [
+        oracle_sharpe_of(p.frame, p.conditional_mean)
+        for p in (
+            mean_reverting_edge(4000, seed=5, half_life=h, deviation_share=1.0)
+            for h in (1.0, 5.0, 20.0)
+        )
+    ]
+    assert at_share_one[0] > at_share_one[1] > at_share_one[2]
+
+
+def test_oracle_sharpe_of_a_band_frame_too_short_to_score_is_zero() -> None:
+    planted = mean_reverting_edge(2, seed=0, half_life=5.0, deviation_share=0.5)
+    assert oracle_sharpe_of(planted.frame, planted.conditional_mean) == 0.0
+
+
+def test_measure_power_accepts_measured_oracles_for_a_non_ar1_process() -> None:
+    planted = {
+        f"BAND{i}": mean_reverting_edge(900, seed=i, half_life=3.0, deviation_share=0.8)
+        for i in range(3)
+    }
+    result = measure_power(
+        {name: p.frame for name, p in planted.items()},
+        ["sma", "momentum"],
+        oracle_sharpes={
+            name: oracle_sharpe_of(p.frame, p.conditional_mean) for name, p in planted.items()
+        },
+        edge="band_reversion",
+        half_life=3.0,
+        deviation_share=0.8,
+    )
+    assert result.phi is None
+    assert result.edge == "band_reversion"
+    assert result.half_life == 3.0
+    assert result.deviation_share == 0.8
+    assert len(result.oracle_sharpes) == 3
+    assert 0.0 <= result.detection_rate <= 1.0
+
+
+def test_measure_power_needs_exactly_one_effect_size_source() -> None:
+    """Silently defaulting either way would mislabel the effect size of a whole published run."""
+    frames = {"BAND0": mean_reverting_edge(900, seed=0, half_life=3.0, deviation_share=0.8).frame}
+    with pytest.raises(ValueError, match="phi"):
+        measure_power(frames, ["sma"])
+    with pytest.raises(ValueError, match="phi"):
+        measure_power(frames, ["sma"], phi=-0.2, oracle_sharpes={"BAND0": 1.0})
+
+
+def test_measure_power_refuses_an_oracle_map_missing_a_searched_symbol() -> None:
+    """Dropping the missing symbol would silently shrink the reported effect-size distribution."""
+    frames = {
+        f"BAND{i}": mean_reverting_edge(900, seed=i, half_life=3.0, deviation_share=0.8).frame
+        for i in range(2)
+    }
+    with pytest.raises(ValueError, match="BAND1"):
+        measure_power(frames, ["sma"], oracle_sharpes={"BAND0": 1.0})
