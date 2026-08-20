@@ -218,3 +218,38 @@ def test_diagnostics_are_none_when_no_graduate_carries_them() -> None:
     report = summarize_pool([_exp("AAA", holdout_sharpe=1.0)], [])
     assert report.walk_forward_graduates is None
     assert report.purged_cv_graduates is None
+
+
+# --- ADR-043: what must be TRUE, reported beside what must be OBSERVED ---
+
+
+def test_report_carries_the_detectable_edge_frontier() -> None:
+    """The bar answers "what must be observed"; a session reading "0 of N clear the bar" needs the
+    other half — the true edge that clears it 80% of the time — in the same breath."""
+    report = summarize_pool([_exp("AAA", holdout_sharpe=1.2), _exp("BBB")], [])
+    frontier = report.frontier
+    assert frontier is not None
+    assert frontier.n_symbols == 2
+    assert frontier.holdout_years == pytest.approx(1080 / 252)
+    assert frontier.detectable_sharpe > frontier.bar
+
+
+def test_the_frontier_uses_the_median_holdout_length_of_the_graduates() -> None:
+    """A pool mixing 4-year and 1-year holdouts has no single bar, so the frontier is quoted at the
+    median length — taking the max or the min would flatter or damn the design by selection."""
+    report = summarize_pool(
+        [
+            _exp("AAA", holdout_sharpe=1.2, holdout_n_bars=252),
+            _exp("BBB", holdout_sharpe=1.2, holdout_n_bars=1080),
+            _exp("CCC", holdout_sharpe=1.2, holdout_n_bars=2520),
+        ],
+        [],
+    )
+    assert report.frontier is not None
+    assert report.frontier.holdout_years == pytest.approx(1080 / 252)
+
+
+def test_a_pool_with_no_graduate_has_no_frontier() -> None:
+    """No graduate means no measured holdout length, and inventing one would publish a detectable
+    edge for a design that was never run."""
+    assert summarize_pool([_exp("AAA"), _exp("BBB")], []).frontier is None

@@ -11,6 +11,7 @@ nothing, touches no network, so it is safe to run at any time.
 from pathlib import Path
 
 from app.research.lab.experiment import PartitionedExperimentStore
+from app.research.lab.frontier import describe_frontier
 from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.pool_report import summarize_pool
 
@@ -42,6 +43,22 @@ def main() -> None:
         f"ADR-018 best-of-{report.n_symbols} bar — the rest are not distinguishable from "
         f"selection luck"
     )
+
+    # ADR-043: the bar above says what must be OBSERVED; this says what must be TRUE for that
+    # observation to happen 80% of the time. Their difference is estimation noise, which is why an
+    # edge sitting exactly at the bar is a coin flip rather than a graduate.
+    if report.frontier is not None:
+        f = report.frontier
+        print(
+            f"RESOLUTION: an edge must be a TRUE annualized Sharpe of {f.detectable_sharpe:.2f} to "
+            f"clear that bar 80% of the time ({f.holdout_years:.1f}y holdout, SE {f.standard_error:.2f})"
+        )
+        halved = describe_frontier(max(2, f.n_symbols // 2), f.holdout_years)
+        doubled = describe_frontier(f.n_symbols, f.holdout_years * 2)
+        print(
+            f"            halving the universe -> {halved.detectable_sharpe:.2f}; doubling the "
+            f"holdout -> {doubled.detectable_sharpe:.2f}. History is the stronger lever."
+        )
 
     if report.near_misses:
         print("\nclosest to the bar (holdout Sharpe vs its own threshold):")

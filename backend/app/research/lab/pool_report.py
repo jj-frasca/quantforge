@@ -13,6 +13,7 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from app.research.lab.experiment import Experiment, Trial
+from app.research.lab.frontier import DetectionFrontier, describe_frontier
 from app.research.lab.paper import PaperPosition
 from app.research.lab.portfolio_manager import DeflationCohorts, deflation_cohorts
 from app.research.lab.universe import expected_max_sharpe_under_null, rank_experiments
@@ -68,6 +69,10 @@ class PoolReport(BaseModel):
     # is in that state, and "not measured" must never be read as a measured zero.
     walk_forward_graduates: DiagnosticSummary | None = None
     purged_cv_graduates: DiagnosticSummary | None = None
+    # ADR-043: the TRUE edge this design can detect, beside the bar an observation must clear.
+    # None when no graduate exists to take a holdout length from — inventing one would publish a
+    # detectable edge for a design that was never run.
+    frontier: DetectionFrontier | None = None
 
 
 def _summarize(trials: list[Trial], field: str) -> DiagnosticSummary | None:
@@ -128,6 +133,16 @@ def summarize_pool(
         if e.graduate is not None and e.trials
     ]
 
+    # Quoted at the MEDIAN graduate holdout length: a pool mixing 1-year and 10-year holdouts has
+    # no single bar, and taking the longest or the shortest would flatter or damn the design by
+    # selection (ADR-043).
+    holdout_lengths = [e.graduate.holdout_n_bars for e in experiments if e.graduate is not None]
+    frontier = (
+        describe_frontier(n_symbols, float(np.median(holdout_lengths)) / _TRADING_DAYS)
+        if holdout_lengths
+        else None
+    )
+
     open_positions = [p for p in positions if p.status == "open"]
     return PoolReport(
         n_experiments=len(experiments),
@@ -141,4 +156,5 @@ def summarize_pool(
         book=deflation_cohorts(open_positions),
         walk_forward_graduates=_summarize(passing_finalists, "walk_forward_oos_sharpe"),
         purged_cv_graduates=_summarize(passing_finalists, "purged_cv_oos_sharpe"),
+        frontier=frontier,
     )
