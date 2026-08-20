@@ -22,6 +22,7 @@ import sys
 from pathlib import Path
 from statistics import median
 
+from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.lab.calibration import (
     PowerCalibration,
     mean_reverting_edge,
@@ -69,11 +70,23 @@ def _report(result: PowerCalibration) -> None:
             f"oracle Sharpe       : median {pct[0]:+.2f} | p95 {pct[1]:+.2f} | max {pct[2]:+.2f} "
             "(the effect size actually planted, measured not derived)"
         )
+    net_pct = result.net_oracle_sharpe_percentiles
+    if net_pct is not None:
+        print(
+            f"oracle NET of costs : median {net_pct[0]:+.2f} | p95 {net_pct[1]:+.2f} | "
+            f"max {net_pct[2]:+.2f} (ADR-055: the same 10bp the catalog pays on turnover)"
+        )
     capture = result.capture_ratio
     if capture is not None:
         print(
             f"CAPTURE UPPER BOUND : {capture:.1%}  <- median finalist in-sample Sharpe / "
             "median oracle Sharpe (selection-biased)"
+        )
+    net_capture = result.net_capture_ratio
+    if net_capture is not None:
+        print(
+            f"  net of costs      : {net_capture:.1%}  <- the comparable ratio: both sides now "
+            "pay the same costs (ADR-055)"
         )
     if result.errors:
         print(f"unsearchable        : {len(result.errors)} symbol(s)")
@@ -110,6 +123,10 @@ def main() -> None:
         strategies,
         oracle_sharpes={
             name: oracle_sharpe_of(p.frame, p.conditional_mean) for name, p in planted.items()
+        },
+        net_oracle_sharpes={
+            name: oracle_sharpe_of(p.frame, p.conditional_mean, cost_rate=DEFAULT_COST_RATE)
+            for name, p in planted.items()
         },
         edge="band_reversion",
         half_life=half_life,

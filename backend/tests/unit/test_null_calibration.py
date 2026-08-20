@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.lab import calibration as calibration_module
 from app.research.lab.calibration import (
     NullCalibration,
@@ -846,3 +847,154 @@ def test_a_sweep_refuses_cells_measured_on_different_histories() -> None:
 def test_an_empty_sweep_is_refused_rather_than_written_as_a_curve() -> None:
     with pytest.raises(ValueError, match="at least one"):
         collect_power_sweep([])
+
+
+# --- ADR-055: the oracle pays the costs the catalog pays ---
+
+
+def test_charging_the_oracle_costs_lowers_its_measured_effect_size() -> None:
+    """The oracle is a SIGN strategy: it flips between +/-1 and turns over heavily, while every
+    catalog finalist it is divided into was charged 10bp on that same turnover."""
+    planted = mean_reverting_edge(3000, seed=0, half_life=1.0, deviation_share=0.169)
+    gross = oracle_sharpe_of(planted.frame, planted.conditional_mean)
+    net = oracle_sharpe_of(planted.frame, planted.conditional_mean, cost_rate=DEFAULT_COST_RATE)
+
+    assert 0.0 < net < gross
+
+
+def test_the_default_oracle_is_still_the_cost_free_one() -> None:
+    """Every committed power artifact was measured gross. A changed default would silently
+    restate published effect sizes."""
+    planted = mean_reverting_edge(3000, seed=1, half_life=3.0, deviation_share=0.409)
+    assert oracle_sharpe_of(planted.frame, planted.conditional_mean) == pytest.approx(
+        oracle_sharpe_of(planted.frame, planted.conditional_mean, cost_rate=0.0)
+    )
+
+
+def test_a_fast_flipping_process_loses_more_of_its_edge_to_costs() -> None:
+    """The correction is not a constant haircut — it is proportional to how often the oracle has
+    to trade, which is exactly what the horizon sweep varies."""
+    fast = mean_reverting_edge(3000, seed=2, half_life=1.0, deviation_share=0.169)
+    slow = mean_reverting_edge(3000, seed=2, half_life=20.0, deviation_share=0.75)
+    fast_loss = oracle_sharpe_of(fast.frame, fast.conditional_mean) - oracle_sharpe_of(
+        fast.frame, fast.conditional_mean, cost_rate=DEFAULT_COST_RATE
+    )
+    slow_loss = oracle_sharpe_of(slow.frame, slow.conditional_mean) - oracle_sharpe_of(
+        slow.frame, slow.conditional_mean, cost_rate=DEFAULT_COST_RATE
+    )
+
+    assert fast_loss > slow_loss
+
+
+def test_the_ar1_power_run_records_both_effect_sizes() -> None:
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(3)}
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+
+    assert len(result.net_oracle_sharpes) == 3
+    assert result.net_capture_ratio is not None
+    assert result.net_capture_ratio == pytest.approx(
+        np.median(result.finalist_observed_sharpes) / np.median(result.net_oracle_sharpes)
+    )
+    # The corrected denominator is smaller, so the corrected capture is larger. This is the
+    # denominator being fixed, not the catalog improving.
+    assert result.capture_ratio is not None
+    assert result.net_capture_ratio > result.capture_ratio
+
+
+def test_a_supplied_process_can_state_its_own_net_effect_size() -> None:
+    planted = {
+        f"BAND{i}": mean_reverting_edge(900, seed=i, half_life=3.0, deviation_share=0.409)
+        for i in range(3)
+    }
+    frames = {name: p.frame for name, p in planted.items()}
+    result = measure_power(
+        frames,
+        ["sma", "momentum"],
+        edge="band_reversion",
+        oracle_sharpes={
+            n: oracle_sharpe_of(p.frame, p.conditional_mean) for n, p in planted.items()
+        },
+        net_oracle_sharpes={
+            n: oracle_sharpe_of(p.frame, p.conditional_mean, cost_rate=DEFAULT_COST_RATE)
+            for n, p in planted.items()
+        },
+    )
+
+    assert len(result.net_oracle_sharpes) == 3
+    assert result.net_oracle_sharpe_percentiles is not None
+
+
+def test_a_run_that_states_no_net_oracle_reports_no_net_capture() -> None:
+    """A partial artifact must refuse the ratio rather than silently change its denominator —
+    the same refusal `capture_ratio` already makes."""
+    planted = {
+        f"BAND{i}": mean_reverting_edge(900, seed=i, half_life=3.0, deviation_share=0.409)
+        for i in range(3)
+    }
+    frames = {name: p.frame for name, p in planted.items()}
+    result = measure_power(
+        frames,
+        ["sma", "momentum"],
+        edge="band_reversion",
+        oracle_sharpes={
+            n: oracle_sharpe_of(p.frame, p.conditional_mean) for n, p in planted.items()
+        },
+    )
+
+    assert result.net_oracle_sharpes == []
+    assert result.net_capture_ratio is None
+    assert result.net_oracle_sharpe_percentiles is None
+
+
+def test_a_net_oracle_map_without_a_gross_one_is_refused() -> None:
+    frames = {"BAND0": mean_reverting_edge(900, seed=0, half_life=3.0, deviation_share=0.409).frame}
+    with pytest.raises(ValueError, match="net_oracle_sharpes"):
+        measure_power(frames, ["sma"], phi=-0.2, net_oracle_sharpes={"BAND0": 1.0})
+
+
+def test_a_legacy_power_artifact_has_no_net_effect_size() -> None:
+    frames = {"EDGE0": autocorrelated_edge(900, seed=0, phi=-0.3)}
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+
+    legacy = PowerCalibration.model_validate(result.model_dump(exclude={"net_oracle_sharpes"}))
+
+    assert legacy.net_oracle_sharpes == []
+    assert legacy.net_capture_ratio is None
+
+
+def test_a_negative_cost_rate_is_refused() -> None:
+    planted = mean_reverting_edge(900, seed=0, half_life=3.0, deviation_share=0.409)
+    with pytest.raises(ValueError, match="cost_rate"):
+        oracle_sharpe_of(planted.frame, planted.conditional_mean, cost_rate=-0.001)
+
+
+def test_a_net_oracle_costs_have_eaten_entirely_has_no_capture_fraction() -> None:
+    """At |phi| = 0.10 the net oracle is about zero: there is no achievable edge to express a
+    capture fraction of, and a ratio against it would divide by noise."""
+    result = _power().model_copy(
+        update={
+            "oracle_sharpes": [1.3, 1.3],
+            "net_oracle_sharpes": [-0.06, 0.02],
+            "finalist_observed_sharpes": [0.5, 0.6],
+        }
+    )
+    assert result.capture_ratio is not None
+    assert result.net_capture_ratio is None
+
+
+def test_a_run_missing_one_symbol_net_oracle_is_refused() -> None:
+    planted = {
+        f"BAND{i}": mean_reverting_edge(900, seed=i, half_life=3.0, deviation_share=0.409)
+        for i in range(2)
+    }
+    frames = {name: p.frame for name, p in planted.items()}
+    with pytest.raises(ValueError, match="net oracle"):
+        measure_power(
+            frames,
+            ["sma"],
+            edge="band_reversion",
+            oracle_sharpes={
+                n: oracle_sharpe_of(p.frame, p.conditional_mean) for n, p in planted.items()
+            },
+            net_oracle_sharpes={"BAND0": 1.0},
+        )

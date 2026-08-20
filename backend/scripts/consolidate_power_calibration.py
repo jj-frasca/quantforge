@@ -22,16 +22,26 @@ def _report(sweep: PowerSweep) -> None:
     print(f"gate config version : {sweep.gate_config_version}")
     print(f"search config version: {sweep.search_config_version}")
     print(f"bars per symbol     : {sweep.n_bars} (the hunt's own history length)")
-    print(f"{'sweep':>8}{'n':>6}{'oracle':>9}{'detect':>9}{'bar':>7}{'capture':>9}  DSR passes")
+    # ADR-055: `oracle` is gross and `net` charges the same 10bp turnover cost every catalog
+    # finalist paid. `capture` divides a net numerator by a gross denominator and is kept only
+    # because ADR-041/042/045 published it; `net cap` is the comparable ratio.
+    print(
+        f"{'sweep':>8}{'n':>6}{'oracle':>9}{'net':>8}{'detect':>9}{'bar':>7}"
+        f"{'capture':>9}{'net cap':>9}  DSR passes"
+    )
     for cell in sweep.cells:
         key = cell.phi if cell.phi is not None else cell.half_life
         percentiles = cell.oracle_sharpe_percentiles
         oracle = percentiles[0] if percentiles else float("nan")
+        net_percentiles = cell.net_oracle_sharpe_percentiles
+        net_oracle = f"{net_percentiles[0]:+.2f}" if net_percentiles else "n/a"
         capture = cell.capture_ratio
+        net_capture = cell.net_capture_ratio
         print(
-            f"{key:>8}{cell.n_symbols:>6}{oracle:>+9.2f}{cell.detection_rate:>8.0%}"
-            f"{cell.n_clear_deflation_bar:>7}"
+            f"{key:>8}{cell.n_symbols:>6}{oracle:>+9.2f}{net_oracle:>8}"
+            f"{cell.detection_rate:>8.0%}{cell.n_clear_deflation_bar:>7}"
             f"{(f'{capture:.1%}' if capture is not None else 'n/a'):>9}"
+            f"{(f'{net_capture:.1%}' if net_capture is not None else 'n/a'):>9}"
             f"  {cell.gate_pass_counts.get('dsr', 'n/a')}/{cell.n_symbols}"
         )
 

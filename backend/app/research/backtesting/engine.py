@@ -5,6 +5,10 @@ import pandas as pd
 from app.research.backtesting.metrics import BacktestMetrics
 from app.research.strategies.base import BaseStrategy
 
+# One rate for the whole project: the catalog is judged under it and, since ADR-055, so is
+# the power calibration's oracle. Two literals would let the two drift apart silently.
+DEFAULT_COST_RATE = 0.001
+
 
 @dataclass(frozen=True)
 class BacktestResult:
@@ -28,7 +32,9 @@ class BacktestEngine:
         Transaction costs are charged on turnover (|Δposition|). Long/short are symmetric.
     """
 
-    def __init__(self, initial_capital: float = 100_000.0, cost_rate: float = 0.001) -> None:
+    def __init__(
+        self, initial_capital: float = 100_000.0, cost_rate: float = DEFAULT_COST_RATE
+    ) -> None:
         if initial_capital <= 0:
             raise ValueError("initial_capital must be > 0")
         if cost_rate < 0:

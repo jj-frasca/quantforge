@@ -8,6 +8,7 @@ import numpy.typing as npt
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.lab.candidate_budget import allocate_catalog_candidate_budget
 from app.research.lab.experiment import Experiment, Trial
@@ -278,6 +279,10 @@ class PowerCalibration(BaseModel):
     half_life: float | None = None
     deviation_share: float | None = None
     oracle_sharpes: list[float]
+    # ADR-055: the same oracle charged the cost model the catalog pays. The gross list above is
+    # what ADR-041/042 published and is kept unchanged; this one is what a capture ratio should be
+    # divided by, since its numerator paid those costs. Empty means an artifact predating ADR-055.
+    net_oracle_sharpes: list[float] = []
     # ADR-045: one max-DSR finalist per SEARCHED symbol, including non-detections. Conditioning
     # this list on graduation would select lucky captures and inflate the reported ratio.
     # Defaulted so power artifacts written before ADR-045 remain readable and report no capture.
@@ -300,6 +305,28 @@ class PowerCalibration(BaseModel):
     def oracle_sharpe_percentiles(self) -> tuple[float, float, float] | None:
         """(median, p95, max) of the planted effect size actually realized in these frames."""
         return _percentiles(self.oracle_sharpes)
+
+    @property
+    def net_oracle_sharpe_percentiles(self) -> tuple[float, float, float] | None:
+        """(median, p95, max) of the planted effect size NET of transaction costs (ADR-055)."""
+        return _percentiles(self.net_oracle_sharpes)
+
+    @property
+    def net_capture_ratio(self) -> float | None:
+        """`capture_ratio` against the effect size the catalog could actually have kept (ADR-055).
+
+        Both numerator and denominator are now net of the same cost model. Higher than the gross
+        ratio by construction — that is the denominator being corrected, not the catalog improving.
+        """
+        if (
+            len(self.finalist_observed_sharpes) != self.n_symbols
+            or len(self.net_oracle_sharpes) != self.n_symbols
+        ):
+            return None
+        oracle = median(self.net_oracle_sharpes)
+        if oracle <= 0.0:
+            return None
+        return median(self.finalist_observed_sharpes) / oracle
 
     @property
     def capture_ratio(self) -> float | None:
@@ -359,7 +386,7 @@ def autocorrelated_edge(
     return _ohlcv(closes, opens, highs, lows, volumes)
 
 
-def oracle_sharpe(frame: pd.DataFrame, *, phi: float) -> float:
+def oracle_sharpe(frame: pd.DataFrame, *, phi: float, cost_rate: float = 0.0) -> float:
     """Annualized Sharpe of `position_t = sign(phi * r_{t-1})` on `frame` (ADR-041).
 
     Notes:
@@ -369,10 +396,12 @@ def oracle_sharpe(frame: pd.DataFrame, *, phi: float) -> float:
         carries no theory that could be silently wrong.
     """
     returns = frame["close"].pct_change().dropna()
-    return oracle_sharpe_of(frame, phi * returns.shift(1))
+    return oracle_sharpe_of(frame, phi * returns.shift(1), cost_rate=cost_rate)
 
 
-def oracle_sharpe_of(frame: pd.DataFrame, conditional_mean: "pd.Series[float]") -> float:
+def oracle_sharpe_of(
+    frame: pd.DataFrame, conditional_mean: "pd.Series[float]", *, cost_rate: float = 0.0
+) -> float:
     """Annualized Sharpe of `position_t = sign(E[r_t | F_{t-1}])` on `frame` (ADR-042).
 
     Notes:
@@ -380,12 +409,21 @@ def oracle_sharpe_of(frame: pd.DataFrame, conditional_mean: "pd.Series[float]") 
         same scale as ADR-041's AR(1) one by handing over its own conditional mean. `conditional_mean`
         must already be lagged — indexed by the bar it PREDICTS, using only information available
         before that bar.
+
+        `cost_rate` charges turnover the way `BacktestEngine` charges the catalog (ADR-055). It
+        defaults to ZERO, which is the gross definition every committed power artifact was measured
+        under; changing that default would silently restate published effect sizes. A sign oracle
+        turns over heavily, so the net figure is materially lower and, being a *sign* strategy
+        rather than a sized one, is a LOWER bound on what perfect knowledge could achieve net.
     """
+    if cost_rate < 0:
+        raise ValueError("cost_rate must be >= 0")
     returns = frame["close"].pct_change().dropna()
     if len(returns) < 3:
         return 0.0
-    position = np.sign(conditional_mean.reindex(returns.index))
-    realized = (position * returns).dropna()
+    position = np.sign(conditional_mean.reindex(returns.index)).fillna(0.0)
+    turnover = position.diff().abs().fillna(position.abs())
+    realized = (position * returns - turnover * cost_rate).dropna()
     std = float(realized.std())
     if std == 0.0:
         return 0.0
@@ -471,6 +509,7 @@ def measure_power(
     *,
     phi: float | None = None,
     oracle_sharpes: Mapping[str, float] | None = None,
+    net_oracle_sharpes: Mapping[str, float] | None = None,
     edge: str = "ar1",
     half_life: float | None = None,
     deviation_share: float | None = None,
@@ -497,19 +536,30 @@ def measure_power(
     if oracle_sharpes is None:
         if phi is None:
             raise ValueError(one_source)
+        if net_oracle_sharpes is not None:
+            raise ValueError("net_oracle_sharpes belongs with oracle_sharpes, not with phi")
         oracle_sharpes = {symbol: oracle_sharpe(frame, phi=phi) for symbol, frame in frames.items()}
+        net_oracle_sharpes = {
+            symbol: oracle_sharpe(frame, phi=phi, cost_rate=DEFAULT_COST_RATE)
+            for symbol, frame in frames.items()
+        }
     elif phi is not None:
         raise ValueError(one_source)
     else:
         missing = sorted(set(frames) - set(oracle_sharpes))
         if missing:
             raise ValueError(f"no measured oracle Sharpe for {', '.join(missing)}")
+        if net_oracle_sharpes is not None:
+            missing = sorted(set(frames) - set(net_oracle_sharpes))
+            if missing:
+                raise ValueError(f"no measured net oracle Sharpe for {', '.join(missing)}")
     gate_config = config or GateConfig()
 
     experiments: list[Experiment] = []
     holdout_years: list[float] = []
     n_bars: list[int] = []
     oracles: list[float] = []
+    net_oracles: list[float] = []
     finalist_observed_sharpes: list[float] = []
     errors: dict[str, str] = {}
     for symbol, frame in frames.items():
@@ -532,6 +582,8 @@ def measure_power(
         holdout_years.append(sealed.n_bars / _TRADING_DAYS)
         n_bars.append(len(frame))
         oracles.append(oracle_sharpes[symbol])
+        if net_oracle_sharpes is not None:
+            net_oracles.append(net_oracle_sharpes[symbol])
         finalist_observed_sharpes.append(_finalist(experiment).observed_sharpe)
 
     if not experiments:
@@ -556,6 +608,7 @@ def measure_power(
         half_life=half_life,
         deviation_share=deviation_share,
         oracle_sharpes=oracles,
+        net_oracle_sharpes=net_oracles,
         finalist_observed_sharpes=finalist_observed_sharpes,
         n_bars=n_bars,
         gate_pass_counts={
