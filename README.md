@@ -44,11 +44,12 @@ statistical one (ADR-051).
 
 ## What's shipped
 
-End-to-end, all gates green (backend 99.98% coverage, 1,159 tests; frontend 92.7%, 217 tests):
+End-to-end, all gates green (backend 99.87% coverage, 1,220 tests; frontend 92.3%, 221 tests):
 
-- **14 HTTP endpoints**: health, strategy catalog (single source of truth per ADR-010), ingest,
+- **15 HTTP endpoints**: health, strategy catalog (single source of truth per ADR-010), ingest,
   bars, backtest, validate, Monte Carlo, plus the research-lab surface — leaderboard, graduates,
-  pool report, paper portfolio, equity curve, cross-sectional factors, null calibration. Sync `def`
+  pool report, paper portfolio, equity curve, cross-sectional factors, null calibration, power
+  calibration. Sync `def`
   per ADR-009, so blocking yfinance + DB calls go through FastAPI's threadpool.
 - **7 product pages**: **Validation Report** (full statistical suite + plain-English verdicts),
   **Data Explorer**, **Backtest Results** (equity curve with buy-and-hold overlay, underwater

@@ -312,6 +312,7 @@ parameter today. Reading them together is the fastest way to understand what the
 | `/api/v1/paper-portfolio` | `lab.py` | `list[PaperPosition]` | `data/paper_portfolio.json` |
 | `/api/v1/pool-report` | `lab.py` | `PoolReport` | pool + portfolio |
 | `/api/v1/null-calibration` | `lab.py` | `list[NullCalibration]` | `data/null_calibration/` |
+| `/api/v1/power-calibration` | `lab.py` | `list[PowerSweep]` | `data/power_calibration/` |
 | `/api/v1/graduates` | `graduates.py` | `list[GraduateRow]` | `data/research_pool/` |
 | `/api/v1/cross-sectional` | `cross_sectional.py` | `CrossSectionalView \| None` | `data/cross_sectional_pool.json` |
 | `/api/v1/equity-curve` | `equity_curve.py` | `list[EquityPoint]` | `data/equity_curve.json` |
@@ -320,12 +321,21 @@ parameter today. Reading them together is the fastest way to understand what the
 
 - `/pool-report` leads with `n_surviving_deflation` — how many graduates are distinguishable from
   best-of-N selection luck (ADR-018/033) — *not* the graduate count, which overstates the funnel.
-  It also carries `walk_forward_graduates` / `purged_cv_graduates` (ADR-038/039), each nullable,
-  where **null means NOT MEASURED and must never be rendered as zero**.
+  It also carries `walk_forward_graduates` / `purged_cv_graduates` (ADR-038/039) and their
+  `*_finalists` counterparts (ADR-051), each nullable, where **null means NOT MEASURED and must
+  never be rendered as zero**. The finalist fields are the ones comparable to the calibration
+  artifacts, which record a finalist per searched symbol rather than per graduate; `pool-report`
+  also carries `search_config_versions` and `median_n_bars` (ADR-052), the two facts a reader needs
+  before quoting any real-versus-null difference.
 - `/null-calibration` returns the gate's measured Type-I error on symbols with no edge by
   construction (ADR-036/037). **A missing data directory returns `[]` with a 200**, deliberately:
   a 500 here would take the whole dashboard down for the sake of a summary panel. The same
   degrade-don't-fail rule applies to `/pool-report` on the frontend side.
+- `/power-calibration` returns the other half of the same question: how often the gate detects a
+  PLANTED edge (ADR-041/042/053), one sweep per planted process, cells listed rather than merged
+  because each plants a different effect size and is judged at its own N. Same `[]`-and-200
+  contract. Serving it beside `/null-calibration` is deliberate — a false-graduation rate with no
+  detection rate beside it reads conservatism as strength.
 - `/cross-sectional` returns `None` (JSON `null`) when the pool has no entry yet — an honest
   "nothing searched", distinct from an empty result.
 
