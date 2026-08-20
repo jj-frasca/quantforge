@@ -1,0 +1,103 @@
+name: Horizon power calibration
+
+# Token-free (no Claude): ADR-042, the follow-up ADR-041 named. ADR-041 measured 54% detection on
+# planted TRENDING edges against 6% on mean-reverting ones at the same effect size, and could not
+# separate two explanations — the mean-reversion family is weak, or its planted process reverted at
+# lag 1 while RSI-14 / Bollinger-20 act over many bars. This plants band reversion (random-walk
+# level + AR(1) deviation) at a STATED half-life, so the horizon is the swept parameter.
+#
+# READ THE TWO TIERS SEPARATELY (ADR-042 §"The effect size is bounded above by the horizon"):
+#   Tier A — half-lives 1, 2, 3, 5 at a matched effect size (measured oracle Sharpe ~2.5-2.7). The
+#            clean horizon test: the only thing changing across these rows is how long a deviation
+#            takes to unwind. Detection climbing with the horizon means ADR-041's asymmetry was a
+#            horizon mismatch, not a blind spot.
+#   Tier B — half-lives 10 and 20. Only (1 - rho)/2 of the deviation's variance is predictable one
+#            bar ahead, so at equity volatility these CANNOT reach oracle 2.6 (they measure ~1.9 and
+#            ~1.5). A low detection rate here is a fact about the model's ceiling and is NOT
+#            evidence about the catalog. The rows are run to make that ceiling visible.
+#
+# `deviation_share` is set per half-life so that the measured oracle Sharpe is comparable within
+# Tier A while realized volatility stays at 1.2%/day everywhere — without that, a horizon sweep
+# moves the horizon, the volatility and the effect size together and confounds all three.
+#
+# Not sharded, same reasoning as power-calibration.yml: each half-life is a self-contained
+# measurement judged at its own ADR-018 bar, so there is nothing to merge. Results are ARTIFACTS +
+# Slack, not a commit — six matrix jobs writing one directory would race (ADR-030).
+on:
+  workflow_dispatch:
+    inputs:
+      n_symbols:
+        description: "Planted-edge symbols per half-life"
+        required: false
+        default: "50"
+      seed:
+        description: "Base RNG seed"
+        required: false
+        default: "0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: horizon-power-calibration
+  cancel-in-progress: false
+
+jobs:
+  power:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - half_life: "1"
+            share: "0.169"
+            tier: "A"
+          - half_life: "2"
+            share: "0.288"
+            tier: "A"
+          - half_life: "3"
+            share: "0.409"
+            tier: "A"
+          - half_life: "5"
+            share: "0.651"
+            tier: "A"
+          - half_life: "10"
+            share: "0.75"
+            tier: "B"
+          - half_life: "20"
+            share: "0.75"
+            tier: "B"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Measure power at half-life ${{ matrix.half_life }} (tier ${{ matrix.tier }})
+        working-directory: backend
+        run: |
+          set -e
+          OUT="$GITHUB_WORKSPACE/horizon_${{ matrix.half_life }}.json"
+          PYTHONPATH=. uv run python scripts/horizon_power_calibration.py \
+            "${{ github.event.inputs.n_symbols || '50' }}" "${{ github.event.inputs.seed || '0' }}" \
+            --half-life "${{ matrix.half_life }}" --deviation-share "${{ matrix.share }}" \
+            --out "$OUT" | tee "$GITHUB_WORKSPACE/horizon_${{ matrix.half_life }}.txt"
+      - name: Upload the measurement
+        if: ${{ always() && hashFiles(format('horizon_{0}.json', matrix.half_life)) != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: horizon-${{ matrix.half_life }}
+          path: |
+            horizon_${{ matrix.half_life }}.json
+            horizon_${{ matrix.half_life }}.txt
+          retention-days: 30
+      - name: Slack the result
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -Rs '{text: ("*QuantForge horizon power — half-life ${{ matrix.half_life }} bars (tier ${{ matrix.tier }})*\n```" + . + "```")}' \
+            "horizon_${{ matrix.half_life }}.txt" \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
