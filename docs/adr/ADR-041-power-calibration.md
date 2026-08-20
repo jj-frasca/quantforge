@@ -85,6 +85,13 @@ is not.
 
 ## Measured, 2026-08-19 (run 32304778979, N = 50 per phi, 3000 bars, full 34-strategy catalog)
 
+> **SUPERSEDED FOR PRODUCTION, 2026-08-20.** This table predates whole-search DSR accounting,
+> production refinement, and the enforced 200-candidate budget. Production-parity run 32341906980
+> measured 0/50 detections at every phi. ADR-049 attribution found DSR passed 0/50 in every cell;
+> at phi +0.30 the other components passed PBO 43/50, stability 40/50, and
+> MinTRL/holdout/beat-buy-and-hold 50/50. See FINDING-006 before interpreting DSR rejection as
+> absence of edge. The historical table remains reproducible evidence for its stated procedure.
+
 | phi | direction | oracle Sharpe (median) | detection rate | clear the ADR-018 bar (of 50) |
 |---|---|---|---|---|
 | -0.30 | mean-reverting | +3.98 | 16% | 6 |

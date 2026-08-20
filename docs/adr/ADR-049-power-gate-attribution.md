@@ -52,6 +52,16 @@ populate the diagnostic.
 - Re-running the two cloud workflows is compute-only and does not touch generated research-pool
   data or any validation threshold.
 
+## Measured result, 2026-08-20
+
+Runs 32341906980 and 32341908789 populated the diagnostic at N = 50 per cell. DSR passed **zero**
+finalists in every cell. The strongest AR(1) trend cell is the cleanest attribution: at phi +0.30,
+DSR passed 0/50, PBO 43/50, stability 40/50, and MinTRL/holdout/beat-buy-and-hold each 50/50. DSR is
+therefore sufficient by itself to explain zero composite power at median oracle Sharpe +3.92.
+
+The horizon cells also have DSR 0/50 throughout; their other pass counts vary with effect size and
+horizon as expected. FINDING-006 records the newly isolated defect in the DSR dispersion estimator.
+
 ## Reversal
 
 Remove `gate_pass_counts` and the two report lines. No search or gate behavior needs reverting.

@@ -51,6 +51,11 @@ in its favour, it cannot convert it at all.
 ### Measured, 2026-08-20 (local, 3 seeds per horizon, full coarse grid over the four principal
 mean-reversion strategies, 3000 bars)
 
+> **Historical procedure.** Production-parity run 32341908789 measured capture upper bounds of
+> 25.7%, 27.3%, 30.1%, 37.4%, 49.8%, and 54.9% at half-lives 1, 2, 3, 5, 10, and 20 respectively,
+> while DSR passed 0/50 in every cell (ADR-049/FINDING-006). The focused table below still isolates
+> the original horizon question but must not be presented as the current whole-pipeline power run.
+
 | planted half-life | oracle Sharpe | best in-sample Sharpe | capture | winning window |
 |---|---|---|---|---|
 | 1 bar | +2.63 / +2.80 / +3.27 | +0.73 / +0.50 / +0.96 | **0.18–0.29** | 51–100 bars |

@@ -107,6 +107,13 @@ for, or to state plainly which effects are outside this pipeline's resolution.
 
 ## Measured, 2026-08-20 (run 32327295232, N = 50 per half-life, 3000 bars, full 34-strategy catalog)
 
+> **SUPERSEDED FOR PRODUCTION, 2026-08-20.** This table predates ADR-046/047/048. Production-parity
+> run 32341908789 measured 0/50 detections at every half-life, and ADR-049 attribution measured DSR
+> pass count 0/50 in every cell. Other components did pass—for example, at five bars PBO passed
+> 38/50, stability 38/50, MinTRL 20/50, holdout 48/50, and beat-buy-and-hold 33/50—so DSR alone is
+> sufficient to explain the composite zero. FINDING-006 records the signal-contaminated dispersion
+> estimator; the historical horizon comparison below remains evidence for its stated procedure.
+
 | tier | half-life | deviation share | oracle Sharpe (median) | detection rate | clear the ADR-018 bar (of 50) |
 |---|---|---|---|---|---|
 | A | 1 bar | 0.169 | +2.76 | **0%** | 0 |

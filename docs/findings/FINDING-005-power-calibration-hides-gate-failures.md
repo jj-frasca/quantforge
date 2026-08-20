@@ -1,7 +1,7 @@
 # FINDING-005: Power calibration hides which gate components destroy power
 
 - **Severity:** High (methodology observability; a zero-power result is not actionable)
-- **Status:** Fix proposed in ADR-049
+- **Status:** Fixed by ADR-049; diagnostic sweep complete
 - **Affected:** ADR-041/042/045 power calibration and both power drivers
 
 ## Finding
@@ -39,3 +39,9 @@ Power artifacts must count, across every successfully searched symbol, how many 
 each unchanged gate component. Drivers must print those counts beside the composite detection
 rate. Legacy artifacts must remain readable and explicitly expose no attribution rather than
 inventing it. The change is diagnostic only: no gate threshold or verdict may change.
+
+## Resolution
+
+`PowerCalibration.gate_pass_counts` now preserves the six independent counts and both drivers print
+them. Runs 32341906980 and 32341908789 verified the schema over the full AR(1) and horizon sweeps.
+DSR passed 0/50 in all 12 cells, exposing the distinct estimator defect in FINDING-006.

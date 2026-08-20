@@ -184,7 +184,11 @@ Sharpe 3.9 and 42% for five-bar band reversion. After whole-search accounting, p
 refinement, and the enforced candidate budget, fresh runs 32340042967/32340043401 measured
 **0/50 in every cell**, including AR(1) oracle Sharpe +3.92 with a 77.4% in-sample capture upper
 bound. That is the current production-parity result. FINDING-005/ADR-049 add per-component gate
-pass counts so the zero can be attributed without guessing or weakening a threshold.
+pass counts so the zero can be attributed without guessing or weakening a threshold. The fresh
+diagnostic found DSR passed **0/50 in all 12 cells**. At phi +0.30, PBO passed 43/50, stability
+40/50, and the other four components 50/50, isolating DSR as sufficient for the composite zero.
+FINDING-006 records that current-run candidate dispersion is contaminated by the planted signal;
+it is open pending a null-consistent estimator ADR and fresh Type-I/power comparison.
 
 **The detectable-edge frontier (ADR-043) factors those two numbers.** `app/research/lab/frontier.py`
 solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0

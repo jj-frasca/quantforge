@@ -196,6 +196,12 @@ tiers: graduated, and cleared the ADR-018 bar.
 - ADR-049 records per-component pass counts (`dsr`, `pbo`, `stability`, `mintrl`, `holdout`,
   `beats_buy_and_hold`) because a composite zero cannot identify its own mechanism. Empty counts on
   a legacy artifact mean attribution was not preserved, never that every component had zero passes.
+- Diagnostic runs 32341906980/32341908789 found **DSR 0/50 in all 12 cells**. At phi +0.30,
+  PBO passed 43/50, stability 40/50, and MinTRL/holdout/beat-buy-and-hold 50/50. FINDING-006 isolates
+  the cause: whole-search DSR estimates null dispersion from the current candidates, so the planted
+  signal widened `sr_std` from 0.510 (matched iid seed) to 1.703 and raised the haircut from 1.410
+  to 4.698 against observed Sharpe 2.937. Do not lower `dsr_min`; a null-consistent dispersion
+  decision requires its own ADR and full recalibration.
 - Effect size is bounded by the horizon: only `(1-rho)/2` of a deviation's variance is predictable
   one bar ahead, so slow band reversion cannot reach a large oracle Sharpe at equity volatility.
   Read half-lives ≥ 10 as a statement about that ceiling, not about the catalog.
