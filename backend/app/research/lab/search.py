@@ -11,6 +11,7 @@ from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GraduationGate
 from app.research.lab.holdout import score_on_holdout, split_holdout
+from app.research.lab.trial_accounting import whole_search_deflated_sharpes
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.grid_generator import (
     find_catalog_entry,
@@ -35,18 +36,20 @@ def _numeric_params(strategy: BaseStrategy) -> dict[str, float | int]:
     return {k: v for k, v in strategy.parameters.items() if isinstance(v, int | float)}
 
 
-def _best_config(
+def _score_configs(
     configs: list[BaseStrategy], frame: pd.DataFrame, engine: BacktestEngine
-) -> BaseStrategy:
+) -> tuple[BaseStrategy, list[float]]:
     """The config with the highest in-sample Sharpe — matches ValidationEngine's own `best`
     selection, so the holdout is scored on the same config the report describes."""
     best = configs[0]
     best_sharpe = float("-inf")
+    sharpes: list[float] = []
     for config in configs:
         sharpe = engine.run_strategy(frame, config).metrics.sharpe
+        sharpes.append(sharpe)
         if sharpe > best_sharpe:
             best_sharpe, best = sharpe, config
-    return best
+    return best, sharpes
 
 
 def run_search(
@@ -68,8 +71,10 @@ def run_search(
     deflated Sharpe, score it on the sealed holdout, and apply the graduation gate (ADR-014/016).
 
     The holdout is split here and never handed to any per-strategy step — only `score_on_holdout`
-    touches it, once, for the finalist. Every candidate is recorded as a Trial; the best
+    touches it, once, for the finalist. Every family's finalist is recorded as a Trial; the best
     candidate's verdict (pass or fail) is always attached so failures are legible.
+    ``n_evaluated_configs`` and ``lifetime_trials`` count the concrete hypotheses that produced
+    those compact summaries (ADR-046).
     """
     gate_config = config or GateConfig()
     handle, sealed = split_holdout(frame, symbol)
@@ -78,7 +83,8 @@ def run_search(
 
     trials: list[Trial] = []
     best_configs: list[BaseStrategy] = []
-    reports = []
+    reports: list[ValidationReport] = []
+    candidate_sharpes: list[float] = []
     for name in strategy_names:
         entry = find_catalog_entry(name)
         if entry is None:
@@ -87,7 +93,8 @@ def run_search(
         if len(configs) < _MIN_CONFIGS_FOR_PBO:
             continue
         report = validator.validate(name, configs, handle.frame)
-        best_config = _best_config(configs, handle.frame, engine)
+        best_config, config_sharpes = _score_configs(configs, handle.frame, engine)
+        candidate_sharpes.extend(config_sharpes)
         trials.append(
             Trial(
                 strategy_name=report.strategy_name,
@@ -96,6 +103,7 @@ def run_search(
                 deflated_sharpe=report.deflated_sharpe,
                 pbo=report.pbo,
                 parameter_stability_score=report.parameter_stability_score,
+                n_evaluated_configs=len(configs),
                 walk_forward_oos_sharpe=_walk_forward_oos(report),
                 purged_cv_oos_sharpe=_purged_cv_oos(report),
             )
@@ -109,12 +117,10 @@ def run_search(
             f">= {_MIN_CONFIGS_FOR_PBO} grid configs"
         )
 
-    best_idx = max(range(len(trials)), key=lambda i: trials[i].deflated_sharpe)
-    best_report = reports[best_idx]
-    finalist_config = best_configs[best_idx]
+    best_idx = max(range(len(trials)), key=lambda i: trials[i].observed_sharpe)
 
-    # Coarse-to-fine (ADR-014): zoom in around the coarse winner. Every refined pass is another
-    # trial that raises the DSR/MinTRL bar, so searching harder self-polices against overfitting.
+    # Coarse-to-fine (ADR-014): zoom in around the coarse winner. Every refined CONFIG raises the
+    # DSR/MinTRL bar, so searching harder self-polices against overfitting (ADR-046).
     if refine:
         entry = find_catalog_entry(trials[best_idx].strategy_name)
         refined_configs = (
@@ -128,7 +134,8 @@ def run_search(
             refined_report = validator.validate(
                 trials[best_idx].strategy_name, refined_configs, handle.frame
             )
-            refined_config = _best_config(refined_configs, handle.frame, engine)
+            refined_config, refined_sharpes = _score_configs(refined_configs, handle.frame, engine)
+            candidate_sharpes.extend(refined_sharpes)
             trials.append(
                 Trial(
                     strategy_name=refined_report.strategy_name,
@@ -137,14 +144,27 @@ def run_search(
                     deflated_sharpe=refined_report.deflated_sharpe,
                     pbo=refined_report.pbo,
                     parameter_stability_score=refined_report.parameter_stability_score,
+                    n_evaluated_configs=len(refined_configs),
                     walk_forward_oos_sharpe=_walk_forward_oos(refined_report),
                     purged_cv_oos_sharpe=_purged_cv_oos(refined_report),
                 )
             )
-            if refined_report.deflated_sharpe > best_report.deflated_sharpe:
-                best_report, finalist_config = refined_report, refined_config
+            reports.append(refined_report)
+            best_configs.append(refined_config)
 
-    lifetime_trials = prior_trials + len(trials)
+    lifetime_trials = prior_trials + len(candidate_sharpes)
+    repriced = whole_search_deflated_sharpes(
+        [trial.observed_sharpe for trial in trials], candidate_sharpes, lifetime_trials
+    )
+    trials = [
+        trial.model_copy(update={"deflated_sharpe": dsr})
+        for trial, dsr in zip(trials, repriced, strict=True)
+    ]
+    best_idx = max(range(len(trials)), key=lambda i: trials[i].observed_sharpe)
+    best_report = reports[best_idx].model_copy(
+        update={"deflated_sharpe": trials[best_idx].deflated_sharpe}
+    )
+    finalist_config = best_configs[best_idx]
     holdout = score_on_holdout(sealed, finalist_config)
     gate_result = GraduationGate().evaluate(
         report=best_report,

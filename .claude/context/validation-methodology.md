@@ -25,6 +25,15 @@ DSR = observed_sr - haircut
 - **Invariant**: `DSR ≤ observed_sr` always (haircut ≥ 0); more trials ⇒ larger haircut ⇒
   lower (or equal) DSR; N == 1 ⇒ DSR == observed_sr.
 
+**Search-level accounting (ADR-046).** A StrategyLab run first evaluates parameter configs inside
+families and then selects across the family finalists. DSR must price that whole selection, not
+reset inside each family. Both longitudinal and cross-sectional search pool every current candidate
+Sharpe to estimate one `sr_std`, use cumulative concrete-config `lifetime_trials` for N, and apply
+the same haircut to every family finalist before the overall argmax. `Trial` is therefore a compact
+family-finalist summary with `n_evaluated_configs`; the number of stored summaries is NOT the DSR or
+MinTRL denominator. Historical longitudinal pool counters predate this field and remain a lower
+bound; generated records are never guessed/backfilled against today's catalog.
+
 ---
 
 ## 2. Probability of Backtest Overfitting (PBO) — CSCV
@@ -155,6 +164,9 @@ tails and vol, destroying serial structure). `null-calibration.yml` shards it an
   across gate config versions or null modes.
 - Null experiments are NEVER written to the research pool: they would inflate the MinTRL
   denominator for real hypotheses.
+- Calibration identity includes the resolved grids AND a trial-accounting-method version
+  (ADR-044/046). The same hypotheses priced by a different DSR denominator are a different measured
+  procedure and must not reuse an old Type-I/power artifact.
 
 ### 7.2 Power (ADR-041/042) — the Type-II half
 `measure_power` plants an edge of MEASURED (never derived) strength and counts detections in two

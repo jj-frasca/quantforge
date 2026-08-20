@@ -205,6 +205,17 @@ the frontier beside the deflation headline; none of it licenses moving a thresho
 **The backend gate runs in parallel (ADR-040).** `make test` uses `pytest -n auto`; `make check`
 went 8:45 → 4:01. Tests must therefore be order-independent and must not write fixed paths.
 
+**DSR prices the whole search as of ADR-046.** The original StrategyLab reduced each family grid to
+one stored finalist, counted those summaries as lifetime trials, and then compared family-local
+DSRs. A 34-family full-catalog run therefore recorded 34 trials after evaluating 667 concrete
+configs, and prior searches never reached DSR. New longitudinal and cross-sectional runs count every
+evaluated config, use cumulative lifetime N plus the whole current search's Sharpe dispersion, and
+apply one comparable haircut before the cross-family argmax. `Trial.n_evaluated_configs` preserves
+the denominator without bloating the partitioned pool; historical longitudinal counts remain a
+lower bound because generated records cannot be honestly reconstructed. FINDING-003 separately
+records that `GateConfig.trial_budget=200` is still inert and needs an order-robust allocation policy
+before enforcement; do not describe it as a cap today.
+
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.
 

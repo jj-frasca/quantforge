@@ -22,6 +22,7 @@ from app.research.cross_sectional.registry import (
 from app.research.lab.experiment import Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult, GraduationGate
 from app.research.lab.holdout import HoldoutScore
+from app.research.lab.trial_accounting import whole_search_deflated_sharpes
 from app.validation.deflated_sharpe import deflated_sharpe
 from app.validation.parameter_stability import parameter_stability
 from app.validation.pbo import probability_of_backtest_overfitting
@@ -159,9 +160,9 @@ def run_cross_sectional_search(
 ) -> CrossSectionalExperiment:
     """Search the cross-sectional strategies over a price panel and apply the graduation gate
     (ADR-024). For each strategy: build config = (signal params x quantile), run the engine on the
-    in-sample panel to get one portfolio return series per config, validate the (T, N) matrix, and
-    keep the finalist by deflated Sharpe. The best strategy overall is scored once on the sealed
-    holdout and fed to the unmodified GraduationGate.
+    in-sample panel to get one portfolio return series per config, and validate the (T, N) matrix.
+    Family finalists receive one whole-search lifetime DSR haircut before the best strategy overall
+    is scored once on the sealed holdout and fed to the unmodified GraduationGate (ADR-046).
     """
     gate_config = config or GateConfig()
     registry = default_strategies(value_scores=value_scores, quality_scores=quality_scores)
@@ -172,6 +173,7 @@ def run_cross_sectional_search(
     reports: list[ValidationReport] = []
     finalists: list[tuple[CrossSectionalStrategy, Params, float]] = []
     total_configs = 0
+    candidate_sharpes: list[float] = []
     for name in names:
         strategy = registry.get(name)
         if strategy is None:
@@ -195,6 +197,7 @@ def run_cross_sectional_search(
         best_i = int(np.argmax(sharpes))
         best_params, best_quantile = configs[best_i]
         total_configs += len(configs)
+        candidate_sharpes.extend(sharpes)
         # The IC is a property of the RANKING, so it is computed from the finalist's signal and is
         # independent of the quantile the portfolio happened to trade (ADR-035).
         finalist_signal = strategy.build(best_params)(in_sample)
@@ -206,6 +209,7 @@ def run_cross_sectional_search(
                 deflated_sharpe=report.deflated_sharpe,
                 pbo=report.pbo,
                 parameter_stability_score=report.parameter_stability_score,
+                n_evaluated_configs=len(configs),
                 ic=summarize_ic(rank_ic(finalist_signal, in_sample)),
             )
         )
@@ -218,11 +222,20 @@ def run_cross_sectional_search(
             f">= {_MIN_CONFIGS_FOR_PBO} configs (signal params x quantiles)"
         )
 
-    best_idx = max(range(len(trials)), key=lambda i: trials[i].deflated_sharpe)
-    best_report = reports[best_idx]
+    lifetime_trials = prior_trials + total_configs
+    repriced = whole_search_deflated_sharpes(
+        [trial.observed_sharpe for trial in trials], candidate_sharpes, lifetime_trials
+    )
+    trials = [
+        trial.model_copy(update={"deflated_sharpe": dsr})
+        for trial, dsr in zip(trials, repriced, strict=True)
+    ]
+    best_idx = max(range(len(trials)), key=lambda i: trials[i].observed_sharpe)
+    best_report = reports[best_idx].model_copy(
+        update={"deflated_sharpe": trials[best_idx].deflated_sharpe}
+    )
     strategy, params, quantile = finalists[best_idx]
 
-    lifetime_trials = prior_trials + total_configs
     holdout_score = _score_holdout(strategy, params, quantile, prices, holdout, cost_rate)
     gate_result = GraduationGate().evaluate(
         report=best_report,

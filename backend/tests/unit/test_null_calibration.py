@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.research.lab import calibration as calibration_module
 from app.research.lab.calibration import (
     NullCalibration,
     NullGraduate,
@@ -164,6 +165,15 @@ def test_calibration_search_version_tracks_the_resolved_hypothesis_family() -> N
     assert baseline == calibration_search_version(["sma"], n_per_param=2, config=gate)
     assert baseline != calibration_search_version(["sma", "momentum"], n_per_param=2, config=gate)
     assert baseline != calibration_search_version(["sma"], n_per_param=3, config=gate)
+
+
+def test_calibration_search_version_tracks_trial_accounting_method(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gate = GateConfig()
+    baseline = calibration_search_version(["sma"], n_per_param=2, config=gate)
+    monkeypatch.setattr(calibration_module, "_TRIAL_ACCOUNTING_VERSION", "test-v2")
+    assert baseline != calibration_search_version(["sma"], n_per_param=2, config=gate)
 
 
 def test_calibrate_gate_rejects_an_empty_universe() -> None:

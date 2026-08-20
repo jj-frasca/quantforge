@@ -55,8 +55,9 @@ def test_universe_hunt_runs_every_symbol_and_records_to_the_pool() -> None:
     result = run_universe_hunt(["AAA", "BBB"], ["sma", "momentum"], _provider(frames), store=store)
     assert len(result.experiments) == 2
     assert result.errors == {}
-    assert store.trials_for_symbol("AAA") == 2
-    assert store.trials_for_symbol("BBB") == 2
+    # Two stored family finalists summarize 7 SMA + 9 momentum configs (ADR-046).
+    assert store.trials_for_symbol("AAA") == 16
+    assert store.trials_for_symbol("BBB") == 16
 
 
 def test_a_failing_symbol_is_captured_and_others_still_run() -> None:

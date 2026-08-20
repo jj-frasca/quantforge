@@ -1,9 +1,10 @@
 """Cross-sectional search + gate reuse (ADR-024). `run_cross_sectional_search` mirrors the
 single-name `run_search` at the PORTFOLIO level: build each strategy's config grid, stack the
 per-config portfolio return series into the (T, N) matrix the existing PBO/DSR/stability primitives
-expect, pick the best by deflated Sharpe, score the finalist on the sealed holdout (full-panel
-warmup, score the post-split slice, equal-weight long-only benchmark), and feed the unmodified
-GraduationGate. A cross-sectional factor graduates exactly the way a single-name strategy does."""
+expect, apply one whole-search lifetime DSR haircut, score the finalist on the sealed holdout
+(full-panel warmup, score the post-split slice, equal-weight long-only benchmark), and feed the
+unmodified GraduationGate. A cross-sectional factor graduates exactly the way a single-name
+strategy does."""
 
 import numpy as np
 import pandas as pd
@@ -146,6 +147,23 @@ def test_lifetime_trials_accumulates_prior_count() -> None:
         _noise_panel(), strategy_names=["xs_reversal"], prior_trials=100
     )
     assert with_prior.lifetime_trials == baseline + 100
+
+
+def test_cross_sectional_family_finalists_share_the_lifetime_dsr_haircut() -> None:
+    first = run_cross_sectional_search(
+        _noise_panel(), strategy_names=["xs_momentum", "xs_reversal"]
+    )
+    repeated = run_cross_sectional_search(
+        _noise_panel(),
+        strategy_names=["xs_momentum", "xs_reversal"],
+        prior_trials=1_000,
+    )
+    assert sum(t.n_evaluated_configs for t in first.trials) == first.lifetime_trials
+    haircuts = [t.observed_sharpe - t.deflated_sharpe for t in first.trials]
+    assert haircuts[0] == pytest.approx(haircuts[1])
+    assert max(t.deflated_sharpe for t in repeated.trials) < max(
+        t.deflated_sharpe for t in first.trials
+    )
 
 
 def test_experiment_is_json_serializable() -> None:

@@ -15,8 +15,12 @@ from app.research.valuation import UndervaluationScore
 
 
 class Trial(BaseModel):
-    """One evaluated candidate in a search (ADR-016). Stored for EVERY candidate, winner or not
-    — the DSR/MinTRL penalty needs the full denominator."""
+    """One strategy-family finalist summary in a search (ADR-016/046).
+
+    The DSR/MinTRL denominator is the sum of ``n_evaluated_configs``, not the number of summary
+    objects. Keeping one summary per family preserves the pool's bounded size without pretending
+    that selecting the family finalist evaluated only one hypothesis.
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -26,6 +30,9 @@ class Trial(BaseModel):
     deflated_sharpe: float
     pbo: float
     parameter_stability_score: float
+    # Legacy records predate candidate-level accounting and cannot be reconstructed against a
+    # changed catalog. One is the honest lower bound for their one persisted family finalist.
+    n_evaluated_configs: int = Field(default=1, ge=1)
     # ADR-038: mean out-of-sample Sharpe across the walk-forward windows — a prequential view
     # of the SELECTION procedure, independent of the locked holdout. Nullable + defaulted so the
     # experiments already in the pool deserialize, and so a producer that computed no
@@ -93,7 +100,8 @@ def _trials_for_symbol(experiments: list[Experiment], symbol: str) -> int:
     ``lifetime_trials`` across the symbol's experiments (each is prior + this run's trials, so it is
     cumulative and non-decreasing). Max, not a sum of trial-list lengths, so the count SURVIVES pool
     pruning: dropping old experiments never lowers the bar as long as the most-recent (max) one is
-    kept (ADR-026 pool-size fix). Equivalent to the old sum for an un-pruned cumulative pool."""
+    kept (ADR-026 pool-size fix). Records before ADR-046 counted family summaries rather than
+    concrete configurations, so their carried-forward value is a conservative lower bound."""
     return max((e.lifetime_trials for e in experiments if e.symbol == symbol), default=0)
 
 

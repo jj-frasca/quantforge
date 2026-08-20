@@ -12,6 +12,7 @@ from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.experiment import Experiment, InMemoryExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.search import run_search
+from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
 
 _LENIENT = GateConfig(
     dsr_min=-100.0,
@@ -49,7 +50,14 @@ def test_run_search_produces_an_experiment_with_a_trial_per_strategy() -> None:
     assert isinstance(exp, Experiment)
     assert exp.symbol == "AAPL"
     assert len(exp.trials) == 2
-    assert exp.lifetime_trials == 2
+    expected_configs = sum(
+        len(grid_from_catalog(entry))
+        for name in ("sma", "momentum")
+        if (entry := find_catalog_entry(name)) is not None
+    )
+    assert expected_configs == 16
+    assert exp.lifetime_trials == expected_configs
+    assert sum(t.n_evaluated_configs for t in exp.trials) == expected_configs
     assert exp.best_strategy_name in {"sma", "momentum"}
     assert exp.best_gate_result is not None
     assert exp.rationale == "unit"
@@ -57,7 +65,24 @@ def test_run_search_produces_an_experiment_with_a_trial_per_strategy() -> None:
 
 def test_prior_trials_feed_the_lifetime_count() -> None:
     exp = run_search(_random_walk_frame(1), "AAPL", ["sma", "momentum"], prior_trials=40)
-    assert exp.lifetime_trials == 42  # 40 prior + 2 this run
+    assert exp.lifetime_trials == 56  # 40 prior + 16 concrete configs this run
+
+
+def test_prior_search_effort_increases_the_dsr_haircut() -> None:
+    first = run_search(_random_walk_frame(1), "AAPL", ["sma", "momentum"])
+    repeated = run_search(_random_walk_frame(1), "AAPL", ["sma", "momentum"], prior_trials=1_000)
+    first_best = max(first.trials, key=lambda trial: trial.deflated_sharpe)
+    repeated_best = max(repeated.trials, key=lambda trial: trial.deflated_sharpe)
+    assert repeated_best.observed_sharpe == pytest.approx(first_best.observed_sharpe)
+    assert repeated_best.deflated_sharpe < first_best.deflated_sharpe
+
+
+def test_family_finalists_share_one_whole_search_dsr_haircut() -> None:
+    exp = run_search(_random_walk_frame(8), "AAPL", ["sma", "momentum"])
+    first, second = exp.trials
+    assert first.observed_sharpe - first.deflated_sharpe == pytest.approx(
+        second.observed_sharpe - second.deflated_sharpe
+    )
 
 
 def test_search_rejects_an_empty_strategy_set() -> None:
@@ -169,11 +194,12 @@ def test_non_distressed_screen_allows_graduation() -> None:
 
 
 def test_refine_adds_a_trial_and_raises_the_bar() -> None:
-    # Coarse-to-fine: the refined pass on the winner is one extra trial (higher DSR/MinTRL bar).
+    # Coarse-to-fine: the refined family summary represents every concrete refined config.
     base = run_search(_random_walk_frame(0), "AAPL", ["sma", "momentum"])
     refined = run_search(_random_walk_frame(0), "AAPL", ["sma", "momentum"], refine=True)
     assert len(refined.trials) == len(base.trials) + 1
-    assert refined.lifetime_trials == base.lifetime_trials + 1
+    assert refined.lifetime_trials == sum(t.n_evaluated_configs for t in refined.trials)
+    assert refined.lifetime_trials > base.lifetime_trials + 1
     assert refined.best_gate_result is not None
 
 
@@ -181,7 +207,7 @@ def test_experiment_records_into_the_pool_and_counts_trials() -> None:
     store = InMemoryExperimentStore()
     exp = run_search(_random_walk_frame(5), "AAPL", ["sma", "momentum"], config=GateConfig())
     store.add(exp)
-    assert store.trials_for_symbol("AAPL") == 2
+    assert store.trials_for_symbol("AAPL") == exp.lifetime_trials == 16
 
 
 def test_every_trial_records_its_walk_forward_estimate() -> None:
@@ -194,7 +220,9 @@ def test_every_trial_records_its_walk_forward_estimate() -> None:
 
 def test_walk_forward_estimate_is_independent_of_the_holdout_sharpe() -> None:
     """It is a second, prequential out-of-sample view — not a restatement of the locked holdout."""
-    exp = run_search(_random_walk_frame(3), "AAPL", ["sma", "momentum"], config=_LENIENT)
+    # Use the strong edge fixture so the now-honest 16-config MinTRL denominator still graduates;
+    # the assertion is about the two OOS measurements, not whether random noise clears MinTRL.
+    exp = run_search(_strong_uptrend_frame(3), "AAPL", ["sma", "momentum"], config=_LENIENT)
     assert exp.graduate is not None
     best = max(exp.trials, key=lambda t: t.deflated_sharpe)
     assert best.walk_forward_oos_sharpe != exp.graduate.holdout_sharpe

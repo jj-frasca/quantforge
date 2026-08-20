@@ -98,6 +98,10 @@ class NullCalibration(BaseModel):
 # floating[Any], and _ohlcv only feeds them to a DataFrame constructor.
 FloatArray = npt.NDArray[np.floating[Any]]
 
+# Changes whenever the procedure that counts/prices searched hypotheses changes. The resolved grid
+# alone is insufficient identity when the same configs receive a different multiple-testing price.
+_TRIAL_ACCOUNTING_VERSION = "whole-search-v1"
+
 
 def calibration_search_version(
     strategy_names: Sequence[str], *, n_per_param: int, config: GateConfig
@@ -121,6 +125,7 @@ def calibration_search_version(
     return compute_parameter_hash(
         {
             "gate_config_version": config.version_hash,
+            "trial_accounting_version": _TRIAL_ACCOUNTING_VERSION,
             "n_per_param": n_per_param,
             "strategies": strategies,
         }
