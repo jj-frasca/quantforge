@@ -193,13 +193,18 @@ preserving SPY's return shape exactly, so the search's advantage over the iid-no
 "the catalog cannot capture serial structure" — ADR-042 measured 42% detection on a planted
 half-life-5 reversion. Four limitations are stated in ADR-051 §Measured.
 
-**The gate's POWER is measured too, and it reframes "0 of 40" (2026-08-19/20).** A Type-I error
-alone cannot say whether "0 of 40 graduates clear the bar" is a fact about the strategies or about
-the bar. The original ADR-041/042 coarse-only procedure measured 64% detection at AR(1) oracle
-Sharpe 3.9 and 42% for five-bar band reversion. After whole-search accounting, production
-refinement, and the enforced candidate budget, fresh runs 32340042967/32340043401 measured
-**0/50 in every cell**, including AR(1) oracle Sharpe +3.92 with a 77.4% in-sample capture upper
-bound. That is the current production-parity result. FINDING-005/ADR-049 add per-component gate
+**The gate's POWER is measured too, and it reframes "0 of 40" (refreshed 2026-08-20 at the hunt's
+own history, runs 32355803804/32355806443).** A Type-I error alone cannot say whether "0 of 40
+graduates clear the bar" is a fact about the strategies or about the bar. At production parity —
+whole-search accounting, production refinement, the enforced candidate budget, ADR-050's dispersion
+— and at 5400 bars, the gate detects a planted AR(1) edge **64% of the time at oracle Sharpe 3.9
+(32/50 also clear the ADR-018 bar)**, 34% at oracle 3.97 in the reverting direction, 22%/14% at
+oracle ≈ 2.6, and 0% at oracle ≈ 1.3 — which is what ADR-043's frontier predicts. **The intermediate
+"0/50 in every cell" result was an artifact of measuring on 3000 bars** (ADR-051); it is superseded
+and must not be requoted. The remaining zero is band reversion: 0% at every half-life at oracle
+≈ 2.6, with DSR passing 0/50, while capture is 20.7–37.2% against 55.1% for AR(1) at the same
+oracle. That is a capture gap — a statement about what the catalog can express, not about the
+statistics. FINDING-005/ADR-049 add per-component gate
 pass counts so the zero can be attributed without guessing or weakening a threshold. The fresh
 diagnostic found DSR passed **0/50 in all 12 cells**. At phi +0.30, PBO passed 43/50, stability
 40/50, and the other four components 50/50, isolating DSR as sufficient for the composite zero.

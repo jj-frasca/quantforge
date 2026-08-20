@@ -199,14 +199,20 @@ tails and vol, destroying serial structure). `null-calibration.yml` shards it an
 tiers: graduated, and cleared the ADR-018 bar.
 
 - `autocorrelated_edge(phi)` — AR(1) on returns. phi < 0 is lag-1 mean reversion, phi > 0 trend.
-  The production-parity 2026-08-20 refresh measured **0/50 at every swept phi**, including median
-  oracle +3.92 and 77.4% in-sample capture at phi +0.30. The earlier **64% at 3.9, 54% at 2.6,
-  0% at 1.3** curve describes the pre-ADR-046/047/048 procedure only.
+  **Current published curve** (run 32355803804, production parity at the hunt's 5400-bar history):
+  **64% at oracle 3.90 (32/50 clear the ADR-018 bar), 34% at oracle 3.97 reverting (17/50), 14%/22%
+  at oracle ≈ 2.6, 0% at oracle ≈ 1.3.** The intermediate 0/50-everywhere result was measured on
+  3000 bars and is superseded (ADR-051) — do not requote it.
 - `mean_reverting_edge(half_life, deviation_share)` — a random-walk level plus an AR(1) deviation,
   i.e. band reversion at a stated horizon. Parameterized by the deviation's SHARE of return
   variance so realized volatility is constant across horizons; otherwise a horizon sweep moves the
-  volatility and the effect size with it. The current refresh measured **0/50 at every horizon**;
-  the older procedure measured 0% at one bar and 42% at five bars at oracle ≈ 2.7.
+  volatility and the effect size with it. Run 32355806443 measures **0/50 at every horizon** at
+  oracle ≈ 2.6 with **DSR passing 0/50 in every cell**, while AR(1) reversion at the SAME oracle is
+  detected 22% with DSR passing 39/50. The difference is capture — **20.7% / 21.8% / 24.6% / 37.2%
+  at half-lives 1 / 2 / 3 / 5** against 55.1% for AR(1) — so this is what the catalog can express,
+  not what the statistics permit. ADR-042's "the asymmetry was the horizon, not the family" reading
+  describes the pre-ADR-046/047/048 procedure at 3000 bars and does NOT describe production: at
+  full history the horizon does not rescue band reversion.
 - Both processes are stationary and always-on, so every power number is an **upper bound** on power
   against real, intermittent edges.
 - ADR-049 records per-component pass counts (`dsr`, `pbo`, `stability`, `mintrl`, `holdout`,
@@ -218,10 +224,10 @@ tiers: graduated, and cleared the ADR-018 bar.
   signal widened `sr_std` from 0.510 (matched iid seed) to 1.703 and raised the haircut from 1.410
   to 4.698 against observed Sharpe 2.937. Do not lower `dsr_min`; a null-consistent dispersion
   decision requires its own ADR and full recalibration.
-- ADR-050 replaces whole-search sample standard deviation with a Normal-consistent IQR scale.
-  Preliminary full-catalog local evidence was 0/10 positive margins under iid null and 9/10 at
-  phi +0.30 (3/10 passed the unchanged composite). Those are design checks, not the new published
-  power result; Type-I and both power workflows must refresh before production claims resume.
+- ADR-050 replaces whole-search sample standard deviation with a Normal-consistent IQR scale. Its
+  refresh has now landed on all three workflows (Type-I 32354284731, power 32355803804/32355806443)
+  and the numbers above are that refresh. **Any further change to the estimator, the catalog, or
+  the grids invalidates all three again — re-dispatch them together, at the same `n_bars`.**
 - Effect size is bounded by the horizon: only `(1-rho)/2` of a deviation's variance is predictable
   one bar ahead, so slow band reversion cannot reach a large oracle Sharpe at equity volatility.
   Read half-lives ≥ 10 as a statement about that ceiling, not about the catalog.

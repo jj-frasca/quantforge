@@ -146,3 +146,54 @@ of the size the catalog can detect. That is a statement about the universe and t
    true edge. The comparison is fair — the same selection acts on both — but the levels are not.
 4. `n` differs (603 vs 200). Mann-Whitney does not require equal samples; the medians and
    percentiles above are not adjusted for it either way.
+
+## Measured (2026-08-20) — power at the hunt's history is NOT zero
+
+Runs 32355803804 (AR(1), ADR-041) and 32355806443 (band reversion, ADR-042), 50 planted-edge
+symbols per cell, 5400 bars, ADR-046/047/048 accounting with ADR-050's IQR dispersion. The
+published production-parity result these supersede was **0/50 in all twelve cells**, measured at
+3000 bars.
+
+| planted process | median oracle Sharpe | detected | clear the ADR-018 bar | capture (upper bound) | DSR passes |
+|---|---|---|---|---|---|
+| AR(1) phi +0.30 (trend) | +3.90 | **64%** | 32/50 | 75.8% | 44/50 |
+| AR(1) phi −0.30 (reversion) | +3.97 | **34%** | 17/50 | 69.5% | 50/50 |
+| AR(1) phi +0.20 | +2.54 | 14% | 5/50 | 64.0% | 23/50 |
+| AR(1) phi −0.20 | +2.63 | 22% | 4/50 | 55.1% | 39/50 |
+| AR(1) phi ±0.10 | +1.25 / +1.33 | 0% | 0 | 40–50% | 0/50 |
+| band reversion, half-life 1 | +2.60 | 0% | 0 | 20.7% | 0/50 |
+| band reversion, half-life 2 | +2.61 | 0% | 0 | 21.8% | 0/50 |
+| band reversion, half-life 3 | +2.70 | 0% | 0 | 24.6% | 0/50 |
+| band reversion, half-life 5 | +2.65 | 0% | 0 | 37.2% | 0/50 |
+| band reversion, half-life 10 | +2.03 | 0% | 0 | 47.4% | 0/50 |
+| band reversion, half-life 20 | +1.45 | 0% | 0 | 50.0% | 0/50 |
+
+**The zero was the measurement, not the gate.** Doubling the history from 3000 to 5400 bars turns
+0/50 into 64% at oracle 3.9 and 34% at oracle 4.0 in the opposite direction. Every claim of the
+form "the repaired gate cannot detect a planted edge" is retired by this table. The ADR-043
+frontier already predicted the shape: detection requires a true Sharpe around 2.1, and the ±0.10
+cells sit at oracle ≈ 1.3, where 0% is the correct answer rather than a defect.
+
+**At matched effect size the family gap is real, and it is a CAPTURE gap.** AR(1) reversion at
+oracle 2.63 is detected 22% of the time with DSR passing 39/50; band reversion at oracle 2.60–2.70
+is detected 0% of the time with DSR passing **0/50** at every horizon. The oracle is matched by
+construction, so a perfect predictor would find both equally easy. What differs is what the catalog
+can express: capture is 55.1% on the AR(1) process and 20.7–37.2% on the band process. Less of the
+available edge reaches the finalist, the finalist's Sharpe is smaller, and DSR — which is where
+every band cell fails — rejects it.
+
+**This corrects ADR-042's headline, and the correction is a stronger result than the original.**
+ADR-042 concluded from the older procedure that the ADR-041 asymmetry "was the horizon, not the
+family", because detection rose 0% → 42% across half-lives 1 → 5. At full history under the
+repaired accounting, band reversion is detected 0% at *every* horizon while AR(1) is detected at
+matched oracle — so the horizon does not rescue it and the family difference does not disappear.
+ADR-042's measurement stands for the procedure it measured; it does not describe production. What
+survives from it is the design that makes the comparison legitimate: constant realized volatility
+across horizons, and effect size measured rather than derived.
+
+**What this licenses.** The project may no longer say the gate has zero power, and "0 of 40
+graduates clear the bar" can no longer be defended as possibly-a-fact-about-the-bar: at oracle ≈ 4
+the bar is cleared 32 and 17 times out of 50. It remains true, per charter §4, that nothing here
+argues for moving a threshold. The direction it does point at is capture — the catalog's
+band-reversion expressions convert a fifth to a third of an available edge, and that is a strategy
+design problem, not a statistics problem.

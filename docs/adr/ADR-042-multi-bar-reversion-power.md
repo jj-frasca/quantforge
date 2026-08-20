@@ -196,3 +196,18 @@ these remain **upper bounds** on power against real, intermittent edges, exactly
 Delete `mean_reverting_edge`, `oracle_sharpe_of`, the workflow and the driver; drop the
 `oracle_sharpes` argument and the three descriptor fields. ADR-041's power path is untouched by all
 of it.
+
+
+## Superseded for production by ADR-051 (2026-08-20)
+
+This ADR's headline — "the ADR-041 asymmetry was the horizon, not the family" — was measured under
+the pre-ADR-046/047/048 accounting at 3000 bars. Re-run at production parity (ADR-050 dispersion,
+enforced candidate budget, production refinement) and at the hunt's own 5400-bar history, band
+reversion is detected **0% at every half-life** at oracle ≈ 2.6 with DSR passing 0/50 in every cell,
+while AR(1) reversion at the same oracle is detected 22% with DSR passing 39/50. The horizon does
+not rescue it, and the family difference does not disappear.
+
+The design in this ADR stands and is what makes the newer comparison legitimate: constant realized
+volatility across horizons, effect size measured rather than derived, and the two-tier reading
+against the deviation-share ceiling. Only the conclusion is superseded. The current numbers and the
+capture-based explanation are in ADR-051 §Measured (power at the hunt's history is NOT zero).

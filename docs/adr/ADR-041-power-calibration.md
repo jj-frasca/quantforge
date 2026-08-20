@@ -165,3 +165,13 @@ resolution. Charter §4 stands.
 Delete `autocorrelated_edge`, `oracle_sharpe`, `measure_power` and `PowerCalibration` from
 `app/research/lab/calibration.py`, plus the driver. `calibrate_gate` and the gate itself are
 untouched; nothing depends on the new code.
+
+
+## Current numbers live in ADR-051 (2026-08-20)
+
+The power curve in this ADR has been re-measured twice since: once under the repaired trial
+accounting (which produced an all-zero result) and once at the hunt's own 5400-bar history, which
+showed that zero to be an artifact of the short measurement. The published curve is now **64% at
+oracle 3.90, 34% at oracle 3.97 reverting, 22%/14% at oracle ≈ 2.6, 0% at oracle ≈ 1.3** — run
+32355803804, recorded in ADR-051 §Measured. The method in this ADR is unchanged; only the numbers
+moved.
