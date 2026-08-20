@@ -157,13 +157,14 @@ second one.
   signal and next-period returns (ADR-035). A dollar-neutral Sharpe cannot distinguish a factor from
   two lucky names; the IC can. Diagnostic only: nothing gates, selects, or sizes on it.
 
-**The gate's Type-I error is measured, not assumed (refreshed 2026-08-20).** `null-calibration.yml` runs the
-UNMODIFIED search over 200 symbols per null mode with no edge by construction (ADR-036/037), and
-commits the answer to `data/null_calibration/`. Under the production-parity ADR-046/047/048
-procedure, measured Type-I error is **0/200 on both nulls**, with max DSR -0.53 (iid) and -0.52
-(bootstrap). The earlier 1.0% / max +0.92 result describes the pre-accounting, uncapped selector
-only. The repaired composite is conservative on known-false series; power determines what that
-conservatism can actually detect.
+**The gate's Type-I error is measured, not assumed (ADR-050 refresh landed 2026-08-20, run
+32354284731).** `null-calibration.yml` runs the UNMODIFIED search over 200 symbols per null mode
+with no edge by construction (ADR-036/037), and commits the answer to `data/null_calibration/`.
+Under the production-parity ADR-046/047/048 procedure **with ADR-050's IQR dispersion**, and judged
+at the hunt's own 5400-bar history rather than the old 3000 (ADR-051), measured Type-I error is
+**0/200 on both nulls**, with max DSR **-0.415** (iid) and **-0.269** (bootstrap). The earlier 1.0%
+/ max +0.92 result describes the pre-accounting, uncapped selector only. The repaired composite is
+conservative on known-false series; power determines what that conservatism can actually detect.
 
 **Walk-forward and purged CV are real as of 2026-08-19 — they used to be counts.** `ValidationReport`
 carried `n_walk_forward_splits` / `n_purged_folds` and nothing was ever trained or scored on those
@@ -176,6 +177,21 @@ folds with an embargo sized from the grid's longest lookback instead of a fixed 
 "indistinguishable from noise" at roughly **+1.0 annualized**, and purged CV sits above walk-forward
 because its selection sees the future — read them side by side, never averaged. Details:
 `.claude/context/validation-methodology.md` §3–§5.
+
+**Their revisit trigger has now fired, and the answer is no separation (ADR-051, 2026-08-20).**
+The diagnostics were read only off gate passers while the null artifacts record the finalist of
+every searched symbol — two different statistics — and ADR-046's repaired denominator then emptied
+the gate-passer set entirely (603 experiments, **0 graduates**). `PoolReport` now summarizes both
+windows. On the matched comparison (same search and gate fingerprints, both sides at 5400 bars) the
+real universe's 603 finalists reach a median walk-forward OOS Sharpe of **+0.561** against
+**+0.652** for the bootstrap null and **+0.414** for the iid-normal null; purged CV reads
+**+0.597** against **+0.661** and **+0.475**. Mann-Whitney one-sided for real greater than null:
+**p = 1.0000 versus bootstrap on both statistics, p < 0.0001 versus iid-normal on both.** Every
+catalog strategy trades serial structure and the bootstrap null has none by construction while
+preserving SPY's return shape exactly, so the search's advantage over the iid-normal null is
+**distributional, not predictive**. This is not an argument about any threshold, and it is not
+"the catalog cannot capture serial structure" — ADR-042 measured 42% detection on a planted
+half-life-5 reversion. Four limitations are stated in ADR-051 §Measured.
 
 **The gate's POWER is measured too, and it reframes "0 of 40" (2026-08-19/20).** A Type-I error
 alone cannot say whether "0 of 40 graduates clear the bar" is a fact about the strategies or about

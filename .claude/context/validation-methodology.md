@@ -166,9 +166,16 @@ after any `GateConfig` change; each is token-free cloud compute.
 tails and vol, destroying serial structure). `null-calibration.yml` shards it and commits
 `data/null_calibration/*.json`.
 
-- Production-parity refresh (2026-08-20, after ADR-046/047/048), N = 200 per mode: **0 false
-  graduates on both nulls**, **0 clear the ADR-018 bar**, max DSR **-0.53 iid / -0.52 bootstrap**.
-  The prior 1.0% / max +0.92 result belongs to the coarse-only, uncapped accounting procedure.
+- Current published result — run 32354284731 (2026-08-20), ADR-046/047/048 accounting **with
+  ADR-050's IQR dispersion**, judged at the hunt's own **5400-bar** history (ADR-051), N = 200 per
+  mode: **0 false graduates on both nulls**, **0 clear the ADR-018 bar**, max DSR **-0.415 iid /
+  -0.269 bootstrap**. The prior 1.0% / max +0.92 result belongs to the coarse-only, uncapped
+  accounting procedure.
+- **Every calibration is judged at the hunt's history length, not a round number (ADR-051).** The
+  drivers previously planted 3000 bars while `scripts/shard_hunt.py` starts at 2005-01-01 and real
+  names carry ~5400. `n_bars` is now a `--n-bars` driver flag, a workflow input, and a recorded
+  field on both `NullCalibration` and `PowerCalibration`; an empty list means an artifact predating
+  the field, never a run that saw no bars.
 - A shard cannot report a final answer — the deflation bar grows with the TOTAL symbols searched,
   so `merge_calibrations` re-judges every false graduate at the combined N, and refuses to merge
   across gate config versions or null modes.
@@ -249,3 +256,36 @@ the denominator.
 - Capture ≈ 0.47 against the frontier's required true Sharpe 2.13 implies an underlying oracle
   Sharpe around **4.5** before the current pipeline is likely to find an edge. Because capture is an
   upper bound, the real requirement is worse. This is a diagnosis, never permission to lower a bar.
+
+### 7.5 The real universe against the null (ADR-051) — `scripts/pool_report.py`
+ADR-038/039 recorded a walk-forward and a purged-CV OOS Sharpe on every trial with a stated revisit
+trigger: read them against `data/null_calibration/*.json`. Two things had to be repaired before that
+was possible, and both are the general lesson.
+
+- **Compare the same statistic on both sides.** The pool's summary read gate passers; the null
+  artifacts record the max-DSR finalist of every SEARCHED symbol. `PoolReport` now carries
+  `walk_forward_finalists` / `purged_cv_finalists` alongside the gate-passer fields, and the report
+  distinguishes *no experiment carries it*, *no experiment passed the gate*, and a measured median.
+  This matters permanently, not once: under ADR-046's repaired denominator the 2026-08-20 discovery
+  run produced **0 graduates from 603 experiments**, so the gate-passer window is empty and only
+  the finalist window is readable.
+- **Match the identity before quoting a difference.** Compare `search_config_version` and
+  `gate_config_version` on both sides and check the bar counts. `Experiment` now records the former
+  (ADR-052) precisely because establishing it once required diffing commit timestamps against
+  workflow start times.
+
+**Measured (2026-08-20, matched at fingerprint `3f36fda2…` and 5400 bars).** Real: 603 finalists.
+Null: 200 per mode.
+
+| statistic | real median | bootstrap null | iid-normal null |
+|---|---|---|---|
+| walk-forward OOS Sharpe | **+0.561** | +0.652 | +0.414 |
+| purged-CV OOS Sharpe | **+0.597** | +0.661 | +0.475 |
+
+Mann-Whitney one-sided for real > null: **p = 1.0000 vs bootstrap** on both statistics, **p < 0.0001
+vs iid-normal** on both. Every catalog strategy trades serial structure; the bootstrap null has none
+and preserves SPY's return shape exactly. So the advantage over iid-normal is **distributional, not
+predictive**. Read it as a joint statement about this universe and this catalog — not as a threshold
+argument (charter §4), and not as "the catalog cannot capture serial structure", which ADR-042
+measured to be false at 42% detection on a planted half-life-5 reversion. Limitations are in
+ADR-051 §Measured; the sharpest is that the bootstrap resamples SPY rather than each symbol.

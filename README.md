@@ -18,19 +18,27 @@ with it. Every number below is produced by a committed workflow and can be re-ru
 
 | question | answer | how |
 |---|---|---|
-| **Type-I error** — how often does the whole pipeline graduate a symbol with *no edge by construction*? | **0/200** under both iid-normal and bootstrap nulls for the pre-ADR-050 estimator; ADR-050 refresh pending | `null-calibration.yml` (ADR-036/037/050) |
+| **Type-I error** — how often does the whole pipeline graduate a symbol with *no edge by construction*? | **0/200** under both iid-normal and bootstrap nulls, with ADR-050's dispersion and judged at the hunt's own 5400-bar history. Max DSR -0.415 (iid) / -0.269 (bootstrap) | `null-calibration.yml` (ADR-036/037/050/051) |
 | Do those false graduates survive the universe-deflation bar? | **0 of 200**, in both nulls | same run |
 | Did the repaired pre-ADR-050 gate detect a *planted* edge? | **No: 0/50 in all 12 cells.** DSR alone rejected every finalist; ADR-050 refresh pending | `power-calibration.yml` (ADR-041/049/050) |
 | **Resolution** — what must an edge actually *be* to be found here? | a **true annualized Sharpe of 2.13**, at the current 607-symbol universe and 4.3-year holdout | `scripts/pool_report.py` (ADR-043) |
 | How many discovered strategies clear that bar today? | **0 of 40.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
+| **Does what the search proposes beat a no-edge surrogate?** | **No.** Its 603 finalists lose to a bootstrap null built from SPY's own return distribution (p = 1.0000 one-sided, both walk-forward and purged CV) and beat only an iid-normal one | `scripts/pool_report.py` vs `null-calibration.yml` (ADR-051) |
 
-The last row is the point. The pipeline has searched 128,000+ parameter trials across 607 symbols
-and **graduated nothing that is distinguishable from best-of-N selection luck**. The pre-ADR-050
-gate rejected every calibrated null but also every planted edge, so it could not support a claim
-about strategy absence; FINDING-006 and ADR-050 repair the isolated dispersion mechanism, and the
-production-sized refresh is required before stating the new error rates. Walk-forward and purged-CV
-out-of-sample Sharpes are likewise read against their own measured null distributions
-(p95 ≈ +1.05), not against zero.
+The last two rows are the point. The pipeline has searched 227,000+ parameter trials across 607
+symbols and **graduated nothing that is distinguishable from best-of-N selection luck** — and when
+the strategies it *proposes* are compared against a surrogate with no serial structure at all, they
+do not win either. Walk-forward and purged-CV out-of-sample Sharpes are read against their own
+measured null distributions (bootstrap p95 ≈ +0.98 walk-forward, +1.00 purged CV), never against
+zero. Because every strategy in the catalog trades serial structure, and the bootstrap null
+destroys serial structure while preserving SPY's return shape exactly, the search's advantage over
+an iid-normal null is **distributional rather than predictive** (ADR-051).
+
+That is a claim about this universe and this catalog jointly, not about the thresholds: ADR-042
+measured 42% detection on a *planted* five-bar band reversion, so the catalog demonstrably can find
+serial structure when it is there. The open question is power at production parity — FINDING-006
+and ADR-050 repaired the dispersion estimator, and the refreshed power run is what the third row
+above is waiting on.
 
 ## What's shipped
 
