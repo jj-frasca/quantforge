@@ -225,6 +225,11 @@ export const powerCellSchema = z.object({
   finalist_observed_sharpes: z.array(z.number()).default([]),
   gate_pass_counts: z.record(z.string(), z.number()).default({}),
   n_bars: z.array(z.number()).default([]),
+  // ADR-045/055: computed by the backend and served, not re-derived here. The net ratio is
+  // null when the net oracle is inside its own Sharpe standard error — a planted edge costs
+  // have eaten has no achievable size to express a fraction of.
+  capture_ratio: z.number().nullable().default(null),
+  net_capture_ratio: z.number().nullable().default(null),
   gate_config_version: z.string(),
   search_config_version: z.string().default('legacy-unspecified'),
 })

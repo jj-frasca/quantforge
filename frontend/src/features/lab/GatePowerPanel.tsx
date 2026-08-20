@@ -9,17 +9,6 @@ const median = (values: number[]): number | null => {
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
 }
 
-// The fraction of an available edge the catalog converts (ADR-045). An upper bound — the finalist
-// is chosen in-sample — so a LOW value is the conclusive one.
-const capture = (oracles: number[], cell: PowerCell): number | null => {
-  const oracle = median(oracles)
-  const finalist = median(cell.finalist_observed_sharpes)
-  if (oracle === null || finalist === null || oracle <= 0) {
-    return null
-  }
-  return finalist / oracle
-}
-
 const sharpe = (value: number | null): string =>
   value === null ? '—' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
 
@@ -70,8 +59,8 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
                   <td>{sharpe(median(cell.net_oracle_sharpes))}</td>
                   <td>{`${Math.round(cell.detection_rate * 100)}%`}</td>
                   <td>{`${cell.n_clear_deflation_bar} / ${cell.n_symbols}`}</td>
-                  <td>{percent(capture(cell.oracle_sharpes, cell))}</td>
-                  <td>{percent(capture(cell.net_oracle_sharpes, cell))}</td>
+                  <td>{percent(cell.capture_ratio)}</td>
+                  <td>{percent(cell.net_capture_ratio)}</td>
                 </tr>
               )
             })}

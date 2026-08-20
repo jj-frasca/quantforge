@@ -6,12 +6,13 @@ from typing import Any, NamedTuple
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.lab.candidate_budget import allocate_catalog_candidate_budget
 from app.research.lab.experiment import Experiment, Trial
+from app.research.lab.frontier import sharpe_standard_error
 from app.research.lab.gate import GateConfig
 from app.research.lab.holdout import split_holdout
 from app.research.lab.search import run_search
@@ -311,23 +312,30 @@ class PowerCalibration(BaseModel):
         """(median, p95, max) of the planted effect size NET of transaction costs (ADR-055)."""
         return _percentiles(self.net_oracle_sharpes)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def net_capture_ratio(self) -> float | None:
         """`capture_ratio` against the effect size the catalog could actually have kept (ADR-055).
 
-        Both numerator and denominator are now net of the same cost model. Higher than the gross
-        ratio by construction — that is the denominator being corrected, not the catalog improving.
+        Notes:
+            Both numerator and denominator are net of the same cost model. Refused when the net
+            oracle is not distinguishable from zero at this cell's own history length — a planted
+            edge that costs have entirely eaten has no achievable size to express a fraction of,
+            and dividing by it reports a ratio against noise. The scale is Lo (2002)'s Sharpe
+            standard error, the same one ADR-043's frontier uses, rather than an invented cutoff.
         """
         if (
             len(self.finalist_observed_sharpes) != self.n_symbols
             or len(self.net_oracle_sharpes) != self.n_symbols
+            or not self.n_bars
         ):
             return None
         oracle = median(self.net_oracle_sharpes)
-        if oracle <= 0.0:
+        if oracle <= sharpe_standard_error(oracle, median(self.n_bars) / _TRADING_DAYS):
             return None
         return median(self.finalist_observed_sharpes) / oracle
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def capture_ratio(self) -> float | None:
         """Selection-biased upper bound on how much of the planted edge the catalog captures.

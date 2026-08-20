@@ -20,6 +20,8 @@ const cell = (overrides: Partial<PowerCell> = {}): PowerCell => ({
   finalist_observed_sharpes: [3.0, 3.0],
   gate_pass_counts: { dsr: 44 },
   n_bars: [5400],
+  capture_ratio: 0.769,
+  net_capture_ratio: 1.034,
   gate_config_version: 'v1',
   search_config_version: 'abcdef0123456789',
   ...overrides,
@@ -70,6 +72,29 @@ test('shows capture, because a zero with low capture is a catalog problem not a 
   expect(screen.getByText('76.9%')).toBeInTheDocument()
 })
 
+test('renders the capture ratios the backend computed rather than re-deriving them', () => {
+  // The panel used to divide the raw Sharpe arrays itself, which is the shadow-validator pattern
+  // the frontend rules forbid — and it could not have applied the backend's noise refusal.
+  render(
+    <GatePowerPanel
+      sweeps={[
+        sweep({
+          cells: [
+            cell({
+              capture_ratio: 0.5,
+              net_capture_ratio: null,
+              oracle_sharpes: [9.9, 9.9],
+              finalist_observed_sharpes: [9.9, 9.9],
+            }),
+          ],
+        }),
+      ]}
+    />,
+  )
+  expect(screen.getByText('50.0%')).toBeInTheDocument()
+  expect(screen.queryByText('100.0%')).not.toBeInTheDocument()
+})
+
 test('renders nothing when power has never been measured', () => {
   const { container } = render(<GatePowerPanel sweeps={[]} />)
   expect(container).toBeEmptyDOMElement()
@@ -86,16 +111,22 @@ test('shows capture against the oracle NET of the costs the catalog itself paid'
 })
 
 test('a cell measured before the net oracle existed shows a dash, not a capture of zero', () => {
-  render(<GatePowerPanel sweeps={[sweep({ cells: [cell({ net_oracle_sharpes: [] })] })]} />)
+  render(
+    <GatePowerPanel
+      sweeps={[sweep({ cells: [cell({ net_oracle_sharpes: [], net_capture_ratio: null })] })]}
+    />,
+  )
   expect(screen.getAllByText('—')).toHaveLength(2)
 })
 
 test('a net oracle that costs have eaten has no capture fraction', () => {
-  // At |phi| = 0.10 the net oracle is about zero: there is no achievable edge to express a
-  // capture fraction of, and a ratio against it would divide by noise.
+  // At |phi| = 0.10 the net oracle sits inside its own standard error: the backend refuses the
+  // ratio, and the panel must show that refusal rather than a number.
   render(
     <GatePowerPanel
-      sweeps={[sweep({ cells: [cell({ net_oracle_sharpes: [-0.06, 0.02] })] })]}
+      sweeps={[
+        sweep({ cells: [cell({ net_oracle_sharpes: [-0.06, 0.02], net_capture_ratio: null })] }),
+      ]}
     />,
   )
   expect(screen.getByText('—')).toBeInTheDocument()

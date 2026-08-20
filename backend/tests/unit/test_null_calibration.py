@@ -998,3 +998,61 @@ def test_a_run_missing_one_symbol_net_oracle_is_refused() -> None:
             },
             net_oracle_sharpes={"BAND0": 1.0},
         )
+
+
+def test_a_net_oracle_inside_its_own_noise_has_no_capture_fraction() -> None:
+    """The refreshed phi = +0.10 cell: net oracle +0.02 over 5400 bars, where a Sharpe's own
+    standard error is about 0.22. Dividing by it reported a capture of 2855%, which is a ratio
+    against noise dressed as a measurement."""
+    result = _power().model_copy(
+        update={
+            "oracle_sharpes": [1.25, 1.25],
+            "net_oracle_sharpes": [0.02, 0.02],
+            "finalist_observed_sharpes": [0.62, 0.62],
+            "n_bars": [5400, 5400],
+        }
+    )
+    assert result.capture_ratio is not None
+    assert result.net_capture_ratio is None
+
+
+def test_a_net_oracle_well_clear_of_its_noise_still_reports_capture() -> None:
+    result = _power().model_copy(
+        update={
+            "oracle_sharpes": [2.63, 2.63],
+            "net_oracle_sharpes": [1.15, 1.15],
+            "finalist_observed_sharpes": [1.45, 1.45],
+            "n_bars": [5400, 5400],
+        }
+    )
+    assert result.net_capture_ratio == pytest.approx(1.45 / 1.15)
+
+
+def test_a_cell_that_states_no_history_cannot_bound_its_own_noise() -> None:
+    result = _power().model_copy(
+        update={
+            "net_oracle_sharpes": [1.15, 1.15],
+            "finalist_observed_sharpes": [1.45, 1.45],
+            "n_bars": [],
+        }
+    )
+    assert result.net_capture_ratio is None
+
+
+def test_both_capture_ratios_are_serialized_not_recomputed_by_every_reader() -> None:
+    """The dashboard was re-deriving this from the raw Sharpe arrays, which is the shadow-validator
+    pattern the frontend rules forbid — and it could not have applied the noise refusal above."""
+    result = _power().model_copy(
+        update={
+            "net_oracle_sharpes": [1.15, 1.15],
+            "finalist_observed_sharpes": [1.45, 1.45],
+            "n_bars": [5400, 5400],
+        }
+    )
+    payload = result.model_dump()
+
+    assert payload["capture_ratio"] == pytest.approx(result.capture_ratio)
+    assert payload["net_capture_ratio"] == pytest.approx(result.net_capture_ratio)
+    assert PowerCalibration.model_validate(payload).net_capture_ratio == pytest.approx(
+        result.net_capture_ratio
+    )
