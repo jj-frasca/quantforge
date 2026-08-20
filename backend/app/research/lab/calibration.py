@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from statistics import median
@@ -18,6 +18,7 @@ from app.research.lab.gate import GateConfig
 from app.research.lab.holdout import split_holdout
 from app.research.lab.search import run_search
 from app.research.lab.universe import expected_max_sharpe_under_null
+from app.research.strategies.catalog import STRATEGY_CATALOG
 
 _TRADING_DAYS = 252
 _COLUMNS = ["open", "high", "low", "close", "volume"]
@@ -294,6 +295,11 @@ class PowerCalibration(BaseModel):
     # catalog grows even if the addition never wins; without the name a capture delta between two
     # sweeps cannot be attributed. Empty means an artifact predating the field.
     finalist_strategy_names: list[str] = []
+    # ADR-059: the best in-sample Sharpe within each catalog CATEGORY, one entry per searched
+    # symbol. Capture's numerator requires nothing of the finalist except that it won, and on fast
+    # band reversion the winner is usually a trend strategy fitting the level rather than anything
+    # trading the planted reversion. Empty means an artifact predating the field.
+    finalist_sharpes_by_category: dict[str, list[float]] = Field(default_factory=dict)
     # ADR-049: independent component pass counts make a composite zero-power result diagnosable.
     # Empty means a legacy artifact did not preserve attribution; it never means zero passes.
     gate_pass_counts: dict[str, int] = Field(default_factory=dict)
@@ -354,6 +360,26 @@ class PowerCalibration(BaseModel):
         if oracle <= sharpe_standard_error(oracle, median(self.n_bars) / _TRADING_DAYS):
             return None
         return median(self.finalist_observed_sharpes) / oracle
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def net_capture_by_category(self) -> dict[str, float]:
+        """`net_capture_ratio` split by the kind of strategy that earned it (ADR-059).
+
+        Notes:
+            Same denominator and the same refusal as `net_capture_ratio` — a cell whose net oracle
+            is indistinguishable from zero has no achievable size for any category to express a
+            fraction of. Which category MATCHES a planted process is an interpretation and is
+            deliberately not encoded here; the reader picks the row.
+        """
+        if self.net_capture_ratio is None:
+            return {}
+        oracle = median(self.net_oracle_sharpes)
+        return {
+            category: median(sharpes) / oracle
+            for category, sharpes in self.finalist_sharpes_by_category.items()
+            if len(sharpes) == self.n_symbols
+        }
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -590,6 +616,7 @@ def measure_power(
     net_oracles: list[float] = []
     finalist_observed_sharpes: list[float] = []
     finalist_strategy_names: list[str] = []
+    finalist_sharpes_by_category: defaultdict[str, list[float]] = defaultdict(list)
     errors: dict[str, str] = {}
     for symbol, frame in frames.items():
         try:
@@ -616,6 +643,8 @@ def measure_power(
         finalist = _finalist(experiment)
         finalist_observed_sharpes.append(finalist.observed_sharpe)
         finalist_strategy_names.append(finalist.strategy_name)
+        for category, best in _best_by_category(experiment).items():
+            finalist_sharpes_by_category[category].append(best)
 
     if not experiments:
         raise ValueError("need at least one symbol that can be searched")
@@ -642,6 +671,7 @@ def measure_power(
         net_oracle_sharpes=net_oracles,
         finalist_observed_sharpes=finalist_observed_sharpes,
         finalist_strategy_names=finalist_strategy_names,
+        finalist_sharpes_by_category=dict(finalist_sharpes_by_category),
         n_bars=n_bars,
         gate_pass_counts={
             "dsr": sum(result.dsr_ok for result in gate_results),
@@ -673,6 +703,26 @@ def _percentiles(values: Sequence[float]) -> tuple[float, float, float] | None:
         return None
     array = np.asarray(values, dtype=float)
     return float(np.median(array)), float(np.percentile(array, 95)), float(array.max())
+
+
+_CATEGORY_OF: dict[str, str] = {e.name: e.category for e in STRATEGY_CATALOG}
+
+
+def _best_by_category(experiment: Experiment) -> dict[str, float]:
+    """The best in-sample Sharpe within each catalog category this search actually covered (ADR-059).
+
+    Notes:
+        A category absent from the searched name list is absent here rather than present at 0.0 —
+        the two mean different things, and only the second would drag a median.
+    """
+    best: dict[str, float] = {}
+    for trial in experiment.trials:
+        category = _CATEGORY_OF.get(trial.strategy_name)
+        if category is None:
+            continue
+        if category not in best or trial.observed_sharpe > best[category]:
+            best[category] = trial.observed_sharpe
+    return best
 
 
 def _finalist(experiment: Experiment) -> Trial:

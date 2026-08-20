@@ -57,6 +57,15 @@ def _report(sweep: PowerSweep) -> None:
             f"  {cell.gate_pass_counts.get('dsr', 'n/a')}/{cell.n_symbols}"
             f"  {_top_finalist(cell)}"
         )
+        # ADR-059: the same ratio split by the kind of strategy that earned it. On a planted
+        # reversion the Mean Reversion row is the one that answers "did anything trading this
+        # process keep any of it"; the overall ratio can be a trend strategy fitting the level.
+        by_category = cell.net_capture_by_category
+        if by_category:
+            parts = "  ".join(
+                f"{category}={ratio:.0%}" for category, ratio in sorted(by_category.items())
+            )
+            print(f"{'':>8}  net capture by category: {parts}")
 
 
 def main() -> None:

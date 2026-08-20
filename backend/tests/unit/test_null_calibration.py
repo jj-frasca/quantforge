@@ -1251,3 +1251,47 @@ def test_the_search_fingerprint_is_stable_across_code_changes() -> None:
         )
         == "b8a2326836973064d20581b449629aa26be30bec31d3c6fad6f2420c433ce470"
     )
+
+
+def test_a_power_cell_records_the_best_finalist_in_each_catalog_category() -> None:
+    """ADR-059. Capture's numerator is 'the best finalist', with nothing requiring the finalist to
+    trade the planted process — on fast band reversion it usually does not. The per-category record
+    is what separates 'the matched family lost narrowly' from 'it was nowhere near'."""
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(3)}
+    result = measure_power(frames, ["sma", "momentum", "mean_reversion"], phi=-0.3)
+
+    by_category = result.finalist_sharpes_by_category
+    assert set(by_category) == {"Trend", "Mean Reversion"}
+    for sharpes in by_category.values():
+        assert len(sharpes) == result.n_symbols
+    # The overall finalist is the best of the categories on every symbol, by construction.
+    for index, best in enumerate(result.finalist_observed_sharpes):
+        assert best == pytest.approx(max(s[index] for s in by_category.values()))
+
+
+def test_capture_by_category_uses_the_same_net_denominator_and_the_same_refusal() -> None:
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(3)}
+    result = measure_power(frames, ["sma", "mean_reversion"], phi=-0.3)
+
+    net = np.median(result.net_oracle_sharpes)
+    for category, sharpes in result.finalist_sharpes_by_category.items():
+        assert result.net_capture_by_category[category] == pytest.approx(
+            float(np.median(sharpes)) / net
+        )
+
+    noise = PowerCalibration.model_validate(
+        {**result.model_dump(), "net_oracle_sharpes": [0.001] * result.n_symbols}
+    )
+    assert noise.net_capture_ratio is None
+    assert noise.net_capture_by_category == {}
+
+
+def test_a_legacy_power_artifact_reports_no_per_category_capture() -> None:
+    frames = {"EDGE0": autocorrelated_edge(900, seed=0, phi=-0.3)}
+    result = measure_power(frames, ["sma", "mean_reversion"], phi=-0.3)
+
+    legacy = PowerCalibration.model_validate(
+        result.model_dump(exclude={"finalist_sharpes_by_category"})
+    )
+    assert legacy.finalist_sharpes_by_category == {}
+    assert legacy.net_capture_by_category == {}
