@@ -18,7 +18,7 @@ from app.research.lab.gate import GateConfig
 from app.research.lab.holdout import split_holdout
 from app.research.lab.search import run_search
 from app.research.lab.universe import expected_max_sharpe_under_null
-from app.research.strategies.catalog import STRATEGY_CATALOG
+from app.research.strategies.catalog import CATEGORY_OF
 
 _TRADING_DAYS = 252
 _COLUMNS = ["open", "high", "low", "close", "volume"]
@@ -705,9 +705,6 @@ def _percentiles(values: Sequence[float]) -> tuple[float, float, float] | None:
     return float(np.median(array)), float(np.percentile(array, 95)), float(array.max())
 
 
-_CATEGORY_OF: dict[str, str] = {e.name: e.category for e in STRATEGY_CATALOG}
-
-
 def _best_by_category(experiment: Experiment) -> dict[str, float]:
     """The best in-sample Sharpe within each catalog category this search actually covered (ADR-059).
 
@@ -717,7 +714,7 @@ def _best_by_category(experiment: Experiment) -> dict[str, float]:
     """
     best: dict[str, float] = {}
     for trial in experiment.trials:
-        category = _CATEGORY_OF.get(trial.strategy_name)
+        category = CATEGORY_OF.get(trial.strategy_name)
         if category is None:
             continue
         if category not in best or trial.observed_sharpe > best[category]:

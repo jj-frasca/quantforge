@@ -1435,3 +1435,10 @@ STRATEGY_CATALOG: list[StrategySchema] = [
         ],
     ),
 ]
+
+
+# One place that answers "what kind of strategy is this?", so a reader of a power cell (ADR-059) and
+# a reader of the pool report (ADR-060) cannot disagree about the taxonomy they are grouping by.
+CATEGORY_OF: dict[str, StrategyCategory] = {
+    entry.name: entry.category for entry in STRATEGY_CATALOG
+}

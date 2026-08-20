@@ -518,3 +518,92 @@ def test_the_probability_reference_level_is_the_caller_s_to_state() -> None:
     assert strict.statistic_agreement is not None and strict.statistic_agreement.margin_only == 1
     assert lenient.statistic_agreement is not None and lenient.statistic_agreement.both_pass == 1
     assert lenient.statistic_agreement.probability_reference == pytest.approx(0.50)
+
+
+def _multi_family_exp(
+    symbol: str,
+    sharpes: dict[str, float],
+    *,
+    n_bars: int | None = None,
+) -> Experiment:
+    """An experiment carrying one finalist per strategy family, as a real search writes it."""
+    trials = [
+        Trial(
+            strategy_name=name,
+            parameters={},
+            observed_sharpe=sharpe,
+            # DSR ordering follows the Sharpe ordering within one experiment: the whole-search
+            # haircut is common to every family in it.
+            deflated_sharpe=sharpe - 0.5,
+            pbo=0.1,
+            parameter_stability_score=0.8,
+        )
+        for name, sharpe in sharpes.items()
+    ]
+    return Experiment(
+        symbol=symbol,
+        strategy_names=list(sharpes),
+        gate_config=GateConfig(),
+        trials=trials,
+        lifetime_trials=10,
+        n_bars=n_bars,
+    )
+
+
+def test_the_report_states_how_far_ahead_the_winning_family_was() -> None:
+    """ADR-060. A pool row records `best_strategy_name` with no indication of how far ahead of the
+    alternatives it was, while the leaderboard and the capture reading both treat it as
+    informative."""
+    report = summarize_pool(
+        [
+            _multi_family_exp("A", {"sma": 1.0, "mean_reversion": 0.9}, n_bars=5400),
+            _multi_family_exp("B", {"sma": 0.6, "mean_reversion": 0.8}, n_bars=5400),
+        ],
+        [],
+    )
+
+    separation = report.category_separation
+    assert separation is not None
+    assert separation.medians == {
+        "Trend": pytest.approx(0.8),
+        "Mean Reversion": pytest.approx(0.85),
+    }
+    assert separation.winner_shares == {
+        "Trend": pytest.approx(0.5),
+        "Mean Reversion": pytest.approx(0.5),
+    }
+    assert separation.median_gap == pytest.approx(0.15)
+
+
+def test_a_gap_inside_one_standard_error_is_reported_as_not_separable() -> None:
+    """The verdict is a comparison of scales — Lo (2002)'s Sharpe standard error at the pool's own
+    history — not an invented cutoff."""
+    close = summarize_pool(
+        [_multi_family_exp(s, {"sma": 1.0, "mean_reversion": 0.98}, n_bars=5400) for s in "ABC"],
+        [],
+    )
+    assert close.category_separation is not None
+    assert close.category_separation.standard_error is not None
+    assert close.category_separation.median_gap < close.category_separation.standard_error
+    assert close.category_separation.separable is False
+
+    clear = summarize_pool(
+        [_multi_family_exp(s, {"sma": 2.0, "mean_reversion": 0.5}, n_bars=5400) for s in "ABC"],
+        [],
+    )
+    assert clear.category_separation is not None
+    assert clear.category_separation.separable is True
+
+
+def test_a_pool_that_does_not_state_its_history_reports_no_verdict() -> None:
+    """None, never False: every row written before ADR-052's amendment lacks `n_bars`, and 'not
+    measured' must not render as 'not separable'."""
+    report = summarize_pool([_multi_family_exp("A", {"sma": 1.0, "mean_reversion": 0.5})], [])
+    assert report.category_separation is not None
+    assert report.category_separation.standard_error is None
+    assert report.category_separation.separable is None
+
+
+def test_a_pool_with_no_trials_has_no_separation_to_report() -> None:
+    report = summarize_pool([], [])
+    assert report.category_separation is None

@@ -9,7 +9,7 @@ occasionally gets done wrong.
 Pure — the caller supplies the experiments and the book.
 """
 
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Sequence
 
 import numpy as np
@@ -17,10 +17,15 @@ from pydantic import BaseModel, ConfigDict
 
 from app.research.lab.calibration import NullCalibration
 from app.research.lab.experiment import Experiment, Trial
-from app.research.lab.frontier import DetectionFrontier, describe_frontier
+from app.research.lab.frontier import (
+    DetectionFrontier,
+    describe_frontier,
+    sharpe_standard_error,
+)
 from app.research.lab.paper import PaperPosition
 from app.research.lab.portfolio_manager import DeflationCohorts, deflation_cohorts
 from app.research.lab.universe import expected_max_sharpe_under_null, rank_experiments
+from app.research.strategies.catalog import CATEGORY_OF
 
 _TRADING_DAYS = 252
 
@@ -116,10 +121,32 @@ class PoolReport(BaseModel):
     # ADR-054: the margin/probability confusion matrix over the pool's finalists. None when no
     # finalist carries a probability — every row written before ADR-054 is in that state.
     statistic_agreement: StatisticAgreement | None = None
+    # ADR-060: how far ahead of the runner-up the selected FAMILY was, against Lo's standard
+    # error. None when no experiment carries a trial — there is no selection to describe.
+    category_separation: "CategorySeparation | None" = None
     # ADR-043: the TRUE edge this design can detect, beside the bar an observation must clear.
     # None when no graduate exists to take a holdout length from — inventing one would publish a
     # detectable edge for a design that was never run.
     frontier: DetectionFrontier | None = None
+
+
+class CategorySeparation(BaseModel):
+    """How far ahead of the runner-up the family the search selected actually was (ADR-060).
+
+    Notes:
+        `separable` compares the median gap to Lo (2002)'s Sharpe standard error at the pool's own
+        history — a stated statistical scale, not an invented cutoff. It is None, never False, when
+        the pool does not state its history: every row written before ADR-052's amendment is in that
+        state, and "not measured" must not render as "not separable".
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    medians: dict[str, float]
+    winner_shares: dict[str, float]
+    median_gap: float
+    standard_error: float | None
+    separable: bool | None
 
 
 class NullComparison(BaseModel):
@@ -248,6 +275,57 @@ def _agree(
     )
 
 
+def _separation(
+    experiments: Sequence[Experiment], median_n_bars: int | None
+) -> CategorySeparation | None:
+    """Group each experiment's finalists by catalog category and report the winner's lead (ADR-060).
+
+    Notes:
+        The gap is taken per experiment and then medianed, not taken between the pooled medians:
+        the pooled version would compare two different symbols' best families and describe no
+        search that ever ran.
+    """
+    per_category: dict[str, list[float]] = defaultdict(list)
+    gaps: list[float] = []
+    winners: Counter[str] = Counter()
+    for experiment in experiments:
+        if not experiment.trials:
+            continue
+        best: dict[str, float] = {}
+        for trial in experiment.trials:
+            category = CATEGORY_OF.get(trial.strategy_name)
+            if category is None:
+                continue
+            if category not in best or trial.observed_sharpe > best[category]:
+                best[category] = trial.observed_sharpe
+        if not best:
+            continue
+        for covered, sharpe in best.items():
+            per_category[covered].append(sharpe)
+        winner = max(experiment.trials, key=lambda t: t.deflated_sharpe)
+        winning_category = CATEGORY_OF.get(winner.strategy_name)
+        if winning_category is not None:
+            winners[winning_category] += 1
+        ordered = sorted(best.values(), reverse=True)
+        if len(ordered) > 1:
+            gaps.append(ordered[0] - ordered[1])
+    if not per_category or not gaps:
+        return None
+
+    n_judged = sum(winners.values())
+    median_gap = float(np.median(gaps))
+    standard_error = (
+        sharpe_standard_error(median_gap, median_n_bars / _TRADING_DAYS) if median_n_bars else None
+    )
+    return CategorySeparation(
+        medians={c: float(np.median(v)) for c, v in per_category.items()},
+        winner_shares={c: n / n_judged for c, n in winners.items()} if n_judged else {},
+        median_gap=median_gap,
+        standard_error=standard_error,
+        separable=median_gap > standard_error if standard_error is not None else None,
+    )
+
+
 def summarize_pool(
     experiments: list[Experiment],
     positions: list[PaperPosition],
@@ -337,4 +415,7 @@ def summarize_pool(
         search_config_versions=dict(families.most_common()),
         median_n_bars=int(np.median(searched_bars)) if searched_bars else None,
         frontier=frontier,
+        category_separation=_separation(
+            experiments, int(np.median(searched_bars)) if searched_bars else None
+        ),
     )

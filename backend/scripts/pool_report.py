@@ -112,6 +112,34 @@ def main() -> None:
             "-- must match the null artifact's own n_bars for the comparison below to hold"
         )
 
+    # ADR-060: the leaderboard and the capture reading both treat the selected FAMILY as
+    # informative. This says how far ahead of the runner-up it was, on the scale that decides
+    # whether that lead means anything.
+    separation = report.category_separation
+    if separation is not None:
+        print("\nwhich KIND of strategy the search selects (ADR-060):")
+        for category, sharpe in sorted(separation.medians.items(), key=lambda kv: -kv[1]):
+            share = separation.winner_shares.get(category, 0.0)
+            print(
+                f"  {category:<16} median best-in-category Sharpe {sharpe:+.3f}   wins {share:.0%}"
+            )
+        if separation.standard_error is None:
+            print(
+                f"  median lead over the runner-up: {separation.median_gap:+.3f} -- NOT JUDGED: "
+                "the pool does not state the history it was searched over"
+            )
+        else:
+            verdict = (
+                "separable from noise"
+                if separation.separable
+                else "INSIDE one standard error -- the family the search picks is not "
+                "distinguishable from the runner-up"
+            )
+            print(
+                f"  median lead over the runner-up: {separation.median_gap:+.3f} against a Sharpe "
+                f"standard error of {separation.standard_error:.3f} -> {verdict}"
+            )
+
     print("\nout-of-sample Sharpe (compare with data/null_calibration/ — same statistic, no edge):")
     for label, finalists, passers in (
         ("walk-forward", report.walk_forward_finalists, report.walk_forward_graduates),
