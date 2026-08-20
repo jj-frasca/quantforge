@@ -218,6 +218,10 @@ export const powerCellSchema = z.object({
   phi: z.number().nullable().default(null),
   half_life: z.number().nullable().default(null),
   oracle_sharpes: z.array(z.number()).default([]),
+  // ADR-055: the same oracle charged the 10bp turnover cost every catalog finalist paid.
+  // Empty for a cell measured before the correction — which must read as unmeasured, not as
+  // an oracle of zero.
+  net_oracle_sharpes: z.array(z.number()).default([]),
   finalist_observed_sharpes: z.array(z.number()).default([]),
   gate_pass_counts: z.record(z.string(), z.number()).default({}),
   n_bars: z.array(z.number()).default([]),

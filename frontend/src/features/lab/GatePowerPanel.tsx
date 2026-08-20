@@ -11,14 +11,20 @@ const median = (values: number[]): number | null => {
 
 // The fraction of an available edge the catalog converts (ADR-045). An upper bound — the finalist
 // is chosen in-sample — so a LOW value is the conclusive one.
-const capture = (cell: PowerCell): number | null => {
-  const oracle = median(cell.oracle_sharpes)
+const capture = (oracles: number[], cell: PowerCell): number | null => {
+  const oracle = median(oracles)
   const finalist = median(cell.finalist_observed_sharpes)
   if (oracle === null || finalist === null || oracle <= 0) {
     return null
   }
   return finalist / oracle
 }
+
+const sharpe = (value: number | null): string =>
+  value === null ? '—' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+
+const percent = (value: number | null): string =>
+  value === null ? '—' : `${(value * 100).toFixed(1)}%`
 
 const label = (cell: PowerCell): string =>
   cell.phi !== null ? `phi ${cell.phi > 0 ? '+' : ''}${cell.phi}` : `half-life ${cell.half_life}`
@@ -48,22 +54,24 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
             <tr>
               <th scope="col">Planted</th>
               <th scope="col">Oracle Sharpe</th>
+              <th scope="col">Oracle net of costs</th>
               <th scope="col">Detected</th>
               <th scope="col">Clear the deflation bar</th>
               <th scope="col">Capture (upper bound)</th>
+              <th scope="col">Capture, net</th>
             </tr>
           </thead>
           <tbody>
             {sweep.cells.map((cell) => {
-              const oracle = median(cell.oracle_sharpes)
-              const captured = capture(cell)
               return (
                 <tr key={label(cell)}>
                   <td>{label(cell)}</td>
-                  <td>{oracle === null ? '—' : `${oracle >= 0 ? '+' : ''}${oracle.toFixed(2)}`}</td>
+                  <td>{sharpe(median(cell.oracle_sharpes))}</td>
+                  <td>{sharpe(median(cell.net_oracle_sharpes))}</td>
                   <td>{`${Math.round(cell.detection_rate * 100)}%`}</td>
                   <td>{`${cell.n_clear_deflation_bar} / ${cell.n_symbols}`}</td>
-                  <td>{captured === null ? '—' : `${(captured * 100).toFixed(1)}%`}</td>
+                  <td>{percent(capture(cell.oracle_sharpes, cell))}</td>
+                  <td>{percent(capture(cell.net_oracle_sharpes, cell))}</td>
                 </tr>
               )
             })}
@@ -75,7 +83,9 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
         <strong>upper bound</strong> on power against real, intermittent edges. Capture is the
         fraction of the available edge the catalog converts, measured in-sample — so a{' '}
         <strong>low</strong> capture beside a zero detection rate points at the strategies, not at
-        the thresholds.
+        the thresholds. The oracle is a sign strategy and trades constantly, so read the{' '}
+        <strong>net</strong> columns: they charge it the same costs every catalog finalist paid,
+        and a planted edge whose net oracle is near zero was never there to be found.
       </p>
     </section>
   )

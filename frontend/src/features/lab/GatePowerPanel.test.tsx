@@ -16,6 +16,7 @@ const cell = (overrides: Partial<PowerCell> = {}): PowerCell => ({
   phi: 0.3,
   half_life: null,
   oracle_sharpes: [3.9, 3.9],
+  net_oracle_sharpes: [2.9, 2.9],
   finalist_observed_sharpes: [3.0, 3.0],
   gate_pass_counts: { dsr: 44 },
   n_bars: [5400],
@@ -72,4 +73,30 @@ test('shows capture, because a zero with low capture is a catalog problem not a 
 test('renders nothing when power has never been measured', () => {
   const { container } = render(<GatePowerPanel sweeps={[]} />)
   expect(container).toBeEmptyDOMElement()
+})
+
+test('shows capture against the oracle NET of the costs the catalog itself paid', () => {
+  // ADR-055: the finalist's Sharpe is charged 10bp on turnover and the oracle's was not, so the
+  // gross ratio divides two different accounting conventions. Both are shown; the net one is the
+  // comparable one.
+  render(<GatePowerPanel sweeps={[sweep()]} />)
+  expect(screen.getByText('76.9%')).toBeInTheDocument()
+  expect(screen.getByText('+2.90')).toBeInTheDocument()
+  expect(screen.getByText('103.4%')).toBeInTheDocument()
+})
+
+test('a cell measured before the net oracle existed shows a dash, not a capture of zero', () => {
+  render(<GatePowerPanel sweeps={[sweep({ cells: [cell({ net_oracle_sharpes: [] })] })]} />)
+  expect(screen.getAllByText('—')).toHaveLength(2)
+})
+
+test('a net oracle that costs have eaten has no capture fraction', () => {
+  // At |phi| = 0.10 the net oracle is about zero: there is no achievable edge to express a
+  // capture fraction of, and a ratio against it would divide by noise.
+  render(
+    <GatePowerPanel
+      sweeps={[sweep({ cells: [cell({ net_oracle_sharpes: [-0.06, 0.02] })] })]}
+    />,
+  )
+  expect(screen.getByText('—')).toBeInTheDocument()
 })
