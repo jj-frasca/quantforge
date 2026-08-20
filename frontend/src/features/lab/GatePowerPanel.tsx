@@ -64,6 +64,23 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
                 </tr>
               )
             })}
+            {sweep.cells.map((cell) => {
+              const split = Object.entries(cell.net_capture_by_category)
+              if (split.length === 0) {
+                return null
+              }
+              return (
+                <tr key={`${label(cell)}-split`} data-testid="capture-by-category">
+                  <td colSpan={7}>
+                    {label(cell)} — net capture by category:{' '}
+                    {split
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([category, ratio]) => `${category} ${percent(ratio)}`)
+                      .join(' · ')}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       ))}

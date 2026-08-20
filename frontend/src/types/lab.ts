@@ -230,6 +230,10 @@ export const powerCellSchema = z.object({
   // have eaten has no achievable size to express a fraction of.
   capture_ratio: z.number().nullable().default(null),
   net_capture_ratio: z.number().nullable().default(null),
+  // ADR-059: the same net ratio split by catalog category. On a planted reversion the overall
+  // ratio can be a trend strategy fitting the level, so the matched category's row is the one
+  // that says whether anything trading the process kept any of it. Served, never re-derived.
+  net_capture_by_category: z.record(z.string(), z.number()).default({}),
   gate_config_version: z.string(),
   search_config_version: z.string().default('legacy-unspecified'),
 })

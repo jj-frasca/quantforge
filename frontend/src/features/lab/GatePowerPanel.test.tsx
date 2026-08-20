@@ -22,6 +22,7 @@ const cell = (overrides: Partial<PowerCell> = {}): PowerCell => ({
   n_bars: [5400],
   capture_ratio: 0.769,
   net_capture_ratio: 1.034,
+  net_capture_by_category: {},
   gate_config_version: 'v1',
   search_config_version: 'abcdef0123456789',
   ...overrides,
@@ -130,4 +131,38 @@ test('a net oracle that costs have eaten has no capture fraction', () => {
     />,
   )
   expect(screen.getByText('—')).toBeInTheDocument()
+})
+
+test('splits capture by the kind of strategy that earned it (ADR-059)', () => {
+  // On fast band reversion the overall capture is mostly a TREND strategy fitting the
+  // random-walk level; the reverting row is the one that says whether anything trading the
+  // planted process kept any of it. A single number cannot show that.
+  render(
+    <GatePowerPanel
+      sweeps={[
+        sweep({
+          edge: 'band_reversion',
+          cells: [
+            cell({
+              edge: 'band_reversion',
+              phi: null,
+              half_life: 1,
+              detection_rate: 0,
+              n_detected: 0,
+              n_clear_deflation_bar: 0,
+              net_capture_ratio: 0.316,
+              net_capture_by_category: { 'Mean Reversion': 0.22, Trend: 0.316 },
+            }),
+          ],
+        }),
+      ]}
+    />,
+  )
+  expect(screen.getByText(/Mean Reversion 22.0%/)).toBeInTheDocument()
+  expect(screen.getByText(/Trend 31.6%/)).toBeInTheDocument()
+})
+
+test('says nothing about categories when a cell predates the split', () => {
+  render(<GatePowerPanel sweeps={[sweep()]} />)
+  expect(screen.queryByTestId('capture-by-category')).not.toBeInTheDocument()
 })
