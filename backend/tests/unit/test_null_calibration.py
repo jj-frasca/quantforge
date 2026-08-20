@@ -35,6 +35,7 @@ from app.research.lab.calibration import (
     oracle_sharpe_of,
 )
 from app.research.lab.gate import GateConfig
+from app.research.lab.search import run_search
 from app.research.lab.universe import expected_max_sharpe_under_null
 
 
@@ -1056,3 +1057,54 @@ def test_both_capture_ratios_are_serialized_not_recomputed_by_every_reader() -> 
     assert PowerCalibration.model_validate(payload).net_capture_ratio == pytest.approx(
         result.net_capture_ratio
     )
+
+
+def test_a_power_cell_names_the_strategy_that_won_each_symbol() -> None:
+    """ADR-057. The capture numerator is an in-sample maximum over the searched grid, so it rises
+    when the grid grows even if the added strategy never wins. Without the winner's identity a
+    capture change between two sweeps cannot be attributed to the catalog change that motivated it."""
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(3)}
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+
+    assert len(result.finalist_strategy_names) == result.n_symbols
+    assert set(result.finalist_strategy_names) <= {"sma", "momentum"}
+    assert result.finalist_strategy_counts == {
+        name: result.finalist_strategy_names.count(name)
+        for name in set(result.finalist_strategy_names)
+    }
+    assert sum(result.finalist_strategy_counts.values()) == result.n_symbols
+
+
+def test_the_finalist_names_line_up_with_the_finalist_sharpes() -> None:
+    """Index-for-index alignment is what makes the attribution readable against the capture ratio;
+    a name list of the right LENGTH but the wrong order would silently misattribute. Pinned against
+    the same max-DSR trial `measure_power` sends to the gate, recomputed from the same frame."""
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(3)}
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+
+    for index, (symbol, frame) in enumerate(frames.items()):
+        experiment = run_search(
+            frame,
+            symbol,
+            ["sma", "momentum"],
+            rationale="ADR-057 alignment check",
+        )
+        finalist = max(experiment.trials, key=lambda t: t.deflated_sharpe)
+        assert result.finalist_strategy_names[index] == finalist.strategy_name
+        assert result.finalist_observed_sharpes[index] == pytest.approx(finalist.observed_sharpe)
+
+
+def test_a_partial_attribution_reports_nothing_rather_than_a_wrong_share() -> None:
+    """A legacy artifact predates the field; a truncated one is a bug. Both must read as 'not
+    measured' — a share computed over a subset would understate the winner's dominance."""
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(2)}
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+
+    legacy = PowerCalibration.model_validate(result.model_dump(exclude={"finalist_strategy_names"}))
+    assert legacy.finalist_strategy_names == []
+    assert legacy.finalist_strategy_counts == {}
+
+    truncated = PowerCalibration.model_validate(
+        {**result.model_dump(), "finalist_strategy_names": result.finalist_strategy_names[:1]}
+    )
+    assert truncated.finalist_strategy_counts == {}

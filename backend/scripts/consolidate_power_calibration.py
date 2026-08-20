@@ -17,6 +17,15 @@ from pathlib import Path
 from app.research.lab.calibration import PowerCalibration, PowerSweep, collect_power_sweep
 
 
+def _top_finalist(cell: PowerCalibration) -> str:
+    """The strategy that won most of this cell's searches, and its share (ADR-057)."""
+    counts = cell.finalist_strategy_counts
+    if not counts:
+        return "not recorded"
+    name, count = max(counts.items(), key=lambda item: item[1])
+    return f"{name} {count / cell.n_symbols:.0%}"
+
+
 def _report(sweep: PowerSweep) -> None:
     print(f"planted process     : {sweep.edge}")
     print(f"gate config version : {sweep.gate_config_version}")
@@ -25,9 +34,12 @@ def _report(sweep: PowerSweep) -> None:
     # ADR-055: `oracle` is gross and `net` charges the same 10bp turnover cost every catalog
     # finalist paid. `capture` divides a net numerator by a gross denominator and is kept only
     # because ADR-041/042/045 published it; `net cap` is the comparable ratio.
+    # ADR-057: the modal finalist and its share. A capture change between two sweeps is
+    # attributable to a catalog change only if this column moved toward the added strategy —
+    # otherwise the rise is selection over a larger grid.
     print(
         f"{'sweep':>8}{'n':>6}{'oracle':>9}{'net':>8}{'detect':>9}{'bar':>7}"
-        f"{'capture':>9}{'net cap':>9}  DSR passes"
+        f"{'capture':>9}{'net cap':>9}  DSR passes  top finalist"
     )
     for cell in sweep.cells:
         key = cell.phi if cell.phi is not None else cell.half_life
@@ -43,6 +55,7 @@ def _report(sweep: PowerSweep) -> None:
             f"{(f'{capture:.1%}' if capture is not None else 'n/a'):>9}"
             f"{(f'{net_capture:.1%}' if net_capture is not None else 'n/a'):>9}"
             f"  {cell.gate_pass_counts.get('dsr', 'n/a')}/{cell.n_symbols}"
+            f"  {_top_finalist(cell)}"
         )
 
 

@@ -1,3 +1,4 @@
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from statistics import median
@@ -288,6 +289,11 @@ class PowerCalibration(BaseModel):
     # this list on graduation would select lucky captures and inflate the reported ratio.
     # Defaulted so power artifacts written before ADR-045 remain readable and report no capture.
     finalist_observed_sharpes: list[float] = []
+    # ADR-057: the winner's identity for each of those finalists, aligned index-for-index.
+    # Capture's numerator is an in-sample maximum over the searched grid, so it rises when the
+    # catalog grows even if the addition never wins; without the name a capture delta between two
+    # sweeps cannot be attributed. Empty means an artifact predating the field.
+    finalist_strategy_names: list[str] = []
     # ADR-049: independent component pass counts make a composite zero-power result diagnosable.
     # Empty means a legacy artifact did not preserve attribution; it never means zero passes.
     gate_pass_counts: dict[str, int] = Field(default_factory=dict)
@@ -311,6 +317,20 @@ class PowerCalibration(BaseModel):
     def net_oracle_sharpe_percentiles(self) -> tuple[float, float, float] | None:
         """(median, p95, max) of the planted effect size NET of transaction costs (ADR-055)."""
         return _percentiles(self.net_oracle_sharpes)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def finalist_strategy_counts(self) -> dict[str, int]:
+        """Which strategies won this cell's finalists, and how often (ADR-057).
+
+        Notes:
+            Empty unless the names cover every searched symbol — a share taken over a subset would
+            understate the winner's dominance, and "not measured" must never read as a distribution.
+            Computed rather than stored so a script or panel cannot re-derive a different one.
+        """
+        if len(self.finalist_strategy_names) != self.n_symbols:
+            return {}
+        return dict(Counter(self.finalist_strategy_names))
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -569,6 +589,7 @@ def measure_power(
     oracles: list[float] = []
     net_oracles: list[float] = []
     finalist_observed_sharpes: list[float] = []
+    finalist_strategy_names: list[str] = []
     errors: dict[str, str] = {}
     for symbol, frame in frames.items():
         try:
@@ -592,7 +613,9 @@ def measure_power(
         oracles.append(oracle_sharpes[symbol])
         if net_oracle_sharpes is not None:
             net_oracles.append(net_oracle_sharpes[symbol])
-        finalist_observed_sharpes.append(_finalist(experiment).observed_sharpe)
+        finalist = _finalist(experiment)
+        finalist_observed_sharpes.append(finalist.observed_sharpe)
+        finalist_strategy_names.append(finalist.strategy_name)
 
     if not experiments:
         raise ValueError("need at least one symbol that can be searched")
@@ -618,6 +641,7 @@ def measure_power(
         oracle_sharpes=oracles,
         net_oracle_sharpes=net_oracles,
         finalist_observed_sharpes=finalist_observed_sharpes,
+        finalist_strategy_names=finalist_strategy_names,
         n_bars=n_bars,
         gate_pass_counts={
             "dsr": sum(result.dsr_ok for result in gate_results),
