@@ -169,7 +169,8 @@ export type PoolReport = z.infer<typeof poolReportSchema>
 // The gate's measured behaviour on symbols with NO EDGE by construction (ADR-036/037), written by
 // the null-calibration workflow. `false_graduation_rate` is a Type-I error for the WHOLE pipeline —
 // search, DSR, PBO, MinTRL, holdout and beat-buy-and-hold together — which no single component's
-// guarantee implies. It is a property of `gate_config_version`; re-measured whenever the gate moves.
+// guarantee implies. ADR-044 fingerprints both the gate and the resolved hypothesis family: a
+// catalog/grid change alters the procedure even when every threshold stays fixed.
 export const nullCalibrationSchema = z.object({
   n_symbols: z.number().int(),
   n_graduates: z.number().int(),
@@ -182,6 +183,7 @@ export const nullCalibrationSchema = z.object({
   walk_forward_oos_sharpes: z.array(z.number()).default([]),
   purged_cv_oos_sharpes: z.array(z.number()).default([]),
   gate_config_version: z.string(),
+  search_config_version: z.string().default('legacy-unspecified'),
   null_mode: z.string(),
 })
 

@@ -168,6 +168,7 @@ def test_null_calibration_endpoint_returns_every_measured_mode(tmp_path) -> None
     assert {row["null_mode"] for row in body} == {"iid_normal", "bootstrap:SPY"}
     assert all(row["false_graduation_rate"] == 0.01 for row in body)
     assert all(row["n_clear_deflation_bar"] == 0 for row in body)
+    assert all(row["search_config_version"] == "legacy-unspecified" for row in body)
 
 
 def test_null_calibration_endpoint_is_empty_when_nothing_has_been_measured(tmp_path) -> None:  # type: ignore[no-untyped-def]

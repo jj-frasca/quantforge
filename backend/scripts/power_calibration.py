@@ -37,6 +37,7 @@ def _report(result: PowerCalibration) -> None:
         f"planted phi         : {result.phi:+.3f} ({'mean-reverting' if result.phi < 0 else 'trending'})"
     )
     print(f"gate config version : {result.gate_config_version}")
+    print(f"search config version: {result.search_config_version}")
     print(f"symbols searched    : {result.n_symbols}")
     print(f"detected            : {result.n_detected}")
     print(f"DETECTION RATE      : {result.detection_rate:.1%}  <- power of the gate as such")
