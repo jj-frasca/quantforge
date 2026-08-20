@@ -39,7 +39,7 @@ def _report(sweep: PowerSweep) -> None:
     # otherwise the rise is selection over a larger grid.
     print(
         f"{'sweep':>8}{'n':>6}{'oracle':>9}{'net':>8}{'detect':>9}{'bar':>7}"
-        f"{'capture':>9}{'net cap':>9}  DSR passes  top finalist"
+        f"{'capture':>9}{'net cap':>9}{'ach cap':>9}  DSR passes  top finalist"
     )
     for cell in sweep.cells:
         key = cell.phi if cell.phi is not None else cell.half_life
@@ -49,11 +49,13 @@ def _report(sweep: PowerSweep) -> None:
         net_oracle = f"{net_percentiles[0]:+.2f}" if net_percentiles else "n/a"
         capture = cell.capture_ratio
         net_capture = cell.net_capture_ratio
+        achievable = cell.achievable_capture_ratio
         print(
             f"{key:>8}{cell.n_symbols:>6}{oracle:>+9.2f}{net_oracle:>8}"
             f"{cell.detection_rate:>8.0%}{cell.n_clear_deflation_bar:>7}"
             f"{(f'{capture:.1%}' if capture is not None else 'n/a'):>9}"
             f"{(f'{net_capture:.1%}' if net_capture is not None else 'n/a'):>9}"
+            f"{(f'{achievable:.1%}' if achievable is not None else 'n/a'):>9}"
             f"  {cell.gate_pass_counts.get('dsr', 'n/a')}/{cell.n_symbols}"
             f"  {_top_finalist(cell)}"
         )

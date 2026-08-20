@@ -286,6 +286,11 @@ class PowerCalibration(BaseModel):
     # what ADR-041/042 published and is kept unchanged; this one is what a capture ratio should be
     # divided by, since its numerator paid those costs. Empty means an artifact predating ADR-055.
     net_oracle_sharpes: list[float] = []
+    # ADR-061: the oracle a causal filter could actually form from prices, charged the same costs.
+    # The latent-state oracle above knows the hidden deviation; on a band process most of its edge
+    # is not recoverable at all. Empty on an AR(1) cell (its state IS the observed return) and on
+    # any artifact predating the field.
+    achievable_oracle_sharpes: list[float] = []
     # ADR-045: one max-DSR finalist per SEARCHED symbol, including non-detections. Conditioning
     # this list on graduation would select lucky captures and inflate the reported ratio.
     # Defaulted so power artifacts written before ADR-045 remain readable and report no capture.
@@ -357,6 +362,28 @@ class PowerCalibration(BaseModel):
         ):
             return None
         oracle = median(self.net_oracle_sharpes)
+        if oracle <= sharpe_standard_error(oracle, median(self.n_bars) / _TRADING_DAYS):
+            return None
+        return median(self.finalist_observed_sharpes) / oracle
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def achievable_capture_ratio(self) -> float | None:
+        """Capture against what a causal filter could recover from prices (ADR-061).
+
+        Notes:
+            The honest denominator for a process whose state is LATENT: the latent-state oracle
+            includes edge no strategy could ever see. Same refusal as `net_capture_ratio` — an
+            achievable oracle inside Lo (2002)'s Sharpe standard error has no size to express a
+            fraction of, which is exactly the half-life-1 case.
+        """
+        if (
+            len(self.finalist_observed_sharpes) != self.n_symbols
+            or len(self.achievable_oracle_sharpes) != self.n_symbols
+            or not self.n_bars
+        ):
+            return None
+        oracle = median(self.achievable_oracle_sharpes)
         if oracle <= sharpe_standard_error(oracle, median(self.n_bars) / _TRADING_DAYS):
             return None
         return median(self.finalist_observed_sharpes) / oracle
@@ -497,6 +524,54 @@ class PlantedEdge(NamedTuple):
     frame: pd.DataFrame
     conditional_mean: "pd.Series[float]"
     deviation: "pd.Series[float]"
+    # ADR-061: the same conditional mean an optimal CAUSAL filter could form from observed prices
+    # alone. `conditional_mean` uses the latent deviation, which no strategy can see; the gap
+    # between the two is how much of the planted edge was never recoverable.
+    achievable_conditional_mean: "pd.Series[float]"
+
+
+def filtered_deviation(
+    log_prices: npt.NDArray[np.float64],
+    *,
+    rho: float,
+    level_vol: float,
+    deviation_vol: float,
+    drift: float = 0.0,
+) -> npt.NDArray[np.float64]:
+    """MMSE estimate of the latent deviation from observed log prices alone (ADR-061).
+
+    Notes:
+        The Kalman recursion for `log price = random-walk level + AR(1) deviation`, given the true
+        process parameters. Observing only the sum, the return `z_t = d_t - d_{t-1} + level shock`
+        depends on two consecutive states, so the state is augmented to `[d_t, d_{t-1}]`.
+
+        Knowing the parameters exactly makes this an UPPER bound on what any causal price-based
+        strategy could estimate — a strategy that also has to fit `rho` and the two volatilities
+        can only do worse. The first bar has no return to update on and is NaN.
+    """
+    if not -1.0 < rho < 1.0:
+        raise ValueError("rho must be in (-1, 1) for a stationary deviation")
+    if level_vol < 0.0 or deviation_vol <= 0.0:
+        raise ValueError("level_vol must be >= 0 and deviation_vol > 0")
+
+    transition = np.array([[rho, 0.0], [1.0, 0.0]])
+    process_noise = np.array([[deviation_vol**2 * (1.0 - rho**2), 0.0], [0.0, 0.0]])
+    observation = np.array([[1.0, -1.0]])
+    observation_noise = level_vol**2
+
+    state = np.zeros((2, 1))
+    covariance = np.array([[deviation_vol**2, 0.0], [0.0, deviation_vol**2]])
+    estimates = np.full(len(log_prices), np.nan)
+    for index, innovation_input in enumerate(np.diff(log_prices) - drift):
+        state = transition @ state
+        covariance = transition @ covariance @ transition.T + process_noise
+        residual = innovation_input - (observation @ state)[0, 0]
+        residual_variance = (observation @ covariance @ observation.T)[0, 0] + observation_noise
+        gain = covariance @ observation.T / residual_variance
+        state = state + gain * residual
+        covariance = covariance - gain @ observation @ covariance
+        estimates[index + 1] = state[0, 0]
+    return estimates
 
 
 def mean_reverting_edge(
@@ -554,7 +629,24 @@ def mean_reverting_edge(
     # E[r_t | F_{t-1}] = drift + (rho - 1) * dev_{t-1}: the level is a martingale, so everything
     # predictable about the next bar is the part of the deviation that is about to decay away.
     conditional_mean = drift + (rho - 1.0) * deviation.shift(1)
-    return PlantedEdge(frame=frame, conditional_mean=conditional_mean, deviation=deviation)
+    # ADR-061: the same quantity formed from PRICES rather than from the hidden state.
+    estimated = pd.Series(
+        filtered_deviation(
+            np.log(closes),
+            rho=rho,
+            level_vol=level_vol,
+            deviation_vol=deviation_vol,
+            drift=drift,
+        ),
+        index=frame.index,
+    )
+    achievable_conditional_mean = (drift + (rho - 1.0) * estimated).shift(1)
+    return PlantedEdge(
+        frame=frame,
+        conditional_mean=conditional_mean,
+        deviation=deviation,
+        achievable_conditional_mean=achievable_conditional_mean,
+    )
 
 
 def measure_power(
@@ -564,6 +656,7 @@ def measure_power(
     phi: float | None = None,
     oracle_sharpes: Mapping[str, float] | None = None,
     net_oracle_sharpes: Mapping[str, float] | None = None,
+    achievable_oracle_sharpes: Mapping[str, float] | None = None,
     edge: str = "ar1",
     half_life: float | None = None,
     deviation_share: float | None = None,
@@ -607,6 +700,10 @@ def measure_power(
             missing = sorted(set(frames) - set(net_oracle_sharpes))
             if missing:
                 raise ValueError(f"no measured net oracle Sharpe for {', '.join(missing)}")
+        if achievable_oracle_sharpes is not None:
+            missing = sorted(set(frames) - set(achievable_oracle_sharpes))
+            if missing:
+                raise ValueError(f"no measured achievable oracle Sharpe for {', '.join(missing)}")
     gate_config = config or GateConfig()
 
     experiments: list[Experiment] = []
@@ -614,6 +711,7 @@ def measure_power(
     n_bars: list[int] = []
     oracles: list[float] = []
     net_oracles: list[float] = []
+    achievable_oracles: list[float] = []
     finalist_observed_sharpes: list[float] = []
     finalist_strategy_names: list[str] = []
     finalist_sharpes_by_category: defaultdict[str, list[float]] = defaultdict(list)
@@ -640,6 +738,8 @@ def measure_power(
         oracles.append(oracle_sharpes[symbol])
         if net_oracle_sharpes is not None:
             net_oracles.append(net_oracle_sharpes[symbol])
+        if achievable_oracle_sharpes is not None:
+            achievable_oracles.append(achievable_oracle_sharpes[symbol])
         finalist = _finalist(experiment)
         finalist_observed_sharpes.append(finalist.observed_sharpe)
         finalist_strategy_names.append(finalist.strategy_name)
@@ -669,6 +769,7 @@ def measure_power(
         deviation_share=deviation_share,
         oracle_sharpes=oracles,
         net_oracle_sharpes=net_oracles,
+        achievable_oracle_sharpes=achievable_oracles,
         finalist_observed_sharpes=finalist_observed_sharpes,
         finalist_strategy_names=finalist_strategy_names,
         finalist_sharpes_by_category=dict(finalist_sharpes_by_category),

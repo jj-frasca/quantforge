@@ -28,6 +28,7 @@ from app.research.lab.calibration import (
     collect_power_sweep,
     compare_power_sweeps,
     drop_incomplete_bars,
+    filtered_deviation,
     iid_normal_null,
     mean_reverting_edge,
     measure_power,
@@ -1295,3 +1296,126 @@ def test_a_legacy_power_artifact_reports_no_per_category_capture() -> None:
     )
     assert legacy.finalist_sharpes_by_category == {}
     assert legacy.net_capture_by_category == {}
+
+
+def test_the_filter_recovers_a_deviation_that_dominates_the_series() -> None:
+    """ADR-061. The achievable oracle is only a benchmark if the filter actually filters — with the
+    deviation carrying almost all the variance, the state is nearly observable and the estimate must
+    track it closely. This is the check that the recursion is right, run before any claim rests
+    on it."""
+    planted = mean_reverting_edge(2000, seed=0, half_life=3.0, deviation_share=0.99)
+    rho = 0.5 ** (1.0 / 3.0)
+    deviation_vol = 0.012 * np.sqrt(0.99 / (2.0 * (1.0 - rho)))
+    level_vol = 0.012 * np.sqrt(1.0 - 0.99)
+
+    estimate = filtered_deviation(
+        np.log(planted.frame["close"].astype(float).to_numpy()),
+        rho=rho,
+        level_vol=level_vol,
+        deviation_vol=deviation_vol,
+    )
+    usable = ~np.isnan(estimate)
+    correlation = np.corrcoef(estimate[usable], planted.deviation.to_numpy()[usable])[0, 1]
+    assert correlation > 0.85
+
+
+def test_the_achievable_oracle_is_far_below_the_latent_one_at_a_fast_half_life() -> None:
+    """The result ADR-061 exists to record: at half-life 1 the latent-state oracle's edge is not
+    recoverable from prices by ANY causal strategy, so a capture ratio against it measures the cost
+    of not seeing the future rather than a deficiency of the catalog."""
+    fast = mean_reverting_edge(5400, seed=0, half_life=1.0, deviation_share=0.169)
+    latent = oracle_sharpe_of(fast.frame, fast.conditional_mean, cost_rate=DEFAULT_COST_RATE)
+    achievable = oracle_sharpe_of(
+        fast.frame, fast.achievable_conditional_mean, cost_rate=DEFAULT_COST_RATE
+    )
+    assert latent > 1.0
+    assert achievable < 0.5
+    assert achievable < latent
+
+    slow = mean_reverting_edge(5400, seed=0, half_life=20.0, deviation_share=0.75)
+    slow_achievable = oracle_sharpe_of(
+        slow.frame, slow.achievable_conditional_mean, cost_rate=DEFAULT_COST_RATE
+    )
+    # The gap closes with the horizon — the state becomes easier to see, not more valuable.
+    assert slow_achievable > achievable
+
+
+def test_the_achievable_conditional_mean_is_causal() -> None:
+    """It is indexed by the bar it PREDICTS and may use nothing from that bar onward — the same
+    contract the latent conditional mean keeps."""
+    planted = mean_reverting_edge(600, seed=1, half_life=5.0, deviation_share=0.651)
+    log_prices = np.log(planted.frame["close"].astype(float).to_numpy())
+    rho = 0.5 ** (1.0 / 5.0)
+    kwargs = {
+        "rho": rho,
+        "level_vol": 0.012 * np.sqrt(1.0 - 0.651),
+        "deviation_vol": 0.012 * np.sqrt(0.651 / (2.0 * (1.0 - rho))),
+        "drift": 0.0003,
+    }
+    full = filtered_deviation(log_prices, **kwargs)  # type: ignore[arg-type]
+    truncated = filtered_deviation(log_prices[:500], **kwargs)  # type: ignore[arg-type]
+    np.testing.assert_allclose(full[:500], truncated, equal_nan=True)
+
+
+def test_a_cell_records_the_achievable_oracle_and_its_capture() -> None:
+    frames = {
+        f"BAND{i}": mean_reverting_edge(900, seed=i, half_life=5.0, deviation_share=0.651)
+        for i in range(3)
+    }
+    result = measure_power(
+        {s: p.frame for s, p in frames.items()},
+        ["sma", "mean_reversion"],
+        oracle_sharpes={
+            s: oracle_sharpe_of(p.frame, p.conditional_mean) for s, p in frames.items()
+        },
+        net_oracle_sharpes={
+            s: oracle_sharpe_of(p.frame, p.conditional_mean, cost_rate=DEFAULT_COST_RATE)
+            for s, p in frames.items()
+        },
+        achievable_oracle_sharpes={
+            s: oracle_sharpe_of(p.frame, p.achievable_conditional_mean, cost_rate=DEFAULT_COST_RATE)
+            for s, p in frames.items()
+        },
+        edge="band_reversion",
+        half_life=5.0,
+    )
+
+    assert len(result.achievable_oracle_sharpes) == result.n_symbols
+    assert result.achievable_capture_ratio == pytest.approx(
+        float(np.median(result.finalist_observed_sharpes))
+        / float(np.median(result.achievable_oracle_sharpes))
+    )
+
+
+def test_an_achievable_oracle_inside_its_own_noise_refuses_a_capture_ratio() -> None:
+    """Half-life 1 must land here: an achievable oracle of ~0 has no size to express a fraction of.
+    The scale is Lo (2002)'s Sharpe standard error, the same refusal ADR-055 applies to the net
+    ratio."""
+    frames = {
+        f"BAND{i}": mean_reverting_edge(900, seed=i, half_life=5.0, deviation_share=0.651)
+        for i in range(2)
+    }
+    result = measure_power(
+        {s: p.frame for s, p in frames.items()},
+        ["sma", "mean_reversion"],
+        oracle_sharpes=dict.fromkeys(frames, 2.0),
+        net_oracle_sharpes=dict.fromkeys(frames, 1.5),
+        achievable_oracle_sharpes=dict.fromkeys(frames, 0.01),
+        edge="band_reversion",
+        half_life=5.0,
+    )
+    assert result.achievable_capture_ratio is None
+    assert result.net_capture_ratio is not None
+
+
+def test_a_legacy_cell_has_no_achievable_oracle() -> None:
+    frames = {"BAND0": mean_reverting_edge(900, seed=0, half_life=5.0, deviation_share=0.651)}
+    result = measure_power(
+        {s: p.frame for s, p in frames.items()},
+        ["sma", "mean_reversion"],
+        oracle_sharpes=dict.fromkeys(frames, 2.0),
+        edge="band_reversion",
+        half_life=5.0,
+    )
+    assert result.achievable_oracle_sharpes == []
+    assert result.achievable_capture_ratio is None

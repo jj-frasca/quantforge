@@ -128,6 +128,14 @@ def main() -> None:
             name: oracle_sharpe_of(p.frame, p.conditional_mean, cost_rate=DEFAULT_COST_RATE)
             for name, p in planted.items()
         },
+        # ADR-061: the same oracle a causal Kalman filter could form from PRICES, which is the
+        # honest denominator for a process whose state is latent.
+        achievable_oracle_sharpes={
+            name: oracle_sharpe_of(
+                p.frame, p.achievable_conditional_mean, cost_rate=DEFAULT_COST_RATE
+            )
+            for name, p in planted.items()
+        },
         edge="band_reversion",
         half_life=half_life,
         deviation_share=share,
