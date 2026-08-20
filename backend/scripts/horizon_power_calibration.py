@@ -49,6 +49,11 @@ def _report(result: PowerCalibration) -> None:
     print(f"symbols searched    : {result.n_symbols}")
     print(f"detected            : {result.n_detected}")
     print(f"DETECTION RATE      : {result.detection_rate:.1%}  <- power of the gate as such")
+    if result.gate_pass_counts:
+        passes = " | ".join(
+            f"{name} {count}/{result.n_symbols}" for name, count in result.gate_pass_counts.items()
+        )
+        print(f"gate component pass : {passes}")
     print(
         f"clear ADR-018 bar   : {result.n_clear_deflation_bar} (bar {result.deflation_bar:.2f})"
         "  <- power against the standard we actually hold to"

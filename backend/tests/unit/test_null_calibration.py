@@ -511,6 +511,15 @@ def test_measure_power_reports_detection_in_two_tiers() -> None:
     assert len(result.oracle_sharpes) == 3
     assert result.phi == -0.3
     assert result.gate_config_version
+    assert set(result.gate_pass_counts) == {
+        "dsr",
+        "pbo",
+        "stability",
+        "mintrl",
+        "holdout",
+        "beats_buy_and_hold",
+    }
+    assert all(0 <= count <= result.n_symbols for count in result.gate_pass_counts.values())
 
 
 def test_measure_power_refuses_an_empty_universe() -> None:
@@ -536,11 +545,14 @@ def test_legacy_power_artifact_has_no_capture_measurement() -> None:
     result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
 
     legacy = PowerCalibration.model_validate(
-        result.model_dump(exclude={"finalist_observed_sharpes", "refine", "refine_span"})
+        result.model_dump(
+            exclude={"finalist_observed_sharpes", "gate_pass_counts", "refine", "refine_span"}
+        )
     )
 
     assert legacy.finalist_observed_sharpes == []
     assert legacy.capture_ratio is None
+    assert legacy.gate_pass_counts == {}
     assert legacy.refine is False and legacy.refine_span == pytest.approx(0.25)
 
 

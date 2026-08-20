@@ -157,8 +157,9 @@ after any `GateConfig` change; each is token-free cloud compute.
 tails and vol, destroying serial structure). `null-calibration.yml` shards it and commits
 `data/null_calibration/*.json`.
 
-- Measured at N = 200 per mode: **1.0% false-graduation rate on both nulls**, **0 false graduates
-  clear the ADR-018 bar**, **max DSR +0.92**.
+- Production-parity refresh (2026-08-20, after ADR-046/047/048), N = 200 per mode: **0 false
+  graduates on both nulls**, **0 clear the ADR-018 bar**, max DSR **-0.53 iid / -0.52 bootstrap**.
+  The prior 1.0% / max +0.92 result belongs to the coarse-only, uncapped accounting procedure.
 - A shard cannot report a final answer — the deflation bar grows with the TOTAL symbols searched,
   so `merge_calibrations` re-judges every false graduate at the combined N, and refuses to merge
   across gate config versions or null modes.
@@ -182,14 +183,19 @@ tails and vol, destroying serial structure). `null-calibration.yml` shards it an
 tiers: graduated, and cleared the ADR-018 bar.
 
 - `autocorrelated_edge(phi)` — AR(1) on returns. phi < 0 is lag-1 mean reversion, phi > 0 trend.
-  Measured at N = 50 per phi: **64% at oracle Sharpe 3.9, 54% at 2.6, 0% at 1.3**, both directions.
+  The production-parity 2026-08-20 refresh measured **0/50 at every swept phi**, including median
+  oracle +3.92 and 77.4% in-sample capture at phi +0.30. The earlier **64% at 3.9, 54% at 2.6,
+  0% at 1.3** curve describes the pre-ADR-046/047/048 procedure only.
 - `mean_reverting_edge(half_life, deviation_share)` — a random-walk level plus an AR(1) deviation,
   i.e. band reversion at a stated horizon. Parameterized by the deviation's SHARE of return
   variance so realized volatility is constant across horizons; otherwise a horizon sweep moves the
-  volatility and the effect size with it. Measured: **0% at a 1-bar half-life, 42% at 5 bars**, at
-  a held-constant oracle ≈ 2.7 — so the catalog's blind spot is FAST reversion, not reversion.
+  volatility and the effect size with it. The current refresh measured **0/50 at every horizon**;
+  the older procedure measured 0% at one bar and 42% at five bars at oracle ≈ 2.7.
 - Both processes are stationary and always-on, so every power number is an **upper bound** on power
   against real, intermittent edges.
+- ADR-049 records per-component pass counts (`dsr`, `pbo`, `stability`, `mintrl`, `holdout`,
+  `beats_buy_and_hold`) because a composite zero cannot identify its own mechanism. Empty counts on
+  a legacy artifact mean attribution was not preserved, never that every component had zero passes.
 - Effect size is bounded by the horizon: only `(1-rho)/2` of a deviation's variance is predictable
   one bar ahead, so slow band reversion cannot reach a large oracle Sharpe at equity volatility.
   Read half-lives ≥ 10 as a statement about that ceiling, not about the catalog.

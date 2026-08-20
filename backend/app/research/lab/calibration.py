@@ -6,7 +6,7 @@ from typing import Any, NamedTuple
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.lab.candidate_budget import allocate_catalog_candidate_budget
@@ -278,6 +278,9 @@ class PowerCalibration(BaseModel):
     # this list on graduation would select lucky captures and inflate the reported ratio.
     # Defaulted so power artifacts written before ADR-045 remain readable and report no capture.
     finalist_observed_sharpes: list[float] = []
+    # ADR-049: independent component pass counts make a composite zero-power result diagnosable.
+    # Empty means a legacy artifact did not preserve attribution; it never means zero passes.
+    gate_pass_counts: dict[str, int] = Field(default_factory=dict)
     holdout_years: list[float]
     errors: dict[str, str]
     gate_config_version: str
@@ -526,6 +529,7 @@ def measure_power(
 
     n_symbols = len(experiments)
     detected = [e for e in experiments if e.graduate is not None]
+    gate_results = [e.best_gate_result for e in experiments if e.best_gate_result is not None]
     return PowerCalibration(
         n_symbols=n_symbols,
         n_detected=len(detected),
@@ -543,6 +547,14 @@ def measure_power(
         deviation_share=deviation_share,
         oracle_sharpes=oracles,
         finalist_observed_sharpes=finalist_observed_sharpes,
+        gate_pass_counts={
+            "dsr": sum(result.dsr_ok for result in gate_results),
+            "pbo": sum(result.pbo_ok for result in gate_results),
+            "stability": sum(result.stability_ok for result in gate_results),
+            "mintrl": sum(result.mintrl_ok for result in gate_results),
+            "holdout": sum(result.holdout_ok for result in gate_results),
+            "beats_buy_and_hold": sum(result.beats_buy_and_hold_ok for result in gate_results),
+        },
         holdout_years=holdout_years,
         errors=errors,
         gate_config_version=gate_config.version_hash,

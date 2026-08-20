@@ -157,13 +157,13 @@ second one.
   signal and next-period returns (ADR-035). A dollar-neutral Sharpe cannot distinguish a factor from
   two lucky names; the IC can. Diagnostic only: nothing gates, selects, or sizes on it.
 
-**The gate's Type-I error is measured, not assumed (2026-08-19).** `null-calibration.yml` runs the
+**The gate's Type-I error is measured, not assumed (refreshed 2026-08-20).** `null-calibration.yml` runs the
 UNMODIFIED search over 200 symbols per null mode with no edge by construction (ADR-036/037), and
-commits the answer to `data/null_calibration/`. Measured: **1.0% false-graduation rate on both
-nulls, and 0 false graduates clear the ADR-018 deflation bar.** Two consequences worth carrying:
-max deflated Sharpe under a pure null was **+0.92**, so DSR > 0 is necessary but nowhere near
-sufficient — the composite gate does the work; and the deflation bar rejecting 100% of *known-false*
-positives is the first evidence it is not merely too strict.
+commits the answer to `data/null_calibration/`. Under the production-parity ADR-046/047/048
+procedure, measured Type-I error is **0/200 on both nulls**, with max DSR -0.53 (iid) and -0.52
+(bootstrap). The earlier 1.0% / max +0.92 result describes the pre-accounting, uncapped selector
+only. The repaired composite is conservative on known-false series; power determines what that
+conservatism can actually detect.
 
 **Walk-forward and purged CV are real as of 2026-08-19 — they used to be counts.** `ValidationReport`
 carried `n_walk_forward_splits` / `n_purged_folds` and nothing was ever trained or scored on those
@@ -179,14 +179,12 @@ because its selection sees the future — read them side by side, never averaged
 
 **The gate's POWER is measured too, and it reframes "0 of 40" (2026-08-19/20).** A Type-I error
 alone cannot say whether "0 of 40 graduates clear the bar" is a fact about the strategies or about
-the bar. `power-calibration.yml` plants an AR(1) edge of measured strength and runs the unmodified
-pipeline (ADR-041): detection is **64% at oracle Sharpe 3.9, 54% at 2.6, and 0% at 1.3** — the gate
-is a conservative instrument with real but limited resolution. `horizon-power-calibration.yml`
-(ADR-042) then separated the confound ADR-041 could not: planting *band* reversion at a stated
-half-life, at a held-constant effect size and volatility, detection goes **0% at a 1-bar half-life
-to 42% at a 5-bar one**. So the catalog's blind spot is **fast** mean reversion, not mean reversion
-— the "half the catalog is decoration" reading is not supported, and more oscillators of the same
-window length would not help.
+the bar. The original ADR-041/042 coarse-only procedure measured 64% detection at AR(1) oracle
+Sharpe 3.9 and 42% for five-bar band reversion. After whole-search accounting, production
+refinement, and the enforced candidate budget, fresh runs 32340042967/32340043401 measured
+**0/50 in every cell**, including AR(1) oracle Sharpe +3.92 with a 77.4% in-sample capture upper
+bound. That is the current production-parity result. FINDING-005/ADR-049 add per-component gate
+pass counts so the zero can be attributed without guessing or weakening a threshold.
 
 **The detectable-edge frontier (ADR-043) factors those two numbers.** `app/research/lab/frontier.py`
 solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0
@@ -222,13 +220,15 @@ grids are reduced with deterministic maximin parameter-space coverage. Adaptive 
 as one additional family bucket inside the same cap, so coarse plus refined work never exceeds 200
 by default. A budget too small to preserve every requested family's PBO minimum fails before any
 backtest; reordering or duplicating strategy names cannot change the searched hypotheses.
+The post-change cloud refresh measured 0/200 false graduates in each null mode and 0/50 power in
+every planted-edge cell; those results are conservative and current, not grounds to move a bar.
 
 **Calibration now includes production refinement (ADR-047).** Daily discovery performs an adaptive
 second grid around the coarse winner, but the published null/power runs had silently stopped after
 the coarse pass. New null and power calibrations default to the same `refine=True`, span-0.25
-procedure and include both inputs in their artifacts and ADR-044 fingerprint. The old 1% Type-I and
-power/capture tables remain evidence for their coarse-only, pre-budget selector; they are stale for
-production until the workflow sole writers refresh them after ADR-046/047/048.
+procedure and include both inputs in their artifacts and ADR-044 fingerprint. The workflow sole
+writers refreshed the evidence after ADR-046/047/048 on 2026-08-20; older Type-I and power/capture
+tables remain historical evidence for their coarse-only, pre-budget selector only.
 
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.

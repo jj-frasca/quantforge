@@ -1,7 +1,7 @@
 # FINDING-003: GateConfig's trial budget is inert
 
 - **Severity:** High (methodology contract and compute bound)
-- **Status:** Fixed by ADR-048; calibration refresh pending
+- **Status:** Fixed by ADR-048; calibration refreshed 2026-08-20
 - **Affected:** ADR-015/016, `GateConfig`, longitudinal and cross-sectional search
 
 ## Finding
@@ -29,5 +29,6 @@ ADR-048 assigns every eligible family a two-config PBO minimum, distributes rema
 canonical-name water-filling, uses deterministic maximin parameter-space coverage inside oversized
 grids, and budgets adaptive refinement as one additional family. Longitudinal and cross-sectional
 search will fail before backtesting when the requested budget cannot preserve those minima. The
-implementation is green; null and power calibration refreshes remain required before their old
-measurements can be described as production results.
+implementation is green. The cloud sole writers refreshed null calibration at commit `cfabdcb`
+and power artifacts in runs 32340042967/32340043401. The resulting zero-power measurements exposed
+the separate diagnostic gap recorded in FINDING-005.
