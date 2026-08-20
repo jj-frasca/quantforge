@@ -7,7 +7,7 @@ import numpy.typing as npt
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.research.backtesting.metrics import sharpe_ratio
+from app.research.backtesting.metrics import ReturnMoments, return_moments, sharpe_ratio
 from app.research.cross_sectional.engine import (
     asset_returns,
     portfolio_returns,
@@ -23,7 +23,10 @@ from app.research.lab.candidate_budget import allocate_candidate_budget
 from app.research.lab.experiment import Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult, GraduationGate
 from app.research.lab.holdout import HoldoutScore
-from app.research.lab.trial_accounting import whole_search_deflated_sharpes
+from app.research.lab.trial_accounting import (
+    whole_search_deflated_sharpe_probabilities,
+    whole_search_deflated_sharpes,
+)
 from app.validation.deflated_sharpe import deflated_sharpe
 from app.validation.parameter_stability import parameter_stability
 from app.validation.pbo import probability_of_backtest_overfitting
@@ -186,6 +189,7 @@ def run_cross_sectional_search(
     finalists: list[tuple[CrossSectionalStrategy, Params, float]] = []
     total_configs = 0
     candidate_sharpes: list[float] = []
+    finalist_moments: list[ReturnMoments | None] = []
     for name, allocated_configs in allocation.families.items():
         strategy = registry[name]
         configs = list(allocated_configs)
@@ -206,6 +210,7 @@ def run_cross_sectional_search(
         best_params, best_quantile = configs[best_i]
         total_configs += len(configs)
         candidate_sharpes.extend(sharpes)
+        finalist_moments.append(return_moments(series[best_i]))
         # The IC is a property of the RANKING, so it is computed from the finalist's signal and is
         # independent of the quantile the portfolio happened to trade (ADR-035).
         finalist_signal = strategy.build(best_params)(in_sample)
@@ -231,12 +236,14 @@ def run_cross_sectional_search(
         )
 
     lifetime_trials = prior_trials + total_configs
-    repriced = whole_search_deflated_sharpes(
-        [trial.observed_sharpe for trial in trials], candidate_sharpes, lifetime_trials
+    observed = [trial.observed_sharpe for trial in trials]
+    repriced = whole_search_deflated_sharpes(observed, candidate_sharpes, lifetime_trials)
+    probabilities = whole_search_deflated_sharpe_probabilities(
+        observed, finalist_moments, candidate_sharpes, lifetime_trials
     )
     trials = [
-        trial.model_copy(update={"deflated_sharpe": dsr})
-        for trial, dsr in zip(trials, repriced, strict=True)
+        trial.model_copy(update={"deflated_sharpe": dsr, "deflated_sharpe_probability": psr})
+        for trial, dsr, psr in zip(trials, repriced, probabilities, strict=True)
     ]
     best_idx = max(range(len(trials)), key=lambda i: trials[i].observed_sharpe)
     best_report = reports[best_idx].model_copy(

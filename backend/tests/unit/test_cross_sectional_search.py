@@ -214,3 +214,25 @@ def test_a_trial_persisted_before_adr_035_still_validates_without_an_ic() -> Non
     del dumped["trials"][0]["ic"]  # a record written before this ADR
     revived = CrossSectionalExperiment.model_validate(dumped)
     assert revived.trials[0].ic is None  # honestly "not measured", never backfilled
+
+
+def test_every_cross_sectional_trial_carries_the_paper_deflated_sharpe_probability() -> None:
+    """ADR-054 decision 3 applies here too: the finalist's portfolio return series is in hand at
+    the same point its Sharpe is, so there is no reason for this producer to report unmeasured."""
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_momentum", "xs_reversal"])
+
+    for trial in exp.trials:
+        assert trial.deflated_sharpe_probability is not None
+        assert 0.0 <= trial.deflated_sharpe_probability <= 1.0
+
+
+def test_the_cross_sectional_probability_prices_the_whole_search_effort() -> None:
+    fresh = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_momentum"])
+    repeated = run_cross_sectional_search(
+        _noise_panel(), strategy_names=["xs_momentum"], prior_trials=50_000
+    )
+
+    before = fresh.trials[0].deflated_sharpe_probability
+    after = repeated.trials[0].deflated_sharpe_probability
+    assert before is not None and after is not None
+    assert after < before
