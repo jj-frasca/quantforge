@@ -1,6 +1,11 @@
 # ADR-045: Record capture efficiency, and correct ADR-042's prescription
 
-- **Status**: Accepted
+- **Status**: Accepted — but **its band-reversion reading is superseded by ADR-061**: the oracle it
+  divides by is computed from the process's LATENT deviation, which no causal strategy can see. A
+  Kalman filter with perfect parameter knowledge recovers only −4%/12%/24%/41%/56%/59% of that
+  oracle's net Sharpe at half-lives 1/2/3/5/10/20, so the "gap" this ADR reads as a catalog
+  deficiency is mostly information that was never available. Read capture against
+  `achievable_capture_ratio` for any latent-state process.
 - **Date**: 2026-08-20
 - **Deciders**: Autonomous session (authority delegated by Joe, `.claude/AUTONOMY_CHARTER.md` §1)
 - **Extends**: ADR-041 (power calibration), ADR-042 (horizon sweep), ADR-043 (detectable frontier)
