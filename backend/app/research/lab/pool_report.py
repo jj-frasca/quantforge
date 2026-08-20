@@ -37,12 +37,16 @@ class NearMiss(BaseModel):
 
 
 class DiagnosticSummary(BaseModel):
-    """Distribution of one out-of-sample diagnostic across the pool's gate-passing experiments.
+    """Distribution of one out-of-sample diagnostic across a set of the pool's experiments.
 
     Notes:
         Exists to be read against the null-calibration percentiles for the SAME statistic
-        (ADR-038/039). A median below the null's p95 means the gate is admitting results the
-        pipeline produces on data with no edge by construction.
+        (ADR-038/039). A median below the null's p95 means the search is producing results
+        indistinguishable from what it produces on data with no edge by construction.
+
+        Which set it covers is the caller's choice and it matters (ADR-051): the null artifacts
+        record one finalist per SEARCHED symbol, so the finalist window is the comparable one,
+        while the gate-passer window answers the narrower question about what was promoted.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -69,6 +73,10 @@ class PoolReport(BaseModel):
     # is in that state, and "not measured" must never be read as a measured zero.
     walk_forward_graduates: DiagnosticSummary | None = None
     purged_cv_graduates: DiagnosticSummary | None = None
+    # ADR-051: the same statistic over the finalist of EVERY experiment, which is what the null
+    # artifacts record. Independent of graduation, so it survives a pool that graduates nothing.
+    walk_forward_finalists: DiagnosticSummary | None = None
+    purged_cv_finalists: DiagnosticSummary | None = None
     # ADR-043: the TRUE edge this design can detect, beside the bar an observation must clear.
     # None when no graduate exists to take a holdout length from — inventing one would publish a
     # detectable edge for a design that was never run.
@@ -127,6 +135,7 @@ def summarize_pool(
             best_miss[key] = miss
     near_misses = sorted(best_miss.values(), key=lambda m: m.ratio_to_bar, reverse=True)
 
+    finalists = [max(e.trials, key=lambda t: t.deflated_sharpe) for e in experiments if e.trials]
     passing_finalists = [
         max(e.trials, key=lambda t: t.deflated_sharpe)
         for e in experiments
@@ -156,5 +165,7 @@ def summarize_pool(
         book=deflation_cohorts(open_positions),
         walk_forward_graduates=_summarize(passing_finalists, "walk_forward_oos_sharpe"),
         purged_cv_graduates=_summarize(passing_finalists, "purged_cv_oos_sharpe"),
+        walk_forward_finalists=_summarize(finalists, "walk_forward_oos_sharpe"),
+        purged_cv_finalists=_summarize(finalists, "purged_cv_oos_sharpe"),
         frontier=frontier,
     )

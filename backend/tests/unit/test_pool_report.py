@@ -253,3 +253,48 @@ def test_a_pool_with_no_graduate_has_no_frontier() -> None:
     """No graduate means no measured holdout length, and inventing one would publish a detectable
     edge for a design that was never run."""
     assert summarize_pool([_exp("AAA"), _exp("BBB")], []).frontier is None
+
+
+# --- ADR-051: the same statistic the null records — every finalist, not only the gate passers ---
+
+
+def test_report_summarizes_the_out_of_sample_diagnostics_of_every_finalist() -> None:
+    """The null artifacts record one finalist per SEARCHED symbol, graduate or not. Restricting the
+    pool side to gate passers compared two different statistics and, under ADR-046's repaired trial
+    denominator, compared against nothing at all."""
+    experiments = [
+        _exp_with_diagnostics("AAA", walk_forward=1.4, purged_cv=0.9, graduated=True),
+        _exp_with_diagnostics("BBB", walk_forward=0.6, purged_cv=0.2, graduated=True),
+        _exp_with_diagnostics("CCC", walk_forward=-0.3, purged_cv=-0.1, graduated=False),
+    ]
+    report = summarize_pool(experiments, [])
+
+    assert report.walk_forward_finalists is not None
+    assert report.walk_forward_finalists.n == 3  # the non-graduate counts too
+    assert report.walk_forward_finalists.median == pytest.approx(0.6)
+    assert report.purged_cv_finalists is not None
+    assert report.purged_cv_finalists.n == 3
+    assert report.purged_cv_finalists.median == pytest.approx(0.2)
+
+
+def test_finalist_diagnostics_survive_a_pool_with_no_graduate_at_all() -> None:
+    """The 2026-08-20 run: 603 experiments, 0 graduates. The gate-passer window is empty and the
+    finalist window is the only one left, so it must not depend on graduation."""
+    experiments = [
+        _exp_with_diagnostics("AAA", walk_forward=0.5, purged_cv=0.4, graduated=False),
+        _exp_with_diagnostics("BBB", walk_forward=0.7, purged_cv=0.6, graduated=False),
+    ]
+    report = summarize_pool(experiments, [])
+
+    assert report.walk_forward_graduates is None
+    assert report.walk_forward_finalists is not None
+    assert report.walk_forward_finalists.n == 2
+    assert report.walk_forward_finalists.median == pytest.approx(0.6)
+
+
+def test_finalist_diagnostics_are_none_when_no_experiment_carries_them() -> None:
+    """A pre-ADR-038/039 pool must still report 'not measured' rather than a measured zero — the
+    finalist window widens the sample, it does not invent one."""
+    report = summarize_pool([_exp("AAA", holdout_sharpe=1.0)], [])
+    assert report.walk_forward_finalists is None
+    assert report.purged_cv_finalists is None
