@@ -61,6 +61,30 @@ class DiagnosticSummary(BaseModel):
     maximum: float
 
 
+class StatisticAgreement(BaseModel):
+    """How often the selection-adjusted Sharpe MARGIN the gate uses and the paper's PROBABILITY
+    form reach the same verdict on the same finalist (ADR-054).
+
+    Notes:
+        `probability_reference` is a stated reading level, not a threshold anything gates on — the
+        gate's verdict is the margin one, and switching it would require a fresh Type-I error and
+        power curve for the new statistic. These counts are what makes that case arguable with
+        measurements; they do not themselves make it.
+        Only finalists that CARRY a probability are counted. Treating an unmeasured row as a
+        failing one would manufacture a disagreement rate out of rows written before the field.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    n: int
+    probability_reference: float
+    both_pass: int
+    both_fail: int
+    margin_only: int
+    probability_only: int
+    median_probability: float
+
+
 class PoolReport(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -89,6 +113,9 @@ class PoolReport(BaseModel):
     # artifact's own n_bars. None when no experiment states one — a median over an empty set would
     # be a fabricated match.
     median_n_bars: int | None = None
+    # ADR-054: the margin/probability confusion matrix over the pool's finalists. None when no
+    # finalist carries a probability — every row written before ADR-054 is in that state.
+    statistic_agreement: StatisticAgreement | None = None
     # ADR-043: the TRUE edge this design can detect, beside the bar an observation must clear.
     # None when no graduate exists to take a holdout length from — inventing one would publish a
     # detectable edge for a design that was never run.
@@ -196,8 +223,37 @@ def _summarize(trials: list[Trial], field: str) -> DiagnosticSummary | None:
     )
 
 
+def _agree(
+    judged: list[tuple[Trial, float]], probability_reference: float
+) -> StatisticAgreement | None:
+    """Cross-tabulate the two statistics' verdicts over (finalist, its own dsr_min) pairs."""
+    measured = [(t, bar) for t, bar in judged if t.deflated_sharpe_probability is not None]
+    if not measured:
+        return None
+    cells = Counter(
+        (
+            trial.deflated_sharpe > bar,
+            (trial.deflated_sharpe_probability or 0.0) > probability_reference,
+        )
+        for trial, bar in measured
+    )
+    return StatisticAgreement(
+        n=len(measured),
+        probability_reference=probability_reference,
+        both_pass=cells[(True, True)],
+        both_fail=cells[(False, False)],
+        margin_only=cells[(True, False)],
+        probability_only=cells[(False, True)],
+        median_probability=float(np.median([t.deflated_sharpe_probability for t, _ in measured])),
+    )
+
+
 def summarize_pool(
-    experiments: list[Experiment], positions: list[PaperPosition], *, top_near_misses: int = 10
+    experiments: list[Experiment],
+    positions: list[PaperPosition],
+    *,
+    top_near_misses: int = 10,
+    probability_reference: float = 0.95,
 ) -> PoolReport:
     """Summarize the research pool and the forward book together.
 
@@ -235,6 +291,14 @@ def summarize_pool(
     near_misses = sorted(best_miss.values(), key=lambda m: m.ratio_to_bar, reverse=True)
 
     finalists = [max(e.trials, key=lambda t: t.deflated_sharpe) for e in experiments if e.trials]
+    # Each finalist is judged against the `dsr_min` ITS OWN experiment recorded: the threshold is
+    # versioned per experiment (ADR-015/016), so a single pool-wide bar would misreport any row
+    # searched under a different rubric.
+    judged = [
+        (max(e.trials, key=lambda t: t.deflated_sharpe), e.gate_config.dsr_min)
+        for e in experiments
+        if e.trials
+    ]
     passing_finalists = [
         max(e.trials, key=lambda t: t.deflated_sharpe)
         for e in experiments
@@ -269,6 +333,7 @@ def summarize_pool(
         purged_cv_graduates=_summarize(passing_finalists, "purged_cv_oos_sharpe"),
         walk_forward_finalists=_summarize(finalists, "walk_forward_oos_sharpe"),
         purged_cv_finalists=_summarize(finalists, "purged_cv_oos_sharpe"),
+        statistic_agreement=_agree(judged, probability_reference),
         search_config_versions=dict(families.most_common()),
         median_n_bars=int(np.median(searched_bars)) if searched_bars else None,
         frontier=frontier,

@@ -427,3 +427,94 @@ def test_nothing_to_compare_when_the_pool_carries_no_diagnostics() -> None:
     assert (
         compare_with_null(report, [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1])]) == []
     )
+
+
+# --- ADR-054: how often the two Sharpe statistics reach the same verdict ---
+
+
+def _exp_with_probability(
+    symbol: str, *, deflated_sharpe: float, probability: float | None, dsr_min: float = 0.0
+) -> Experiment:
+    return Experiment(
+        symbol=symbol,
+        strategy_names=["sma"],
+        gate_config=GateConfig(dsr_min=dsr_min),
+        trials=[
+            Trial(
+                strategy_name="sma",
+                parameters={"fast": 5, "slow": 20},
+                observed_sharpe=1.0,
+                deflated_sharpe=deflated_sharpe,
+                pbo=0.1,
+                parameter_stability_score=0.8,
+                deflated_sharpe_probability=probability,
+            )
+        ],
+        lifetime_trials=10,
+    )
+
+
+def test_report_counts_where_the_margin_and_the_probability_disagree() -> None:
+    """ADR-054's payoff: the gate uses the MARGIN, the paper's statistic is the PROBABILITY, and
+    a case for switching needs their disagreement measured on real trials rather than assumed."""
+    experiments = [
+        _exp_with_probability("AAA", deflated_sharpe=0.4, probability=0.99),  # both pass
+        _exp_with_probability("BBB", deflated_sharpe=0.4, probability=0.10),  # margin only
+        _exp_with_probability("CCC", deflated_sharpe=-0.4, probability=0.99),  # probability only
+        _exp_with_probability("DDD", deflated_sharpe=-0.4, probability=0.10),  # neither
+    ]
+    report = summarize_pool(experiments, [])
+
+    agreement = report.statistic_agreement
+    assert agreement is not None
+    assert agreement.n == 4
+    assert agreement.probability_reference == pytest.approx(0.95)
+    assert (agreement.both_pass, agreement.both_fail) == (1, 1)
+    assert (agreement.margin_only, agreement.probability_only) == (1, 1)
+    assert agreement.median_probability == pytest.approx(0.545)
+
+
+def test_the_margin_verdict_uses_each_experiment_own_recorded_threshold() -> None:
+    """`dsr_min` is versioned per experiment (ADR-015/016). Judging a whole pool against today's
+    default would misreport rows that were searched under a different rubric."""
+    experiments = [
+        _exp_with_probability("AAA", deflated_sharpe=0.4, probability=0.99, dsr_min=0.0),
+        _exp_with_probability("BBB", deflated_sharpe=0.4, probability=0.99, dsr_min=0.9),
+    ]
+    report = summarize_pool(experiments, [])
+
+    assert report.statistic_agreement is not None
+    assert report.statistic_agreement.both_pass == 1
+    assert report.statistic_agreement.probability_only == 1
+
+
+def test_finalists_without_a_probability_are_left_out_rather_than_counted_as_failures() -> None:
+    """The 3,237 rows written before ADR-054 carry None. Counting them as 'probability fails'
+    would manufacture a disagreement rate out of rows that were never measured."""
+    experiments = [
+        _exp_with_probability("AAA", deflated_sharpe=0.4, probability=0.99),
+        _exp_with_probability("BBB", deflated_sharpe=0.4, probability=None),
+    ]
+    report = summarize_pool(experiments, [])
+
+    assert report.statistic_agreement is not None
+    assert report.statistic_agreement.n == 1
+    assert report.statistic_agreement.both_pass == 1
+
+
+def test_a_pool_with_no_probability_at_all_reports_no_agreement() -> None:
+    report = summarize_pool([_exp("AAA", holdout_sharpe=1.0)], [])
+    assert report.statistic_agreement is None
+
+
+def test_the_probability_reference_level_is_the_caller_s_to_state() -> None:
+    """It is a stated reading level, not a threshold anything gates on — so it must be visible
+    and movable, and the report must say which one produced its counts."""
+    experiments = [_exp_with_probability("AAA", deflated_sharpe=0.4, probability=0.80)]
+
+    strict = summarize_pool(experiments, [], probability_reference=0.95)
+    lenient = summarize_pool(experiments, [], probability_reference=0.50)
+
+    assert strict.statistic_agreement is not None and strict.statistic_agreement.margin_only == 1
+    assert lenient.statistic_agreement is not None and lenient.statistic_agreement.both_pass == 1
+    assert lenient.statistic_agreement.probability_reference == pytest.approx(0.50)

@@ -120,6 +120,27 @@ def main() -> None:
         print(f"  {label:<13} finalists  : {_diagnostic(finalists, finalists)}")
         print(f"  {label:<13} gate passers: {_diagnostic(passers, finalists)}")
 
+    # ADR-054: the gate's verdict is the MARGIN one. This says how often the paper's probability
+    # form would have said the same thing about the same finalist — the measurement any future
+    # case for switching the gate has to be built on. The reference level is a reading level, not
+    # a threshold: nothing gates on it.
+    if report.statistic_agreement is not None:
+        a = report.statistic_agreement
+        print(
+            f"\nmargin vs the paper's DSR (reference P > {a.probability_reference:.2f}, "
+            f"n={a.n} finalists, median P {a.median_probability:.3f}):"
+        )
+        print(
+            f"  agree: {a.both_pass} both pass, {a.both_fail} both fail | "
+            f"disagree: {a.margin_only} margin only, {a.probability_only} probability only "
+            f"({(a.margin_only + a.probability_only) / a.n:.1%})"
+        )
+    else:
+        print(
+            "\nmargin vs the paper's DSR: not measured — no finalist in the pool carries a "
+            "probability (pre-ADR-054 rows)."
+        )
+
     # ADR-051: the comparison itself, not an instruction to go and do it. `comparable` guards it —
     # a difference between runs that resolved different search families, or were judged on
     # different history lengths, is not a finding about the universe, and both have happened here.
