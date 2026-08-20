@@ -91,6 +91,10 @@ class Experiment(BaseModel):
     # real-versus-null comparison needs. Rows written before the field cannot have their family
     # reconstructed and keep the default rather than a synthesized value.
     search_config_version: str = "legacy-unspecified"
+    # ADR-052: the history this search actually saw. Graduate carries a holdout length, but a run
+    # that graduates nothing recorded no length at all — which is exactly the state ADR-051's
+    # comparison had to be qualified for. None means a row written before the field.
+    n_bars: int | None = None
     rationale: str = ""
 
 

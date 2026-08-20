@@ -83,6 +83,10 @@ class PoolReport(BaseModel):
     # spanning two families has no single median — it has a blend of two procedures — and this is
     # what lets a reader match the pool against a calibration artifact instead of against git log.
     search_config_versions: dict[str, int] = {}
+    # ADR-052: the median history the pool was searched over, to be checked against the null
+    # artifact's own n_bars. None when no experiment states one — a median over an empty set would
+    # be a fabricated match.
+    median_n_bars: int | None = None
     # ADR-043: the TRUE edge this design can detect, beside the bar an observation must clear.
     # None when no graduate exists to take a holdout length from — inventing one would publish a
     # detectable edge for a design that was never run.
@@ -159,6 +163,7 @@ def summarize_pool(
     )
 
     families = Counter(e.search_config_version for e in experiments)
+    searched_bars = [e.n_bars for e in experiments if e.n_bars is not None]
 
     open_positions = [p for p in positions if p.status == "open"]
     return PoolReport(
@@ -176,5 +181,6 @@ def summarize_pool(
         walk_forward_finalists=_summarize(finalists, "walk_forward_oos_sharpe"),
         purged_cv_finalists=_summarize(finalists, "purged_cv_oos_sharpe"),
         search_config_versions=dict(families.most_common()),
+        median_n_bars=int(np.median(searched_bars)) if searched_bars else None,
         frontier=frontier,
     )

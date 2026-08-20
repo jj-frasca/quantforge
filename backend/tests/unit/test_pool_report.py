@@ -318,3 +318,19 @@ def test_report_counts_the_experiments_of_each_search_family() -> None:
 
 def test_an_empty_pool_reports_no_search_families() -> None:
     assert summarize_pool([], []).search_config_versions == {}
+
+
+def test_report_takes_the_median_searched_history_of_the_pool() -> None:
+    """The number a reader compares against the null artifact's own n_bars. The median, because a
+    pool mixing 21-year names with recent listings has no single length."""
+    experiments = [
+        _exp("AAA").model_copy(update={"n_bars": 5000}),
+        _exp("BBB").model_copy(update={"n_bars": 5400}),
+        _exp("CCC").model_copy(update={"n_bars": 900}),
+    ]
+    assert summarize_pool(experiments, []).median_n_bars == 5000
+
+
+def test_a_pool_of_experiments_with_no_bar_count_reports_no_median() -> None:
+    """3,237 rows predate the field; a median over an empty set would be a fabricated match."""
+    assert summarize_pool([_exp("AAA")], []).median_n_bars is None

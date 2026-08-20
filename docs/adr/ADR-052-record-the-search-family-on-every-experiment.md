@@ -40,6 +40,14 @@ needs, and the one that was previously unavailable at any price.
 prints them beside the OOS diagnostics, because a pool that mixes families is a pool whose single
 median is a blend of two different procedures.
 
+**Amendment, same day: `Experiment.n_bars` for the same reason.** ADR-051's measured comparison
+lists "the real side's history length is unknown" as one of its four limitations, because only
+`Graduate` records a bar count and the run that produced the result graduated nothing. History
+length and search family are the same kind of fact — what a pool row must state for a calibration
+artifact to be comparable to it — so they belong under one decision rather than two. `run_search`
+records the searched frame's length, `PoolReport` reports the median, and `scripts/pool_report.py`
+prints it next to the search families so a reader can check both halves of the match at once.
+
 ## Alternatives considered
 
 - **Record it on `Trial` instead.** Rejected. It is a property of the run, not of a candidate, and
@@ -66,6 +74,7 @@ median is a blend of two different procedures.
 
 ## Reversal
 
-Drop `search_config_version` from `Experiment` (it is defaulted, so records written under this ADR
-still load), remove the `run_search` call, and delete `PoolReport.search_config_versions` and its
-report line. No threshold, gate, or promotion rule reads any of it.
+Drop `search_config_version` and `n_bars` from `Experiment` (both are defaulted, so records written
+under this ADR still load), remove the `run_search` calls, and delete
+`PoolReport.search_config_versions` / `median_n_bars` and their report lines. No threshold, gate, or
+promotion rule reads any of it.

@@ -104,6 +104,11 @@ def main() -> None:
             for version, count in report.search_config_versions.items()
         )
         print(f"\nsearch families in the pool (fingerprint, experiments): {families}")
+    if report.median_n_bars is not None:
+        print(
+            f"median searched history: {report.median_n_bars} bars "
+            "-- must match the null artifact's own n_bars for the comparison below to hold"
+        )
 
     print("\nout-of-sample Sharpe (compare with data/null_calibration/ — same statistic, no edge):")
     for label, finalists, passers in (

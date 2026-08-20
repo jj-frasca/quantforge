@@ -213,6 +213,7 @@ def run_search(
         gate_config=gate_config,
         trials=trials,
         lifetime_trials=lifetime_trials,
+        n_bars=len(frame),
         search_config_version=calibration_search_version(
             strategy_names,
             n_per_param=n_per_param,

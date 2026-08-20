@@ -325,3 +325,19 @@ def test_an_experiment_written_before_this_field_reads_back_as_unspecified() -> 
     legacy = Experiment.model_validate_json(exp.model_dump_json(exclude={"search_config_version"}))
 
     assert legacy.search_config_version == "legacy-unspecified"
+
+
+def test_search_records_the_history_it_searched() -> None:
+    """ADR-051's comparison lists the real side's unknown history length as a limitation: only
+    Graduate carried a bar count, and the run that produced the result graduated nothing."""
+    frame = _random_walk_frame(15)
+    exp = run_search(frame, "AAPL", ["sma"])
+
+    assert exp.n_bars == len(frame)
+
+
+def test_an_experiment_written_before_the_bar_count_reads_back_as_unknown() -> None:
+    exp = run_search(_random_walk_frame(16), "AAPL", ["sma"])
+    legacy = Experiment.model_validate_json(exp.model_dump_json(exclude={"n_bars"}))
+
+    assert legacy.n_bars is None
