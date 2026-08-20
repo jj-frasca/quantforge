@@ -64,6 +64,28 @@ grid and must be reported as such.
 - **Do nothing and read capture deltas as-is.** Rejected. It is exactly the class of unattributable
   reading that ADR-055 had to retract twice (the 0%-power cells, and the "matched oracle" pairing).
 
+## Amendment (2026-08-20, same session) — make the reading rule code, not prose
+
+ADR-056's first paired reading landed while this ADR was being implemented, and it showed why the
+rule above cannot live only in prose. The band cells moved by ≤ +0.7pp (noise) while **all four**
+non-zero AR(1) detection cells moved down by 2–4pp — each inside binomial noise at n=50, but all in
+the direction the ADR-046 accounting predicts when the catalog grows. A reader comparing two
+committed sweeps by eye has to remember four separate qualifications to not over-read that.
+
+**Decision 4: `compare_power_sweeps(before, after)` returns one row per matched cell** carrying the
+capture deltas, the detection delta, and — the load-bearing part — an `attributable` flag that is
+true only when **both** sides record finalist names AND the finalist mix actually moved. Cells that
+exist on only one side are reported as unmatched rather than silently dropped, and a mismatch in
+`edge`, `n_bars` or `gate_config_version` refuses the whole comparison the way `collect_power_sweep`
+already refuses a mixed sweep. A DIFFERENT `search_config_version` across the two sides is
+**required**, not refused: it is the catalog change being measured, and comparing two sweeps of the
+identical search family is the one case where a capture delta is pure noise.
+
+The rule the flag encodes: *a capture change is attributable to a catalog change only if the
+finalist distribution moved toward the added strategy.* This is the same move `compare_with_null`
+made for ADR-038/039's revisit trigger — a comparison the project kept getting wrong by hand became
+a function with a refusal in it.
+
 ## Consequences
 
 - The two power workflows must be re-dispatched for the attribution to exist; the sweeps dispatched
@@ -77,6 +99,7 @@ grid and must be reported as such.
 ## Reversal
 
 Drop `finalist_strategy_names` and `finalist_strategy_counts` from `PowerCalibration`, the one line
-in `calibrate_power` that appends to it, and the modal-finalist column in the consolidation script.
+in `calibrate_power` that appends to it, the modal-finalist column in the consolidation script, and
+`compare_power_sweeps` with its `PowerSweepComparison` row.
 No stored artifact is invalidated — the field is defaulted, and every capture number is computed
 from lists this ADR does not touch.
