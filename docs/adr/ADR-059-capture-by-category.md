@@ -80,6 +80,42 @@ capture ratio per category.**
   the maximum row, and at φ = +0.3 the Trend row should be. A sweep where it is not would mean the
   planted process and the category taxonomy disagree, which is worth knowing on its own.
 
+## Measured (runs 32427507324 / 32427509259, committed `8e49ba7` / `2b5503d`)
+
+Both sweeps at `n_bars=5400` on the restored 34-strategy catalog (`search_config_version
+3f36fda2…`), so they are directly comparable to everything published before ADR-056.
+
+**The self-check passes.** On AR(1) the taxonomy and the planted process agree completely: at
+φ = −0.3 / −0.2 the Mean Reversion row is the maximum (114% / 126%) while Trend reaches 18% / 39%;
+at φ = +0.2 / +0.3 Trend and Breakout are the maxima (116% / 103%) while Mean Reversion collapses to
+14% / 5%. A sweep where that failed would have meant the categories describe something other than
+what is planted.
+
+**On band reversion the headline capture is not the matched capture at fast half-lives:**
+
+| band half-life | 1 | 2 | 3 | 5 | 10 | 20 |
+|---|---|---|---|---|---|---|
+| headline net capture | 32% | 29% | 31% | 45% | 56% | 58% |
+| **Mean Reversion** (the matched row) | **22%** | 26% | 29% | 44% | 56% | 58% |
+| Trend | 31% | 25% | 21% | 20% | 26% | 35% |
+
+At half-life 1 the headline 32% is carried by **Trend at 31%** — strategies fitting the random-walk
+level, which holds 83% of return variance in that cell by construction — while everything actually
+aimed at the planted reversion keeps 22%. From half-life 3 onward the matched row *is* the headline,
+and the two converge exactly where ADR-058 found recognition starts working. **Every band-reversion
+capture number published before this is therefore an overstatement at half-lives 1–2**, and the
+correct sentence is: the catalog's reverting strategies keep about 22% of a fast planted reversion.
+
+**A second result, from the removal being deterministic.** The planted frames come from fixed seeds
+and the search has no RNG, so the 34-strategy sweep before ADR-056 and this one after ADR-058 are
+the same computation — and they agree exactly (detection 34% / 22% / 14% / 64% at
+φ = −0.3 / −0.2 / +0.2 / +0.3, reproducing the pre-ADR-056 numbers to the symbol). That means the
+2–4pp declines observed with the 35th strategy in the catalog were **not sampling noise on these
+symbols**: on this fixed sample, adding one strategy deterministically cost two detections at
+φ = ±0.3 and one at φ = −0.2 / +0.2. The ±6.6pp binomial caveat still applies to generalizing the
+magnitude to the population, but the *direction* was a real cost, exactly as ADR-046's accounting
+predicts, and ADR-058's removal rationale is stronger than it was stated.
+
 ## Reversal
 
 Drop `finalist_sharpes_by_category` and `net_capture_by_category` from `PowerCalibration`, the
