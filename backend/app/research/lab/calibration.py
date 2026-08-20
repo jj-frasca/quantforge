@@ -60,6 +60,10 @@ class NullCalibration(BaseModel):
     # One entry per SEARCHED symbol (not per graduate): the merged bar is reported at the median
     # holdout length, which is only exact if the lengths themselves survive sharding (ADR-037).
     holdout_years: list[float]
+    # ADR-051: the total history each null symbol was judged on, one entry per SEARCHED symbol. A
+    # null and a real hunt are only comparable at the same length, and an empty list means an
+    # artifact predating this field — never that the run saw no bars.
+    n_bars: list[int] = []
     # ADR-038: the finalist trial's walk-forward mean OOS Sharpe, one per searched symbol. Under a
     # null this is the distribution a walk-forward floor would have to clear, which is the evidence
     # ADR-038 requires before promoting the statistic from a diagnostic to a gate criterion.
@@ -608,6 +612,7 @@ def calibrate_gate(
 
     experiments: list[Experiment] = []
     holdout_years: list[float] = []
+    n_bars: list[int] = []
     errors: dict[str, str] = {}
     for symbol, frame in frames.items():
         try:
@@ -627,6 +632,7 @@ def calibrate_gate(
             continue
         experiments.append(experiment)
         holdout_years.append(sealed.n_bars / _TRADING_DAYS)
+        n_bars.append(len(frame))
 
     if not experiments:
         raise ValueError("need at least one null symbol that can be searched")
@@ -665,6 +671,7 @@ def calibrate_gate(
             if e.graduate is not None
         ],
         holdout_years=holdout_years,
+        n_bars=n_bars,
         walk_forward_oos_sharpes=[
             wf for e in experiments if (wf := _finalist(e).walk_forward_oos_sharpe) is not None
         ],
@@ -716,6 +723,7 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
     n_symbols = sum(s.n_symbols for s in shards)
     graduates = [g for s in shards for g in s.graduates]
     holdout_years = [y for s in shards for y in s.holdout_years]
+    n_bars = [n for s in shards for n in s.n_bars]
     return NullCalibration(
         n_symbols=n_symbols,
         n_graduates=len(graduates),
@@ -730,6 +738,7 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
         max_holdout_sharpe=max((g.holdout_sharpe for g in graduates), default=None),
         graduates=graduates,
         holdout_years=holdout_years,
+        n_bars=n_bars,
         walk_forward_oos_sharpes=[v for s in shards for v in s.walk_forward_oos_sharpes],
         purged_cv_oos_sharpes=[v for s in shards for v in s.purged_cv_oos_sharpes],
         errors={sym: why for s in shards for sym, why in s.errors.items()},

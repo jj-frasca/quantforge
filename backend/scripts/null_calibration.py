@@ -2,7 +2,9 @@
 
 Usage: PYTHONPATH=. uv run python scripts/null_calibration.py [N_SYMBOLS] [SEED]
            [--bootstrap SYM] [--shard I/N] [--out PATH]
-       (default: 100 null symbols, seed 0, iid-normal null, whole run, print only)
+           [--n-bars N]
+       (default: 100 null symbols, seed 0, iid-normal null, whole run, print only, and the
+        hunt's own history length)
 
 Runs the UNMODIFIED search + graduation gate over a universe with no edge by construction and
 reports how often it graduates something — a measured Type-I error for the whole pipeline. The
@@ -22,6 +24,7 @@ about a real symbol and must never reach the research pool (ADR-036).
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from statistics import median
 
 import pandas as pd
 
@@ -38,9 +41,12 @@ from app.research.lab.calibration import (
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
 START = datetime(2005, 1, 1, tzinfo=UTC)
-# Matches the shape a real hunt sees: ~12 years, so the 20% holdout clears the 252-bar floor with
-# room to spare and MinTRL is reachable — a null run must face the same bar a real symbol does.
-N_BARS = 3000
+# ADR-051: the length a real hunt actually sees. scripts/shard_hunt.py starts at the same 2005-01-01
+# and a long-lived name carries ~5400 trading days by 2026, so the previous 3000 judged the null on
+# 55% of the pool's history and inflated its Sharpe dispersion relative to the pool's. Fixed rather
+# than computed from today's date, because a calibration artifact must be reproducible; bump it
+# deliberately as history accumulates, and `--n-bars` overrides it for a shorter experiment.
+N_BARS = 5400
 
 
 def _source_frame(symbol: str) -> pd.DataFrame:
@@ -63,6 +69,8 @@ def _report(result: NullCalibration) -> None:
     print(f"search config version: {result.search_config_version}")
     print(f"adaptive refinement : {result.refine} (span {result.refine_span:.2f})")
     print(f"symbols searched    : {result.n_symbols}")
+    if result.n_bars:
+        print(f"bars per symbol     : {median(result.n_bars):.0f} (the hunt's own history length)")
     print(f"graduates           : {result.n_graduates}")
     print(f"FALSE GRADUATION    : {result.false_graduation_rate:.1%}  <- Type-I error, whole gate")
     print(f"clear ADR-018 bar   : {result.n_clear_deflation_bar} (bar {result.deflation_bar:.2f})")
@@ -86,27 +94,29 @@ def main() -> None:
     shard_spec = _flag("--shard")
     bootstrap_symbol = _flag("--bootstrap")
     out = _flag("--out")
-    consumed = {shard_spec, bootstrap_symbol, out} - {None}
+    n_bars_flag = _flag("--n-bars")
+    consumed = {shard_spec, bootstrap_symbol, out, n_bars_flag} - {None}
     positional = [a for a in args if a not in consumed]
 
     n_symbols = int(positional[0]) if positional else 100
     seed = int(positional[1]) if len(positional) > 1 else 0
     shard, n_shards = (int(x) for x in shard_spec.split("/")) if shard_spec else (0, 1)
+    n_bars = int(n_bars_flag) if n_bars_flag else N_BARS
     indices = [i for i in range(n_symbols) if i % n_shards == shard]
 
     if bootstrap_symbol:
         symbol = bootstrap_symbol.upper()
         source = _source_frame(symbol)
         print(f"bootstrap null from {symbol}: {len(source)} real bars resampled iid\n")
-        frames = {f"NULL{i:04d}": bootstrap_null(source, N_BARS, seed=seed + i) for i in indices}
+        frames = {f"NULL{i:04d}": bootstrap_null(source, n_bars, seed=seed + i) for i in indices}
         mode = f"bootstrap:{symbol}"
     else:
-        frames = {f"NULL{i:04d}": iid_normal_null(N_BARS, seed=seed + i) for i in indices}
+        frames = {f"NULL{i:04d}": iid_normal_null(n_bars, seed=seed + i) for i in indices}
         mode = "iid_normal"
 
     strategies = [entry.name for entry in STRATEGY_CATALOG]
     print(
-        f"calibrating the gate against {len(indices)} of {n_symbols} null symbols x {N_BARS} bars "
+        f"calibrating the gate against {len(indices)} of {n_symbols} null symbols x {n_bars} bars "
         f"over {len(strategies)} strategies (seed {seed}, shard {shard}/{n_shards})...\n"
     )
     result = calibrate_gate(frames, strategies, null_mode=mode)

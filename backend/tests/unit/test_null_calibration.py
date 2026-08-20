@@ -274,6 +274,7 @@ def _shard(
         max_holdout_sharpe=max((g.holdout_sharpe for g in grads), default=None),
         graduates=grads,
         holdout_years=[4.0] * n_symbols,
+        n_bars=[5040] * n_symbols,
         errors=errors or {},
         gate_config_version=version,
         search_config_version=search_version,
@@ -723,3 +724,40 @@ def test_measure_power_refuses_an_oracle_map_missing_a_searched_symbol() -> None
     }
     with pytest.raises(ValueError, match="BAND1"):
         measure_power(frames, ["sma"], oracle_sharpes={"BAND0": 1.0})
+
+
+# --- ADR-051: an artifact must state the history length it was judged at ---
+
+
+def test_calibration_records_the_bar_count_of_every_searched_symbol() -> None:
+    """A null run and a real hunt are only comparable at the same history length, and the length
+    was previously recoverable only by knowing the holdout split ratio and multiplying back."""
+    frames = {"NULL1": iid_normal_null(800, seed=1), "NULL2": iid_normal_null(900, seed=2)}
+    result = calibrate_gate(frames, ["sma"], n_per_param=2)
+
+    assert result.n_bars == [800, 900]
+    assert len(result.n_bars) == result.n_symbols
+
+
+def test_an_unsearchable_symbol_contributes_no_bar_count() -> None:
+    """`errors` symbols are excluded from the denominator, so including their length would
+    misalign n_bars against holdout_years and every other per-symbol list."""
+    frames = {"NULL1": iid_normal_null(800, seed=1), "TOOSHORT": iid_normal_null(20, seed=2)}
+    result = calibrate_gate(frames, ["sma"], n_per_param=2)
+
+    assert "TOOSHORT" in result.errors
+    assert result.n_bars == [800]
+
+
+def test_merge_concatenates_the_bar_counts() -> None:
+    merged = merge_calibrations([_shard(n_symbols=2), _shard(n_symbols=3)])
+    assert len(merged.n_bars) == 5
+
+
+def test_a_legacy_artifact_states_no_bar_count_rather_than_a_wrong_one() -> None:
+    """The 3000-bar artifacts committed before ADR-051 must read back as "unstated", never as the
+    new default — that would silently claim they were judged on the hunt's history."""
+    legacy = NullCalibration.model_validate_json(
+        _shard(n_symbols=2).model_dump_json(exclude={"n_bars"})
+    )
+    assert legacy.n_bars == []
