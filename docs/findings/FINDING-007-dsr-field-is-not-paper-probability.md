@@ -1,9 +1,10 @@
 # FINDING-007: The reported DSR is not the paper's Deflated Sharpe Ratio statistic
 
 - **Severity:** High (methodology naming and omitted uncertainty correction)
-- **Status:** Resolved in part by ADR-054 (2026-08-20) — the probability form is implemented and
-  every user-facing claim now names the margin correctly. The remaining piece is recording the
-  probability per trial (ADR-054 decision 3), which is blocked on plumbing per-period moments
+- **Status:** Resolved by ADR-054 (2026-08-20) — the probability form is implemented, every
+  user-facing claim now names the margin correctly, and every new trial records the probability
+  beside the margin. What remains is a THRESHOLD question (should the gate use it?), which charter
+  §4 requires be argued with a measured Type-I error and power curve, not with this finding
 - **Affected:** `deflated_sharpe`, `ValidationReport.deflated_sharpe`, gate and UI descriptions
 
 ## Finding
@@ -64,5 +65,10 @@ Deliberately NOT done, and why: the stored field keeps its name (a schema migrat
 committed pool files buys a name, while the defect was in what the name claimed), and the gate still
 gates on the margin at `dsr_min` (a gate change is a threshold change, which charter §4 forbids
 arguing without evidence — and it would have invalidated ADR-051's matched Type-I and power runs in
-the same commit). Recording the probability per trial is the precondition for making that case with
-measurements instead of argument.
+the same commit). Recording the probability per trial WAS the precondition for making that case with
+measurements instead of argument, and it now happens on every search: a `Trial` carries both
+numbers, priced from the same search at the same haircut, so their disagreement rate can be measured
+on real trials rather than assumed. The remaining open question is therefore no longer this finding
+— it is whether the gate should switch, which needs a fresh Type-I error and power curve for the new
+statistic (all three calibration workflows re-dispatched together, per `validation-methodology.md`
+§7.2).

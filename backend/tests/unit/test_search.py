@@ -3,16 +3,24 @@ validate each on in-sample data -> pick the best -> score it on the sealed holdo
 graduation gate. Produces one Experiment with ALL trials recorded and the best candidate's
 verdict (pass OR fail) attached."""
 
+import json
+import math
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
+from app.research.backtesting.engine import BacktestEngine
+from app.research.backtesting.metrics import TRADING_DAYS, return_moments
 from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.experiment import Experiment, InMemoryExperimentStore
 from app.research.lab.gate import GateConfig
+from app.research.lab.holdout import split_holdout
 from app.research.lab.search import run_search
+from app.research.strategies.builder import build_strategy_from_dict
 from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
+from app.validation.deflated_sharpe import probabilistic_sharpe_ratio
 
 _LENIENT = GateConfig(
     dsr_min=-100.0,
@@ -341,3 +349,63 @@ def test_an_experiment_written_before_the_bar_count_reads_back_as_unknown() -> N
     legacy = Experiment.model_validate_json(exp.model_dump_json(exclude={"n_bars"}))
 
     assert legacy.n_bars is None
+
+
+def test_every_trial_records_the_paper_deflated_sharpe_probability() -> None:
+    """ADR-054 decision 3: both statistics now ride on every trial, so their disagreement is
+    measurable rather than hypothetical."""
+    exp = run_search(_random_walk_frame(17), "AAPL", ["sma", "momentum"], refine=True)
+
+    assert len(exp.trials) == 3  # 2 coarse + 1 refined
+    for trial in exp.trials:
+        assert trial.deflated_sharpe_probability is not None
+        assert 0.0 <= trial.deflated_sharpe_probability <= 1.0
+
+
+def test_the_recorded_probability_is_priced_per_period_not_annualized() -> None:
+    """The margin is in ANNUALIZED Sharpe units; the PSR is a function of the PER-PERIOD Sharpe
+    and the per-period moments together. Rebuilding the finalist and reconstructing the haircut
+    from the stored margin pins the recorded probability end to end — an annualized Sharpe against
+    per-period moments would saturate this to 0.0 or 1.0."""
+    frame = _random_walk_frame(18)
+    exp = run_search(frame, "AAPL", ["sma"])
+    trial = exp.trials[0]
+    handle, _ = split_holdout(frame, "AAPL")
+    finalist = build_strategy_from_dict(trial.strategy_name, trial.parameters)
+    moments = return_moments(BacktestEngine().run_strategy(handle.frame, finalist).returns)
+    assert moments is not None
+
+    scale = math.sqrt(TRADING_DAYS)
+    expected = probabilistic_sharpe_ratio(
+        trial.observed_sharpe / scale,
+        benchmark_sr=(trial.observed_sharpe - trial.deflated_sharpe) / scale,
+        n_returns=moments.n_returns,
+        skew=moments.skew,
+        kurtosis=moments.kurtosis,
+    )
+    assert trial.deflated_sharpe_probability == pytest.approx(expected)
+
+
+def test_a_trial_written_before_the_probability_reads_back_as_unmeasured() -> None:
+    """The 3,237 committed pool rows predate the field. None means "not measured", while a 0.0
+    would read as a track record the paper's test rejects outright."""
+    exp = run_search(_random_walk_frame(19), "AAPL", ["sma"])
+    payload = json.loads(exp.model_dump_json())
+    for row in payload["trials"]:
+        del row["deflated_sharpe_probability"]
+
+    legacy = Experiment.model_validate(payload)
+
+    assert all(t.deflated_sharpe_probability is None for t in legacy.trials)
+
+
+def test_the_probability_prices_the_whole_search_effort() -> None:
+    """It must use the same lifetime denominator the margin does: prior effort lowers it."""
+    frame = _random_walk_frame(20)
+    fresh = run_search(frame, "AAPL", ["sma", "momentum"])
+    repeated = run_search(frame, "AAPL", ["sma", "momentum"], prior_trials=50_000)
+
+    for before, after in zip(fresh.trials, repeated.trials, strict=True):
+        assert before.deflated_sharpe_probability is not None
+        assert after.deflated_sharpe_probability is not None
+        assert after.deflated_sharpe_probability < before.deflated_sharpe_probability

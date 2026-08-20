@@ -42,13 +42,15 @@ that calls the margin by the paper's name — but do not change what the gate ga
    as the benchmark, i.e. the paper's Equation 2 using this repo's existing, calibrated haircut.
 3. `Trial.deflated_sharpe_probability`, recorded alongside the existing margin. Nullable, so the
    3,237 pool rows that predate it read as unmeasured rather than as a probability of zero.
-   **NOT YET IMPLEMENTED — stated here so the gap is visible rather than assumed done.** The trap
-   is scale: everything stored in a `Trial` is annualized, while PSR is a function of the
-   *per-period* Sharpe and the *per-period* moments together, so recording it requires
-   de-annualizing the observed Sharpe and the dispersion by the same `sqrt(252)` AND plumbing the
-   finalist's return skew and kurtosis out of `_score_configs`, which today returns only Sharpes.
-   Mixing one annualized input with two per-period ones silently rescales the probability, which
-   is precisely the class of error this ADR exists to remove.
+   The trap is scale: everything stored in a `Trial` is annualized, while PSR is a function of the
+   *per-period* Sharpe and the *per-period* moments together. Mixing one annualized input with two
+   per-period ones silently rescales the probability, which is precisely the class of error this
+   ADR exists to remove. Implemented by de-annualizing the observed Sharpe AND the trial dispersion
+   by the same `sqrt(252)` inside `whole_search_deflated_sharpe_probabilities`, and by returning the
+   finalist's `ReturnMoments` (raw kurtosis) from `_score_configs`, which is the only place the
+   finalist's return series exists. A finalist whose moments are absent, or whose moment combination
+   the formula refuses, records `None`: one unmeasurable family must neither fabricate a number nor
+   abort a hunt.
 4. The existing field keeps its stored name and the gate keeps its `dsr_min` threshold. What changes
    is the language around it: it is described everywhere as the **selection-adjusted Sharpe margin**,
    and "Deflated Sharpe Ratio" refers only to the probability.
@@ -74,10 +76,9 @@ that calls the margin by the paper's name — but do not change what the gate ga
 
 ## Consequences
 
-- Once decision 3 lands, every new trial carries both numbers and the disagreement between them
-  becomes measurable rather than hypothetical. That measurement is the precondition for any future
-  gate change. Until then the probability form exists, is tested, and is unused — which is a
-  smaller and more honest state than the one this ADR found.
+- Every new trial carries both numbers, so the disagreement between them is measurable rather than
+  hypothetical. That measurement is the precondition for any future gate change. Rows already in
+  the pool carry `None` and are distinguishable from a measured zero.
 - The probability is scale-free and comparable to the literature, which the margin is not.
 - Nothing gates on the new field, so no calibration result is invalidated by this ADR and the
   committed Type-I and power measurements remain current. **This is deliberate**: had the gate

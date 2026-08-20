@@ -42,6 +42,13 @@ class Trial(BaseModel):
     # walk_forward_oos_sharpe on purpose — the two answer different questions (causal
     # prequential vs leakage-controlled dispersion) and the GAP between them is diagnostic.
     purged_cv_oos_sharpe: float | None = None
+    # ADR-054 decision 3: the PAPER's Deflated Sharpe Ratio — a PROBABILITY in [0, 1] that the
+    # true Sharpe exceeds the multiple-testing threshold, using this trial's track-record length,
+    # skewness and kurtosis. `deflated_sharpe` above is the selection-adjusted Sharpe MARGIN and
+    # the two are not comparable. Nullable so the rows written before the field, and the
+    # cross-sectional producer that computes no per-period moments, read as "not measured"
+    # rather than as a probability of zero.
+    deflated_sharpe_probability: float | None = None
 
 
 class Graduate(BaseModel):

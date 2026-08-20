@@ -7,6 +7,7 @@ from app.data.fundamentals import (
     screen_fundamentals,
 )
 from app.research.backtesting.engine import BacktestEngine
+from app.research.backtesting.metrics import ReturnMoments, return_moments
 from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.candidate_budget import (
     allocate_catalog_candidate_budget,
@@ -15,7 +16,10 @@ from app.research.lab.candidate_budget import (
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GraduationGate
 from app.research.lab.holdout import score_on_holdout, split_holdout
-from app.research.lab.trial_accounting import whole_search_deflated_sharpes
+from app.research.lab.trial_accounting import (
+    whole_search_deflated_sharpe_probabilities,
+    whole_search_deflated_sharpes,
+)
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.grid_generator import find_catalog_entry, refine_grid
 from app.validation.engine import ValidationEngine
@@ -38,18 +42,26 @@ def _numeric_params(strategy: BaseStrategy) -> dict[str, float | int]:
 
 def _score_configs(
     configs: list[BaseStrategy], frame: pd.DataFrame, engine: BacktestEngine
-) -> tuple[BaseStrategy, list[float]]:
+) -> tuple[BaseStrategy, list[float], ReturnMoments | None]:
     """The config with the highest in-sample Sharpe — matches ValidationEngine's own `best`
-    selection, so the holdout is scored on the same config the report describes."""
+    selection, so the holdout is scored on the same config the report describes.
+
+    Notes:
+        Also returns the winner's PER-PERIOD return moments. They are the two inputs the paper's
+        DSR needs that a Sharpe alone cannot supply (ADR-054), and this loop is the only place
+        the finalist's return series exists.
+    """
     best = configs[0]
     best_sharpe = float("-inf")
+    best_returns: pd.Series | None = None
     sharpes: list[float] = []
     for config in configs:
-        sharpe = engine.run_strategy(frame, config).metrics.sharpe
-        sharpes.append(sharpe)
-        if sharpe > best_sharpe:
-            best_sharpe, best = sharpe, config
-    return best, sharpes
+        result = engine.run_strategy(frame, config)
+        sharpes.append(result.metrics.sharpe)
+        if result.metrics.sharpe > best_sharpe:
+            best_sharpe, best, best_returns = result.metrics.sharpe, config, result.returns
+    moments = None if best_returns is None else return_moments(best_returns)
+    return best, sharpes, moments
 
 
 def run_search(
@@ -91,11 +103,13 @@ def run_search(
     best_configs: list[BaseStrategy] = []
     reports: list[ValidationReport] = []
     candidate_sharpes: list[float] = []
+    finalist_moments: list[ReturnMoments | None] = []
     for name, allocated_configs in allocation.families.items():
         configs = list(allocated_configs)
         report = validator.validate(name, configs, handle.frame)
-        best_config, config_sharpes = _score_configs(configs, handle.frame, engine)
+        best_config, config_sharpes, moments = _score_configs(configs, handle.frame, engine)
         candidate_sharpes.extend(config_sharpes)
+        finalist_moments.append(moments)
         trials.append(
             Trial(
                 strategy_name=report.strategy_name,
@@ -141,8 +155,11 @@ def run_search(
             refined_report = validator.validate(
                 trials[best_idx].strategy_name, refined_configs, handle.frame
             )
-            refined_config, refined_sharpes = _score_configs(refined_configs, handle.frame, engine)
+            refined_config, refined_sharpes, refined_moments = _score_configs(
+                refined_configs, handle.frame, engine
+            )
             candidate_sharpes.extend(refined_sharpes)
+            finalist_moments.append(refined_moments)
             trials.append(
                 Trial(
                     strategy_name=refined_report.strategy_name,
@@ -160,12 +177,14 @@ def run_search(
             best_configs.append(refined_config)
 
     lifetime_trials = prior_trials + len(candidate_sharpes)
-    repriced = whole_search_deflated_sharpes(
-        [trial.observed_sharpe for trial in trials], candidate_sharpes, lifetime_trials
+    observed = [trial.observed_sharpe for trial in trials]
+    repriced = whole_search_deflated_sharpes(observed, candidate_sharpes, lifetime_trials)
+    probabilities = whole_search_deflated_sharpe_probabilities(
+        observed, finalist_moments, candidate_sharpes, lifetime_trials
     )
     trials = [
-        trial.model_copy(update={"deflated_sharpe": dsr})
-        for trial, dsr in zip(trials, repriced, strict=True)
+        trial.model_copy(update={"deflated_sharpe": dsr, "deflated_sharpe_probability": psr})
+        for trial, dsr, psr in zip(trials, repriced, probabilities, strict=True)
     ]
     best_idx = max(range(len(trials)), key=lambda i: trials[i].observed_sharpe)
     best_report = reports[best_idx].model_copy(
