@@ -83,6 +83,54 @@ a smaller universe so the deflation bar is lower), or for stating plainly in the
 bar is currently unreachable. Both are honest; weakening DSR/PBO/MinTRL to manufacture a graduate
 is not.
 
+## Measured, 2026-08-19 (run 32304778979, N = 50 per phi, 3000 bars, full 34-strategy catalog)
+
+| phi | direction | oracle Sharpe (median) | detection rate | clear the ADR-018 bar (of 50) |
+|---|---|---|---|---|
+| -0.30 | mean-reverting | +3.98 | 16% | 6 |
+| -0.20 | mean-reverting | +2.60 | 6% | 2 |
+| -0.10 | mean-reverting | +1.29 | **0%** | 0 |
+| +0.10 | trending | +1.26 | **0%** | 0 |
+| +0.20 | trending | +2.56 | 54% | 8 |
+| +0.30 | trending | +3.92 | 64% | 27 |
+
+**1. The gate is not a dead instrument.** At phi = +0.30 it detects 64% of planted edges and 27 of
+50 clear the deflation bar. Detection rises monotonically with effect size in both directions. This
+is the result that was actually in question, and it materially strengthens the standing "0 of 40
+graduates clear the bar" finding as a statement about the *strategies* rather than about the bar.
+
+**2. Power collapses to zero at moderate effect sizes.** At an oracle Sharpe of ~1.3 — a genuinely
+excellent real-world edge — detection is **0 of 50, in both directions**. The gate has usable power
+only for edges around oracle Sharpe 2.5 and above, which is far larger than anything one should
+expect to find in liquid daily equities. So the honest reading of "0 of 40" is narrower than it
+looked: it is strong evidence that **no edge of oracle Sharpe ≳ 2.5 exists in this catalog crossed
+with this universe**, and it is nearly silent about edges around 1.0–1.5, which this pipeline cannot
+see at all.
+
+**3. The catalog is markedly better at trend than at mean reversion.** At comparable planted effect
+size the asymmetry is roughly ninefold (oracle ≈ 2.6: 54% trending vs 6% mean-reverting; oracle
+≈ 3.9: 64% vs 16%), even though the catalog contains more nominally mean-reversion strategies
+(RSI, Bollinger, Connors RSI, Williams %R, CCI, stochastic, VWAP reversion, trend-filtered MR) than
+trend ones.
+
+**The honest alternative explanation for (3), which cannot be separated with this experiment:** the
+planted process reverts at **lag 1**, while the catalog's mean-reversion strategies act on
+multi-bar rolling windows (RSI-14, Bollinger-20). A trend strategy integrating over many bars
+accumulates positive autocorrelation cumulatively; a 14-bar oscillator has no particular reason to
+capture bar-to-bar reversion. So this may be a mismatch between the planted *horizon* and the
+strategies' horizon rather than a weakness of the mean-reversion family as such. What can be said
+without qualification is narrower and still useful: **the catalog cannot capture lag-1 mean
+reversion.** Distinguishing the two requires an edge planted at a multi-bar horizon, which is the
+obvious follow-up experiment and is not attempted here.
+
+**What this does not license, restated because it is the tempting inference:** none of this is an
+argument for loosening the gate. A test with low power and a 1% false-positive rate is a
+*conservative* instrument, and conservative is what this project claims to be. The legitimate
+responses are to search where large edges might plausibly live, to reduce the deflation bar
+honestly by testing fewer and better-motivated hypotheses (ADR-029's quality pre-screen is exactly
+this), or to state plainly that edges below oracle Sharpe ~2.5 are outside this pipeline's
+resolution. Charter §4 stands.
+
 ## Alternatives considered
 
 1. **Do nothing; power is implicit in the forward test.** The paper book does eventually reveal
