@@ -23,6 +23,8 @@ const cell = (overrides: Partial<PowerCell> = {}): PowerCell => ({
   capture_ratio: 0.769,
   net_capture_ratio: 1.034,
   net_capture_by_category: {},
+  achievable_oracle_sharpes: [],
+  achievable_capture_ratio: null,
   gate_config_version: 'v1',
   search_config_version: 'abcdef0123456789',
   ...overrides,
@@ -117,7 +119,9 @@ test('a cell measured before the net oracle existed shows a dash, not a capture 
       sweeps={[sweep({ cells: [cell({ net_oracle_sharpes: [], net_capture_ratio: null })] })]}
     />,
   )
-  expect(screen.getAllByText('—')).toHaveLength(2)
+  // Four dashes: the net oracle and its capture, plus the achievable pair an AR(1) cell never
+  // records (its state IS the observed return, so no filter correction applies).
+  expect(screen.getAllByText('—')).toHaveLength(4)
 })
 
 test('a net oracle that costs have eaten has no capture fraction', () => {
@@ -130,7 +134,7 @@ test('a net oracle that costs have eaten has no capture fraction', () => {
       ]}
     />,
   )
-  expect(screen.getByText('—')).toBeInTheDocument()
+  expect(screen.getAllByText('—')).toHaveLength(3)
 })
 
 test('splits capture by the kind of strategy that earned it (ADR-059)', () => {
@@ -165,4 +169,40 @@ test('splits capture by the kind of strategy that earned it (ADR-059)', () => {
 test('says nothing about categories when a cell predates the split', () => {
   render(<GatePowerPanel sweeps={[sweep()]} />)
   expect(screen.queryByTestId('capture-by-category')).not.toBeInTheDocument()
+})
+
+test('shows capture against the oracle a filter could actually have formed (ADR-061)', () => {
+  // The latent-state oracle knows the process's hidden deviation; on a band process most of that
+  // edge is not recoverable from prices at all, so the achievable column is the honest one.
+  render(
+    <GatePowerPanel
+      sweeps={[
+        sweep({
+          edge: 'band_reversion',
+          cells: [
+            cell({
+              edge: 'band_reversion',
+              phi: null,
+              half_life: 5,
+              detection_rate: 0,
+              n_detected: 0,
+              n_clear_deflation_bar: 0,
+              net_capture_ratio: 0.453,
+              achievable_oracle_sharpes: [0.94, 0.94],
+              achievable_capture_ratio: 1.07,
+            }),
+          ],
+        }),
+      ]}
+    />,
+  )
+  expect(screen.getByText('107.0%')).toBeInTheDocument()
+  expect(screen.getByText('+0.94')).toBeInTheDocument()
+})
+
+test('an AR(1) cell shows a dash for the achievable oracle, because its state is observed', () => {
+  // Not a missing measurement: an AR(1) process's state IS the observed return, so the latent and
+  // achievable oracles coincide and the driver deliberately records none.
+  render(<GatePowerPanel sweeps={[sweep()]} />)
+  expect(screen.getAllByText('—')).toHaveLength(2)
 })

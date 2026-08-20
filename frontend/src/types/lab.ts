@@ -234,6 +234,10 @@ export const powerCellSchema = z.object({
   // ratio can be a trend strategy fitting the level, so the matched category's row is the one
   // that says whether anything trading the process kept any of it. Served, never re-derived.
   net_capture_by_category: z.record(z.string(), z.number()).default({}),
+  // ADR-061: the oracle a causal filter could form from prices alone, and capture against it.
+  // Empty/null on an AR(1) cell — its state IS the observed return, so no correction applies.
+  achievable_oracle_sharpes: z.array(z.number()).default([]),
+  achievable_capture_ratio: z.number().nullable().default(null),
   gate_config_version: z.string(),
   search_config_version: z.string().default('legacy-unspecified'),
 })

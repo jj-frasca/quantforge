@@ -48,6 +48,8 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
               <th scope="col">Clear the deflation bar</th>
               <th scope="col">Capture (upper bound)</th>
               <th scope="col">Capture, net</th>
+              <th scope="col">Oracle a filter could form</th>
+              <th scope="col">Capture vs achievable</th>
             </tr>
           </thead>
           <tbody>
@@ -61,6 +63,8 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
                   <td>{`${cell.n_clear_deflation_bar} / ${cell.n_symbols}`}</td>
                   <td>{percent(cell.capture_ratio)}</td>
                   <td>{percent(cell.net_capture_ratio)}</td>
+                  <td>{sharpe(median(cell.achievable_oracle_sharpes))}</td>
+                  <td>{percent(cell.achievable_capture_ratio)}</td>
                 </tr>
               )
             })}
@@ -71,7 +75,7 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
               }
               return (
                 <tr key={`${label(cell)}-split`} data-testid="capture-by-category">
-                  <td colSpan={7}>
+                  <td colSpan={9}>
                     {label(cell)} — net capture by category:{' '}
                     {split
                       .sort(([a], [b]) => a.localeCompare(b))
@@ -91,7 +95,10 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
         <strong>low</strong> capture beside a zero detection rate points at the strategies, not at
         the thresholds. The oracle is a sign strategy and trades constantly, so read the{' '}
         <strong>net</strong> columns: they charge it the same costs every catalog finalist paid,
-        and a planted edge whose net oracle is near zero was never there to be found.
+        and a planted edge whose net oracle is near zero was never there to be found. For band
+        reversion read the <strong>achievable</strong> columns above all: that oracle is what an
+        optimal filter could have formed from prices, while the others know the process's hidden
+        state — at a one-bar half-life the difference is the entire edge.
       </p>
     </section>
   )
