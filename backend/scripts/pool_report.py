@@ -10,13 +10,15 @@ nothing, touches no network, so it is safe to run at any time.
 
 from pathlib import Path
 
+from app.research.lab.calibration import NullCalibration
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.frontier import describe_frontier
 from app.research.lab.paper import JsonFilePaperPortfolio
-from app.research.lab.pool_report import DiagnosticSummary, summarize_pool
+from app.research.lab.pool_report import DiagnosticSummary, compare_with_null, summarize_pool
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 POOL = DATA / "research_pool"
+NULL_CALIBRATION = DATA / "null_calibration"
 PORTFOLIO = DATA / "paper_portfolio.json"
 
 
@@ -117,6 +119,41 @@ def main() -> None:
     ):
         print(f"  {label:<13} finalists  : {_diagnostic(finalists, finalists)}")
         print(f"  {label:<13} gate passers: {_diagnostic(passers, finalists)}")
+
+    # ADR-051: the comparison itself, not an instruction to go and do it. `comparable` guards it —
+    # a difference between runs that resolved different search families, or were judged on
+    # different history lengths, is not a finding about the universe, and both have happened here.
+    calibrations = [
+        NullCalibration.model_validate_json(path.read_text())
+        for path in sorted(NULL_CALIBRATION.glob("*.json"))
+    ]
+    rows = compare_with_null(report, calibrations)
+    if (
+        rows
+        and all(not row.comparable for row in rows)
+        and "legacy-unspecified" in (report.search_config_versions or {})
+    ):
+        print(
+            "\nNOTE: the pool predates ADR-052, so it cannot state the search family it used and "
+            "no comparison below is formally valid.\n      It resolves itself after the next "
+            "discovery run writes rows that carry the fingerprint."
+        )
+    if rows:
+        print("\nvs the null (finalist window on both sides):")
+        for row in rows:
+            verdict = (
+                "SEPARATES"
+                if row.real_exceeds_null_p95
+                else "does not separate (real median <= null p95)"
+            )
+            if not row.comparable:
+                verdict = f"NOT COMPARABLE -- {row.mismatch}"
+            print(
+                f"  {row.statistic:<13} vs {row.null_mode:<14} "
+                f"real {row.real_median:+.3f} (n={row.real_n}) | "
+                f"null median {row.null_median:+.3f} p95 {row.null_p95:+.3f} (n={row.null_n}) "
+                f"-- {verdict}"
+            )
 
     book = report.book
     print(

@@ -47,6 +47,13 @@ finalist the null artifacts record. The existing `walk_forward_graduates` /
 we actually promoted hold up" is a real and different question; they are simply no longer the only
 window onto the statistic.
 
+**1a. Amendment, same day: run the comparison in code.** `compare_with_null(report, calibrations)`
+reads the pool's finalist window against each null mode's own values and returns one row per
+(statistic, null mode) carrying both medians, the null p95, and a `comparable` flag. The flag is the
+load-bearing part: it refuses to call a pair comparable when the search families differ or when the
+history lengths differ, which are exactly the two mismatches this session found by hand against
+commit timestamps. Stating the rule in prose is what let it be skipped for three sessions.
+
 **2. Say which of the three states the report is in.** `no experiment carries it (pre-ADR-038/039)`,
 `no experiment passed the gate` and `median … over N finalists` are three different facts and the
 report must not print the first when the third is true.

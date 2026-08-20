@@ -10,10 +10,12 @@ Pure — the caller supplies the experiments and the book.
 """
 
 from collections import Counter
+from collections.abc import Sequence
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
+from app.research.lab.calibration import NullCalibration
 from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.frontier import DetectionFrontier, describe_frontier
 from app.research.lab.paper import PaperPosition
@@ -91,6 +93,93 @@ class PoolReport(BaseModel):
     # None when no graduate exists to take a holdout length from — inventing one would publish a
     # detectable edge for a design that was never run.
     frontier: DetectionFrontier | None = None
+
+
+class NullComparison(BaseModel):
+    """One statistic of the pool read against one null mode — ADR-038/039's revisit trigger, run
+    in code so a session does not re-derive it by hand.
+
+    Notes:
+        `comparable` is the load-bearing field. A difference between two measurements that resolved
+        different search families, or that were judged on different history lengths, is not a
+        finding about the universe; both mismatches have actually occurred in this repo.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    statistic: str
+    null_mode: str
+    real_n: int
+    real_median: float
+    null_n: int
+    null_median: float
+    null_p95: float
+    # Stated criterion, not a threshold anything gates on: ADR-038 reads a pool median below the
+    # null's p95 as the search producing what it produces from noise.
+    real_exceeds_null_p95: bool
+    comparable: bool
+    mismatch: str = ""
+
+
+def _short(version: str) -> str:
+    """Abbreviate a fingerprint but never the `legacy-unspecified` sentinel, which truncates into
+    something that reads like a hash prefix."""
+    return version if len(version) <= 18 else f"{version[:12]}..."
+
+
+def _mismatch(report: "PoolReport", calibration: NullCalibration) -> str:
+    """Why this pair cannot be compared, or '' when it can."""
+    reasons = []
+    families = set(report.search_config_versions)
+    null_family = calibration.search_config_version
+    if families and (len(families) > 1 or null_family not in families):
+        pool_side = ", ".join(_short(f) for f in sorted(families))
+        reasons.append(f"search family {pool_side} vs {_short(null_family)}")
+    null_bars = int(np.median(calibration.n_bars)) if calibration.n_bars else None
+    if null_bars is not None and report.median_n_bars not in (None, null_bars):
+        reasons.append(f"history {report.median_n_bars} bars vs {null_bars}")
+    return "; ".join(reasons)
+
+
+def compare_with_null(
+    report: "PoolReport", calibrations: Sequence[NullCalibration]
+) -> list[NullComparison]:
+    """Read the pool's finalist OOS diagnostics against each null mode's own (ADR-051).
+
+    Notes:
+        Uses the FINALIST window on both sides: a null artifact records one finalist per searched
+        symbol, so the gate-passer window would compare two different statistics — and under
+        ADR-046's denominator it is usually empty besides.
+    """
+    rows: list[NullComparison] = []
+    for label, real, field in (
+        ("walk-forward", report.walk_forward_finalists, "walk_forward_oos_sharpes"),
+        ("purged-CV", report.purged_cv_finalists, "purged_cv_oos_sharpes"),
+    ):
+        if real is None:
+            continue
+        for calibration in calibrations:
+            values = getattr(calibration, field)
+            if not values:
+                continue
+            array = np.asarray(values, dtype=float)
+            p95 = float(np.percentile(array, 95))
+            mismatch = _mismatch(report, calibration)
+            rows.append(
+                NullComparison(
+                    statistic=label,
+                    null_mode=calibration.null_mode,
+                    real_n=real.n,
+                    real_median=real.median,
+                    null_n=len(values),
+                    null_median=float(np.median(array)),
+                    null_p95=p95,
+                    real_exceeds_null_p95=real.median > p95,
+                    comparable=not mismatch,
+                    mismatch=mismatch,
+                )
+            )
+    return rows
 
 
 def _summarize(trials: list[Trial], field: str) -> DiagnosticSummary | None:

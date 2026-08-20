@@ -7,10 +7,11 @@ from datetime import UTC, datetime
 
 import pytest
 
+from app.research.lab.calibration import NullCalibration
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import PaperPosition
-from app.research.lab.pool_report import summarize_pool
+from app.research.lab.pool_report import compare_with_null, summarize_pool
 
 _NOW = datetime(2026, 8, 18, tzinfo=UTC)
 
@@ -334,3 +335,95 @@ def test_report_takes_the_median_searched_history_of_the_pool() -> None:
 def test_a_pool_of_experiments_with_no_bar_count_reports_no_median() -> None:
     """3,237 rows predate the field; a median over an empty set would be a fabricated match."""
     assert summarize_pool([_exp("AAA")], []).median_n_bars is None
+
+
+# --- ADR-051: run the comparison in code, not by hand in a session ---
+
+
+def _null(
+    mode: str,
+    *,
+    walk_forward: list[float],
+    purged_cv: list[float],
+    search_version: str = "fam-a",
+    n_bars: int = 5400,
+) -> NullCalibration:
+    return NullCalibration(
+        n_symbols=len(walk_forward),
+        n_graduates=0,
+        false_graduation_rate=0.0,
+        n_clear_deflation_bar=0,
+        deflation_bar=2.1,
+        max_deflated_sharpe=-0.3,
+        max_holdout_sharpe=None,
+        graduates=[],
+        holdout_years=[4.3] * len(walk_forward),
+        n_bars=[n_bars] * len(walk_forward),
+        walk_forward_oos_sharpes=walk_forward,
+        purged_cv_oos_sharpes=purged_cv,
+        errors={},
+        gate_config_version="v1",
+        search_config_version=search_version,
+        null_mode=mode,
+    )
+
+
+def _pool(values: list[float]) -> list[Experiment]:
+    return [
+        _exp_with_diagnostics(f"S{i}", walk_forward=v, purged_cv=v, graduated=False).model_copy(
+            update={"search_config_version": "fam-a", "n_bars": 5400}
+        )
+        for i, v in enumerate(values)
+    ]
+
+
+def test_the_comparison_reports_the_real_median_against_each_null() -> None:
+    report = summarize_pool(_pool([0.5, 0.6, 0.7]), [])
+    rows = compare_with_null(
+        report, [_null("iid_normal", walk_forward=[0.1, 0.2, 0.3], purged_cv=[0.1, 0.2, 0.3])]
+    )
+
+    walk = next(r for r in rows if r.statistic == "walk-forward")
+    assert walk.null_mode == "iid_normal"
+    assert walk.real_median == pytest.approx(0.6)
+    assert walk.null_median == pytest.approx(0.2)
+    assert walk.real_exceeds_null_p95 is True
+
+
+def test_a_real_median_inside_the_null_does_not_separate() -> None:
+    report = summarize_pool(_pool([0.1, 0.2, 0.3]), [])
+    rows = compare_with_null(
+        report, [_null("bootstrap", walk_forward=[0.5, 0.6, 0.7], purged_cv=[0.5, 0.6, 0.7])]
+    )
+
+    assert all(row.real_exceeds_null_p95 is False for row in rows)
+
+
+def test_the_comparison_refuses_to_call_a_mismatched_pair_comparable() -> None:
+    """Match the identity before quoting a difference — the rule this session had to apply by hand
+    against commit timestamps."""
+    report = summarize_pool(_pool([0.5, 0.6, 0.7]), [])
+    rows = compare_with_null(
+        report,
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], search_version="fam-b")],
+    )
+
+    assert all(row.comparable is False for row in rows)
+    assert all("search family" in row.mismatch for row in rows)
+
+
+def test_a_history_length_mismatch_is_also_not_comparable() -> None:
+    report = summarize_pool(_pool([0.5, 0.6, 0.7]), [])
+    rows = compare_with_null(
+        report, [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=3000)]
+    )
+
+    assert all(row.comparable is False for row in rows)
+    assert all("history" in row.mismatch for row in rows)
+
+
+def test_nothing_to_compare_when_the_pool_carries_no_diagnostics() -> None:
+    report = summarize_pool([_exp("AAA")], [])
+    assert (
+        compare_with_null(report, [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1])]) == []
+    )
