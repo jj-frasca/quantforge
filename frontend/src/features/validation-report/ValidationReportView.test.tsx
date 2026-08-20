@@ -25,7 +25,7 @@ test('renders the interpretations panel with each metric verdict', () => {
   render(<ValidationReportView report={failingReport} />)
   const interpretations = screen.getByLabelText('interpretations')
   expect(interpretations).toHaveTextContent(/PBO 89%.*overfit/i)
-  expect(interpretations).toHaveTextContent(/Deflated Sharpe.*luck/i)
+  expect(interpretations).toHaveTextContent(/Selection-adjusted Sharpe margin.*luck/i)
   expect(interpretations).toHaveTextContent(/Parameter stability.*fragility/i)
 })
 

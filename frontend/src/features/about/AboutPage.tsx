@@ -121,12 +121,17 @@ export function AboutPage() {
             </dd>
           </div>
           <div>
-            <dt>Deflated Sharpe Ratio (DSR)</dt>
+            <dt>Selection-adjusted Sharpe margin (shown as DSR)</dt>
             <dd>
-              Bailey & López de Prado (2014). The observed Sharpe deflated by the
-              multiple-testing penalty for the number of configurations tried. DSR ≤ 0
-              means the observed Sharpe is plausibly explained by luck given the search
-              effort; DSR &gt; 0 is the "survives multiple testing" threshold.
+              The observed Sharpe minus the multiple-testing penalty for the number of
+              configurations tried, in Sharpe units. A margin ≤ 0 means the observed
+              Sharpe is plausibly explained by luck given the search effort; &gt; 0 is
+              the "survives multiple testing" threshold. It is <em>adapted from</em>{' '}
+              Bailey &amp; López de Prado (2014), not the paper's statistic: the paper
+              defines a <em>probability</em> in [0, 1] that also uses the track record's
+              length, skewness and kurtosis. QuantForge now computes that probability form
+              too (ADR-054); the number on this page is still the margin, and saying so is
+              the point.
             </dd>
           </div>
           <div>

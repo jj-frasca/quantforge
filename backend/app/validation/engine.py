@@ -64,8 +64,8 @@ def _interpret(pbo: float, dsr: float, stability: float) -> list[Interpretation]
             Interpretation(
                 metric="deflated_sharpe",
                 message=(
-                    f"Deflated Sharpe {dsr:.2f} — survives the multiple-testing penalty for "
-                    "the number of configurations tried."
+                    f"Selection-adjusted Sharpe margin {dsr:.2f} — survives the multiple-testing "
+                    "penalty for the number of configurations tried."
                 ),
                 verdict="good",
             )
@@ -75,8 +75,8 @@ def _interpret(pbo: float, dsr: float, stability: float) -> list[Interpretation]
             Interpretation(
                 metric="deflated_sharpe",
                 message=(
-                    f"Deflated Sharpe {dsr:.2f} — observed Sharpe doesn't survive the "
-                    "multiple-testing penalty; plausibly attributable to luck."
+                    f"Selection-adjusted Sharpe margin {dsr:.2f} — observed Sharpe doesn't "
+                    "survive the multiple-testing penalty; plausibly attributable to luck."
                 ),
                 verdict="bad",
             )

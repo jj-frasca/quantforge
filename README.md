@@ -5,8 +5,9 @@ validation, and production-grade financial data engineering**. This is research
 *infrastructure* — not a trading app, and it makes no claim to generate alpha. Its value
 is methodological rigor: purged cross-validation, walk-forward analysis, the Probability
 of Backtest Overfitting (PBO), and a multiple-testing-adjusted Sharpe margin adapted from
-Bailey and López de Prado (2014). FINDING-007 records why that margin is not yet the paper's
-probability-form Deflated Sharpe Ratio.
+Bailey and López de Prado (2014). FINDING-007 records why that margin is not the paper's
+statistic; ADR-054 implements the paper's probability form beside it and corrects every surface
+that called the margin by the paper's name.
 
 > Full design rationale and every decision: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 

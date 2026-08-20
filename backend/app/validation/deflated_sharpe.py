@@ -40,12 +40,14 @@ def expected_max_sharpe(n_trials: int, sr_std: float) -> float:
 
 
 def deflated_sharpe(observed_sr: float, n_trials: int, sr_std: float = 1.0) -> float:
-    """Deflated Sharpe value = observed Sharpe minus the multiple-testing haircut.
+    """Selection-adjusted Sharpe MARGIN = observed Sharpe minus the multiple-testing haircut.
 
     Notes:
-        Reported as a value (not a probability) so DSR <= observed_sr by construction
-        (§8 invariant #5): the haircut is the expected max Sharpe of n_trials under the null,
-        which is >= 0. N == 1 means no penalty. Bailey & López de Prado (2014).
+        This is NOT the Deflated Sharpe Ratio of Bailey & Lopez de Prado (2014), which is a
+        probability in [0, 1] that also uses the track record's length, skewness and kurtosis —
+        see `deflated_sharpe_probability` below and FINDING-007. It is adapted from that paper's
+        expected-maximum haircut, and it is in Sharpe units, so `margin <= observed_sr` holds by
+        construction (§8 invariant #5). N == 1 means no penalty.
     """
     if n_trials < 1:
         raise ValueError("n_trials must be >= 1")

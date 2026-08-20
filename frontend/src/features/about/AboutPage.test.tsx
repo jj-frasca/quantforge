@@ -16,7 +16,9 @@ test('renders the page heading and methodology sections', async () => {
   ).toBeInTheDocument()
   // Spot-check that the static methodology blocks made it onto the page.
   expect(screen.getByText(/Probability of Backtest Overfitting/i)).toBeInTheDocument()
-  expect(screen.getByText(/Deflated Sharpe Ratio \(DSR\)/i)).toBeInTheDocument()
+  // ADR-054: the glossary must name the statistic it actually shows — a margin, not the paper's
+  // probability-form DSR.
+  expect(screen.getByText(/Selection-adjusted Sharpe margin/i)).toBeInTheDocument()
   expect(screen.getByText(/Walk-forward \+ Purged K-Fold CV/i)).toBeInTheDocument()
 })
 

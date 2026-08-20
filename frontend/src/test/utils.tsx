@@ -26,7 +26,7 @@ export const passingReport: ValidationReport = {
     { metric: 'pbo', message: 'PBO 20% — overfitting risk is low.', verdict: 'good' },
     {
       metric: 'deflated_sharpe',
-      message: 'Deflated Sharpe 0.40 — survives the multiple-testing penalty.',
+      message: 'Selection-adjusted Sharpe margin 0.40 — survives the multiple-testing penalty.',
       verdict: 'good',
     },
     {
@@ -61,7 +61,7 @@ export const failingReport: ValidationReport = {
     },
     {
       metric: 'deflated_sharpe',
-      message: "Deflated Sharpe -0.30 — plausibly attributable to luck.",
+      message: "Selection-adjusted Sharpe margin -0.30 — plausibly attributable to luck.",
       verdict: 'bad',
     },
     {

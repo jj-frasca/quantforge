@@ -33,8 +33,8 @@ export function ValidationReportView({ report }: Props) {
         </div>
         <div>
           <dt>
-            <Term definition="The Sharpe ratio penalized for how many configurations we tried. Bailey & López de Prado (2014). DSR ≤ 0 means the result is plausibly explained by luck. DSR > 0 is necessary but NOT sufficient: measured against data with no edge by construction, this pipeline still produced a deflated Sharpe as high as +0.92, so the other criteria do the real work.">
-              Deflated Sharpe
+            <Term definition="The observed Sharpe minus a penalty for how many configurations we tried, in Sharpe units — a selection-adjusted MARGIN adapted from Bailey & López de Prado (2014), not the paper's probability-form DSR, which also uses the track record's length, skewness and kurtosis (ADR-054). At or below 0 the result is plausibly explained by luck. Above 0 is necessary but NOT sufficient: measured against data with no edge by construction, this pipeline still produced a margin as high as +0.92, so the other criteria do the real work.">
+              Selection-adjusted Sharpe margin
             </Term>
           </dt>
           <dd>{asRatio(report.deflated_sharpe)}</dd>
