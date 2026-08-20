@@ -187,3 +187,19 @@ solved by fixed point. At `SR = 0` that SE is exactly the `sqrt(1/T)` in
   universe buys ~4%, doubling the holdout ~29%.**
 - None of this licenses moving a threshold. A frontier the universe cannot reach is a finding to
   state plainly, not a reason to lower the bar (charter §4).
+
+### 7.4 Capture efficiency (ADR-045) — recorded by `measure_power`
+Every power run keeps the max-DSR finalist's in-sample Sharpe for every successfully SEARCHED
+symbol, including non-detections. `PowerCalibration.capture_ratio` is median finalist Sharpe /
+median oracle Sharpe. It returns null for legacy or partial artifacts rather than silently changing
+the denominator.
+
+- This is an **upper bound**, not holdout capture: the finalist is selected in-sample from a grid,
+  so selection works in its favour. Low capture is therefore conclusive; high capture is not.
+- Measured upper bounds: **0.18–0.29 at a 1-bar band-reversion half-life, 0.45–0.50 at 5 bars**.
+  The grid searches 2-bar configurations at both horizons and they win at neither. Fast reversion
+  is a smaller, noisier state-estimation target at held-constant oracle Sharpe, not a missing-window
+  problem (ADR-045's correction to ADR-042).
+- Capture ≈ 0.47 against the frontier's required true Sharpe 2.13 implies an underlying oracle
+  Sharpe around **4.5** before the current pipeline is likely to find an edge. Because capture is an
+  upper bound, the real requirement is worse. This is a diagnosis, never permission to lower a bar.

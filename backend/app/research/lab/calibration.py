@@ -252,6 +252,10 @@ class PowerCalibration(BaseModel):
     half_life: float | None = None
     deviation_share: float | None = None
     oracle_sharpes: list[float]
+    # ADR-045: one max-DSR finalist per SEARCHED symbol, including non-detections. Conditioning
+    # this list on graduation would select lucky captures and inflate the reported ratio.
+    # Defaulted so power artifacts written before ADR-045 remain readable and report no capture.
+    finalist_observed_sharpes: list[float] = []
     holdout_years: list[float]
     errors: dict[str, str]
     gate_config_version: str
@@ -261,6 +265,24 @@ class PowerCalibration(BaseModel):
     def oracle_sharpe_percentiles(self) -> tuple[float, float, float] | None:
         """(median, p95, max) of the planted effect size actually realized in these frames."""
         return _percentiles(self.oracle_sharpes)
+
+    @property
+    def capture_ratio(self) -> float | None:
+        """Selection-biased upper bound on how much of the planted edge the catalog captures.
+
+        Both lists must cover every searched symbol. Partial or legacy artifacts return None rather
+        than silently changing the denominator. A non-positive median oracle has no available edge
+        to express as a meaningful capture fraction.
+        """
+        if (
+            len(self.finalist_observed_sharpes) != self.n_symbols
+            or len(self.oracle_sharpes) != self.n_symbols
+        ):
+            return None
+        oracle = median(self.oracle_sharpes)
+        if oracle <= 0.0:
+            return None
+        return median(self.finalist_observed_sharpes) / oracle
 
 
 def autocorrelated_edge(
@@ -450,6 +472,7 @@ def measure_power(
     experiments: list[Experiment] = []
     holdout_years: list[float] = []
     oracles: list[float] = []
+    finalist_observed_sharpes: list[float] = []
     errors: dict[str, str] = {}
     for symbol, frame in frames.items():
         try:
@@ -468,6 +491,7 @@ def measure_power(
         experiments.append(experiment)
         holdout_years.append(sealed.n_bars / _TRADING_DAYS)
         oracles.append(oracle_sharpes[symbol])
+        finalist_observed_sharpes.append(_finalist(experiment).observed_sharpe)
 
     if not experiments:
         raise ValueError("need at least one symbol that can be searched")
@@ -490,6 +514,7 @@ def measure_power(
         half_life=half_life,
         deviation_share=deviation_share,
         oracle_sharpes=oracles,
+        finalist_observed_sharpes=finalist_observed_sharpes,
         holdout_years=holdout_years,
         errors=errors,
         gate_config_version=gate_config.version_hash,

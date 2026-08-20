@@ -18,6 +18,7 @@ import pytest
 from app.research.lab.calibration import (
     NullCalibration,
     NullGraduate,
+    PowerCalibration,
     autocorrelated_edge,
     bootstrap_null,
     calibrate_gate,
@@ -450,9 +451,27 @@ def test_measure_power_refuses_an_empty_universe() -> None:
 
 def test_oracle_sharpe_percentiles_summarize_the_planted_effect_size() -> None:
     frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(3)}
-    pct = measure_power(frames, ["sma", "momentum"], phi=-0.3).oracle_sharpe_percentiles
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+    pct = result.oracle_sharpe_percentiles
     assert pct is not None
     assert pct[0] <= pct[1] <= pct[2]
+
+    assert len(result.finalist_observed_sharpes) == result.n_symbols
+    assert result.capture_ratio == pytest.approx(
+        np.median(result.finalist_observed_sharpes) / np.median(result.oracle_sharpes)
+    )
+
+
+def test_legacy_power_artifact_has_no_capture_measurement() -> None:
+    frames = {"EDGE0": autocorrelated_edge(900, seed=0, phi=-0.3)}
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+
+    legacy = PowerCalibration.model_validate(
+        result.model_dump(exclude={"finalist_observed_sharpes"})
+    )
+
+    assert legacy.finalist_observed_sharpes == []
+    assert legacy.capture_ratio is None
 
 
 def test_autocorrelated_edge_rejects_a_non_stationary_phi() -> None:
@@ -475,6 +494,7 @@ def test_a_symbol_that_cannot_be_searched_is_recorded_and_excluded() -> None:
     }
     result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
     assert result.n_symbols == 1
+    assert len(result.finalist_observed_sharpes) == 1
     assert "TOOSHORT" in result.errors
 
 

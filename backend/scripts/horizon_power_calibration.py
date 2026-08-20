@@ -57,6 +57,12 @@ def _report(result: PowerCalibration) -> None:
             f"oracle Sharpe       : median {pct[0]:+.2f} | p95 {pct[1]:+.2f} | max {pct[2]:+.2f} "
             "(the effect size actually planted, measured not derived)"
         )
+    capture = result.capture_ratio
+    if capture is not None:
+        print(
+            f"CAPTURE UPPER BOUND : {capture:.1%}  <- median finalist in-sample Sharpe / "
+            "median oracle Sharpe (selection-biased)"
+        )
     if result.errors:
         print(f"unsearchable        : {len(result.errors)} symbol(s)")
 

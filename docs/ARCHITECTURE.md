@@ -192,11 +192,15 @@ window length would not help.
 solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0
 is exactly the `sqrt(1/T)` the ADR-018 bar already uses. At the current design (607 symbols, 4.3y
 holdout) an edge must be a **true annualized Sharpe of 2.13** to be found 80% of the time. Measured
-power is lower than that frontier, and the gap is the catalog's *capture efficiency*. The design
-lever this exposes: the bar moves as `sqrt(2 ln N)` in hypotheses but `1/sqrt(T)` in holdout length,
-so **halving the universe buys ~4% while doubling the holdout buys ~29%** — history is the stronger
-lever by an order of magnitude. `scripts/pool_report.py` and the dashboard print this beside the
-deflation headline; none of it licenses moving a threshold (charter §4).
+power is lower than that frontier, and the gap is the catalog's *capture efficiency*. ADR-045 now
+records the max-DSR finalist's in-sample Sharpe for every searched power-calibration symbol and
+reports median finalist / median oracle as a selection-biased **upper bound** on capture. Measured
+capture is 0.18–0.29 at a 1-bar reversion half-life and 0.45–0.50 at 5 bars; the 2-bar configs are
+searched but do not win, so the fast-reversion weakness is estimation, not a missing short window.
+The design lever this exposes: the bar moves as `sqrt(2 ln N)` in hypotheses but `1/sqrt(T)` in
+holdout length, so **halving the universe buys ~4% while doubling the holdout buys ~29%** — history
+is the stronger lever by an order of magnitude. `scripts/pool_report.py` and the dashboard print
+the frontier beside the deflation headline; none of it licenses moving a threshold (charter §4).
 
 **The backend gate runs in parallel (ADR-040).** `make test` uses `pytest -n auto`; `make check`
 went 8:45 → 4:01. Tests must therefore be order-independent and must not write fixed paths.
