@@ -10,6 +10,7 @@ from app.research.lab.experiment import (
     InMemoryExperimentStore,
     JsonFileExperimentStore,
     PartitionedExperimentStore,
+    PriorAwareExperimentStore,
     Trial,
     migrate_pool_to_partitions,
 )
@@ -267,3 +268,40 @@ def test_migration_keeps_every_experiment_for_a_heavily_hunted_symbol(tmp_path) 
     directory = tmp_path / "research_pool"
     assert migrate_pool_to_partitions(source, directory) == 20
     assert len(PartitionedExperimentStore(directory).all()) == 20
+
+
+def test_prior_aware_store_counts_trials_from_the_pool_it_is_adding_to(tmp_path) -> None:
+    # ADR-062: a shard writes its own file but must price the selection breadth already recorded in
+    # the committed pool. Without this the DSR/MinTRL denominator resets to zero on every run.
+    prior = PartitionedExperimentStore(tmp_path / "research_pool")
+    prior.add(_experiment("AAPL", 5, prior=135))
+    shard = JsonFileExperimentStore(tmp_path / "shard_0.json")
+    store = PriorAwareExperimentStore(writer=shard, prior=prior)
+
+    assert store.trials_for_symbol("AAPL") == 140
+    assert store.trials_for_symbol("MSFT") == 0
+
+
+def test_prior_aware_store_takes_the_max_so_a_fresh_shard_never_lowers_the_bar(tmp_path) -> None:
+    prior = PartitionedExperimentStore(tmp_path / "research_pool")
+    prior.add(_experiment("AAPL", 5, prior=135))
+    shard = JsonFileExperimentStore(tmp_path / "shard_0.json")
+    store = PriorAwareExperimentStore(writer=shard, prior=prior)
+    store.add(_experiment("AAPL", 5, prior=0))  # this run alone, as the shard file records it
+
+    assert store.trials_for_symbol("AAPL") == 140
+
+
+def test_prior_aware_store_writes_only_to_the_writer(tmp_path) -> None:
+    # ADR-030's single-writer rule and ADR-026's race-free consolidation both depend on this: ten
+    # parallel shards read the same pool directory and none of them may write it.
+    prior = PartitionedExperimentStore(tmp_path / "research_pool")
+    prior.add(_experiment("AAPL", 5, prior=135))
+    shard = JsonFileExperimentStore(tmp_path / "shard_0.json")
+    store = PriorAwareExperimentStore(writer=shard, prior=prior)
+    added = _experiment("MSFT", 3)
+    store.add(added)
+
+    assert [e.experiment_id for e in shard.all()] == [added.experiment_id]
+    assert [e.symbol for e in prior.all()] == ["AAPL"]
+    assert [e.experiment_id for e in store.all()] == [added.experiment_id]

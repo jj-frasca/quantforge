@@ -242,6 +242,33 @@ class PartitionedExperimentStore:
         return _trials_for_symbol(self._load_partition(self._partition(symbol)), symbol)
 
 
+class PriorAwareExperimentStore:
+    """A shard's own writable store, given the committed pool as a READ-ONLY prior (ADR-062).
+
+    ADR-046 makes `lifetime_trials` the denominator of the DSR haircut and the MinTRL requirement,
+    and `run_universe_hunt` reads it from the store it writes to. A sharded run writes a fresh file
+    per shard, so that store knew nothing and the denominator reset to this run's candidates on
+    every hunt — the published bar was quietly EASIER than documented. Reading the prior restores
+    the count; writing only to `writer` keeps ADR-030's single writer per generated file and leaves
+    ADR-026's consolidation the only thing that touches the pool.
+    """
+
+    def __init__(self, writer: ExperimentStore, prior: ExperimentStore) -> None:
+        self._writer = writer
+        self._prior = prior
+
+    def add(self, experiment: Experiment) -> None:
+        self._writer.add(experiment)
+
+    def all(self) -> list[Experiment]:
+        """Only this shard's experiments. The consolidation step merges shard output into the pool,
+        so returning the prior here would fold the whole pool back into every shard's artifact."""
+        return self._writer.all()
+
+    def trials_for_symbol(self, symbol: str) -> int:
+        return max(self._writer.trials_for_symbol(symbol), self._prior.trials_for_symbol(symbol))
+
+
 def migrate_pool_to_partitions(
     source: Path, directory: Path, keep_non_graduate_per_symbol: int | None = None
 ) -> int:
