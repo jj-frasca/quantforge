@@ -68,8 +68,9 @@ gate at the history the hunt actually sees.**
    `panel.dropna()` over the union of dates, so the usable block is bounded by its *newest* member
    (a 2012 listing in `large_cap.txt`). Fetching each name from 1990 would add fetch cost and change
    nothing about the panel. Where the extra history cannot reach the estimator, it is not bought.
-3. `CALIBRATION_N_BARS` moves into the same module at **7,400**, replacing the two independent
-   `N_BARS = 5400` constants in `scripts/null_calibration.py` and `scripts/power_calibration.py`.
+3. `CALIBRATION_N_BARS` moves into the same module at **7,400**, replacing the three independent
+   `N_BARS = 5400` constants in `scripts/null_calibration.py`, `scripts/power_calibration.py` and
+   `scripts/horizon_power_calibration.py`.
    ADR-051's whole point is that the null must be judged on the length the hunt sees; that
    requirement is now expressed by both constants living in one file, where a disagreement is
    visible. The value is the sampled median, and it is **fixed, not computed from today's date**,

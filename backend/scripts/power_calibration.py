@@ -23,14 +23,12 @@ from pathlib import Path
 from statistics import median
 
 from app.research.lab.calibration import PowerCalibration, autocorrelated_edge, measure_power
+from app.research.lab.history import CALIBRATION_N_BARS
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
-# ADR-051: the length a real hunt actually sees (scripts/shard_hunt.py starts at 2005-01-01, so a
-# long-lived name carries ~5400 trading days by 2026), matching the null driver so power and Type-I
-# error stay comparable. The previous 3000 measured power on 55% of the hunt's history against a
-# MinTRL requirement that grows with the trial count but not with the record, which makes a zero
-# result a lower bound rather than a finding. `--n-bars` overrides it.
-N_BARS = 5400
+# ADR-051/063: the length a real hunt actually sees, shared with the null driver so power and
+# Type-I error stay comparable — defined once in app/research/lab/history.py. A power number
+# measured short bounds the power available rather than reporting it. `--n-bars` overrides it.
 
 
 def _flag(name: str) -> str | None:
@@ -100,7 +98,7 @@ def main() -> None:
     seed = int(positional[1]) if len(positional) > 1 else 0
     phi = float(phi_flag) if phi_flag else -0.20
     shard, n_shards = (int(x) for x in shard_spec.split("/")) if shard_spec else (0, 1)
-    n_bars = int(n_bars_flag) if n_bars_flag else N_BARS
+    n_bars = int(n_bars_flag) if n_bars_flag else CALIBRATION_N_BARS
     indices = [i for i in range(n_symbols) if i % n_shards == shard]
 
     frames = {f"EDGE{i:04d}": autocorrelated_edge(n_bars, seed=seed + i, phi=phi) for i in indices}

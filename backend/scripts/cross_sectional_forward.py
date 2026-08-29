@@ -26,11 +26,11 @@ from app.research.cross_sectional.forward_store import JsonFileCrossSectionalBoo
 from app.research.cross_sectional.hunt import price_panel_from_frames
 from app.research.cross_sectional.store import JsonFileCrossSectionalStore
 from app.research.frames import bars_to_frame
+from app.research.lab.history import RECENT_HISTORY_START
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 POOL = DATA / "cross_sectional_pool.json"
 BOOK = DATA / "cross_sectional_book.json"
-START = datetime(2005, 1, 1, tzinfo=UTC)
 
 
 def main() -> None:
@@ -45,7 +45,9 @@ def main() -> None:
         frames: dict[str, pd.DataFrame] = {}
         for symbol in position.universe_symbols:
             try:
-                frames[symbol] = bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
+                frames[symbol] = bars_to_frame(
+                    adapter.fetch_price_bars(symbol, RECENT_HISTORY_START, now)
+                )
             except (ValueError, KeyError, OSError):
                 continue  # a dropped name just narrows the panel; the factor still ranks the rest.
         return price_panel_from_frames(frames)

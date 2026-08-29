@@ -26,12 +26,12 @@ from app.research.cross_sectional.hunt import run_cross_sectional_hunt
 from app.research.cross_sectional.store import JsonFileCrossSectionalStore
 from app.research.frames import bars_to_frame
 from app.research.fundamentals.record import load_fundamentals_pool, score_maps
+from app.research.lab.history import RECENT_HISTORY_START
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 POOL = DATA / "cross_sectional_pool.json"
 FUNDAMENTALS_POOL = DATA / "fundamentals_pool.json"
 DEFAULT_UNIVERSE = DATA / "universes" / "sp500.txt"
-START = datetime(2005, 1, 1, tzinfo=UTC)
 
 
 def _resolve_symbols(args: list[str]) -> list[str]:
@@ -53,7 +53,7 @@ def main() -> None:
     now = datetime.now(UTC)
 
     def frame_provider(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
+        return bars_to_frame(adapter.fetch_price_bars(symbol, RECENT_HISTORY_START, now))
 
     # ADR-029 4b: the weekly EDGAR sweep's pool supplies the fundamental legs. A symbol missing
     # from a map is simply excluded from that factor's ranking, so an unswept universe degrades to

@@ -284,6 +284,15 @@ The design lever this exposes: the bar moves as `sqrt(2 ln N)` in hypotheses but
 holdout length, so **halving the universe buys ~4% while doubling the holdout buys ~29%** — history
 is the stronger lever by an order of magnitude. `scripts/pool_report.py` and the dashboard print
 the frontier beside the deflation headline; none of it licenses moving a threshold (charter §4).
+**ADR-063 spends that lever.** The search window was a `datetime(2005, 1, 1)` literal copied into
+nine drivers — `T` was a constant, not a property of the data. `app/research/lab/history.py` now
+defines it once: `SEARCH_HISTORY_START` = 1990-01-01 for the single-name hunt and the calibrations
+that must mirror it, `RECENT_HISTORY_START` = 2005-01-01 for the paper book and everything else that
+only needs a recent tail, and `CALIBRATION_N_BARS` = 7,400 so the null cannot silently be judged on a
+different length than the hunt (ADR-051). Median searched history 5,448 → 7,444 bars, holdout 4.3y →
+5.9y, required true Sharpe **2.13 → 1.82**. Nothing in `GateConfig` moves and `gate_config_version`
+is unchanged — the bar is recomputed from `(N, T)` per symbol on every run, and it rises again the
+moment the universe grows.
 
 **The backend gate runs in parallel (ADR-040).** `make test` uses `pytest -n auto`; `make check`
 went 8:45 → 4:01. Tests must therefore be order-independent and must not write fixed paths.

@@ -25,13 +25,13 @@ from app.execution.alpaca_broker import AlpacaBroker, AlpacaOrder, reconcile
 from app.execution.equity_curve import JsonFileEquityCurve, append_equity_point
 from app.execution.sizing import TargetPosition, equal_weight_targets, quote_position
 from app.research.frames import bars_to_frame
+from app.research.lab.history import RECENT_HISTORY_START
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 PORTFOLIO = DATA / "paper_portfolio.json"
 EQUITY_CURVE = DATA / "equity_curve.json"
 PAPER_URL = "https://paper-api.alpaca.markets"
-START = datetime(2005, 1, 1, tzinfo=UTC)
 
 
 def compute_targets(
@@ -60,7 +60,7 @@ def main() -> None:  # pragma: no cover - live wiring, exercised by the @live sm
     now = datetime.now(UTC)
 
     def frame_provider(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
+        return bars_to_frame(adapter.fetch_price_bars(symbol, RECENT_HISTORY_START, now))
 
     broker = AlpacaBroker(PAPER_URL, settings.alpaca_api_key, settings.alpaca_secret_key)
     account = broker.account()

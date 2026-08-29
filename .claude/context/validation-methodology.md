@@ -266,6 +266,17 @@ solved by fixed point. At `SR = 0` that SE is exactly the `sqrt(1/T)` in
   universe buys ~4%, doubling the holdout ~29%.**
 - None of this licenses moving a threshold. A frontier the universe cannot reach is a finding to
   state plainly, not a reason to lower the bar (charter §4).
+- **ADR-063 acts on that asymmetry rather than restating it.** The search window was
+  `datetime(2005, 1, 1)` copied into nine drivers, so `T` was a constant, not a property of the
+  data — Yahoo serves 1990 for 74% of the discovery universe. `app/research/lab/history.py` now
+  holds `SEARCH_HISTORY_START` (1990-01-01, the single-name search and the calibrations that mirror
+  it), `RECENT_HISTORY_START` (2005-01-01, the paper book and anything needing only a recent tail)
+  and `CALIBRATION_N_BARS`. Sampled median history goes 5,448 → **7,444 bars**, holdout 4.3y →
+  **5.9y**, and the required true Sharpe 2.13 → **1.82** (1.63 for the 25% of names with full
+  1990 history). No threshold moves: the ADR-018 bar and MinTRL are derived from `(N, T)` per symbol
+  at judgement time, and the estimate's standard error falls with the bar. **Any calibration
+  artifact at `n_bars=5400` describes a gate that no longer runs** — re-dispatch all three before
+  quoting a Type-I error or a power number.
 
 ### 7.4 Capture efficiency (ADR-045) — recorded by `measure_power`
 Every power run keeps the max-DSR finalist's in-sample Sharpe for every successfully SEARCHED

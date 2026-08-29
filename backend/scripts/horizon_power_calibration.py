@@ -29,13 +29,12 @@ from app.research.lab.calibration import (
     measure_power,
     oracle_sharpe_of,
 )
+from app.research.lab.history import CALIBRATION_N_BARS
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
-# ADR-051: the length a real hunt actually sees, matching the null and ADR-041 power drivers so the
-# three stay comparable without an adjustment. The previous 3000 was 55% of the hunt's history, and
-# a power number measured short bounds the power available rather than reporting it. `--n-bars`
-# overrides it.
-N_BARS = 5400
+# ADR-051/063: the length a real hunt actually sees, matching the null and ADR-041 power drivers so
+# the three stay comparable without an adjustment — defined once in app/research/lab/history.py.
+# `--n-bars` overrides it.
 
 
 def _flag(name: str) -> str | None:
@@ -124,7 +123,7 @@ def main() -> None:
     seed = int(positional[1]) if len(positional) > 1 else 0
     half_life = float(half_life_flag) if half_life_flag else 3.0
     share = float(share_flag) if share_flag else 0.409
-    n_bars = int(n_bars_flag) if n_bars_flag else N_BARS
+    n_bars = int(n_bars_flag) if n_bars_flag else CALIBRATION_N_BARS
 
     planted = {
         f"BAND{i:04d}": mean_reverting_edge(

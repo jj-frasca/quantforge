@@ -23,6 +23,7 @@ from app.research.lab.experiment import (
     JsonFileExperimentStore,
     PartitionedExperimentStore,
 )
+from app.research.lab.history import RECENT_HISTORY_START
 from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.pool_merge import merge_experiments
 from app.research.lab.portfolio_manager import (
@@ -30,8 +31,6 @@ from app.research.lab.portfolio_manager import (
     manage_portfolio,
     newly_promoted,
 )
-
-START = datetime(2005, 1, 1, tzinfo=UTC)
 
 
 def _fmt(value: float | None) -> str:
@@ -58,7 +57,7 @@ def main() -> None:
     now = datetime.now(UTC)
 
     def frame_provider(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
+        return bars_to_frame(adapter.fetch_price_bars(symbol, RECENT_HISTORY_START, now))
 
     graduates = [e for e in merged if e.graduate is not None]
     before = portfolio.positions()

@@ -9,7 +9,8 @@ OUT_POOL into the research pool and promotes once. The committed pool at data/re
 read as a prior for the lifetime trial count (ADR-062), never written here. Local-only / cloud
 matrix (live network); never in CI.
 
-DATA SOURCE: forces YFinanceAdapter (MinTRL needs 15-20yr; Alpaca IEX is too short — ADR-015).
+DATA SOURCE: forces YFinanceAdapter (the search window starts 1990-01-01 per ADR-063 and
+MinTRL needs every year of it; Alpaca IEX is far too short — ADR-015).
 
 VENDOR THROTTLING (ADR-031): Yahoo rate-limits the shared GitHub-runner egress IPs at the yfinance
 session bootstrap, so one hot minute can wipe out a whole shard. The adapter retries with jittered
@@ -34,6 +35,7 @@ from app.research.lab.experiment import (
     PriorAwareExperimentStore,
 )
 from app.research.lab.gate import GateConfig
+from app.research.lab.history import SEARCH_HISTORY_START
 from app.research.lab.sharding import shard_universe
 from app.research.lab.universe import run_universe_hunt
 from app.research.lab.universe_files import load_universe
@@ -41,7 +43,6 @@ from app.research.strategies.catalog import STRATEGY_CATALOG
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 POOL = DATA / "research_pool"  # ADR-032 partitions — this shard's READ-ONLY prior (ADR-062)
-START = datetime(2005, 1, 1, tzinfo=UTC)
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
 MIN_YIELD = 0.25
 
@@ -54,7 +55,7 @@ def main() -> None:
 
     symbols = shard_universe(load_universe(universe_file), n_shards, shard_index)
     names = [entry.name for entry in STRATEGY_CATALOG]
-    adapter = YFinanceAdapter(retry=CLOUD)  # forced: the hunt needs 15-20yr of history.
+    adapter = YFinanceAdapter(retry=CLOUD)  # forced: the hunt searches from 1990 (ADR-063).
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     # ADR-062: write only this shard's file, but count the trials the committed pool already
     # records for these symbols — otherwise the DSR/MinTRL denominator resets on every run.
@@ -65,7 +66,7 @@ def main() -> None:
     now = datetime.now(UTC)
 
     def frame_provider(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
+        return bars_to_frame(adapter.fetch_price_bars(symbol, SEARCH_HISTORY_START, now))
 
     def fundamentals_provider(symbol: str) -> FundamentalSnapshot | None:
         try:

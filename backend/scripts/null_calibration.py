@@ -38,15 +38,12 @@ from app.research.lab.calibration import (
     drop_incomplete_bars,
     iid_normal_null,
 )
+from app.research.lab.history import CALIBRATION_N_BARS, SEARCH_HISTORY_START
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
-START = datetime(2005, 1, 1, tzinfo=UTC)
-# ADR-051: the length a real hunt actually sees. scripts/shard_hunt.py starts at the same 2005-01-01
-# and a long-lived name carries ~5400 trading days by 2026, so the previous 3000 judged the null on
-# 55% of the pool's history and inflated its Sharpe dispersion relative to the pool's. Fixed rather
-# than computed from today's date, because a calibration artifact must be reproducible; bump it
-# deliberately as history accumulates, and `--n-bars` overrides it for a shorter experiment.
-N_BARS = 5400
+# ADR-051/063: the null must be judged on the length a real hunt sees. That length is now defined
+# once, next to the search window it follows from — see app/research/lab/history.py. `--n-bars`
+# still overrides it for a shorter experiment.
 
 
 def _source_frame(symbol: str) -> pd.DataFrame:
@@ -55,7 +52,7 @@ def _source_frame(symbol: str) -> pd.DataFrame:
     # Today's bar is still forming; resampling it makes the bootstrap null drift between two runs
     # on the same day, and a calibration is supposed to be a property of the GateConfig version.
     return drop_incomplete_bars(
-        bars_to_frame(adapter.fetch_price_bars(symbol, START, now)), asof=now
+        bars_to_frame(adapter.fetch_price_bars(symbol, SEARCH_HISTORY_START, now)), asof=now
     )
 
 
@@ -101,7 +98,7 @@ def main() -> None:
     n_symbols = int(positional[0]) if positional else 100
     seed = int(positional[1]) if len(positional) > 1 else 0
     shard, n_shards = (int(x) for x in shard_spec.split("/")) if shard_spec else (0, 1)
-    n_bars = int(n_bars_flag) if n_bars_flag else N_BARS
+    n_bars = int(n_bars_flag) if n_bars_flag else CALIBRATION_N_BARS
     indices = [i for i in range(n_symbols) if i % n_shards == shard]
 
     if bootstrap_symbol:

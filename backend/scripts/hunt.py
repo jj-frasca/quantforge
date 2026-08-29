@@ -8,8 +8,9 @@ graduate to the managed paper book: new winners are auto-frozen as OPEN position
 monitored/exited by the ADR-020 lifecycle. Findings persist in data/research_pool/ and the book
 in data/paper_portfolio.json — commit both. Local-only / cloud cron (live network); never in CI.
 
-DATA SOURCE (load-bearing): the HUNT forces YFinanceAdapter — MinTRL needs 15-20yr of history and
-Alpaca's free IEX feed only reaches back a few years (ADR-015). Alpaca is for the recent-only
+DATA SOURCE (load-bearing): the HUNT forces YFinanceAdapter — the search window starts 1990-01-01
+(ADR-063), MinTRL needs every year of it, and Alpaca's free IEX feed only reaches back a few
+years (ADR-015). Alpaca is for the recent-only
 forward/paper loop (scripts/paper.py), NOT the hunt. Do not swap this for build_data_adapter.
 """
 
@@ -27,6 +28,7 @@ from app.research.frames import bars_to_frame
 from app.research.fundamentals.record import load_fundamentals_pool
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.gate import GateConfig
+from app.research.lab.history import SEARCH_HISTORY_START
 from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.quality_filter import make_quality_provider, parse_quality_screen
 from app.research.lab.scheduled_hunt import hunt_and_promote
@@ -43,7 +45,6 @@ POOL = DATA / "research_pool"  # per-symbol partitions (ADR-032)
 PORTFOLIO = DATA / "paper_portfolio.json"
 FUNDAMENTALS_POOL = DATA / "fundamentals_pool.json"
 DEFAULT_UNIVERSE = DATA / "universes" / "sp500.txt"
-START = datetime(2005, 1, 1, tzinfo=UTC)
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
 
 
@@ -63,7 +64,7 @@ def main() -> None:
     quality_config, arg_rest = parse_quality_screen(arg_rest)
     symbols = _resolve_symbols(arg_rest)
     names = [entry.name for entry in STRATEGY_CATALOG]
-    # forced: the hunt needs 15-20yr; Alpaca IEX is too short.
+    # forced: the hunt searches from 1990 (ADR-063); Alpaca IEX is too short.
     adapter = YFinanceAdapter(retry=CLOUD)
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     pool = PartitionedExperimentStore(POOL)
@@ -71,7 +72,7 @@ def main() -> None:
     now = datetime.now(UTC)
 
     def fetch_frame(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
+        return bars_to_frame(adapter.fetch_price_bars(symbol, SEARCH_HISTORY_START, now))
 
     # One memoized fetch feeds BOTH the backtest and the value price series (no double price load).
     frame_provider = cached_frame_provider(fetch_frame)

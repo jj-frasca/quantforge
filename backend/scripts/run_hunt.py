@@ -28,6 +28,7 @@ from app.dependencies import build_data_adapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.gate import GateConfig
+from app.research.lab.history import SEARCH_HISTORY_START
 from app.research.lab.universe import rank_experiments, run_universe_hunt
 from app.research.lab.value_wiring import (
     cached_frame_provider,
@@ -38,7 +39,6 @@ from app.research.strategies.catalog import STRATEGY_CATALOG
 
 # In-repo research pool so findings survive and are reviewable in git.
 POOL = Path(__file__).resolve().parents[2] / "data" / "research_pool"  # ADR-032
-START = datetime(2005, 1, 1, tzinfo=UTC)
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
 
 # A liquid large-cap universe across sectors — more independent shots on goal.
@@ -87,7 +87,7 @@ def main() -> None:
     end = datetime.now(UTC)
 
     def fetch_frame(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, START, end))
+        return bars_to_frame(adapter.fetch_price_bars(symbol, SEARCH_HISTORY_START, end))
 
     # One memoized fetch feeds BOTH the backtest and the value price series (no double price load).
     frame_provider = cached_frame_provider(fetch_frame)

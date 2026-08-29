@@ -15,13 +15,13 @@ from app.config import get_settings
 from app.dependencies import build_data_adapter
 from app.research.frames import bars_to_frame
 from app.research.lab.experiment import PartitionedExperimentStore
+from app.research.lab.history import RECENT_HISTORY_START
 from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.portfolio_manager import deflation_cohorts, manage_portfolio
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 POOL = DATA / "research_pool"  # per-symbol partitions (ADR-032)
 PORTFOLIO = DATA / "paper_portfolio.json"
-START = datetime(2005, 1, 1, tzinfo=UTC)
 
 
 def _fmt(value: float | None) -> str:
@@ -35,7 +35,7 @@ def main() -> None:
     now = datetime.now(UTC)
 
     def frame_provider(symbol: str):
-        return bars_to_frame(adapter.fetch_price_bars(symbol, START, now))
+        return bars_to_frame(adapter.fetch_price_bars(symbol, RECENT_HISTORY_START, now))
 
     experiments = pool.all()
     graduates = [e for e in experiments if e.graduate is not None]
