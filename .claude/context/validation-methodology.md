@@ -430,3 +430,27 @@ predictive**. Read it as a joint statement about this universe and this catalog 
 argument (charter §4), and not as "the catalog cannot capture serial structure", which ADR-042
 measured to be false at 42% detection on a planted half-life-5 reversion. Limitations are in
 ADR-051 §Measured; the sharpest is that the bootstrap resamples SPY rather than each symbol.
+
+**ADR-064 made the report state that verdict instead of refusing it.** The identity check above was
+implemented as exact equality between the pool's *median* `n_bars` and the null artifact's, and a
+median that grows by a bar per trading day can essentially never equal a fixed integer — so from the
+moment the pool grew past 5,400 the report printed `NOT COMPARABLE -- history 5444 bars vs 5400` on
+all four rows. `compare_with_null(report, calibrations, experiments)` now selects the experiments
+whose `n_bars` is within `HISTORY_TOLERANCE` (10%) of THAT artifact's, summarizes the real side over
+exactly those, reports `matched_n` / `matched_n_bars` on every row, and refuses below `MIN_MATCHED`
+(30). The search-family test reads the same subset — refusing a comparison because of rows outside
+it describes a comparison nobody made. Rows with no `n_bars` are excluded, never assumed to match.
+
+**Measured (2026-08-29): 2,427 matched experiments at a median 5,445 bars, 100% fingerprint
+`3f36fda2…`, against nulls at 5,400.**
+
+| statistic | matched real median | bootstrap null (median / p95) | iid-normal null (median / p95) |
+|---|---|---|---|
+| walk-forward OOS Sharpe | **+0.542** | +0.652 / +0.983 | +0.414 / +0.796 |
+| purged-CV OOS Sharpe | **+0.584** | +0.661 / +1.003 | +0.475 / +0.803 |
+
+**Does not separate on any of the four**, and against the bootstrap the real median sits *below* the
+null's. The pool-wide medians are +0.567 / +0.598 — quoting those against a 5,400-bar null is the
+error this repairs, so quote the matched numbers. After ADR-063 the pool goes bimodal (5,448 legacy /
+7,400+ re-searched) and the two cohorts must be read against their own nulls; `matched_n` on each row
+is what tells you which cohort you are looking at.

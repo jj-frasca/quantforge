@@ -50,9 +50,8 @@ def _diagnostic(summary: DiagnosticSummary | None, finalists: DiagnosticSummary 
 
 
 def main() -> None:
-    report = summarize_pool(
-        PartitionedExperimentStore(POOL).all(), JsonFilePaperPortfolio(PORTFOLIO).positions()
-    )
+    experiments = PartitionedExperimentStore(POOL).all()
+    report = summarize_pool(experiments, JsonFilePaperPortfolio(PORTFOLIO).positions())
 
     print(f"{'=' * 82}\nQUANTFORGE — state of the research programme\n{'=' * 82}")
     print(
@@ -176,7 +175,7 @@ def main() -> None:
         NullCalibration.model_validate_json(path.read_text())
         for path in sorted(NULL_CALIBRATION.glob("*.json"))
     ]
-    rows = compare_with_null(report, calibrations)
+    rows = compare_with_null(report, calibrations, experiments)
     if (
         rows
         and all(not row.comparable for row in rows)
@@ -197,9 +196,16 @@ def main() -> None:
             )
             if not row.comparable:
                 verdict = f"NOT COMPARABLE -- {row.mismatch}"
+            # ADR-064: the matched history IS the sample the real median was taken over, so it
+            # belongs on the same line as the median rather than in a footnote.
+            matched = (
+                f"{row.matched_n} matched @ {row.matched_n_bars} bars"
+                if row.matched_n_bars is not None
+                else f"{row.matched_n} matched"
+            )
             print(
                 f"  {row.statistic:<13} vs {row.null_mode:<14} "
-                f"real {row.real_median:+.3f} (n={row.real_n}) | "
+                f"real {row.real_median:+.3f} (n={row.real_n}, {matched}) | "
                 f"null median {row.null_median:+.3f} p95 {row.null_p95:+.3f} (n={row.null_n}) "
                 f"-- {verdict}"
             )

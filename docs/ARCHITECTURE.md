@@ -294,6 +294,18 @@ different length than the hunt (ADR-051). Median searched history 5,448 → 7,44
 is unchanged — the bar is recomputed from `(N, T)` per symbol on every run, and it rises again the
 moment the universe grows.
 
+**ADR-064 is the repair ADR-063 forced.** The real-vs-null comparison required the pool's *median*
+history to equal the null artifact's exactly — a median that grows a bar per trading day never does,
+so the report had been printing `NOT COMPARABLE -- history 5444 bars vs 5400` on all four rows while
+2,427 of 3,028 experiments sat within 10% of the null. `compare_with_null` now summarizes the real
+side over the experiments whose `n_bars` is within `HISTORY_TOLERANCE` of that artifact's, reports
+`matched_n` beside every median, refuses below `MIN_MATCHED = 30`, and applies the search-family
+test to the same subset. **The first formally valid comparison this project has produced says the
+pool does not separate from either null**: matched walk-forward **+0.542** against a bootstrap
+median +0.652 (p95 +0.983), purged-CV **+0.584** against +0.661 (p95 +1.003). It is the deflation
+headline's conclusion reached by an independent route, and it is now a measurement rather than an
+absence of one.
+
 **The backend gate runs in parallel (ADR-040).** `make test` uses `pytest -n auto`; `make check`
 went 8:45 → 4:01. Tests must therefore be order-independent and must not write fixed paths.
 

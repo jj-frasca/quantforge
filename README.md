@@ -36,6 +36,17 @@ zero. Because every strategy in the catalog trades serial structure, and the boo
 destroys serial structure while preserving SPY's return shape exactly, the search's advantage over
 an iid-normal null is **distributional rather than predictive** (ADR-051).
 
+**As of ADR-064 that comparison is formally valid for the first time, and it survives.** The
+report used to refuse all four comparisons: it required the pool's *median* history to equal the
+null artifact's exactly, and a median that grows by one bar per trading day never does. The
+comparison now runs on the subset of experiments whose history is within 10% of the null's — 2,427
+of them, at a median 5,445 bars against nulls at 5,400, all carrying the null's own search
+fingerprint. On that matched subset the pool's walk-forward median is **+0.542** against a
+bootstrap null median of **+0.652** (p95 +0.983) and purged-CV **+0.584** against **+0.661**
+(p95 +1.003): **the search does not separate from a no-edge surrogate, and against the bootstrap it
+sits below the null's median.** The pool-wide median would have read +0.567 — the subset is not a
+formality.
+
 That is a claim about this universe and this catalog jointly, not about the thresholds. The power
 row is what makes it sayable: a gate that detects nothing could not distinguish "no edge here" from
 "no ability to see one", and this one detects a planted edge 64% of the time and clears its own

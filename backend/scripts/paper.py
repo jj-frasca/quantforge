@@ -11,6 +11,8 @@ losers cut — automatically. Portfolio persists in-repo. Local-only (live netwo
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pandas as pd
+
 from app.config import get_settings
 from app.dependencies import build_data_adapter
 from app.research.frames import bars_to_frame
@@ -34,7 +36,7 @@ def main() -> None:
     adapter = build_data_adapter(get_settings())
     now = datetime.now(UTC)
 
-    def frame_provider(symbol: str):
+    def frame_provider(symbol: str) -> pd.DataFrame:
         return bars_to_frame(adapter.fetch_price_bars(symbol, RECENT_HISTORY_START, now))
 
     experiments = pool.all()

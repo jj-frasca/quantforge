@@ -378,9 +378,11 @@ def _pool(values: list[float]) -> list[Experiment]:
 
 
 def test_the_comparison_reports_the_real_median_against_each_null() -> None:
-    report = summarize_pool(_pool([0.5, 0.6, 0.7]), [])
+    pool = _pool([0.5, 0.6, 0.7])
     rows = compare_with_null(
-        report, [_null("iid_normal", walk_forward=[0.1, 0.2, 0.3], purged_cv=[0.1, 0.2, 0.3])]
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1, 0.2, 0.3], purged_cv=[0.1, 0.2, 0.3])],
+        pool,
     )
 
     walk = next(r for r in rows if r.statistic == "walk-forward")
@@ -391,9 +393,11 @@ def test_the_comparison_reports_the_real_median_against_each_null() -> None:
 
 
 def test_a_real_median_inside_the_null_does_not_separate() -> None:
-    report = summarize_pool(_pool([0.1, 0.2, 0.3]), [])
+    pool = _pool([0.1, 0.2, 0.3])
     rows = compare_with_null(
-        report, [_null("bootstrap", walk_forward=[0.5, 0.6, 0.7], purged_cv=[0.5, 0.6, 0.7])]
+        summarize_pool(pool, []),
+        [_null("bootstrap", walk_forward=[0.5, 0.6, 0.7], purged_cv=[0.5, 0.6, 0.7])],
+        pool,
     )
 
     assert all(row.real_exceeds_null_p95 is False for row in rows)
@@ -402,10 +406,11 @@ def test_a_real_median_inside_the_null_does_not_separate() -> None:
 def test_the_comparison_refuses_to_call_a_mismatched_pair_comparable() -> None:
     """Match the identity before quoting a difference — the rule this session had to apply by hand
     against commit timestamps."""
-    report = summarize_pool(_pool([0.5, 0.6, 0.7]), [])
+    pool = _pool([0.5, 0.6, 0.7])
     rows = compare_with_null(
-        report,
+        summarize_pool(pool, []),
         [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], search_version="fam-b")],
+        pool,
     )
 
     assert all(row.comparable is False for row in rows)
@@ -413,9 +418,11 @@ def test_the_comparison_refuses_to_call_a_mismatched_pair_comparable() -> None:
 
 
 def test_a_history_length_mismatch_is_also_not_comparable() -> None:
-    report = summarize_pool(_pool([0.5, 0.6, 0.7]), [])
+    pool = _pool([0.5, 0.6, 0.7])
     rows = compare_with_null(
-        report, [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=3000)]
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=3000)],
+        pool,
     )
 
     assert all(row.comparable is False for row in rows)
@@ -607,3 +614,120 @@ def test_a_pool_that_does_not_state_its_history_reports_no_verdict() -> None:
 def test_a_pool_with_no_trials_has_no_separation_to_report() -> None:
     report = summarize_pool([], [])
     assert report.category_separation is None
+
+
+# --- ADR-064: compare the null against the experiments whose history actually matches it ---
+
+
+def _pool_with_history(pairs: list[tuple[float, int | None]]) -> list[Experiment]:
+    return [
+        _exp_with_diagnostics(f"H{i}", walk_forward=v, purged_cv=v, graduated=False).model_copy(
+            update={"search_config_version": "fam-a", "n_bars": bars}
+        )
+        for i, (v, bars) in enumerate(pairs)
+    ]
+
+
+def test_a_history_difference_inside_the_tolerance_is_still_comparable() -> None:
+    """The pool's median grows a bar per trading day; exact equality could never be satisfied."""
+    pool = _pool_with_history([(0.5, 5444)] * 40)
+    rows = compare_with_null(
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=5400)],
+        pool,
+    )
+
+    assert all(row.comparable for row in rows)
+    assert all(row.matched_n == 40 for row in rows)
+
+
+def test_the_real_side_is_computed_only_from_the_matched_experiments() -> None:
+    """A bimodal pool (ADR-063) must not be summarized as one population."""
+    pool = _pool_with_history([(0.2, 5400)] * 40 + [(0.9, 7400)] * 40)
+    rows = compare_with_null(
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=7400)],
+        pool,
+    )
+
+    walk = next(r for r in rows if r.statistic == "walk-forward")
+    assert walk.matched_n == 40
+    assert walk.matched_n_bars == 7400
+    assert walk.real_median == pytest.approx(0.9)
+
+
+def test_history_far_outside_the_tolerance_is_refused() -> None:
+    pool = _pool_with_history([(0.5, 5400)] * 40)
+    rows = compare_with_null(
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=3000)],
+        pool,
+    )
+
+    assert all(row.comparable is False for row in rows)
+    assert all("history" in row.mismatch for row in rows)
+
+
+def test_a_matched_subset_too_small_to_measure_is_refused() -> None:
+    pool = _pool_with_history([(0.5, 5400)] * 5 + [(0.5, 9000)] * 40)
+    rows = compare_with_null(
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=5400)],
+        pool,
+    )
+
+    assert all(row.comparable is False for row in rows)
+    assert all("matched" in row.mismatch for row in rows)
+    assert all(row.matched_n == 5 for row in rows)
+
+
+def test_experiments_without_a_history_are_not_assumed_to_match() -> None:
+    pool = _pool_with_history([(0.5, None)] * 40 + [(0.9, 5400)] * 40)
+    rows = compare_with_null(
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=5400)],
+        pool,
+    )
+
+    walk = next(r for r in rows if r.statistic == "walk-forward")
+    assert walk.matched_n == 40
+    assert walk.real_median == pytest.approx(0.9)
+
+
+def test_the_family_check_reads_the_matched_subset_not_the_whole_pool() -> None:
+    """ADR-064 amendment: legacy rows outside the compared subset cannot refuse a comparison
+    nobody made with them. Measured on the live pool: all 2,427 history-matched rows carry the
+    null's own fingerprint while 227 legacy rows carry none."""
+    modern = [
+        e.model_copy(update={"search_config_version": "fam-a", "n_bars": 5400})
+        for e in _pool_with_history([(0.5, 5400)] * 40)
+    ]
+    legacy = [
+        e.model_copy(update={"search_config_version": "legacy-unspecified", "n_bars": None})
+        for e in _pool_with_history([(0.5, None)] * 10)
+    ]
+    pool = modern + legacy
+    rows = compare_with_null(
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=5400)],
+        pool,
+    )
+
+    assert all(row.comparable for row in rows)
+    assert all(row.matched_n == 40 for row in rows)
+
+
+def test_a_matched_subset_spanning_two_families_is_still_refused() -> None:
+    pool = [
+        e.model_copy(update={"search_config_version": fam, "n_bars": 5400})
+        for fam in ("fam-a", "fam-b")
+        for e in _pool_with_history([(0.5, 5400)] * 20)
+    ]
+    rows = compare_with_null(
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=5400)],
+        pool,
+    )
+
+    assert all(row.comparable is False for row in rows)
+    assert all("search family" in row.mismatch for row in rows)

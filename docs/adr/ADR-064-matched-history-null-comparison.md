@@ -93,3 +93,43 @@ there were.**
 Restore the `median_n_bars != null_bars` branch in `_mismatch`, drop `matched_n` / `matched_n_bars`
 and the `experiments` argument. No stored artifact is affected in either direction: this changes
 only which rows a report reads, never what any run records.
+
+## Amendment (same day, before implementation landed): the family test moves to the subset too
+
+§Decision item 5 said the search-family check was unchanged. Implementing the rest made that
+position incoherent and it is hereby revised: **the family test is evaluated over the matched
+subset, not over the whole pool.**
+
+The reasoning is the one this ADR already makes on the history side. Once the real median is taken
+over a subset, refusing the comparison because of rows *outside* that subset describes a comparison
+nobody made. The test itself is untouched — a fingerprint is still an identity, and a matched subset
+spanning two fingerprints is still refused (`test_a_matched_subset_spanning_two_families_is_still_refused`).
+Only its population changes, to the population being compared.
+
+It is not a formality on this pool. Measured at implementation time: the 2,427 history-matched
+experiments are **100% `3f36fda2…`** — the null's own fingerprint — while all 227
+`legacy-unspecified` rows carry no `n_bars` at all and are therefore already outside the subset by
+rule 4. The pool-wide test was refusing a valid comparison on account of rows that could never have
+been in it.
+
+## Measured — the first formally valid real-vs-null comparison this project has produced
+
+With both halves of `_mismatch` reading the matched subset, `scripts/pool_report.py` prints a
+verdict instead of a refusal, on 2,427 matched experiments at a median 5,445 bars against nulls at
+5,400:
+
+| statistic | null | real median | null median | null p95 | verdict |
+|---|---|---|---|---|---|
+| walk-forward | bootstrap:SPY | **+0.542** | +0.652 | +0.983 | does not separate |
+| walk-forward | iid_normal | **+0.542** | +0.414 | +0.796 | does not separate |
+| purged-CV | bootstrap:SPY | **+0.584** | +0.661 | +1.003 | does not separate |
+| purged-CV | iid_normal | **+0.584** | +0.475 | +0.803 | does not separate |
+
+**The pool does not separate from either null on either statistic**, and against the bootstrap null
+— which preserves SPY's fat tails, gaps and realized volatility while destroying serial structure —
+the real median is *below* the null's median. This is the same conclusion the deflation headline
+reaches by a different route (0 of 40 graduates clear the ADR-018 bar), now stated as a measurement
+rather than as an absence of one.
+
+Note the subset matters: the pool-wide walk-forward median is +0.567 and the matched one is +0.542.
+Reporting the former against a 5,400-bar null would have been the exact error this ADR removes.

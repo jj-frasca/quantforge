@@ -173,6 +173,11 @@ class NullComparison(BaseModel):
     real_exceeds_null_p95: bool
     comparable: bool
     mismatch: str = ""
+    # ADR-064: how many experiments the real side was actually computed from, and their median
+    # history. A comparison whose sample the reader cannot see is not a measurement — and after
+    # ADR-063 the pool is bimodal, so a pool-wide median describes neither cohort.
+    matched_n: int = 0
+    matched_n_bars: int | None = None
 
 
 def _short(version: str) -> str:
@@ -181,44 +186,109 @@ def _short(version: str) -> str:
     return version if len(version) <= 18 else f"{version[:12]}..."
 
 
-def _mismatch(report: "PoolReport", calibration: NullCalibration) -> str:
-    """Why this pair cannot be compared, or '' when it can."""
+# ADR-064: history length is a QUANTITY, so it gets a tolerance and a subset; the search family is
+# an IDENTITY, so it still gets an equality test. The pool's median history grows by a bar per
+# trading day, which no fixed artifact can ever equal.
+HISTORY_TOLERANCE = 0.10
+MIN_MATCHED = 30
+
+
+def _finalists(experiments: Sequence[Experiment]) -> list[Trial]:
+    """The max-DSR trial of every experiment that has one — the window the null artifacts record."""
+    return [max(e.trials, key=lambda t: t.deflated_sharpe) for e in experiments if e.trials]
+
+
+def _matched(experiments: Sequence[Experiment], null_bars: int | None) -> list[Experiment]:
+    """The experiments searched over a history within `HISTORY_TOLERANCE` of the null's (ADR-064).
+
+    Notes:
+        An experiment that states no `n_bars` is EXCLUDED rather than assumed to match: a row that
+        cannot say what produced it cannot be shown to be comparable to anything.
+    """
+    if null_bars is None:
+        return list(experiments)
+    return [
+        e
+        for e in experiments
+        if e.n_bars is not None and abs(e.n_bars - null_bars) <= HISTORY_TOLERANCE * null_bars
+    ]
+
+
+def _mismatch(
+    report: "PoolReport", calibration: NullCalibration, matched: Sequence[Experiment]
+) -> str:
+    """Why this pair cannot be compared, or '' when it can.
+
+    Notes:
+        ADR-064 amendment: the search-family test is applied to the MATCHED subset, not to the whole
+        pool. The real median is now taken over that subset, so refusing it because of rows that are
+        not in it would describe a comparison nobody made — the same defect on the identity side
+        that the tolerance fixed on the quantity side. The test itself is unchanged: a fingerprint
+        is an identity, and two of them are still two searches.
+    """
     reasons = []
-    families = set(report.search_config_versions)
+    families = {e.search_config_version for e in matched} or set(report.search_config_versions)
     null_family = calibration.search_config_version
     if families and (len(families) > 1 or null_family not in families):
         pool_side = ", ".join(_short(f) for f in sorted(families))
         reasons.append(f"search family {pool_side} vs {_short(null_family)}")
     null_bars = int(np.median(calibration.n_bars)) if calibration.n_bars else None
-    if null_bars is not None and report.median_n_bars not in (None, null_bars):
-        reasons.append(f"history {report.median_n_bars} bars vs {null_bars}")
+    pct = int(HISTORY_TOLERANCE * 100)
+    if null_bars is not None and not matched:
+        reasons.append(f"no experiment's history is within {pct}% of the null's {null_bars} bars")
+    elif null_bars is not None and len(matched) < MIN_MATCHED:
+        reasons.append(
+            f"only {len(matched)} experiments matched {null_bars} bars +/-{pct}% "
+            f"(need {MIN_MATCHED} to measure a median)"
+        )
     return "; ".join(reasons)
 
 
 def compare_with_null(
-    report: "PoolReport", calibrations: Sequence[NullCalibration]
+    report: "PoolReport",
+    calibrations: Sequence[NullCalibration],
+    experiments: Sequence[Experiment] = (),
 ) -> list[NullComparison]:
-    """Read the pool's finalist OOS diagnostics against each null mode's own (ADR-051).
+    """Read the pool's finalist OOS diagnostics against each null mode's own (ADR-051/064).
 
     Notes:
         Uses the FINALIST window on both sides: a null artifact records one finalist per searched
         symbol, so the gate-passer window would compare two different statistics — and under
         ADR-046's denominator it is usually empty besides.
+
+        ADR-064: the real side is summarized over the experiments whose history is within
+        `HISTORY_TOLERANCE` of THAT artifact's, so one pool in transition can be read against a
+        short null and a long one at the same time. When nothing matches, the row still reports the
+        pool-wide numbers and refuses — a refusal that hides what it refused teaches nothing.
     """
     rows: list[NullComparison] = []
-    for label, real, field in (
-        ("walk-forward", report.walk_forward_finalists, "walk_forward_oos_sharpes"),
-        ("purged-CV", report.purged_cv_finalists, "purged_cv_oos_sharpes"),
+    for label, pool_wide, null_field, trial_field in (
+        (
+            "walk-forward",
+            report.walk_forward_finalists,
+            "walk_forward_oos_sharpes",
+            "walk_forward_oos_sharpe",
+        ),
+        (
+            "purged-CV",
+            report.purged_cv_finalists,
+            "purged_cv_oos_sharpes",
+            "purged_cv_oos_sharpe",
+        ),
     ):
-        if real is None:
-            continue
         for calibration in calibrations:
-            values = getattr(calibration, field)
+            values = getattr(calibration, null_field)
             if not values:
+                continue
+            null_bars = int(np.median(calibration.n_bars)) if calibration.n_bars else None
+            matched = _matched(experiments, null_bars)
+            matched_bars = [e.n_bars for e in matched if e.n_bars is not None]
+            real = _summarize(_finalists(matched), trial_field) or pool_wide
+            if real is None:
                 continue
             array = np.asarray(values, dtype=float)
             p95 = float(np.percentile(array, 95))
-            mismatch = _mismatch(report, calibration)
+            mismatch = _mismatch(report, calibration, matched)
             rows.append(
                 NullComparison(
                     statistic=label,
@@ -231,6 +301,8 @@ def compare_with_null(
                     real_exceeds_null_p95=real.median > p95,
                     comparable=not mismatch,
                     mismatch=mismatch,
+                    matched_n=len(matched),
+                    matched_n_bars=int(np.median(matched_bars)) if matched_bars else None,
                 )
             )
     return rows
