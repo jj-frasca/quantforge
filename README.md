@@ -27,7 +27,7 @@ with it. Every number below is produced by a committed workflow and can be re-ru
 | How many discovered strategies clear that bar today? | **0 of 40.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
 | **Does what the search proposes beat a no-edge surrogate?** | **No.** Its 603 finalists lose to a bootstrap null built from SPY's own return distribution (p = 1.0000 one-sided, both walk-forward and purged CV) and beat only an iid-normal one | `scripts/pool_report.py` vs `null-calibration.yml` (ADR-051) |
 
-The last two rows are the point. The pipeline has searched 227,000+ parameter trials across 607
+The last two rows are the point. The pipeline has searched 614,000+ parameter trials across 607
 symbols and **graduated nothing that is distinguishable from best-of-N selection luck** — and when
 the strategies it *proposes* are compared against a surrogate with no serial structure at all, they
 do not win either. Walk-forward and purged-CV out-of-sample Sharpes are read against their own
@@ -69,6 +69,18 @@ detectable-edge frontier alone: a recoverable Sharpe of at most ~0.95 against a 
 gate that graduated any of those cells would have been wrong.
 The added strategy was removed once it failed its own pre-stated criterion — that loop, stating a
 criterion before the measurement and honouring it afterwards, is the point of the project.
+
+**The same message shows up on real data, in a different place.** ADR-060 records, for every
+experiment in the pool, the best in-sample Sharpe achieved by each catalog *category*, so the pool
+report can ask whether the family the search selects is separable from the one it passed over.
+Across 3,255 experiments the medians are Trend **+0.569** (wins 53% of searches), Breakout **+0.495**
+(10%), Mean Reversion **+0.469** (33%), Combination **+0.316** (3%) — and the median lead of the
+winning category over the runner-up is **+0.074** against a Lo (2002) Sharpe standard error of
+**0.215**. For a typical symbol the *kind* of strategy the search picks is inside a third of one
+standard error of the kind it rejected. That is not a defect in the selection rule; it is the same
+statement ADR-061 makes on synthetic data — at this history length the data does not contain enough
+information to separate these hypotheses, which is why the honest output of the whole pipeline is
+still zero graduates.
 
 ## What's shipped
 

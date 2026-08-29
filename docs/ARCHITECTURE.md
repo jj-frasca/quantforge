@@ -254,6 +254,15 @@ ADR-058 removed the probe strategy for failing its own pre-stated criterion (res
 `search_config_version 3f36fda2…`, so the committed calibration artifacts apply unchanged) and
 points the next unit at the selection step, judged against the finalist category mix.
 
+**ADR-060 answers that on real data, and the answer is the same one.** The pool report now groups
+every experiment's trials by catalog category and reports the winning category's median lead over
+the runner-up against Lo (2002)'s Sharpe standard error. Over 3,255 pooled experiments: Trend
++0.569 (wins 53%), Breakout +0.495 (10%), Mean Reversion +0.469 (33%), Combination +0.316 (3%), and
+the **median lead is +0.074 against an SE of 0.215 — inside one standard error**. The *kind* of
+strategy the search selects is not distinguishable from the kind it rejected, on real symbols, for
+the same reason ADR-061 gives on synthetic ones: at this history length the data does not separate
+the hypotheses. That points the next unit at **holdout length**, not at the selection rule.
+
 FINDING-007 is **resolved** (ADR-054): the paper's probability-form DSR is implemented, every
 user-facing claim now calls the stored value a selection-adjusted Sharpe *margin*, and every new
 trial records both. What remains is the threshold question — whether the gate should switch to the
