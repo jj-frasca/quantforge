@@ -150,3 +150,51 @@ cells (0/50 today) sit against an achievable oracle of +0.51 to +0.95 (ADR-061) 
 that falls from 2.13 to 1.82 — if none of them moves off zero at the longer holdout, then holdout
 length is not the binding constraint either, and the honest conclusion is that this universe carries
 no edge of a size any amount of daily history can resolve.
+
+## Measured (2026-08-29) — the criterion's first clause was NOT met, and power rose anyway
+
+Runs 33272142250 (null), 33272143102 (gate power), 33272143952 (horizon power), all at
+`n_bars=7400`, `search_config_version 3f36fda2…`, committed by the bots. Read them in the order this
+ADR fixed.
+
+**Precondition — Type-I error is unchanged.** 0/200 false graduates on BOTH nulls, max DSR −0.261
+(bootstrap:SPY) / −0.368 (iid-normal), `deflation_bar` **1.3432** against 1.7220 at 5,400 bars.
+A longer null series is a longer track record, which the MinTRL side of the gate rewards, so the
+honest risk was that the window bought power by loosening the gate. It did not.
+
+**Power — every AR(1) cell that had an edge to find detected more of it.** The sweeps are
+deterministic (fixed seeds, no RNG in the search — established when ADR-059 reproduced a prior run
+to the symbol), so these are real gains on this sample; the ±6.6pp binomial caveat still applies to
+the population claim.
+
+| φ | −0.3 | −0.2 | −0.1 | +0.1 | +0.2 | +0.3 |
+|---|---|---|---|---|---|---|
+| detection at 5,400 bars | 34% | 22% | 0% | 0% | 14% | 64% |
+| **detection at 7,400 bars** | **40%** | **36%** | 0% | 0% | **24%** | **66%** |
+| clears the ADR-018 bar | 20/50 | 10/50 | 0 | 0 | 11/50 | 33/50 |
+
+**Four cells out of four moved up. Zero moved down.** But the cells this ADR named — φ = ±0.1 and
+band half-lives 3–5 — are all still at 0%, so **the stated criterion's first clause failed.** It is
+recorded as failed rather than reinterpreted.
+
+**The criterion was the wrong instrument, and the reason is already in ADR-061.** It lumped two
+kinds of zero together: a cell at 0% because the gate lacks the power to see an edge that is there,
+and a cell at 0% because there is no recoverable edge to see. ADR-061 measured the second kind
+directly — the achievable (Kalman) oracle nets at most +0.95 on the band cells, against a
+requirement that even at the new length is `bar 1.154 + z·SE ≈ 1.5`, and ADR-055 found no achievable
+edge at |φ| = 0.1 at all. Every cell that had an edge to find moved; every cell that stayed at zero
+is one ADR-061 says has nothing to find. A criterion phrased over *outcomes* could not distinguish
+those, and the honest fix is to phrase the next one over the cells where the achievable oracle
+exceeds the requirement.
+
+**A second result, unanticipated and worth more than the first: capture FELL, and that is an
+improvement.** Band net capture went 32/29/31/45/56/58% → **31/30/30/42/51/50%** across half-lives
+1–20, and against ADR-061's achievable oracle 105/103/104% → **97/98/88%** at half-lives 5/10/20.
+Capture's numerator is an in-sample maximum over the searched grid (ADR-045), which is inflated by
+selection; 1,600 more in-sample bars regress that maximum toward the truth it estimates. **The
+earlier ratios were the more selection-biased ones.** Reading a capture *decline* as a loss here
+would be reading the removal of a bias as a regression.
+
+**Still open:** the criterion's second clause — whether the pool's median holdout Sharpe falls — is
+not answerable until the daily discovery has re-searched the universe at the new window. That is the
+test of the 1990s cost-anachronism risk in §Consequences, and it is the one to read next.

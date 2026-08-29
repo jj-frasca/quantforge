@@ -19,13 +19,13 @@ with it. Every number below is produced by a committed workflow and can be re-ru
 
 | question | answer | how |
 |---|---|---|
-| **Type-I error** — how often does the whole pipeline graduate a symbol with *no edge by construction*? | **0/200** under both iid-normal and bootstrap nulls, with ADR-050's dispersion and judged at the hunt's own 5400-bar history. Max DSR -0.415 (iid) / -0.269 (bootstrap) | `null-calibration.yml` (ADR-036/037/050/051) |
+| **Type-I error** — how often does the whole pipeline graduate a symbol with *no edge by construction*? | **0/200** under both iid-normal and bootstrap nulls, with ADR-050's dispersion and judged at the hunt's own 7400-bar history (ADR-063). Max DSR -0.368 (iid) / -0.261 (bootstrap) | `null-calibration.yml` (ADR-036/037/050/051/063) |
 | Do those false graduates survive the universe-deflation bar? | **0 of 200**, in both nulls | same run |
-| **Power** — does the gate detect a *planted* edge at production parity? | **Yes, and it is measured: 64%** at AR(1) oracle Sharpe 3.9 (32/50 also clear the deflation bar), 34% at oracle 4.0 in the reverting direction, **0%** at oracle 1.3. The earlier 0/50-everywhere result was measured on 3000 bars against a hunt that gets 5400 | `power-calibration.yml` (ADR-041/049/050/051) |
+| **Power** — does the gate detect a *planted* edge at production parity? | **Yes, and it is measured: 66%** at AR(1) oracle Sharpe 3.9 (33/50 also clear the deflation bar), 40% at oracle 4.0 in the reverting direction, **0%** at oracle 1.3. Lengthening the searched history to 1990 raised every cell that had an edge to find — 34/22/14/64% → 40/36/24/66% — and moved none down (ADR-063) | `power-calibration.yml` (ADR-041/049/050/051/063) |
 | **Is the effect size those rates are quoted against achievable?** | Not always. Charged the same 10bp turnover cost the catalog pays, the oracle at \|φ\| = 0.10 is **+0.02 / −0.09** — the two zero-power cells contained no tradeable edge at all | `power-calibration.yml` (ADR-055) |
-| **Resolution** — what must an edge actually *be* to be found here? | a **true annualized Sharpe of 2.13**, at the current 607-symbol universe and 4.3-year holdout | `scripts/pool_report.py` (ADR-043) |
+| **Resolution** — what must an edge actually *be* to be found here? | a **true annualized Sharpe of 1.82** at the 607-symbol universe and the 5.9-year holdout ADR-063 bought, down from 2.13 at 4.3 years. The bar falls as `1/sqrt(T)` in holdout length but only `sqrt(ln N)` in universe size, so history is the lever | `scripts/pool_report.py` (ADR-043/063) |
 | How many discovered strategies clear that bar today? | **0 of 40.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
-| **Does what the search proposes beat a no-edge surrogate?** | **No.** Its 603 finalists lose to a bootstrap null built from SPY's own return distribution (p = 1.0000 one-sided, both walk-forward and purged CV) and beat only an iid-normal one | `scripts/pool_report.py` vs `null-calibration.yml` (ADR-051) |
+| **Does what the search proposes beat a no-edge surrogate?** | **No**, and as of ADR-064 that is a valid comparison rather than a refused one. On the 2,427 experiments whose history matches the null's within 10%, walk-forward **+0.542** and purged-CV **+0.584** sit below a bootstrap null's own **+0.652 / +0.661** (p95 +0.983 / +1.003) | `scripts/pool_report.py` vs `null-calibration.yml` (ADR-051/064) |
 
 The last two rows are the point. The pipeline has searched 614,000+ parameter trials across 607
 symbols and **graduated nothing that is distinguishable from best-of-N selection luck** — and when
@@ -49,15 +49,18 @@ formality.
 
 That is a claim about this universe and this catalog jointly, not about the thresholds. The power
 row is what makes it sayable: a gate that detects nothing could not distinguish "no edge here" from
-"no ability to see one", and this one detects a planted edge 64% of the time and clears its own
-deflation bar 32 times in 50.
+"no ability to see one", and this one detects a planted edge 66% of the time and clears its own
+deflation bar 33 times in 50.
 
 Where it still fails is **capture**, and ADR-055 sharpened that considerably by charging the oracle
 the same transaction costs every catalog strategy pays. Measured net of costs, the catalog's best
-in-sample config *beats* a cost-paying oracle on AR(1) processes (104–126%) and reaches only
-**29–45% on band reversion at half-lives 1–5**, where it detects 0%. The fast band cells have a
-*higher* net oracle than the AR(1) cell detected 22% of the time (+1.70 vs +1.15), and capture rises
-monotonically with the horizon (31% → 58%).
+in-sample config *beats* a cost-paying oracle on AR(1) processes (103–128%) and reaches only
+**30–42% on band reversion at half-lives 1–5**, where it detects 0%. The fast band cells have a
+*higher* net oracle than the AR(1) cell detected 24% of the time (+1.70 vs +1.15), and capture rises
+monotonically with the horizon (31% → 50%). Those ratios all *fell* when ADR-063 lengthened the
+searched history, which is a correction rather than a regression: capture's numerator is an
+in-sample maximum over the searched grid, so more in-sample data regresses it toward the value it
+estimates and the older, higher ratios carried more selection bias.
 
 ADR-056/057/058 then took that finding apart. A strategy was added specifically to express fast
 reversion to a slow-moving level, the calibration was re-run, and **net capture moved by at most
@@ -74,9 +77,10 @@ fast deviation, and only their sum is observable, so the oracle every one of tho
 knows a state no strategy can see. A Kalman filter given the true process parameters — an upper
 bound on any causal price-based strategy — nets **−0.08** Sharpe at half-life 1 against that
 oracle's +1.70, and +0.95 at half-life 5. Measured against what is actually recoverable, the catalog
-converts **103–105%** of it at half-lives 5–20 and there is nothing to convert at half-lives 1–2.
+converts **88–98%** of it at half-lives 5–20 and there is nothing to convert at half-lives 1–2.
 **The gap was the benchmark, not the catalog** — and the zero detection rate follows from the
-detectable-edge frontier alone: a recoverable Sharpe of at most ~0.95 against a ~2.1 requirement. A
+detectable-edge frontier alone: a recoverable Sharpe of at most ~0.95 against a requirement of ~1.50
+even after ADR-063 lengthened the holdout (it was ~1.76 before). A
 gate that graduated any of those cells would have been wrong.
 The added strategy was removed once it failed its own pre-stated criterion — that loop, stating a
 criterion before the measurement and honouring it afterwards, is the point of the project.

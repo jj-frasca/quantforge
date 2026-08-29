@@ -278,6 +278,19 @@ solved by fixed point. At `SR = 0` that SE is exactly the `sqrt(1/T)` in
   artifact at `n_bars=5400` describes a gate that no longer runs** — re-dispatch all three before
   quoting a Type-I error or a power number.
 
+- **ADR-063 MEASURED (2026-08-29, `n_bars=7400`).** Type-I error unchanged: **0/200 on both nulls**,
+  max DSR −0.261 / −0.368, `deflation_bar` **1.343** (was 1.722). AR(1) detection
+  **34/22/0/0/14/64% → 40/36/0/0/24/66%** for φ = −0.3…+0.3 — four of four cells that had an edge to
+  find rose, none fell, on a deterministic sweep. **The ADR's own criterion FAILED**: the cells it
+  named (φ = ±0.1, band half-lives 3–5) are still 0%, because it could not distinguish "0% for want
+  of power" from "0% because ADR-061 showed nothing is recoverable there". Phrase the next such
+  criterion over the cells where the achievable oracle exceeds the requirement.
+- **Capture FELL and that is a correction, not a regression.** Band net capture
+  32/29/31/45/56/58% → **31/30/30/42/51/50%**; against the achievable oracle 105/103/104% →
+  **97/98/88%** at half-lives 5/10/20. ADR-045's numerator is an in-sample maximum over the searched
+  grid, so 1,600 more in-sample bars regress it toward the value it estimates. **The earlier, higher
+  ratios carried more selection bias — quote the new ones.**
+
 ### 7.4 Capture efficiency (ADR-045) — recorded by `measure_power`
 Every power run keeps the max-DSR finalist's in-sample Sharpe for every successfully SEARCHED
 symbol, including non-detections. `PowerCalibration.capture_ratio` is median finalist Sharpe /

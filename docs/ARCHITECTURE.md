@@ -306,6 +306,17 @@ median +0.652 (p95 +0.983), purged-CV **+0.584** against +0.661 (p95 +1.003). It
 headline's conclusion reached by an independent route, and it is now a measurement rather than an
 absence of one.
 
+**ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
+error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against
+1.722), and AR(1) detection moved **34/22/0/0/14/64% → 40/36/0/0/24/66%** for φ = −0.3…+0.3 — four
+of four cells that had an edge to find, none down, on a deterministic sweep. The cells ADR-063
+named (φ = ±0.1, band half-lives 3–5) stayed at 0%, so the pre-stated criterion is recorded as
+**failed**: it lumped "0% for want of power" together with "0% because ADR-061 showed there is
+nothing recoverable there". Band capture also *fell* (32/29/31/45/56/58% → 31/30/30/42/51/50%,
+and 105/103/104% → 97/98/88% against the achievable oracle) — capture's numerator is an in-sample
+maximum, so 1,600 more bars regress it toward truth. **The older, higher ratios were the more
+selection-biased ones.**
+
 **The backend gate runs in parallel (ADR-040).** `make test` uses `pytest -n auto`; `make check`
 went 8:45 → 4:01. Tests must therefore be order-independent and must not write fixed paths.
 
