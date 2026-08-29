@@ -133,3 +133,26 @@ rather than as an absence of one.
 
 Note the subset matters: the pool-wide walk-forward median is +0.567 and the matched one is +0.542.
 Reporting the former against a 5,400-bar null would have been the exact error this ADR removes.
+
+### Provenance of those four numbers, and what the report prints today
+
+The table above was measured against the null artifacts as they stood at commit **`dbba1ed`**
+(`n_bars` 5,400, fingerprint `3f36fda2…`) — verified reproducible from that ref: bootstrap
+walk-forward median +0.652 / p95 +0.983 and purged-CV +0.661 / +1.003, iid-normal +0.414 / +0.796
+and +0.475 / +0.803. **ADR-063's re-dispatch overwrote `data/null_calibration/*.json` with the
+7,400-bar run (`6efcb7e`) hours later**, so those numbers are no longer reproducible from the
+working tree, only from that ref. This is ADR-058's rule biting on its own terms — *a matching
+fingerprint licenses reusing a measurement, not reusing a file that has since been overwritten* —
+and it is recorded here rather than left for a future session to rediscover.
+
+**What the report prints today is `0 matched`, and that is correct.** The pool's rows are at ~5,445
+bars and the current null is at 7,400 — 26% apart, well outside `HISTORY_TOLERANCE` — so every
+comparison is refused with `no experiment's history is within 10% of the null's 7400 bars` and the
+row falls back to the pool-wide median. The pool and its null are genuinely out of sync until the
+daily discovery re-searches the universe at ADR-063's window. **The verdict above is therefore a
+statement about the pool as it was searched, not a claim the tree can re-derive right now**, and
+this ADR's mechanism — not its measurement — is what changed permanently.
+
+Keeping both lengths on disk so a pool in transition could be read against each (this ADR's
+§Consequences) needs the null artifacts named by their history length; the workflow writes one file
+per mode. That is a separate decision and is deliberately not smuggled in here.

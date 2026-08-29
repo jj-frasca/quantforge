@@ -467,3 +467,11 @@ null's. The pool-wide medians are +0.567 / +0.598 — quoting those against a 5,
 error this repairs, so quote the matched numbers. After ADR-063 the pool goes bimodal (5,448 legacy /
 7,400+ re-searched) and the two cohorts must be read against their own nulls; `matched_n` on each row
 is what tells you which cohort you are looking at.
+
+⚠️ **Provenance, and what the report prints today.** Those matched numbers are against the
+**5,400-bar** null artifacts at commit **`dbba1ed`**; ADR-063's re-dispatch overwrote
+`data/null_calibration/*.json` with the 7,400-bar run (`6efcb7e`) the same day. The pool's rows sit
+at ~5,445 bars, 26% from the current null, so every row now prints `0 matched` and refuses — which
+is the rule working, not failing. It resolves when the daily discovery re-searches the universe at
+ADR-063's window. Reproduce the published numbers from `dbba1ed`, never from the working tree, and
+do not quote them as a property of the *current* null.

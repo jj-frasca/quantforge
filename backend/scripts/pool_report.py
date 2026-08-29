@@ -108,7 +108,8 @@ def main() -> None:
     if report.median_n_bars is not None:
         print(
             f"median searched history: {report.median_n_bars} bars "
-            "-- must match the null artifact's own n_bars for the comparison below to hold"
+            "-- descriptive only; ADR-064 matches each null against its own subset below, so a "
+            "pool spanning two history cohorts is read against both rather than refused"
         )
 
     # ADR-060: the leaderboard and the capture reading both treat the selected FAMILY as

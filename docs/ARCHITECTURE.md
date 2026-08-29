@@ -304,7 +304,9 @@ test to the same subset. **The first formally valid comparison this project has 
 pool does not separate from either null**: matched walk-forward **+0.542** against a bootstrap
 median +0.652 (p95 +0.983), purged-CV **+0.584** against +0.661 (p95 +1.003). It is the deflation
 headline's conclusion reached by an independent route, and it is now a measurement rather than an
-absence of one.
+absence of one. ⚠️ Those figures are against the 5,400-bar nulls at `dbba1ed`, which ADR-063's
+re-dispatch superseded the same day — the report correctly prints `0 matched` until the pool is
+re-searched at the longer window.
 
 **ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
 error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against
