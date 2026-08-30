@@ -196,6 +196,15 @@ tails and vol, destroying serial structure). `null-calibration.yml` shards it an
   mode: **0 false graduates on both nulls**, **0 clear the ADR-018 bar**, max DSR **-0.415 iid /
   -0.269 bootstrap**. The prior 1.0% / max +0.92 result belongs to the coarse-only, uncapped
   accounting procedure.
+- Current 7,400-bar result — run 33287465013 (2026-08-30), N = 200 per mode: **0 false graduates on
+  both nulls**, **0 clear the bar**, max DSR **-0.368 iid / -0.253 bootstrap**, `deflation_bar`
+  1.343. Carries ADR-068's paired hold distribution; the 5,400-bar pair never will.
+- **Only the iid-normal null is bit-reproducible across days; the bootstrap null is not, by
+  construction.** Re-running the identical dispatch on 2026-08-30 reproduced iid's max DSR to the
+  digit (−0.368) while bootstrap's moved −0.261 → −0.253. `_source_frame` fetches SPY up to *now*,
+  so the resampled marginal changes every time the real series gains a bar. That is not drift in the
+  gate and not a defect: it is the null tracking the symbol it is built from. Quote a bootstrap
+  number with its run id, and never treat a small move in it as a change in the pipeline.
 - **Every calibration is judged at the hunt's history length, not a round number (ADR-051).** The
   drivers previously planted 3000 bars while `scripts/shard_hunt.py` starts at 2005-01-01 and real
   names carry ~5400. `n_bars` is now a `--n-bars` driver flag, a workflow input, and a recorded
