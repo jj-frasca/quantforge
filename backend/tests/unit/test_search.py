@@ -12,7 +12,7 @@ import pytest
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.research.backtesting.engine import BacktestEngine
-from app.research.backtesting.metrics import TRADING_DAYS, return_moments
+from app.research.backtesting.metrics import TRADING_DAYS, return_moments, sharpe_ratio
 from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.experiment import Experiment, InMemoryExperimentStore
 from app.research.lab.gate import GateConfig
@@ -21,6 +21,7 @@ from app.research.lab.search import run_search
 from app.research.strategies.builder import build_strategy_from_dict
 from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
 from app.validation.deflated_sharpe import probabilistic_sharpe_ratio
+from app.validation.walk_forward import walk_forward_splits
 
 _LENIENT = GateConfig(
     dsr_min=-100.0,
@@ -409,3 +410,47 @@ def test_the_probability_prices_the_whole_search_effort() -> None:
         assert before.deflated_sharpe_probability is not None
         assert after.deflated_sharpe_probability is not None
         assert after.deflated_sharpe_probability < before.deflated_sharpe_probability
+
+
+# --- ADR-068: what holding the same window earned, recorded beside what the search earned ---
+
+
+def test_the_experiment_records_the_hold_sharpe_of_its_own_search_window() -> None:
+    frame = _random_walk_frame(31)
+    exp = run_search(frame, "AAPL", ["sma", "momentum"], rationale="unit")
+
+    handle, _ = split_holdout(frame, "AAPL")
+    hold = handle.frame["close"].pct_change().fillna(0.0).to_numpy(dtype=float)
+    splits = walk_forward_splits(len(handle.frame), 5)
+    expected = float(np.mean([sharpe_ratio(pd.Series(hold[test_idx])) for _, test_idx in splits]))
+
+    assert exp.walk_forward_hold_sharpe == pytest.approx(expected)
+
+
+def test_the_hold_sharpe_excludes_the_sealed_holdout() -> None:
+    """It benchmarks the walk-forward windows, which never touch the sealed split (ADR-016)."""
+    frame = _random_walk_frame(32)
+    exp = run_search(frame, "AAPL", ["sma", "momentum"], rationale="unit")
+
+    whole = frame["close"].pct_change().fillna(0.0).to_numpy(dtype=float)
+    splits = walk_forward_splits(len(frame), 5)
+    whole_window = float(
+        np.mean([sharpe_ratio(pd.Series(whole[test_idx])) for _, test_idx in splits])
+    )
+
+    assert exp.walk_forward_hold_sharpe is not None
+    assert exp.walk_forward_hold_sharpe != pytest.approx(whole_window)
+
+
+def test_an_experiment_written_before_the_benchmark_reads_as_not_measured() -> None:
+    """ADR-067: the pool predates the field and must not report an excess of zero."""
+    assert (
+        Experiment(
+            symbol="AAPL",
+            strategy_names=["sma"],
+            gate_config=GateConfig(),
+            trials=[],
+            lifetime_trials=0,
+        ).walk_forward_hold_sharpe
+        is None
+    )

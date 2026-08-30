@@ -5,10 +5,12 @@ import pandas as pd
 import pytest
 from tests.fixtures.synthetic import builders
 
+from app.research.backtesting.metrics import sharpe_ratio
 from app.research.frames import bars_to_frame
 from app.research.strategies.sma import SMAStrategy
 from app.validation.engine import ValidationEngine
 from app.validation.report import ValidationReport
+from app.validation.walk_forward import walk_forward_splits
 
 _CONFIGS = [
     SMAStrategy(fast=f, slow=s)
@@ -123,3 +125,16 @@ def test_a_sample_too_short_to_purge_reports_nothing_rather_than_a_leaky_number(
 
     assert report.purged_cv is None
     assert any("purged CV not measured" in flag for flag in report.flags)
+
+
+def test_report_carries_the_buy_and_hold_of_the_same_windows() -> None:
+    """ADR-068: the walk-forward OOS Sharpe is denominated in the drift of the series it was
+    computed on, so the report must carry what holding that series earned over the same blocks."""
+    frame = _random_walk_frame(seed=4, n=300)
+    report = ValidationEngine().validate("sma_crossover", _CONFIGS, frame)
+
+    hold = frame["close"].pct_change().fillna(0.0).to_numpy(dtype=float)
+    splits = walk_forward_splits(len(frame), report.n_walk_forward_splits)
+    expected = float(np.mean([sharpe_ratio(pd.Series(hold[test_idx])) for _, test_idx in splits]))
+
+    assert report.walk_forward.mean_oos_hold_sharpe == pytest.approx(expected)

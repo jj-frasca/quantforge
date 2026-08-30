@@ -10,6 +10,7 @@ is zero.
 """
 
 from datetime import UTC, datetime
+from statistics import median
 
 import numpy as np
 import pandas as pd
@@ -1419,3 +1420,63 @@ def test_a_legacy_cell_has_no_achievable_oracle() -> None:
     )
     assert result.achievable_oracle_sharpes == []
     assert result.achievable_capture_ratio is None
+
+
+# --- ADR-068: the null carries what holding its own generated series earned ---
+
+
+def test_the_null_records_what_holding_its_own_series_earned() -> None:
+    frames = {f"NULL{i}": iid_normal_null(900, seed=i) for i in range(3)}
+    result = calibrate_gate(frames, ["sma", "momentum"], null_mode="iid_normal")
+
+    assert len(result.walk_forward_hold_sharpes) == result.n_symbols
+
+
+def test_the_null_search_adds_almost_nothing_over_holding_the_same_series() -> None:
+    """The point of ADR-068. A null's OOS Sharpe looks like skill until it is read against the
+    drift of the series it was measured on, which is where the whole level comes from."""
+    frames = {f"NULL{i}": iid_normal_null(1500, seed=i) for i in range(6)}
+    result = calibrate_gate(frames, ["sma", "momentum"], null_mode="iid_normal")
+
+    excess = [
+        oos - hold
+        for oos, hold in zip(
+            result.walk_forward_oos_sharpes, result.walk_forward_hold_sharpes, strict=True
+        )
+    ]
+    assert median(excess) < median(result.walk_forward_oos_sharpes)
+
+
+def test_merging_shards_concatenates_the_hold_distribution() -> None:
+    shards = [
+        calibrate_gate(
+            {f"NULL{i}": iid_normal_null(900, seed=i)}, ["sma", "momentum"], null_mode="iid_normal"
+        )
+        for i in range(2)
+    ]
+    merged = merge_calibrations(shards)
+
+    assert merged.walk_forward_hold_sharpes == (
+        shards[0].walk_forward_hold_sharpes + shards[1].walk_forward_hold_sharpes
+    )
+
+
+def test_an_artifact_predating_the_benchmark_carries_no_hold_distribution() -> None:
+    """ADR-067: absent is not zero — an excess of zero is a measurement nobody made."""
+    artifact = NullCalibration(
+        n_symbols=1,
+        n_graduates=0,
+        false_graduation_rate=0.0,
+        n_clear_deflation_bar=0,
+        deflation_bar=1.3,
+        max_deflated_sharpe=-0.2,
+        max_holdout_sharpe=None,
+        graduates=[],
+        holdout_years=[4.0],
+        n_bars=[5400],
+        errors={},
+        gate_config_version="v1",
+        null_mode="iid_normal",
+    )
+
+    assert artifact.walk_forward_hold_sharpes == []

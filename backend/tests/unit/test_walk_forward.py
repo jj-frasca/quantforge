@@ -198,3 +198,53 @@ def test_walk_forward_sharpe_is_annualized_like_every_other_sharpe() -> None:
     selected = result.splits[0].selected_config
     expected = sharpe_ratio(pd.Series(performance[80:120, selected]))
     assert result.splits[0].oos_sharpe == pytest.approx(expected)
+
+
+# --- ADR-068: the same test blocks, scored on buy-and-hold ---
+
+
+def test_the_benchmark_is_scored_on_the_same_test_blocks() -> None:
+    n = 60
+    rng = np.random.default_rng(11)
+    performance = _matrix([list(rng.normal(0.02, 0.01, n)), list(rng.normal(0.015, 0.01, n))])
+    hold = rng.normal(0.01, 0.008, n)
+    splits = walk_forward_splits(n_obs=n, n_splits=3)
+
+    result = walk_forward_evaluate(performance, splits, benchmark=hold)
+
+    assert result.mean_oos_hold_sharpe == pytest.approx(
+        float(np.mean([sharpe_ratio(pd.Series(hold[test_idx])) for _, test_idx in splits]))
+    )
+
+
+def test_an_unbenchmarked_walk_forward_reports_not_measured() -> None:
+    """ADR-067: a missing benchmark is not a benchmark of zero."""
+    n = 60
+    performance = _matrix([list(np.full(n, 0.01)), list(np.full(n, 0.005))])
+    splits = walk_forward_splits(n_obs=n, n_splits=3)
+
+    assert walk_forward_evaluate(performance, splits).mean_oos_hold_sharpe is None
+
+
+def test_a_benchmark_that_does_not_span_the_window_is_refused() -> None:
+    n = 60
+    performance = _matrix([list(np.full(n, 0.01)), list(np.full(n, 0.005))])
+    splits = walk_forward_splits(n_obs=n, n_splits=3)
+
+    with pytest.raises(ValueError, match="benchmark"):
+        walk_forward_evaluate(performance, splits, benchmark=np.full(n - 1, 0.01))
+
+
+def test_holding_beats_a_strategy_that_sits_out_the_drift() -> None:
+    """The point of the benchmark (ADR-068): on a series whose whole return is drift, a finalist
+    that captures it is worth nothing over having held it."""
+    n = 120
+    rng = np.random.default_rng(5)
+    hold = rng.normal(0.0008, 0.01, n)
+    performance = _matrix([list(hold), list(hold * 0.5)])
+    splits = walk_forward_splits(n_obs=n, n_splits=4)
+
+    result = walk_forward_evaluate(performance, splits, benchmark=hold)
+
+    assert result.mean_oos_hold_sharpe is not None
+    assert result.mean_oos_sharpe - result.mean_oos_hold_sharpe == pytest.approx(0.0, abs=1e-9)

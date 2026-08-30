@@ -175,7 +175,10 @@ class ValidationEngine:
 
         n_obs = len(data)
         wf_splits = walk_forward_splits(n_obs, self._walk_forward_count)
-        walk_forward = walk_forward_evaluate(performance, wf_splits)
+        # ADR-068: hold the same series across the same test blocks. Without it the OOS Sharpe
+        # reads as skill when on a structure-free series it comes out at the underlying's drift.
+        hold_returns = data["close"].pct_change().fillna(0.0).to_numpy(dtype=np.float64)
+        walk_forward = walk_forward_evaluate(performance, wf_splits, benchmark=hold_returns)
 
         # ADR-039: purge by the grid's longest lookback, not a fixed 2 bars — an embargo shorter
         # than the rolling window leaves the boundary contaminated, which is what it exists to stop.

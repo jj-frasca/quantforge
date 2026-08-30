@@ -75,6 +75,11 @@ class WalkForwardResult(BaseModel):
     mean_oos_sharpe: float
     consistency: float
     efficiency: float | None = None
+    # ADR-068: buy-and-hold scored across the SAME test blocks. `mean_oos_sharpe` is denominated in
+    # the drift of the series it was computed on — on data with no edge by construction it comes
+    # out at the underlying's own buy-and-hold Sharpe — so the two are only interpretable together.
+    # None means no benchmark was supplied, which is not a benchmark of zero (ADR-067).
+    mean_oos_hold_sharpe: float | None = None
 
 
 def _sharpe(returns: FloatArray) -> float:
@@ -87,7 +92,10 @@ def _sharpe(returns: FloatArray) -> float:
 
 
 def walk_forward_evaluate(
-    performance: FloatArray, splits: list[tuple[IntArray, IntArray]]
+    performance: FloatArray,
+    splits: list[tuple[IntArray, IntArray]],
+    *,
+    benchmark: FloatArray | None = None,
 ) -> WalkForwardResult:
     """Select the best config on each train block, score it on the following test block (ADR-038).
 
@@ -96,6 +104,9 @@ def walk_forward_evaluate(
             PBO consumes. Slicing it is equivalent to re-running the window because every catalog
             strategy is causal (signal at t uses bars <= t only); see ADR-038.
         splits: expanding-window splits from ``walk_forward_splits``.
+        benchmark: optional per-bar buy-and-hold returns for the same window, scored across the
+            same test blocks (ADR-068). Pairing it here rather than at the call site is the point:
+            a benchmark measured over a different window is the confound it exists to remove.
 
     Returns:
         A ``WalkForwardResult``. Ties in the train-block argmax resolve to the lowest config index,
@@ -108,6 +119,10 @@ def walk_forward_evaluate(
         raise ValueError("need >= 1 split")
 
     n_obs = performance.shape[0]
+    if benchmark is not None:
+        benchmark = np.asarray(benchmark, dtype=np.float64)
+        if benchmark.shape != (n_obs,):
+            raise ValueError("benchmark must carry one return per bar of the performance matrix")
     results: list[WalkForwardSplitResult] = []
     for train_idx, test_idx in splits:
         if int(train_idx.max()) >= n_obs or int(test_idx.max()) >= n_obs:
@@ -133,4 +148,9 @@ def walk_forward_evaluate(
         mean_oos_sharpe=mean_oos,
         consistency=sum(r.oos_sharpe > 0.0 for r in results) / len(results),
         efficiency=(mean_oos / mean_is) if mean_is > 0.0 else None,
+        mean_oos_hold_sharpe=(
+            None
+            if benchmark is None
+            else float(np.mean([_sharpe(benchmark[test_idx]) for _, test_idx in splits]))
+        ),
     )

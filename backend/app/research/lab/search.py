@@ -240,6 +240,11 @@ def run_search(
             refine=refine,
             refine_span=refine_span,
         ),
+        walk_forward_hold_sharpe=(
+            None
+            if best_report.walk_forward is None
+            else best_report.walk_forward.mean_oos_hold_sharpe
+        ),
         best_strategy_name=best_report.strategy_name,
         best_gate_result=gate_result,
         fundamentals=fundamentals,

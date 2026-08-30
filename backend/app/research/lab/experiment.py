@@ -102,6 +102,13 @@ class Experiment(BaseModel):
     # that graduates nothing recorded no length at all — which is exactly the state ADR-051's
     # comparison had to be qualified for. None means a row written before the field.
     n_bars: int | None = None
+    # ADR-068: what buy-and-hold earned across the SAME walk-forward test blocks the trials'
+    # `walk_forward_oos_sharpe` was scored on. The OOS Sharpe is denominated in the underlying's
+    # drift — on a series with no edge by construction it lands on this number — so the pair is
+    # what makes the diagnostic comparable across two different underlying processes. One per
+    # experiment, not per trial: every family shares the window and the splits. None on the
+    # records written before the field, which must read as not measured, never as zero excess.
+    walk_forward_hold_sharpe: float | None = None
     rationale: str = ""
 
 

@@ -75,6 +75,11 @@ class NullCalibration(BaseModel):
     # ADR-039: the same, for the purged folds. Separate list because the two statistics have
     # different null distributions and a floor argued from one says nothing about the other.
     purged_cv_oos_sharpes: list[float] = []
+    # ADR-068: what buy-and-hold earned across the same walk-forward test blocks, one per searched
+    # symbol. `walk_forward_oos_sharpes` above is denominated in the generator's own drift — under
+    # a null it lands on this number — so the null's level is only interpretable against it. Empty
+    # on artifacts predating the field, which reads as not measured, never as zero excess.
+    walk_forward_hold_sharpes: list[float] = []
     errors: dict[str, str]
     gate_config_version: str
     # ADR-044: the result measures search + gate, not thresholds alone. Old committed artifacts
@@ -918,6 +923,9 @@ def calibrate_gate(
         purged_cv_oos_sharpes=[
             cv for e in experiments if (cv := _finalist(e).purged_cv_oos_sharpe) is not None
         ],
+        walk_forward_hold_sharpes=[
+            hold for e in experiments if (hold := e.walk_forward_hold_sharpe) is not None
+        ],
         errors=errors,
         gate_config_version=gate_config.version_hash,
         search_config_version=calibration_search_version(
@@ -1152,6 +1160,7 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
         n_bars=n_bars,
         walk_forward_oos_sharpes=[v for s in shards for v in s.walk_forward_oos_sharpes],
         purged_cv_oos_sharpes=[v for s in shards for v in s.purged_cv_oos_sharpes],
+        walk_forward_hold_sharpes=[v for s in shards for v in s.walk_forward_hold_sharpes],
         errors={sym: why for s in shards for sym, why in s.errors.items()},
         gate_config_version=versions.pop(),
         search_config_version=search_versions.pop(),
