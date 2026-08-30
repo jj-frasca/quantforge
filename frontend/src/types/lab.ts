@@ -207,6 +207,29 @@ export const nullCalibrationSchema = z.object({
 
 export type NullCalibration = z.infer<typeof nullCalibrationSchema>
 
+// ADR-051/064/068: one statistic of the pool read against one null mode. `comparable` is the
+// load-bearing field — a difference between two measurements that resolved different search
+// families, or were judged on different history lengths, is not a finding — and `matched_n` /
+// `matched_n_bars` are the subset the real median was actually taken over. A row whose `statistic`
+// ends in "excess" is the drift-controlled form: each side differenced against what holding its own
+// series across the same test blocks earned. Absent, never zero, until both sides measured it.
+export const nullComparisonSchema = z.object({
+  statistic: z.string(),
+  null_mode: z.string(),
+  real_n: z.number().int(),
+  real_median: z.number(),
+  null_n: z.number().int(),
+  null_median: z.number(),
+  null_p95: z.number(),
+  real_exceeds_null_p95: z.boolean(),
+  comparable: z.boolean(),
+  mismatch: z.string().default(''),
+  matched_n: z.number().int().default(0),
+  matched_n_bars: z.number().nullable().default(null),
+})
+
+export type NullComparison = z.infer<typeof nullComparisonSchema>
+
 // ADR-041/042/053: one cell of a power sweep — a planted process at one effect size, judged at its
 // own N. `phi` indexes an AR(1) sweep and `half_life` a band-reversion one; exactly one is set.
 export const powerCellSchema = z.object({

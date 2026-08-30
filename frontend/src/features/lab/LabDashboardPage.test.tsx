@@ -175,3 +175,32 @@ test('the dashboard still renders when the gate has never been calibrated', asyn
   expect(await screen.findByLabelText('leaderboard')).toBeInTheDocument()
   expect(screen.queryByLabelText('gate calibration')).toBeNull()
 })
+
+test('leads with how the pool reads against a no-edge surrogate', async () => {
+  server.use(
+    http.get('/api/v1/leaderboard', () => HttpResponse.json([])),
+    http.get('/api/v1/paper-portfolio', () => HttpResponse.json([])),
+    http.get('/api/v1/null-comparison', () =>
+      HttpResponse.json([
+        {
+          statistic: 'walk-forward',
+          null_mode: 'bootstrap:SPY',
+          real_n: 2427,
+          real_median: 0.542,
+          null_n: 200,
+          null_median: 0.652,
+          null_p95: 0.983,
+          real_exceeds_null_p95: false,
+          comparable: true,
+          mismatch: '',
+          matched_n: 2427,
+          matched_n_bars: 5445,
+        },
+      ]),
+    ),
+  )
+  renderWithClient(<LabDashboardPage />)
+
+  expect(await screen.findByLabelText('null comparison')).toBeInTheDocument()
+  expect(screen.getByText(/does not separate/i)).toBeInTheDocument()
+})

@@ -6,6 +6,7 @@ import {
   graduatesSchema,
   leaderboardSchema,
   nullCalibrationSchema,
+  nullComparisonSchema,
   powerSweepSchema,
   paperPortfolioSchema,
   poolReportSchema,
@@ -14,6 +15,7 @@ import {
   type GraduateRow,
   type LeaderboardRow,
   type NullCalibration,
+  type NullComparison,
   type PaperPosition,
   type PoolReport,
   type PowerSweep,
@@ -75,6 +77,14 @@ export async function requestNullCalibration(): Promise<NullCalibration[]> {
     throw new Error(`Null calibration request failed (${response.status})`)
   }
   return z.array(nullCalibrationSchema).parse(await response.json())
+}
+
+export async function requestNullComparison(): Promise<NullComparison[]> {
+  const response = await fetch(`${API_BASE}/api/v1/null-comparison`)
+  if (!response.ok) {
+    throw new Error(`Null comparison request failed (${response.status})`)
+  }
+  return z.array(nullComparisonSchema).parse(await response.json())
 }
 
 export async function requestPowerCalibration(): Promise<PowerSweep[]> {
