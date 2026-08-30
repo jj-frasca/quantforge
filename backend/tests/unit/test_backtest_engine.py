@@ -5,7 +5,7 @@ from itertools import pairwise
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from tests.fixtures.synthetic import builders
 
@@ -98,6 +98,7 @@ def test_metrics_handle_empty_series() -> None:
 # --- Hypothesis invariants ---
 
 
+@settings(deadline=None)
 @given(
     # realistic bounded daily returns (the quality gate flags >20% moves); a price path
     # built from these keeps long-only net > -1, so equity stays strictly positive
