@@ -45,6 +45,24 @@ The measurement is nonetheless informative, and both things are true at once:
   error. **A ranking key applied to families that are not separable should not be expected to move
   detection much, and it did not.** That is a coherent result, not a null one.
 
+### The second clause: Type-I error is unchanged (run 33288583470)
+
+| null, `walk_forward` arm | N | false graduates | clear the bar | max DSR | walk-forward OOS median / p95 |
+|---|---|---|---|---|---|
+| `iid_normal` | 200 | **0** | 0 | −0.366 | +0.399 / +0.753 |
+| `bootstrap:SPY` | **175** | **0** | 0 | −0.261 | +0.618 / +0.966 |
+
+Type-I error stays at zero under the new rule, so ADR-069's second clause passes. It does not
+rescue the first. The bootstrap arm is at N = 175 rather than 200 because one shard's artifact
+upload timed out against GitHub's own API after five retries — the shard computed fine, and the
+consolidation is a valid measurement at the smaller N, which is what the workflow was built to do.
+
+One observation, recorded without interpretation because it is inside noise: selecting *on* the
+walk-forward statistic did not raise the null's distribution *of* it (+0.416 → +0.399 iid,
++0.622 → +0.618 bootstrap). A best-of-N maximum taken over the same key would ordinarily be
+inflated by that selection. At n = 200 with a p95 near +0.75 this says nothing on its own; it is
+noted so a future run knows to look.
+
 ### The meta-lesson, and it is the second time
 
 ADR-063's criterion failed because it was phrased over cells with nothing to find. This one failed
