@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The autonomous QuantForge session (.claude/AUTONOMY_CHARTER.md), scheduled the same
+  wake-resilient way as the Codex job (a3d71b4): fixed clock times rather than
+  StartInterval, so a slot missed while the Mac was asleep runs on wake instead of
+  silently vanishing. The ledger shows no run at all between 2026-08-21 and 2026-08-29
+  against a budget of 35 sessions a week.
+
+  The times are offset 2.5h from com.jjfrasca.quantforge-codex (00/05/10/15/20) on
+  purpose: on 2026-08-30 both agents implemented ADR-065 within half an hour of each
+  other and one of the two implementations was thrown away. They share a working tree
+  and do not coordinate, so the schedule is the only thing keeping them apart.
+
+  Install (do NOT run while a session is live — unload SIGTERMs the running session):
+    cp scripts/com.jjfrasca.quantforge-autonomous.plist ~/Library/LaunchAgents/
+    launchctl unload ~/Library/LaunchAgents/com.jjfrasca.quantforge-autonomous.plist
+    launchctl load   ~/Library/LaunchAgents/com.jjfrasca.quantforge-autonomous.plist
+-->
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>HOME</key>
+		<string>/Users/joefrasca</string>
+		<key>PATH</key>
+		<string>/Users/joefrasca/.local/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<key>SHELL</key>
+		<string>/bin/zsh</string>
+		<key>USER</key>
+		<string>joefrasca</string>
+	</dict>
+	<key>Label</key>
+	<string>com.jjfrasca.quantforge-autonomous</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>/Users/joefrasca/claude-work/.claude/cron/quantforge-autonomous.sh</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/joefrasca/.claude/_reports/cron-qf-autonomous.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/joefrasca/.claude/_reports/cron-qf-autonomous.log</string>
+	<key>StartCalendarInterval</key>
+	<array>
+		<dict>
+			<key>Hour</key>
+			<integer>2</integer>
+			<key>Minute</key>
+			<integer>30</integer>
+		</dict>
+		<dict>
+			<key>Hour</key>
+			<integer>7</integer>
+			<key>Minute</key>
+			<integer>30</integer>
+		</dict>
+		<dict>
+			<key>Hour</key>
+			<integer>12</integer>
+			<key>Minute</key>
+			<integer>30</integer>
+		</dict>
+		<dict>
+			<key>Hour</key>
+			<integer>17</integer>
+			<key>Minute</key>
+			<integer>30</integer>
+		</dict>
+		<dict>
+			<key>Hour</key>
+			<integer>22</integer>
+			<key>Minute</key>
+			<integer>30</integer>
+		</dict>
+	</array>
+</dict>
+</plist>
