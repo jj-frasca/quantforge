@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends
 from app.research.lab.calibration import NullCalibration, PowerSweep
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
-from app.research.lab.pool_report import PoolReport, summarize_pool
+from app.research.lab.pool_report import (
+    NullComparison,
+    PoolReport,
+    compare_with_null,
+    summarize_pool,
+)
 from app.research.lab.universe import LeaderboardRow, rank_experiments
 
 router = APIRouter(tags=["lab"])
@@ -74,6 +79,29 @@ def null_calibration(
         NullCalibration.model_validate_json(path.read_text())
         for path in sorted(calibration_path.glob("*.json"))
     ]
+
+
+# Sync + read-only: the project's headline claim, computed rather than retyped — how the pool's
+# finalist OOS diagnostics read against each null mode's own, on the matched-history subset
+# (ADR-051/064) and net of each side's own drift (ADR-068). Empty when either side is missing, for
+# the same reason /null-calibration is: a 500 here would take the whole dashboard down.
+@router.get("/null-comparison", response_model=list[NullComparison])
+def null_comparison(
+    pool_path: Annotated[Path, Depends(get_pool_path)],
+    portfolio_path: Annotated[Path, Depends(get_portfolio_path)],
+    calibration_path: Annotated[Path, Depends(get_calibration_path)],
+) -> list[NullComparison]:
+    if not calibration_path.is_dir():
+        return []
+    experiments = PartitionedExperimentStore(pool_path).all()
+    if not experiments:
+        return []
+    calibrations = [
+        NullCalibration.model_validate_json(path.read_text())
+        for path in sorted(calibration_path.glob("*.json"))
+    ]
+    report = summarize_pool(experiments, JsonFilePaperPortfolio(portfolio_path).positions())
+    return compare_with_null(report, calibrations, experiments)
 
 
 # Sync + read-only: the measured POWER of the whole gate (ADR-041/042/053), written by the two

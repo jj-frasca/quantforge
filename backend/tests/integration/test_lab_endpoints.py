@@ -253,3 +253,71 @@ def test_power_calibration_endpoint_is_empty_when_nothing_has_been_measured(tmp_
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+# ---- GET /null-comparison (ADR-051/064/068: the claim the dashboard leads with) -------------------
+
+
+def _diagnostic_experiment(symbol: str, *, walk_forward: float, hold: float) -> Experiment:
+    return Experiment(
+        symbol=symbol,
+        strategy_names=["sma"],
+        gate_config=GateConfig(),
+        trials=[
+            Trial(
+                strategy_name="sma",
+                parameters={"fast": 10, "slow": 30},
+                observed_sharpe=1.0,
+                deflated_sharpe=0.5,
+                pbo=0.1,
+                parameter_stability_score=0.8,
+                walk_forward_oos_sharpe=walk_forward,
+                purged_cv_oos_sharpe=walk_forward,
+            )
+        ],
+        lifetime_trials=1,
+        n_bars=5400,
+        walk_forward_hold_sharpe=hold,
+        search_config_version="fam-a",
+    )
+
+
+def test_null_comparison_endpoint_reads_the_pool_against_each_null(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    pool = tmp_path / "research_pool"
+    store = PartitionedExperimentStore(pool)
+    for i, wf in enumerate([0.5, 0.6, 0.7]):
+        store.add(_diagnostic_experiment(f"S{i}", walk_forward=wf, hold=0.5))
+    calibrations = tmp_path / "null_calibration"
+    calibrations.mkdir()
+    (calibrations / "iid_normal_5400.json").write_text(_calibration_json("iid_normal", 0, 5400))
+    app.dependency_overrides[get_pool_path] = lambda: pool
+    app.dependency_overrides[get_portfolio_path] = lambda: tmp_path / "absent.json"
+    app.dependency_overrides[get_calibration_path] = lambda: calibrations
+
+    try:
+        response = TestClient(app).get("/api/v1/null-comparison")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    walk = next(row for row in body if row["statistic"] == "walk-forward")
+    assert walk["null_mode"] == "iid_normal"
+    assert walk["real_median"] == 0.6
+    assert walk["null_median"] == 0.2
+    assert walk["matched_n"] == 3
+
+
+def test_null_comparison_endpoint_is_empty_when_nothing_has_been_measured(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Same contract as /null-calibration: an empty list is honest, a 500 takes the page down."""
+    app.dependency_overrides[get_pool_path] = lambda: tmp_path / "nope"
+    app.dependency_overrides[get_portfolio_path] = lambda: tmp_path / "nope.json"
+    app.dependency_overrides[get_calibration_path] = lambda: tmp_path / "missing"
+
+    try:
+        response = TestClient(app).get("/api/v1/null-comparison")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == []

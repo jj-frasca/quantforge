@@ -312,6 +312,7 @@ parameter today. Reading them together is the fastest way to understand what the
 | `/api/v1/paper-portfolio` | `lab.py` | `list[PaperPosition]` | `data/paper_portfolio.json` |
 | `/api/v1/pool-report` | `lab.py` | `PoolReport` | pool + portfolio |
 | `/api/v1/null-calibration` | `lab.py` | `list[NullCalibration]` | `data/null_calibration/` |
+| `/api/v1/null-comparison` | `lab.py` | `list[NullComparison]` | pool + portfolio + `data/null_calibration/` |
 | `/api/v1/power-calibration` | `lab.py` | `list[PowerSweep]` | `data/power_calibration/` |
 | `/api/v1/graduates` | `graduates.py` | `list[GraduateRow]` | `data/research_pool/` |
 | `/api/v1/cross-sectional` | `cross_sectional.py` | `CrossSectionalView \| None` | `data/cross_sectional_pool.json` |
@@ -331,6 +332,15 @@ parameter today. Reading them together is the fastest way to understand what the
   construction (ADR-036/037). **A missing data directory returns `[]` with a 200**, deliberately:
   a 500 here would take the whole dashboard down for the sake of a summary panel. The same
   degrade-don't-fail rule applies to `/pool-report` on the frontend side.
+- `/null-comparison` serves the project's headline claim as a computation rather than a retyped
+  sentence: the pool's finalist OOS diagnostics read against each null mode's own. Every row carries
+  `comparable` and `mismatch` — a difference between two measurements that resolved different search
+  families, or were judged on different history lengths, is not a finding — plus `matched_n` /
+  `matched_n_bars`, the ADR-064 subset the real median was actually taken over. Rows with
+  `statistic = "walk-forward excess"` are ADR-068's drift-controlled form, where each side is
+  differenced against what holding ITS OWN series across the SAME test blocks earned; they are
+  **absent, not zero**, until both sides carry the benchmark. Never render a row whose `comparable`
+  is false as a result — render the `mismatch`. Same `[]`-and-200 contract as `/null-calibration`.
 - `/power-calibration` returns the other half of the same question: how often the gate detects a
   PLANTED edge (ADR-041/042/053), one sweep per planted process, cells listed rather than merged
   because each plants a different effect size and is judged at its own N. Same `[]`-and-200
