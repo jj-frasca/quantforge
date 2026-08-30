@@ -27,8 +27,9 @@ with it. Every number below is produced by a committed workflow and can be re-ru
 | How many discovered strategies clear that bar today? | **0 of 40.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
 | **Does what the search proposes beat a no-edge surrogate?** | **No**, and as of ADR-064 that is a valid comparison rather than a refused one. On the 2,427 experiments whose history matches the null's within 10%, walk-forward **+0.542** and purged-CV **+0.584** sit below a bootstrap null's own **+0.652 / +0.661** (p95 +0.983 / +1.003) | `scripts/pool_report.py` vs `null-calibration.yml` (ADR-051/064) |
 
-The last two rows are the point. The pipeline has searched 614,000+ parameter trials across 607
-symbols and **graduated nothing that is distinguishable from best-of-N selection luck** — and when
+The last two rows are the point. The retained per-symbol counters currently preserve 122,000+
+candidate evaluations as the conservative cumulative DSR/MinTRL lower bound (ADR-062/066). The
+pipeline has **graduated nothing that is distinguishable from best-of-N selection luck** — and when
 the strategies it *proposes* are compared against a surrogate with no serial structure at all, they
 do not win either. Walk-forward and purged-CV out-of-sample Sharpes are read against their own
 measured null distributions (bootstrap p95 ≈ +0.98 walk-forward, +1.00 purged CV), never against

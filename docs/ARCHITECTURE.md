@@ -332,6 +332,13 @@ the denominator without bloating the partitioned pool; historical longitudinal c
 lower bound because generated records cannot be honestly reconstructed. FINDING-003 separately
 recorded that `GateConfig.trial_budget=200` was inert.
 
+**Daily shards carry the lifetime denominator forward (ADR-062), and reports count it once
+(ADR-066).** Each shard writes only its own artifact but reads the committed partitioned pool as a
+prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experiment's
+`lifetime_trials` already includes that prior, the programme-wide headline sums only the maximum
+counter per symbol. Summing all retained cumulative rows would double-count earlier trials; the
+headline is the sum of per-symbol denominators, not one global DSR denominator.
+
 **Whole-search dispersion is robust as of ADR-050.** Sample standard deviation made the supposed
 null haircut grow without bound when a subset of heterogeneous strategies captured a planted edge;
 DSR consequently passed 0/50 even at median oracle Sharpe +3.92. Whole-search pricing now estimates

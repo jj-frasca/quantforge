@@ -56,7 +56,7 @@ def main() -> None:
     print(f"{'=' * 82}\nQUANTFORGE — state of the research programme\n{'=' * 82}")
     print(
         f"searched : {report.n_experiments} experiments over {report.n_symbols} symbols "
-        f"({report.n_trials} lifetime trials — the DSR/MinTRL denominator)"
+        f"({report.n_trials} lifetime trials — sum of per-symbol DSR/MinTRL denominators)"
     )
     print(
         f"graduates: {report.n_graduate_experiments} graduate experiments -> "

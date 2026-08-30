@@ -19,8 +19,7 @@ export function DeflationHeadline({ report }: { report: PoolReport }) {
       </p>
       <p data-testid="search-effort">
         Searched {count(report.n_experiments)} experiments over {count(report.n_symbols)} symbols —{' '}
-        {count(report.n_trials)} lifetime trials, which is the denominator the deflated Sharpe and
-        MinTRL penalties are charged against.
+        {count(report.n_trials)} lifetime trials, the sum of the per-symbol DSR/MinTRL denominators.
       </p>
       {report.frontier && (
         <p data-testid="detection-frontier">

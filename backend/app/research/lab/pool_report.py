@@ -322,6 +322,21 @@ def _summarize(trials: list[Trial], field: str) -> DiagnosticSummary | None:
     )
 
 
+def _lifetime_trial_count(experiments: Sequence[Experiment]) -> int:
+    """Sum the cumulative DSR/MinTRL denominator once per symbol (ADR-066).
+
+    Each experiment carries prior + current trials, so summing rows counts the same prior once for
+    every retained search. Maximum mirrors the experiment-store contract and survives legacy
+    counter resets, clock skew, and pool pruning.
+    """
+    by_symbol: dict[str, int] = {}
+    for experiment in experiments:
+        by_symbol[experiment.symbol] = max(
+            by_symbol.get(experiment.symbol, 0), experiment.lifetime_trials
+        )
+    return sum(by_symbol.values())
+
+
 def _agree(
     judged: list[tuple[Trial, float]], probability_reference: float
 ) -> StatisticAgreement | None:
@@ -472,7 +487,7 @@ def summarize_pool(
     return PoolReport(
         n_experiments=len(experiments),
         n_symbols=n_symbols,
-        n_trials=sum(e.lifetime_trials for e in experiments),
+        n_trials=_lifetime_trial_count(experiments),
         n_graduate_experiments=sum(1 for e in experiments if e.graduate is not None),
         n_leaderboard_graduates=len(graduates),
         n_surviving_deflation=sum(1 for r in graduates if r.survives_universe_deflation),

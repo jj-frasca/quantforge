@@ -63,6 +63,11 @@ standard deviation. `Trial` is therefore a compact family-finalist summary with
 Historical longitudinal pool counters predate this field and remain a lower bound; generated
 records are never guessed/backfilled against today's catalog.
 
+**Pool reporting (ADR-066).** `Experiment.lifetime_trials` is already cumulative per symbol. The
+programme-wide trial headline therefore sums the maximum counter once per symbol; summing every
+retained experiment would count the same prior trials repeatedly. The aggregate is the sum of the
+per-symbol DSR/MinTRL denominators, not one global denominator.
+
 ---
 
 ## 2. Probability of Backtest Overfitting (PBO) — CSCV

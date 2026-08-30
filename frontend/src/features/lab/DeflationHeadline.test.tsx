@@ -51,6 +51,7 @@ describe('DeflationHeadline', () => {
     expect(effort).toHaveTextContent('3,208')
     expect(effort).toHaveTextContent('607')
     expect(effort).toHaveTextContent('115,009')
+    expect(effort).toHaveTextContent(/sum of the per-symbol DSR\/MinTRL denominators/i)
   })
 
   it('lists the near-misses with each candidate’s own bar', () => {

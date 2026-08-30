@@ -64,10 +64,14 @@ def _exp(
 
 
 def test_report_counts_the_search_effort() -> None:
-    report = summarize_pool([_exp("A"), _exp("B"), _exp("A", holdout_sharpe=0.5)], [])
+    first_a = _exp("A")
+    latest_a = _exp("A", holdout_sharpe=0.5).model_copy(update={"lifetime_trials": 20})
+    report = summarize_pool([first_a, _exp("B"), latest_a], [])
     assert report.n_experiments == 3
     assert report.n_symbols == 2
-    assert report.n_trials == 30  # lifetime trials, the DSR/MinTRL denominator
+    # A's 10 trials are already carried into its cumulative 20; only the maximum per-symbol
+    # denominator is counted. Summing rows would double-count A's first 10 and report 40.
+    assert report.n_trials == 30
 
 
 def test_report_separates_graduate_experiments_from_leaderboard_graduates() -> None:
