@@ -776,3 +776,97 @@ def test_a_matched_subset_spanning_two_families_is_still_refused() -> None:
 
     assert all(row.comparable is False for row in rows)
     assert all("search family" in row.mismatch for row in rows)
+
+
+# --- ADR-068: the same comparison, with each side's own drift taken out ---
+
+
+def _pool_with_hold(pairs: list[tuple[float, float]]) -> list[Experiment]:
+    return [
+        _exp_with_diagnostics(f"S{i}", walk_forward=oos, purged_cv=oos, graduated=False).model_copy(
+            update={
+                "search_config_version": "fam-a",
+                "n_bars": 5400,
+                "walk_forward_hold_sharpe": hold,
+            }
+        )
+        for i, (oos, hold) in enumerate(pairs)
+    ]
+
+
+def test_the_excess_row_takes_each_sides_own_drift_out() -> None:
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.1, 0.2, 0.3]).model_copy(
+        update={"walk_forward_hold_sharpes": [0.4, 0.4, 0.4]}
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.real_median == pytest.approx(0.05)
+    assert excess.null_median == pytest.approx(0.1)
+    assert excess.real_n == 3
+    assert excess.null_n == 3
+
+
+def test_the_raw_row_survives_the_excess_row() -> None:
+    """ADR-068 decision 5: a published verdict is not restated on a new statistic in place."""
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.1, 0.2, 0.3]).model_copy(
+        update={"walk_forward_hold_sharpes": [0.4, 0.4, 0.4]}
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    assert [r.statistic for r in rows].count("walk-forward") == 1
+    assert next(r for r in rows if r.statistic == "walk-forward").real_median == pytest.approx(0.6)
+
+
+def test_a_drift_only_lead_over_the_null_disappears_in_the_excess() -> None:
+    """The confound ADR-068 measured: a pool can lead a null on the raw statistic purely because
+    its symbols drifted harder, and lead it by nothing once both are read against their own."""
+    pool = _pool_with_hold([(0.9, 0.9), (1.0, 1.0), (1.1, 1.1)])
+    null = _null("iid_normal", walk_forward=[0.2, 0.3, 0.4], purged_cv=[0.1, 0.2, 0.3]).model_copy(
+        update={"walk_forward_hold_sharpes": [0.2, 0.3, 0.4]}
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    assert next(r for r in rows if r.statistic == "walk-forward").real_exceeds_null_p95 is True
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.real_median == pytest.approx(0.0)
+    assert excess.real_exceeds_null_p95 is False
+
+
+def test_no_excess_row_when_the_null_never_measured_its_own_hold() -> None:
+    """ADR-067: every artifact on disk predates the benchmark; absent is not an excess of zero."""
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.1, 0.2, 0.3])
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    assert all(r.statistic != "walk-forward excess" for r in rows)
+
+
+def test_no_excess_row_when_the_pool_never_measured_its_own_hold() -> None:
+    pool = _pool([0.5, 0.6, 0.7])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.1, 0.2, 0.3]).model_copy(
+        update={"walk_forward_hold_sharpes": [0.4, 0.4, 0.4]}
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    assert all(r.statistic != "walk-forward excess" for r in rows)
+
+
+def test_a_null_whose_two_distributions_do_not_pair_up_is_refused() -> None:
+    """They are paired per searched symbol; unequal lengths mean the pairing is unknown, and
+    differencing them anyway would invent a measurement."""
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.1, 0.2, 0.3]).model_copy(
+        update={"walk_forward_hold_sharpes": [0.4, 0.4]}
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    assert all(r.statistic != "walk-forward excess" for r in rows)

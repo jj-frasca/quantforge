@@ -14,7 +14,12 @@ from app.research.lab.calibration import NullCalibration
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.frontier import describe_frontier
 from app.research.lab.paper import JsonFilePaperPortfolio
-from app.research.lab.pool_report import DiagnosticSummary, compare_with_null, summarize_pool
+from app.research.lab.pool_report import (
+    EXCESS_STATISTIC,
+    DiagnosticSummary,
+    compare_with_null,
+    summarize_pool,
+)
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 POOL = DATA / "research_pool"
@@ -209,6 +214,13 @@ def main() -> None:
                 f"real {row.real_median:+.3f} (n={row.real_n}, {matched}) | "
                 f"null median {row.null_median:+.3f} p95 {row.null_p95:+.3f} (n={row.null_n}) "
                 f"-- {verdict}"
+            )
+        if not any(row.statistic == EXCESS_STATISTIC for row in rows):
+            # ADR-068: the raw rows above are denominated in each side's own drift. Saying so is
+            # the point of the line — a reader who does not see the excess must know it is missing.
+            print(
+                "  walk-forward excess: NOT MEASURED -- the pool, the null artifacts, or both "
+                "predate ADR-068's benchmark; re-search and re-dispatch before reading a lead"
             )
 
     book = report.book

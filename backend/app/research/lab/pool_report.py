@@ -319,6 +319,71 @@ def compare_with_null(
                     matched_n_bars=int(np.median(matched_bars)) if matched_bars else None,
                 )
             )
+    rows.extend(_excess_rows(report, calibrations, experiments))
+    return rows
+
+
+EXCESS_STATISTIC = "walk-forward excess"
+
+
+def _excess_rows(
+    report: "PoolReport",
+    calibrations: Sequence[NullCalibration],
+    experiments: Sequence[Experiment],
+) -> list[NullComparison]:
+    """The same comparison with each side's own drift taken out (ADR-068).
+
+    Notes:
+        The walk-forward OOS Sharpe is denominated in the drift of the series it was computed on:
+        on both nulls it lands within 0.02 of that generator's own buy-and-hold Sharpe. Comparing
+        two raw medians therefore compares two drifts. This row differences each side against what
+        holding ITS OWN series across the SAME test blocks earned, so what is left is what the
+        search added. Emitted only where both sides measured it — every artifact written before
+        ADR-068 carries neither, and an excess of zero is a measurement nobody made (ADR-067).
+
+        The purged-CV row is deliberately absent: its folds are not a prefix-ordered benchmark
+        window, so the same subtraction would not be the same statistic.
+    """
+    rows: list[NullComparison] = []
+    for calibration in calibrations:
+        oos, hold = calibration.walk_forward_oos_sharpes, calibration.walk_forward_hold_sharpes
+        # Paired per searched symbol; unequal lengths mean the pairing is unknown, and
+        # differencing them anyway would invent a measurement.
+        if not hold or len(hold) != len(oos):
+            continue
+        null_excess = np.asarray(oos, dtype=float) - np.asarray(hold, dtype=float)
+        null_bars = int(np.median(calibration.n_bars)) if calibration.n_bars else None
+        matched = _matched(experiments, null_bars)
+        matched_bars = [e.n_bars for e in matched if e.n_bars is not None]
+        real_values = [
+            finalist.walk_forward_oos_sharpe - e.walk_forward_hold_sharpe
+            for e in matched
+            if e.trials
+            and e.walk_forward_hold_sharpe is not None
+            and (finalist := max(e.trials, key=lambda t: t.deflated_sharpe)).walk_forward_oos_sharpe
+            is not None
+        ]
+        if not real_values:
+            continue
+        real_median = float(np.median(np.asarray(real_values, dtype=float)))
+        p95 = float(np.percentile(null_excess, 95))
+        mismatch = _mismatch(report, calibration, matched, len(real_values))
+        rows.append(
+            NullComparison(
+                statistic=EXCESS_STATISTIC,
+                null_mode=calibration.null_mode,
+                real_n=len(real_values),
+                real_median=real_median,
+                null_n=len(null_excess),
+                null_median=float(np.median(null_excess)),
+                null_p95=p95,
+                real_exceeds_null_p95=real_median > p95,
+                comparable=not mismatch,
+                mismatch=mismatch,
+                matched_n=len(matched),
+                matched_n_bars=int(np.median(matched_bars)) if matched_bars else None,
+            )
+        )
     return rows
 
 
