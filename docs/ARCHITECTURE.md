@@ -304,9 +304,24 @@ test to the same subset. **The first formally valid comparison this project has 
 pool does not separate from either null**: matched walk-forward **+0.542** against a bootstrap
 median +0.652 (p95 +0.983), purged-CV **+0.584** against +0.661 (p95 +1.003). It is the deflation
 headline's conclusion reached by an independent route, and it is now a measurement rather than an
-absence of one. ⚠️ Those figures are against the 5,400-bar nulls at `dbba1ed`, which ADR-063's
-re-dispatch superseded the same day — the report correctly prints `0 matched` until the pool is
-re-searched at the longer window.
+absence of one. Those figures are against the 5,400-bar nulls, which ADR-063's
+re-dispatch briefly overwrote — **ADR-065 removed that failure mode**: an artifact is named for the
+history it measured (`bootstrap_spy_5400.json` / `_7400.json`), both lengths coexist, and the pool
+in transition is read against each cohort separately instead of being refused.
+
+**ADR-068 attributes the level of that statistic, and the answer is drift.** The walk-forward OOS
+Sharpe is denominated in the drift of the series it was computed on: each null's finalist median
+equals its own generator's buy-and-hold Sharpe to within ±0.03 (iid-normal 0.397 → +0.414;
+bootstrap:SPY 0.650 → +0.652), and the matched pool's 0.546 → +0.542. **ADR-064's −0.11 gap is the
+gap between SPY's 33-year drift and the median pool symbol's**, not a difference between two
+searches. `walk_forward_evaluate` now scores buy-and-hold across the SAME test blocks
+(`mean_oos_hold_sharpe`), `Experiment.walk_forward_hold_sharpe` and
+`NullCalibration.walk_forward_hold_sharpes` persist it, and `compare_with_null` emits a
+`walk-forward excess` row beside each raw row — the raw row stays, because a published verdict is
+not restated on a new statistic in place. Measured excess: **+0.002** (bootstrap null), **+0.017**
+(iid null), **−0.004** (real pool, a 39-symbol sample). The verdict does not move; what moves is
+what the number means. Until the pool is re-searched and the null re-dispatched carrying the paired
+value, the row prints `NOT MEASURED` (ADR-067).
 
 **ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
 error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against

@@ -473,10 +473,45 @@ error this repairs, so quote the matched numbers. After ADR-063 the pool goes bi
 7,400+ re-searched) and the two cohorts must be read against their own nulls; `matched_n` on each row
 is what tells you which cohort you are looking at.
 
-⚠️ **Provenance, and what the report prints today.** Those matched numbers are against the
-**5,400-bar** null artifacts at commit **`dbba1ed`**; ADR-063's re-dispatch overwrote
-`data/null_calibration/*.json` with the 7,400-bar run (`6efcb7e`) the same day. The pool's rows sit
-at ~5,445 bars, 26% from the current null, so every row now prints `0 matched` and refuses — which
-is the rule working, not failing. It resolves when the daily discovery re-searches the universe at
-ADR-063's window. Reproduce the published numbers from `dbba1ed`, never from the working tree, and
-do not quote them as a property of the *current* null.
+**Provenance, and why the tree can answer again (ADR-065).** Those matched numbers were measured
+against the **5,400-bar** null artifacts, which ADR-063's re-dispatch overwrote in place with the
+7,400-bar run (`6efcb7e`) the same day — leaving a published measurement reproducible only from
+commit `dbba1ed`. The cause was the filename: one path per null mode. Artifacts are now named for
+the history they measured (`bootstrap_spy_5400.json`, `bootstrap_spy_7400.json`); the superseded
+5,400-bar pair was restored from `dbba1ed` under its own name and **the table above reproduces from
+the working tree**. A re-run at the same length still overwrites — that is a re-measurement of the
+same pair — so the directory grows once per genuine change of history length, not once per run.
+
+## §7.6 Excess over buy-and-hold — what the OOS statistic is actually denominated in (ADR-068)
+
+The walk-forward OOS Sharpe carries the **drift of the series it was computed on**. Measured
+2026-08-30, where "underlying" is `mean/std × √252` of the daily returns the finalist was searched
+over — buy-and-hold, computed exactly as `walk_forward._sharpe` computes a strategy's:
+
+| side | underlying | finalist walk-forward OOS median | excess |
+|---|---|---|---|
+| `iid_normal` null (drift 0.0003 / vol 0.012) | 0.397 | +0.414 (5,400) / +0.416 (7,400) | +0.017 / +0.019 |
+| `bootstrap:SPY` null (SPY 1993-01-29→2026-08-28) | 0.650 | +0.652 (5,400) / +0.622 (7,400) | +0.002 / −0.028 |
+| real matched cohort (5,445 bars) | 0.546 (39-symbol sample) | +0.542 | −0.004 |
+
+**Every row lands on its own underlying's buy-and-hold Sharpe to within ±0.03.** Two of them are
+nulls with no exploitable structure by construction, so the level is not evidence of anything — and
+§7.5's −0.11 "gap" between the pool and the bootstrap null is the gap between SPY's 33-year drift
+and the median pool symbol's. Read the other way it is the cleanest statement of gate honesty here:
+**what the search adds out-of-sample over holding the same series across the same windows is +0.002
+to +0.019 on data with no edge, and −0.004 on real symbols.**
+
+`walk_forward_evaluate(performance, splits, benchmark=)` scores the benchmark on the SAME test
+indices with the same annualization and mean-over-splits, reporting `mean_oos_hold_sharpe`;
+`ValidationEngine` passes the frame's close-to-close returns; `Experiment.walk_forward_hold_sharpe`
+and `NullCalibration.walk_forward_hold_sharpes` persist it; `compare_with_null` emits a
+`walk-forward excess` row per null mode beside the raw row, with §7.5's verdict rule applied to it.
+Rules that hold here:
+- **The raw row stays.** A published verdict is not restated on a new statistic in place.
+- **Absent is not zero** (ADR-067). Every artifact written before ADR-068 carries neither side of
+  the difference, so the row prints `NOT MEASURED` until the pool is re-searched and the null
+  re-dispatched. An excess of zero is a measurement nobody made.
+- **The two null lists are paired per searched symbol.** Unequal lengths mean the pairing is
+  unknown and the row is refused rather than differenced anyway.
+- **Purged-CV is out of scope**: its folds are not a prefix-ordered benchmark window, so the same
+  subtraction would not be the same statistic. Extend it on its own terms or not at all.

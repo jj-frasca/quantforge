@@ -26,6 +26,7 @@ with it. Every number below is produced by a committed workflow and can be re-ru
 | **Resolution** — what must an edge actually *be* to be found here? | a **true annualized Sharpe of 1.82** at the 607-symbol universe and the 5.9-year holdout ADR-063 bought, down from 2.13 at 4.3 years. The bar falls as `1/sqrt(T)` in holdout length but only `sqrt(ln N)` in universe size, so history is the lever | `scripts/pool_report.py` (ADR-043/063) |
 | How many discovered strategies clear that bar today? | **0 of 40.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
 | **Does what the search proposes beat a no-edge surrogate?** | **No**, and as of ADR-064 that is a valid comparison rather than a refused one. On the 2,427 experiments whose history matches the null's within 10%, walk-forward **+0.542** and purged-CV **+0.584** sit below a bootstrap null's own **+0.652 / +0.661** (p95 +0.983 / +1.003) | `scripts/pool_report.py` vs `null-calibration.yml` (ADR-051/064) |
+| **How much of that out-of-sample number is drift?** | **Nearly all of it.** Each null's finalist walk-forward median is its own generator's buy-and-hold Sharpe to within ±0.03 — iid-normal 0.397 → **+0.414**, bootstrap:SPY 0.650 → **+0.652** — and the matched pool's 0.546 → **+0.542**. What the search adds over holding the same series across the same windows is **+0.002 to +0.019 on data with no edge, −0.004 on real symbols** | ADR-068, `scripts/pool_report.py` |
 
 The last two rows are the point. The retained per-symbol counters currently preserve 122,000+
 candidate evaluations as the conservative cumulative DSR/MinTRL lower bound (ADR-062/066). The
@@ -46,10 +47,25 @@ fingerprint. On that matched subset the pool's walk-forward median is **+0.542**
 bootstrap null median of **+0.652** (p95 +0.983) and purged-CV **+0.584** against **+0.661**
 (p95 +1.003): **the search does not separate from a no-edge surrogate, and against the bootstrap it
 sits below the null's median.** The pool-wide median would have read +0.567 — the subset is not a
-formality. Those figures are against the 5,400-bar nulls at commit `dbba1ed`; ADR-063's
-re-dispatch replaced them with 7,400-bar nulls the same day, so the report currently reports
-`0 matched` and refuses — correctly — until the daily discovery re-searches the universe at the
-longer window. What changed permanently is the mechanism, not the verdict.
+formality. Those figures are against the 5,400-bar nulls. ADR-063's re-dispatch
+briefly replaced them with 7,400-bar ones and the report went to `0 matched` — correctly, since a
+pool at 5,445 bars is 26% away from a 7,400-bar null. **ADR-065 fixed the cause rather than the
+symptom**: a null artifact is now named for the history it measured (`bootstrap_spy_5400.json`,
+`bootstrap_spy_7400.json`), both lengths sit on disk, and a pool in transition is read against each
+cohort separately. What changed permanently is the mechanism, not the verdict.
+
+**ADR-068 then found where the level of that number comes from, and it is not the search.** The
+walk-forward out-of-sample Sharpe is denominated in the drift of whatever series it was computed on.
+Measured: each null's finalist median equals its own generator's buy-and-hold Sharpe to within ±0.03
+(iid-normal 0.397 → +0.414; bootstrap:SPY, whose source is SPY 1993→2026, 0.650 → +0.652), and the
+matched pool's 0.546 → +0.542. **The −0.11 "gap" above is the gap between SPY's 33-year drift and
+the median pool symbol's over its own window.** Read against what holding each series would have
+earned across the same test blocks, the search adds +0.002 (bootstrap null), +0.017 (iid null) and
+−0.004 (real pool) — indistinguishable from zero on all three, which is what a null must look like
+and, on this pool, what the real thing looks like too. The report now scores buy-and-hold across the
+same walk-forward windows and prints that excess beside the raw row; the real-side figure above is a
+39-symbol sample of the matched cohort, and the row prints `NOT MEASURED` until the pool and the
+null artifacts are regenerated carrying the paired number.
 
 That is a claim about this universe and this catalog jointly, not about the thresholds. The power
 row is what makes it sayable: a gate that detects nothing could not distinguish "no edge here" from
