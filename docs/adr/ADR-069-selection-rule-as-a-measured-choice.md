@@ -71,6 +71,18 @@ Anything else — including "it selects a more sensible-looking strategy" — le
 A selection rule that picks the category a human would have picked, without detecting more planted
 edge, has improved a narrative and nothing else.
 
+### Amendment made during implementation
+
+**The non-default arm is not committed.** Both calibration workflows take a `select_by` input and
+skip their commit step unless it is `observed`. Two reasons, and they are the same reason twice:
+`null_artifact_name` names an artifact by mode and history but not by selection rule, so a
+`walk_forward` run would overwrite the published null with a measurement of a *different procedure*
+— the ADR-065 failure on a new axis; and the dashboard's power panel keys its tables on `edge`, so a
+second `ar1` sweep would render as two identical-looking tables a reader cannot tell apart. The
+non-default arm lives in its run artifact and Slack, and the ADR that decides the switch cites the
+run id. If the rule ever becomes a standing published dimension, name the artifacts for it first —
+ADR-065's argument applies unchanged.
+
 ## Alternatives considered
 
 - **Just switch it.** Rejected: it changes what every future experiment means, invalidates the

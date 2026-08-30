@@ -2,7 +2,7 @@
 
 Usage: PYTHONPATH=. uv run python scripts/null_calibration.py [N_SYMBOLS] [SEED]
            [--bootstrap SYM] [--shard I/N] [--out PATH]
-           [--n-bars N]
+           [--n-bars N] [--select-by observed|walk_forward]
        (default: 100 null symbols, seed 0, iid-normal null, whole run, print only, and the
         hunt's own history length)
 
@@ -39,6 +39,7 @@ from app.research.lab.calibration import (
     iid_normal_null,
 )
 from app.research.lab.history import CALIBRATION_N_BARS, SEARCH_HISTORY_START
+from app.research.lab.search import SelectBy
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
 # ADR-051/063: the null must be judged on the length a real hunt sees. That length is now defined
@@ -58,6 +59,15 @@ def _source_frame(symbol: str) -> pd.DataFrame:
 
 def _flag(name: str) -> str | None:
     return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else None
+
+
+def _select_by() -> SelectBy:
+    """ADR-069: which arm of the selection rule this calibration measures. A typo is refused rather
+    than defaulted — the rule is part of the artifact's identity."""
+    value = _flag("--select-by") or "observed"
+    if value not in ("observed", "walk_forward"):
+        raise SystemExit(f"--select-by must be observed or walk_forward, got {value!r}")
+    return value
 
 
 def _report(result: NullCalibration) -> None:
@@ -92,7 +102,8 @@ def main() -> None:
     bootstrap_symbol = _flag("--bootstrap")
     out = _flag("--out")
     n_bars_flag = _flag("--n-bars")
-    consumed = {shard_spec, bootstrap_symbol, out, n_bars_flag} - {None}
+    select_by = _select_by()
+    consumed = {shard_spec, bootstrap_symbol, out, n_bars_flag, select_by} - {None}
     positional = [a for a in args if a not in consumed]
 
     n_symbols = int(positional[0]) if positional else 100
@@ -114,9 +125,10 @@ def main() -> None:
     strategies = [entry.name for entry in STRATEGY_CATALOG]
     print(
         f"calibrating the gate against {len(indices)} of {n_symbols} null symbols x {n_bars} bars "
-        f"over {len(strategies)} strategies (seed {seed}, shard {shard}/{n_shards})...\n"
+        f"over {len(strategies)} strategies (seed {seed}, shard {shard}/{n_shards}, "
+        f"select_by {select_by})...\n"
     )
-    result = calibrate_gate(frames, strategies, null_mode=mode)
+    result = calibrate_gate(frames, strategies, null_mode=mode, select_by=select_by)
     _report(result)
 
     if out:

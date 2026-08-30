@@ -16,7 +16,7 @@ from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.frontier import sharpe_standard_error
 from app.research.lab.gate import GateConfig
 from app.research.lab.holdout import split_holdout
-from app.research.lab.search import run_search
+from app.research.lab.search import SelectBy, run_search
 from app.research.lab.universe import expected_max_sharpe_under_null
 from app.research.strategies.catalog import CATEGORY_OF
 
@@ -128,6 +128,7 @@ def calibration_search_version(
     config: GateConfig,
     refine: bool = True,
     refine_span: float = 0.25,
+    select_by: SelectBy = "observed",
 ) -> str:
     """Fingerprint the exact catalog-derived hypothesis family calibrated by a run (ADR-044).
 
@@ -157,6 +158,11 @@ def calibration_search_version(
             "refine": refine,
             "refine_span": refine_span if refine else None,
             "refinement_reserve": allocation.refinement_reserve,
+            # ADR-069: present ONLY for a non-default rule. Every experiment and null artifact on
+            # disk was searched under `observed`, and adding a key for it would change their
+            # fingerprint without changing their procedure — which would make ADR-064's matched
+            # comparison refuse the entire pool.
+            **({} if select_by == "observed" else {"select_by": select_by}),
             "strategies": strategies,
         }
     )
@@ -669,6 +675,7 @@ def measure_power(
     n_per_param: int = 3,
     refine: bool = True,
     refine_span: float = 0.25,
+    select_by: SelectBy = "observed",
 ) -> PowerCalibration:
     """Run the unmodified search + gate over frames with a PLANTED edge and count detections.
 
@@ -731,6 +738,7 @@ def measure_power(
                 n_per_param=n_per_param,
                 refine=refine,
                 refine_span=refine_span,
+                select_by=select_by,
                 rationale="ADR-041 power calibration",
             )
             _, sealed = split_holdout(frame, symbol)
@@ -796,6 +804,7 @@ def measure_power(
             config=gate_config,
             refine=refine,
             refine_span=refine_span,
+            select_by=select_by,
         ),
         refine=refine,
         refine_span=refine_span,
@@ -842,6 +851,7 @@ def calibrate_gate(
     refine: bool = True,
     refine_span: float = 0.25,
     null_mode: str = "unspecified",
+    select_by: SelectBy = "observed",
 ) -> NullCalibration:
     """Run the unmodified search + gate over null price frames and report how often it graduates.
 
@@ -869,6 +879,7 @@ def calibrate_gate(
                 n_per_param=n_per_param,
                 refine=refine,
                 refine_span=refine_span,
+                select_by=select_by,
                 rationale="ADR-036 null calibration",
             )
             _, sealed = split_holdout(frame, symbol)
@@ -934,6 +945,7 @@ def calibrate_gate(
             config=gate_config,
             refine=refine,
             refine_span=refine_span,
+            select_by=select_by,
         ),
         refine=refine,
         refine_span=refine_span,

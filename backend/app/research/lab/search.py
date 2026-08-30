@@ -1,3 +1,6 @@
+from collections.abc import Sequence
+from typing import Literal
+
 import pandas as pd
 
 from app.data.fundamentals import (
@@ -64,6 +67,29 @@ def _score_configs(
     return best, sharpes, moments
 
 
+SelectBy = Literal["observed", "walk_forward"]
+
+
+def _select_index(trials: Sequence[Trial], select_by: SelectBy) -> int:
+    """Which family is the finalist (ADR-069).
+
+    Notes:
+        `observed` is the in-sample maximum this project has always used; `walk_forward` ranks the
+        SELECTION PROCEDURE instead of its luckiest draw, using ADR-038's mean OOS Sharpe over the
+        expanding train blocks — computed on the in-sample handle only, so it touches no sealed
+        holdout. A family carrying no walk-forward number falls back to its observed Sharpe rather
+        than ranking as a measured zero (ADR-067).
+    """
+
+    def rank(trial: Trial) -> float:
+        prequential = trial.walk_forward_oos_sharpe
+        if select_by == "walk_forward" and prequential is not None:
+            return prequential
+        return trial.observed_sharpe
+
+    return max(range(len(trials)), key=lambda i: rank(trials[i]))
+
+
 def run_search(
     frame: pd.DataFrame,
     symbol: str,
@@ -77,6 +103,7 @@ def run_search(
     fundamentals: FundamentalSnapshot | None = None,
     fundamental_criteria: FundamentalCriteria | None = None,
     distress_screen: DistressScreen | None = None,
+    select_by: SelectBy = "observed",
     rationale: str = "",
 ) -> Experiment:
     """Run one search: validate each catalog strategy on the in-sample split, pick the best by
@@ -132,7 +159,7 @@ def run_search(
             f">= {_MIN_CONFIGS_FOR_PBO} grid configs"
         )
 
-    best_idx = max(range(len(trials)), key=lambda i: trials[i].observed_sharpe)
+    best_idx = _select_index(trials, select_by)
 
     # Coarse-to-fine (ADR-014): zoom in around the coarse winner. Every refined CONFIG raises the
     # DSR/MinTRL bar, so searching harder self-polices against overfitting (ADR-046).
@@ -186,7 +213,7 @@ def run_search(
         trial.model_copy(update={"deflated_sharpe": dsr, "deflated_sharpe_probability": psr})
         for trial, dsr, psr in zip(trials, repriced, probabilities, strict=True)
     ]
-    best_idx = max(range(len(trials)), key=lambda i: trials[i].observed_sharpe)
+    best_idx = _select_index(trials, select_by)
     best_report = reports[best_idx].model_copy(
         update={"deflated_sharpe": trials[best_idx].deflated_sharpe}
     )
@@ -239,6 +266,7 @@ def run_search(
             config=gate_config,
             refine=refine,
             refine_span=refine_span,
+            select_by=select_by,
         ),
         walk_forward_hold_sharpe=(
             None

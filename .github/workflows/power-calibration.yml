@@ -40,6 +40,12 @@ on:
         description: "Bars of history per planted-edge symbol (blank = the hunt's own length)"
         required: false
         default: ""
+      select_by:
+        description: "Finalist selection rule (ADR-069). A non-default arm is NOT committed."
+        required: false
+        default: "observed"
+        type: choice
+        options: ["observed", "walk_forward"]
 
 permissions:
   contents: write
@@ -74,7 +80,9 @@ jobs:
           fi
           PYTHONPATH=. uv run python scripts/power_calibration.py \
             "${{ github.event.inputs.n_symbols || '50' }}" "${{ github.event.inputs.seed || '0' }}" \
-            --phi "${{ matrix.phi }}" $BARS --out "$OUT" | tee "$GITHUB_WORKSPACE/power_${{ matrix.phi }}.txt"
+            --phi "${{ matrix.phi }}" $BARS \
+            --select-by "${{ github.event.inputs.select_by || 'observed' }}" \
+            --out "$OUT" | tee "$GITHUB_WORKSPACE/power_${{ matrix.phi }}.txt"
       - name: Upload the measurement
         if: ${{ always() && hashFiles(format('power_{0}.json', matrix.phi)) != '' }}
         uses: actions/upload-artifact@v4
@@ -133,7 +141,12 @@ jobs:
         run: |
           jq -Rs '{text: ("*QuantForge gate power sweep*\n```" + . + "```")}' sweep.txt \
             | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+      # ADR-069: only the DEFAULT arm is a published figure. The dashboard's power panel keys its
+      # tables on `edge`, so a second ar1 sweep would render as two identical-looking tables — and
+      # a non-default selection rule is an experiment being measured, not a standing result. The
+      # non-default arm lives in the run artifact and Slack, which is what the deciding ADR cites.
       - name: Commit the sweep (if changed)
+        if: ${{ (github.event.inputs.select_by || 'observed') == 'observed' }}
         run: |
           git add data/power_calibration
           if git diff --cached --quiet; then

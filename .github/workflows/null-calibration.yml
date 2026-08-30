@@ -39,6 +39,12 @@ on:
         description: "Bars of history per null symbol (blank = the hunt's own length)"
         required: false
         default: ""
+      select_by:
+        description: "Finalist selection rule (ADR-069). A non-default arm is NOT committed."
+        required: false
+        default: "observed"
+        type: choice
+        options: ["observed", "walk_forward"]
 
 permissions:
   contents: write
@@ -49,6 +55,7 @@ concurrency:
 
 env:
   N_SHARDS: "8"
+  SELECT_BY: ${{ github.event.inputs.select_by || 'observed' }}
   N_SYMBOLS: ${{ github.event.inputs.n_symbols || '200' }}
   BOOTSTRAP_SYMBOL: ${{ github.event.inputs.bootstrap_symbol || 'SPY' }}
   SEED: ${{ github.event.inputs.seed || '0' }}
@@ -83,7 +90,8 @@ jobs:
             EXTRA="$EXTRA --n-bars $N_BARS"
           fi
           PYTHONPATH=. uv run python scripts/null_calibration.py \
-            "$N_SYMBOLS" "$SEED" --shard "${{ matrix.shard }}/$N_SHARDS" --out "$OUT" $EXTRA
+            "$N_SYMBOLS" "$SEED" --shard "${{ matrix.shard }}/$N_SHARDS" --out "$OUT" \
+            --select-by "$SELECT_BY" $EXTRA
       - name: Upload shard
         if: ${{ always() && hashFiles(format('{0}__{1}.json', matrix.mode, matrix.shard)) != '' }}
         uses: actions/upload-artifact@v4
@@ -136,7 +144,12 @@ jobs:
         run: |
           jq -Rs '{text: ("*QuantForge null-model gate calibration*\n```" + . + "```")}' calibration_out.txt \
             | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
+      # ADR-069: only the DEFAULT arm is a published figure. `null_artifact_name` names an artifact
+      # by mode and history, not by selection rule, so committing a second arm would overwrite the
+      # published one with a measurement of a different procedure — the ADR-065 failure exactly.
+      # The non-default arm lives in the run log and Slack, which is what the deciding ADR cites.
       - name: Commit the calibration (if changed)
+        if: ${{ (github.event.inputs.select_by || 'observed') == 'observed' }}
         run: |
           git add data/null_calibration
           if git diff --cached --quiet; then

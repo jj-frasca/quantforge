@@ -1,7 +1,7 @@
 """Power calibration driver (ADR-041) — the Type-II half of ADR-036.
 
 Usage: PYTHONPATH=. uv run python scripts/power_calibration.py [N_SYMBOLS] [SEED] [--phi P]
-           [--shard I/N] [--out PATH]
+           [--shard I/N] [--out PATH] [--select-by observed|walk_forward]
        (default: 50 symbols, seed 0, phi -0.20, whole run, print only)
 
 Plants an AR(1) edge of known strength, runs the UNMODIFIED search + gate, and reports how often
@@ -24,6 +24,7 @@ from statistics import median
 
 from app.research.lab.calibration import PowerCalibration, autocorrelated_edge, measure_power
 from app.research.lab.history import CALIBRATION_N_BARS
+from app.research.lab.search import SelectBy
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
 # ADR-051/063: the length a real hunt actually sees, shared with the null driver so power and
@@ -33,6 +34,16 @@ from app.research.strategies.catalog import STRATEGY_CATALOG
 
 def _flag(name: str) -> str | None:
     return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else None
+
+
+def _select_by() -> SelectBy:
+    """ADR-069: which arm of the selection rule this sweep measures. Rejected rather than defaulted
+    on a typo — the rule is part of the artifact's identity, so a silent fallback would publish a
+    sweep labelled as the arm it did not run."""
+    value = _flag("--select-by") or "observed"
+    if value not in ("observed", "walk_forward"):
+        raise SystemExit(f"--select-by must be observed or walk_forward, got {value!r}")
+    return value
 
 
 def _report(result: PowerCalibration) -> None:
@@ -91,7 +102,8 @@ def main() -> None:
     out = _flag("--out")
     phi_flag = _flag("--phi")
     n_bars_flag = _flag("--n-bars")
-    consumed = {shard_spec, out, phi_flag, n_bars_flag} - {None}
+    select_by = _select_by()
+    consumed = {shard_spec, out, phi_flag, n_bars_flag, select_by} - {None}
     positional = [a for a in sys.argv[1:] if not a.startswith("--") and a not in consumed]
 
     n_symbols = int(positional[0]) if positional else 50
@@ -106,9 +118,9 @@ def main() -> None:
     print(
         f"measuring power against {len(indices)} of {n_symbols} planted-edge symbols x {n_bars} "
         f"bars over {len(strategies)} strategies (phi {phi:+.3f}, seed {seed}, "
-        f"shard {shard}/{n_shards})...\n"
+        f"shard {shard}/{n_shards}, select_by {select_by})...\n"
     )
-    result = measure_power(frames, strategies, phi=phi)
+    result = measure_power(frames, strategies, phi=phi, select_by=select_by)
     _report(result)
 
     if out:

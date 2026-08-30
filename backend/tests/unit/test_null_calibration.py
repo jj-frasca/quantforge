@@ -1480,3 +1480,32 @@ def test_an_artifact_predating_the_benchmark_carries_no_hold_distribution() -> N
     )
 
     assert artifact.walk_forward_hold_sharpes == []
+
+
+# --- ADR-069: both arms of the selection rule measured by the same code path ---
+
+
+def test_the_null_can_be_calibrated_under_the_walk_forward_rule() -> None:
+    frames = {f"NULL{i}": iid_normal_null(900, seed=i) for i in range(2)}
+
+    default = calibrate_gate(frames, ["sma", "momentum"], n_per_param=2)
+    walk = calibrate_gate(frames, ["sma", "momentum"], n_per_param=2, select_by="walk_forward")
+
+    assert walk.search_config_version != default.search_config_version
+    assert walk.n_symbols == default.n_symbols
+
+
+def test_a_power_sweep_records_which_rule_selected_its_finalists() -> None:
+    frames = {f"AR{i}": autocorrelated_edge(900, phi=-0.3, seed=i) for i in range(2)}
+
+    walk = measure_power(
+        frames, ["sma", "momentum"], phi=-0.3, n_per_param=2, select_by="walk_forward"
+    )
+
+    assert walk.search_config_version == calibration_search_version(
+        ["sma", "momentum"],
+        n_per_param=2,
+        config=GateConfig(),
+        refine=True,
+        select_by="walk_forward",
+    )

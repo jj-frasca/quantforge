@@ -14,10 +14,11 @@ from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.metrics import TRADING_DAYS, return_moments, sharpe_ratio
 from app.research.fundamentals.distress import DistressScreen
-from app.research.lab.experiment import Experiment, InMemoryExperimentStore
+from app.research.lab.calibration import calibration_search_version
+from app.research.lab.experiment import Experiment, InMemoryExperimentStore, Trial
 from app.research.lab.gate import GateConfig
 from app.research.lab.holdout import split_holdout
-from app.research.lab.search import run_search
+from app.research.lab.search import _select_index, run_search
 from app.research.strategies.builder import build_strategy_from_dict
 from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
 from app.validation.deflated_sharpe import probabilistic_sharpe_ratio
@@ -44,6 +45,18 @@ def _snap(growth: float, net_margin: float) -> FundamentalSnapshot:
         revenue=400_000,
         revenue_growth_yoy=growth,
         net_margin=net_margin,
+    )
+
+
+def _bare_trial(name: str, *, observed: float, walk_forward: float | None) -> Trial:
+    return Trial(
+        strategy_name=name,
+        parameters={"fast": 5, "slow": 20},
+        observed_sharpe=observed,
+        deflated_sharpe=0.1,
+        pbo=0.2,
+        parameter_stability_score=0.5,
+        walk_forward_oos_sharpe=walk_forward,
     )
 
 
@@ -453,4 +466,76 @@ def test_an_experiment_written_before_the_benchmark_reads_as_not_measured() -> N
             lifetime_trials=0,
         ).walk_forward_hold_sharpe
         is None
+    )
+
+
+# --- ADR-069: the finalist selection rule is a parameter, and it is fingerprinted ---
+
+
+def test_the_default_rule_picks_the_in_sample_maximum() -> None:
+    exp = run_search(_random_walk_frame(41), "AAPL", ["sma", "momentum", "rsi_mean_reversion"])
+    assert exp.best_strategy_name == max(exp.trials, key=lambda t: t.observed_sharpe).strategy_name
+
+
+def test_the_walk_forward_rule_picks_the_prequential_maximum() -> None:
+    exp = run_search(
+        _random_walk_frame(41),
+        "AAPL",
+        ["sma", "momentum", "rsi_mean_reversion"],
+        select_by="walk_forward",
+    )
+    best = max(exp.trials, key=lambda t: t.walk_forward_oos_sharpe or -math.inf)
+    assert exp.best_strategy_name == best.strategy_name
+
+
+def test_the_two_rules_can_disagree_about_the_finalist() -> None:
+    """Otherwise ADR-069's sweep would be measuring one arm twice."""
+    names = ["sma", "momentum", "rsi_mean_reversion"]
+    disagreements = [
+        run_search(_random_walk_frame(seed), "AAPL", names).best_strategy_name
+        != run_search(
+            _random_walk_frame(seed), "AAPL", names, select_by="walk_forward"
+        ).best_strategy_name
+        for seed in (41, 42, 43)
+    ]
+    assert any(disagreements)
+
+
+def test_a_family_with_no_walk_forward_number_falls_back_to_its_observed_sharpe() -> None:
+    """ADR-067: not measured must not rank as measured zero."""
+    unmeasured = _bare_trial("sma", observed=2.0, walk_forward=None)
+    measured = _bare_trial("momentum", observed=0.1, walk_forward=0.5)
+
+    assert _select_index([unmeasured, measured], "walk_forward") == 0
+    assert _select_index([measured, unmeasured], "walk_forward") == 1
+
+
+def test_the_default_rule_leaves_the_search_fingerprint_untouched() -> None:
+    """Every experiment and null artifact on disk carries the default's fingerprint; changing it
+    would make ADR-064's matched comparison refuse the whole pool."""
+    config = GateConfig()
+    assert calibration_search_version(
+        ["sma", "momentum"], n_per_param=2, config=config
+    ) == calibration_search_version(
+        ["sma", "momentum"], n_per_param=2, config=config, select_by="observed"
+    )
+
+
+def test_a_different_selection_rule_is_a_different_procedure() -> None:
+    config = GateConfig()
+    assert calibration_search_version(
+        ["sma", "momentum"], n_per_param=2, config=config
+    ) != calibration_search_version(
+        ["sma", "momentum"], n_per_param=2, config=config, select_by="walk_forward"
+    )
+
+
+def test_an_experiment_records_the_rule_that_selected_it() -> None:
+    exp = run_search(_random_walk_frame(44), "AAPL", ["sma", "momentum"], select_by="walk_forward")
+    assert exp.search_config_version == calibration_search_version(
+        ["sma", "momentum"],
+        n_per_param=3,
+        config=exp.gate_config,
+        refine=False,
+        select_by="walk_forward",
     )
