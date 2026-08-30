@@ -105,6 +105,42 @@ report the real-vs-null comparison on the excess as well as on the raw statistic
   covers the walk-forward statistic only, because purged-CV's folds are not a prefix-ordered
   benchmark window; extending it should be argued on its own terms.
 
+## Measured (run 33287465013, committed `a61beb0`)
+
+The null side is no longer an estimate. Both 7,400-bar nulls were re-dispatched hours after this
+ADR was accepted, carrying the paired benchmark, 200 symbols per mode, 0 false graduates, all 16
+shards green. The excess below is the **median of the per-symbol differences**, not the difference
+of the medians:
+
+| null (7,400 bars) | finalist OOS median | its own hold median | **paired excess** (median / mean) | excess p95 | corr(OOS, hold) | share beating hold |
+|---|---|---|---|---|---|---|
+| `bootstrap:SPY` | +0.622 | +0.652 | **−0.006** / −0.028 | +0.096 | **0.884** | 18.5% |
+| `iid_normal` | +0.416 | +0.394 | **+0.000** / +0.012 | +0.325 | 0.652 | 36.0% |
+
+Three things this settles that the estimate could only suggest:
+
+1. **The paired excess is zero.** Not "small" — the median is −0.006 and 0.000 on 200 symbols each.
+   The whole level of the OOS diagnostic under a null is the drift of the generated series.
+2. **The finalist usually LOSES to holding.** On structure-free data the searched finalist beats
+   buy-and-hold on the same windows 18.5% (bootstrap) and 36.0% (iid) of the time. It pays turnover
+   costs for a signal that is not there, which is what should happen and had never been measured.
+3. **The excess is a far tighter instrument.** The null band collapses: bootstrap p95 falls from
+   **+0.968 raw to +0.096 excess**, a factor of ten. Under ADR-064's verdict rule a real pool must
+   clear the null's p95, so the drift-controlled comparison is not merely unconfounded — it is an
+   order of magnitude more sensitive. The raw comparison could only ever have detected an edge
+   larger than the spread of market drift; this one cannot be satisfied by drift at all.
+
+The `corr(OOS, hold) = 0.884` on the bootstrap null is the confound stated as one number: on data
+with no exploitable structure by construction, 88% of the co-movement in the statistic the project
+publishes is the underlying's own drift.
+
+**Still not measured: the real side.** Every experiment in the pool predates
+`walk_forward_hold_sharpe`, and the 5,400-bar nulls the current pool matches predate
+`walk_forward_hold_sharpes`, so `pool_report.py` prints `NOT MEASURED` for the excess row and is
+right to. It resolves as the daily discovery re-searches the universe at ADR-063's 7,400-bar window
+— the same cohort these nulls were measured at. Do not quote a real excess before then; the
+39-symbol sample in §Context is evidence about the confound, not a result.
+
 ## How to reverse
 
 Drop the `benchmark` argument, the three persisted fields and the excess row. The raw comparison,

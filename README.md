@@ -26,7 +26,7 @@ with it. Every number below is produced by a committed workflow and can be re-ru
 | **Resolution** — what must an edge actually *be* to be found here? | a **true annualized Sharpe of 1.82** at the 607-symbol universe and the 5.9-year holdout ADR-063 bought, down from 2.13 at 4.3 years. The bar falls as `1/sqrt(T)` in holdout length but only `sqrt(ln N)` in universe size, so history is the lever | `scripts/pool_report.py` (ADR-043/063) |
 | How many discovered strategies clear that bar today? | **0 of 40.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
 | **Does what the search proposes beat a no-edge surrogate?** | **No**, and as of ADR-064 that is a valid comparison rather than a refused one. On the 2,427 experiments whose history matches the null's within 10%, walk-forward **+0.542** and purged-CV **+0.584** sit below a bootstrap null's own **+0.652 / +0.661** (p95 +0.983 / +1.003) | `scripts/pool_report.py` vs `null-calibration.yml` (ADR-051/064) |
-| **How much of that out-of-sample number is drift?** | **Nearly all of it.** Each null's finalist walk-forward median is its own generator's buy-and-hold Sharpe to within ±0.03 — iid-normal 0.397 → **+0.414**, bootstrap:SPY 0.650 → **+0.652** — and the matched pool's 0.546 → **+0.542**. What the search adds over holding the same series across the same windows is **+0.002 to +0.019 on data with no edge, −0.004 on real symbols** | ADR-068, `scripts/pool_report.py` |
+| **How much of that out-of-sample number is drift?** | **All of it, on a null.** Measured per symbol on 200 nulls each: the finalist's walk-forward Sharpe minus what holding the SAME series across the SAME windows earned is **−0.006** (bootstrap) and **+0.000** (iid-normal), and the finalist beats holding only **18.5% / 36.0%** of the time. `corr(OOS, hold) = 0.884` | ADR-068, `null-calibration.yml` run 33287465013 |
 
 The last two rows are the point. The retained per-symbol counters currently preserve 122,000+
 candidate evaluations as the conservative cumulative DSR/MinTRL lower bound (ADR-062/066). The
@@ -59,13 +59,16 @@ walk-forward out-of-sample Sharpe is denominated in the drift of whatever series
 Measured: each null's finalist median equals its own generator's buy-and-hold Sharpe to within ±0.03
 (iid-normal 0.397 → +0.414; bootstrap:SPY, whose source is SPY 1993→2026, 0.650 → +0.652), and the
 matched pool's 0.546 → +0.542. **The −0.11 "gap" above is the gap between SPY's 33-year drift and
-the median pool symbol's over its own window.** Read against what holding each series would have
-earned across the same test blocks, the search adds +0.002 (bootstrap null), +0.017 (iid null) and
-−0.004 (real pool) — indistinguishable from zero on all three, which is what a null must look like
-and, on this pool, what the real thing looks like too. The report now scores buy-and-hold across the
-same walk-forward windows and prints that excess beside the raw row; the real-side figure above is a
-39-symbol sample of the matched cohort, and the row prints `NOT MEASURED` until the pool and the
-null artifacts are regenerated carrying the paired number.
+the median pool symbol's over its own window.** **The null side is now measured pairwise, not estimated** (run
+33287465013, 200 symbols per mode at 7,400 bars): the median per-symbol excess of the finalist over
+holding the same series across the same windows is **−0.006** against the bootstrap null and
+**+0.000** against the iid-normal one, and the searched finalist beats simply holding only **18.5%**
+and **36.0%** of the time — it pays turnover costs for a signal that is not there, exactly as it
+should. Controlling for drift also makes the comparison **an order of magnitude more sensitive**:
+the bootstrap null's p95 falls from **+0.968 raw to +0.096 in excess terms**, so a real edge no
+longer has to out-run the spread of market drift to be visible. The real side of that row prints
+`NOT MEASURED` until the daily discovery re-searches the universe carrying the paired number; the
+−0.004 above is a 39-symbol sample, quoted as evidence about the confound, not as a result.
 
 That is a claim about this universe and this catalog jointly, not about the thresholds. The power
 row is what makes it sayable: a gate that detects nothing could not distinguish "no edge here" from

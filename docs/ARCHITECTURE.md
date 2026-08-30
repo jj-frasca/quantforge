@@ -318,10 +318,14 @@ searches. `walk_forward_evaluate` now scores buy-and-hold across the SAME test b
 (`mean_oos_hold_sharpe`), `Experiment.walk_forward_hold_sharpe` and
 `NullCalibration.walk_forward_hold_sharpes` persist it, and `compare_with_null` emits a
 `walk-forward excess` row beside each raw row — the raw row stays, because a published verdict is
-not restated on a new statistic in place. Measured excess: **+0.002** (bootstrap null), **+0.017**
-(iid null), **−0.004** (real pool, a 39-symbol sample). The verdict does not move; what moves is
-what the number means. Until the pool is re-searched and the null re-dispatched carrying the paired
-value, the row prints `NOT MEASURED` (ADR-067).
+not restated on a new statistic in place. **Measured pairwise on both nulls** (run 33287465013, 200
+symbols per mode at 7,400 bars): median per-symbol excess **−0.006** (bootstrap) and **+0.000**
+(iid), the finalist beats holding only 18.5% / 36.0% of the time, and `corr(OOS, hold) = 0.884` on
+the bootstrap null. The excess is also a tighter instrument — bootstrap p95 falls from +0.968 raw to
+**+0.096** — so the drift-controlled comparison is roughly an order of magnitude more sensitive than
+the raw one. The verdict does not move; what moves is what the number means. The REAL side of the
+row still prints `NOT MEASURED` (ADR-067) until the daily discovery re-searches the universe at
+ADR-063's window carrying the paired value.
 
 **ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
 error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against

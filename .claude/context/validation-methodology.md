@@ -494,6 +494,24 @@ over — buy-and-hold, computed exactly as `walk_forward._sharpe` computes a str
 | `bootstrap:SPY` null (SPY 1993-01-29→2026-08-28) | 0.650 | +0.652 (5,400) / +0.622 (7,400) | +0.002 / −0.028 |
 | real matched cohort (5,445 bars) | 0.546 (39-symbol sample) | +0.542 | −0.004 |
 
+**Then measured pairwise, per symbol** (run 33287465013 → `a61beb0`, 200 nulls per mode at 7,400
+bars, 0 false graduates, 16/16 shards green). The excess here is the median of the per-symbol
+DIFFERENCES, which is the statistic `compare_with_null` reports — not the difference of medians:
+
+| null (7,400 bars) | OOS median | its own hold median | paired excess (median / mean) | excess p95 | corr(OOS, hold) | beats holding |
+|---|---|---|---|---|---|---|
+| `bootstrap:SPY` | +0.622 | +0.652 | **−0.006** / −0.028 | +0.096 | **0.884** | 18.5% |
+| `iid_normal` | +0.416 | +0.394 | **+0.000** / +0.012 | +0.325 | 0.652 | 36.0% |
+
+Three consequences worth carrying forward:
+1. **The paired excess is zero on a null**, not merely small — so the level of the raw statistic is
+   the generated series' drift and nothing else.
+2. **The searched finalist usually loses to holding** on structure-free data (beats it 18.5% /
+   36.0% of the time): it pays turnover for a signal that is not there, as it should.
+3. **The excess band is ~10× tighter** (bootstrap p95 +0.968 raw → +0.096 excess). Under §7.5's
+   verdict rule that makes the drift-controlled comparison far more sensitive — a real edge no
+   longer has to out-run the spread of market drift to show up.
+
 **Every row lands on its own underlying's buy-and-hold Sharpe to within ±0.03.** Two of them are
 nulls with no exploitable structure by construction, so the level is not evidence of anything — and
 §7.5's −0.11 "gap" between the pool and the bootstrap null is the gap between SPY's 33-year drift
