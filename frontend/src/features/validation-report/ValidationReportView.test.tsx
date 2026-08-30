@@ -42,6 +42,7 @@ test('reports the walk-forward out-of-sample Sharpe when one was computed', () =
           mean_oos_sharpe: 0.34,
           consistency: 0.8,
           efficiency: 0.34,
+          mean_oos_hold_sharpe: null,
         },
       }}
     />,
@@ -79,4 +80,47 @@ test('reports the purged-CV Sharpe, its dispersion, and the embargo', () => {
 test('says the sample could not be purged when purged_cv is null', () => {
   render(<ValidationReportView report={{ ...passingReport, purged_cv: null }} />)
   expect(screen.getByText(/5 folds, not scored/i)).toBeInTheDocument()
+})
+
+// ADR-068: the walk-forward Sharpe is denominated in the drift of the series it was computed on —
+// on a series with no edge at all it lands on that series' own buy-and-hold Sharpe.
+test('reads the walk-forward Sharpe against what holding the same windows earned', () => {
+  render(
+    <ValidationReportView
+      report={{
+        ...passingReport,
+        walk_forward: {
+          n_splits: 5,
+          splits: [],
+          mean_is_sharpe: 1.0,
+          mean_oos_sharpe: 0.34,
+          consistency: 0.8,
+          efficiency: 0.34,
+          mean_oos_hold_sharpe: 0.3,
+        },
+      }}
+    />,
+  )
+  expect(screen.getByTestId('walk-forward-hold')).toHaveTextContent('0.30')
+  expect(screen.getByTestId('walk-forward-hold')).toHaveTextContent(/\+0\.04 over holding/i)
+})
+
+test('says nothing about holding when no benchmark was measured', () => {
+  render(
+    <ValidationReportView
+      report={{
+        ...passingReport,
+        walk_forward: {
+          n_splits: 5,
+          splits: [],
+          mean_is_sharpe: 1.0,
+          mean_oos_sharpe: 0.34,
+          consistency: 0.8,
+          efficiency: 0.34,
+          mean_oos_hold_sharpe: null,
+        },
+      }}
+    />,
+  )
+  expect(screen.queryByTestId('walk-forward-hold')).not.toBeInTheDocument()
 })

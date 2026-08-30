@@ -4,6 +4,8 @@ import { RegimeBreakdownView } from './RegimeBreakdownView'
 
 const asPercent = (value: number): string => `${(value * 100).toFixed(1)}%`
 const asRatio = (value: number): string => value.toFixed(2)
+// ADR-068: an excess is a difference, so it is only legible with its sign.
+const asSigned = (value: number): string => (value >= 0 ? `+${value.toFixed(2)}` : value.toFixed(2))
 // Reuse the IngestResultView's severity styles: good -> info chrome, warning -> warning,
 // bad -> error. Keeps the visual language consistent across the app.
 const verdictClass = (verdict: 'good' | 'warning' | 'bad'): 'info' | 'warning' | 'error' =>
@@ -69,6 +71,16 @@ export function ValidationReportView({ report }: Props) {
                   (positive in {Math.round(report.walk_forward.consistency * report.walk_forward.n_splits)} of{' '}
                   {report.walk_forward.n_splits} windows)
                 </span>
+                {typeof report.walk_forward.mean_oos_hold_sharpe === 'number' && (
+                  <div className="metric-hint" data-testid="walk-forward-hold">
+                    Holding the same windows earned{' '}
+                    {asRatio(report.walk_forward.mean_oos_hold_sharpe)} —{' '}
+                    {asSigned(
+                      report.walk_forward.mean_oos_sharpe - report.walk_forward.mean_oos_hold_sharpe,
+                    )}{' '}
+                    over holding
+                  </div>
+                )}
               </>
             ) : (
               <span className="metric-hint">not measured</span>

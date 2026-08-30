@@ -38,6 +38,10 @@ export const walkForwardSchema = z.object({
   mean_oos_sharpe: z.number(),
   consistency: z.number().min(0).max(1),
   efficiency: z.number().nullable().default(null),
+  // ADR-068: buy-and-hold scored across the SAME test blocks. The OOS Sharpe above is denominated
+  // in the drift of the series it was computed on, so the pair is what makes it readable. Null on
+  // a report computed before the benchmark existed — not measured, never a benchmark of zero.
+  mean_oos_hold_sharpe: z.number().nullable().default(null),
 })
 
 export type WalkForward = z.infer<typeof walkForwardSchema>
