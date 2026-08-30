@@ -215,7 +215,10 @@ def _matched(experiments: Sequence[Experiment], null_bars: int | None) -> list[E
 
 
 def _mismatch(
-    report: "PoolReport", calibration: NullCalibration, matched: Sequence[Experiment]
+    report: "PoolReport",
+    calibration: NullCalibration,
+    matched: Sequence[Experiment],
+    matched_diagnostic_n: int,
 ) -> str:
     """Why this pair cannot be compared, or '' when it can.
 
@@ -239,6 +242,11 @@ def _mismatch(
     elif null_bars is not None and len(matched) < MIN_MATCHED:
         reasons.append(
             f"only {len(matched)} experiments matched {null_bars} bars +/-{pct}% "
+            f"(need {MIN_MATCHED} to measure a median)"
+        )
+    elif matched_diagnostic_n < MIN_MATCHED:
+        reasons.append(
+            f"only {matched_diagnostic_n} matched diagnostics measured "
             f"(need {MIN_MATCHED} to measure a median)"
         )
     return "; ".join(reasons)
@@ -283,12 +291,18 @@ def compare_with_null(
             null_bars = int(np.median(calibration.n_bars)) if calibration.n_bars else None
             matched = _matched(experiments, null_bars)
             matched_bars = [e.n_bars for e in matched if e.n_bars is not None]
-            real = _summarize(_finalists(matched), trial_field) or pool_wide
+            matched_real = _summarize(_finalists(matched), trial_field)
+            real = matched_real or pool_wide
             if real is None:
                 continue
             array = np.asarray(values, dtype=float)
             p95 = float(np.percentile(array, 95))
-            mismatch = _mismatch(report, calibration, matched)
+            mismatch = _mismatch(
+                report,
+                calibration,
+                matched,
+                matched_real.n if matched_real is not None else 0,
+            )
             rows.append(
                 NullComparison(
                     statistic=label,

@@ -374,6 +374,11 @@ the only file for that mode. A rerun at the same length still replaces the same 
 lets ADR-064 compare transition cohorts against both their 5,400- and 7,400-bar nulls from the
 current tree; the API and dashboard expose every retained pair and label its History explicitly.
 
+**A matched null comparison needs 30 measured diagnostics (ADR-067).** History membership alone is
+not an observation: rows whose finalist lacks walk-forward or purged-CV output do not count toward
+that statistic's `MIN_MATCHED` floor. The report keeps history-cohort `matched_n` and diagnostic
+`real_n` visible separately and refuses a pool-wide fallback as formally comparable.
+
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.
 

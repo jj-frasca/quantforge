@@ -685,6 +685,47 @@ def test_a_matched_subset_too_small_to_measure_is_refused() -> None:
     assert all(row.matched_n == 5 for row in rows)
 
 
+def test_a_matched_subset_with_too_few_measured_diagnostics_is_refused() -> None:
+    """The median's sample is `real_n`, not every history-matched experiment (FINDING-009)."""
+    pool = [
+        _exp_with_diagnostics(
+            f"H{i}",
+            walk_forward=0.5 if i < 5 else None,
+            purged_cv=0.5 if i < 5 else None,
+            graduated=False,
+        ).model_copy(update={"search_config_version": "fam-a", "n_bars": 5400})
+        for i in range(40)
+    ]
+    rows = compare_with_null(
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=5400)],
+        pool,
+    )
+
+    assert all(row.comparable is False for row in rows)
+    assert all(row.real_n == 5 for row in rows)
+    assert all("diagnostics" in row.mismatch for row in rows)
+
+
+def test_pool_wide_fallback_cannot_satisfy_the_matched_diagnostic_minimum() -> None:
+    matched_missing = [
+        _exp_with_diagnostics(
+            f"M{i}", walk_forward=None, purged_cv=None, graduated=False
+        ).model_copy(update={"search_config_version": "fam-a", "n_bars": 5400})
+        for i in range(40)
+    ]
+    unmatched_measured = _pool_with_history([(0.9, 7400)] * 40)
+    pool = matched_missing + unmatched_measured
+    rows = compare_with_null(
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1], purged_cv=[0.1], n_bars=5400)],
+        pool,
+    )
+
+    assert all(row.comparable is False for row in rows)
+    assert all("0 matched diagnostics" in row.mismatch for row in rows)
+
+
 def test_experiments_without_a_history_are_not_assumed_to_match() -> None:
     pool = _pool_with_history([(0.5, None)] * 40 + [(0.9, 5400)] * 40)
     rows = compare_with_null(
