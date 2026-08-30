@@ -145,7 +145,7 @@ def test_pool_report_is_empty_when_the_pool_is_absent(tmp_path) -> None:
     assert response.json()["n_experiments"] == 0
 
 
-def _calibration_json(mode: str, n_graduates: int) -> str:
+def _calibration_json(mode: str, n_graduates: int, n_bars: int | None = None) -> str:
     return NullCalibration(
         n_symbols=200,
         n_graduates=n_graduates,
@@ -156,6 +156,7 @@ def _calibration_json(mode: str, n_graduates: int) -> str:
         max_holdout_sharpe=0.85,
         graduates=[],
         holdout_years=[2.4],
+        n_bars=[] if n_bars is None else [n_bars],
         walk_forward_oos_sharpes=[0.1, 0.2, 0.3],
         purged_cv_oos_sharpes=[0.2, 0.3, 0.4],
         errors={},
@@ -178,6 +179,18 @@ def test_null_calibration_endpoint_returns_every_measured_mode(tmp_path) -> None
     assert all(row["false_graduation_rate"] == 0.01 for row in body)
     assert all(row["n_clear_deflation_bar"] == 0 for row in body)
     assert all(row["search_config_version"] == "legacy-unspecified" for row in body)
+
+
+def test_null_calibration_endpoint_retains_histories_for_the_same_mode(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    (tmp_path / "iid_normal_5400.json").write_text(_calibration_json("iid_normal", 2, 5400))
+    (tmp_path / "iid_normal_7400.json").write_text(_calibration_json("iid_normal", 0, 7400))
+    app.dependency_overrides[get_calibration_path] = lambda: tmp_path
+
+    response = TestClient(app).get("/api/v1/null-calibration")
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert [row["n_bars"] for row in response.json()] == [[5400], [7400]]
 
 
 def test_null_calibration_endpoint_is_empty_when_nothing_has_been_measured(tmp_path) -> None:  # type: ignore[no-untyped-def]

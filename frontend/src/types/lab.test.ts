@@ -3,9 +3,28 @@ import {
   graduatesSchema,
   leaderboardSchema,
   paperPortfolioSchema,
+  nullCalibrationSchema,
   type LeaderboardRow,
   type PaperPosition,
 } from './lab'
+
+test('nullCalibrationSchema preserves the measured history identity', () => {
+  const parsed = nullCalibrationSchema.parse({
+    n_symbols: 1,
+    n_graduates: 0,
+    false_graduation_rate: 0,
+    n_clear_deflation_bar: 0,
+    deflation_bar: 1,
+    max_deflated_sharpe: -0.1,
+    max_holdout_sharpe: null,
+    gate_config_version: 'gate',
+    search_config_version: 'search',
+    null_mode: 'iid_normal',
+    n_bars: [5400],
+  })
+
+  expect(parsed.n_bars).toEqual([5400])
+})
 
 test('graduatesSchema parses a graduate row incl. undervaluation + deflation verdict', () => {
   const raw = [

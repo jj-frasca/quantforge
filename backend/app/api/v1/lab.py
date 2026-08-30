@@ -62,8 +62,8 @@ def get_power_calibration_path() -> Path:
 
 
 # Sync + read-only: the measured Type-I error of the WHOLE gate (ADR-036/037), written by the
-# null-calibration workflow. Returns one row per null mode, or [] when none has been measured —
-# an empty list is honest, and a 500 here would take the rest of the dashboard down with it.
+# null-calibration workflow. Returns one row per measured (null mode, history) pair, or [] when none
+# has been measured — an empty list is honest, and a 500 here would take the dashboard down with it.
 @router.get("/null-calibration", response_model=list[NullCalibration])
 def null_calibration(
     calibration_path: Annotated[Path, Depends(get_calibration_path)],

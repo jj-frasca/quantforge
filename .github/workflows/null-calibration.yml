@@ -126,7 +126,7 @@ jobs:
             fi
             mv "$GITHUB_WORKSPACE/shards/${mode}__"*.json "$dir/"
             PYTHONPATH=. uv run python scripts/consolidate_null_calibration.py \
-              "$dir" "$GITHUB_WORKSPACE/data/null_calibration/${mode}.json" \
+              "$dir" "$GITHUB_WORKSPACE/data/null_calibration" \
               | tee -a "$GITHUB_WORKSPACE/calibration_out.txt"
           done
       - name: Slack the measured Type-I error

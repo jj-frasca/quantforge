@@ -1,16 +1,50 @@
-"""Merge sharded null-calibration runs into one measurement (ADR-037).
+"""Merge sharded null-calibration runs into one history-addressed measurement (ADR-037/065).
 
-Usage: PYTHONPATH=. uv run python scripts/consolidate_null_calibration.py SHARD_DIR [OUT_JSON]
+Usage: PYTHONPATH=. uv run python scripts/consolidate_null_calibration.py SHARD_DIR [OUT_DIR]
 
 Reads every *.json shard in SHARD_DIR, merges them at the COMBINED symbol count — which re-judges
 each false graduate against the ADR-018 bar the full run implies, not its own shard's smaller bar —
-and prints the headline. This script is the sole writer of data/null_calibration.json (ADR-030).
+and prints the headline. This script is the sole writer of data/null_calibration/ (ADR-030).
 """
 
+import re
 import sys
 from pathlib import Path
+from statistics import median
 
 from app.research.lab.calibration import NullCalibration, merge_calibrations
+
+
+def _mode_slug(null_mode: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", null_mode.lower()).strip("_")
+
+
+def _artifact_path(out_dir: Path, result: NullCalibration) -> Path:
+    """Address one empirical null by both its process and measured history (ADR-065)."""
+    if not result.n_bars:
+        raise ValueError("cannot name a null artifact without n_bars")
+    return out_dir / f"{_mode_slug(result.null_mode)}_{int(median(result.n_bars))}.json"
+
+
+def _migrate_legacy_artifacts(out_dir: Path) -> None:
+    """Preserve the one-file-per-mode artifacts under their recorded history identity.
+
+    The cloud workflow remains the sole writer. This migration runs there immediately before a new
+    measurement is written, so the prior artifact becomes a sibling rather than being overwritten.
+    """
+    for legacy_name in ("iid_normal.json", "bootstrap.json"):
+        source = out_dir / legacy_name
+        if not source.exists():
+            continue
+        result = NullCalibration.model_validate_json(source.read_text())
+        target = _artifact_path(out_dir, result)
+        if target.exists():
+            existing = NullCalibration.model_validate_json(target.read_text())
+            if existing != result:
+                raise ValueError(f"refusing to overwrite distinct null artifact: {target}")
+            source.unlink()
+        else:
+            source.replace(target)
 
 
 def _print_null_distributions(result: NullCalibration) -> None:
@@ -43,7 +77,7 @@ def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
     shard_dir = Path(sys.argv[1])
-    out = Path(sys.argv[2]) if len(sys.argv) > 2 else None
+    out_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else None
 
     paths = sorted(shard_dir.glob("*.json"))
     if not paths:
@@ -72,8 +106,10 @@ def main() -> None:
         print(f"unsearchable        : {len(merged.errors)} symbol(s)")
     _print_null_distributions(merged)
 
-    if out:
-        out.parent.mkdir(parents=True, exist_ok=True)
+    if out_dir:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        _migrate_legacy_artifacts(out_dir)
+        out = _artifact_path(out_dir, merged)
         out.write_text(merged.model_dump_json(indent=2) + "\n")
         print(f"\nwrote {out}")
 

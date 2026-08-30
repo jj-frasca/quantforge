@@ -2,6 +2,14 @@ import type { NullCalibration } from '../../types/lab'
 
 const asPercent = (value: number): string => `${(value * 100).toFixed(2)}%`
 
+const historyBars = (calibration: NullCalibration): number | null => {
+  if (calibration.n_bars.length === 0) {
+    return null
+  }
+  const values = [...calibration.n_bars].sort((a, b) => a - b)
+  return values[Math.floor(values.length / 2)]
+}
+
 // ADR-036/037. Every other number on this page describes how the gate judged real symbols. This one
 // describes how often the same gate graduates something on data with NO EDGE by construction —
 // the only number here that bounds how much the rest can be trusted.
@@ -21,6 +29,7 @@ export function GateCalibrationPanel({ calibrations }: { calibrations: NullCalib
         <thead>
           <tr>
             <th scope="col">Null model</th>
+            <th scope="col">History</th>
             <th scope="col">Symbols</th>
             <th scope="col">False graduates</th>
             <th scope="col">Type-I error</th>
@@ -29,20 +38,24 @@ export function GateCalibrationPanel({ calibrations }: { calibrations: NullCalib
           </tr>
         </thead>
         <tbody>
-          {calibrations.map((c) => (
-            <tr key={c.null_mode}>
-              <td>{c.null_mode}</td>
-              <td>{c.n_symbols.toLocaleString('en-US')}</td>
-              <td>{c.n_graduates}</td>
-              <td>{asPercent(c.false_graduation_rate)}</td>
-              <td>{c.n_clear_deflation_bar}</td>
-              <td title={c.search_config_version}>
-                {c.search_config_version === 'legacy-unspecified'
-                  ? 'legacy'
-                  : c.search_config_version.slice(0, 8)}
-              </td>
-            </tr>
-          ))}
+          {calibrations.map((c) => {
+            const history = historyBars(c)
+            return (
+              <tr key={`${c.null_mode}-${history ?? 'legacy'}`}>
+                <td>{c.null_mode}</td>
+                <td>{history === null ? 'legacy' : history.toLocaleString('en-US')}</td>
+                <td>{c.n_symbols.toLocaleString('en-US')}</td>
+                <td>{c.n_graduates}</td>
+                <td>{asPercent(c.false_graduation_rate)}</td>
+                <td>{c.n_clear_deflation_bar}</td>
+                <td title={c.search_config_version}>
+                  {c.search_config_version === 'legacy-unspecified'
+                    ? 'legacy'
+                    : c.search_config_version.slice(0, 8)}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
       <p data-testid="dsr-caveat">

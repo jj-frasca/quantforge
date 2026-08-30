@@ -14,6 +14,7 @@ const calibration = (overrides: Partial<NullCalibration> = {}): NullCalibration 
   max_deflated_sharpe: 0.92,
   max_holdout_sharpe: 0.85,
   holdout_years: [2.4],
+  n_bars: [5400],
   walk_forward_oos_sharpes: [],
   purged_cv_oos_sharpes: [],
   gate_config_version: 'v1',
@@ -32,6 +33,18 @@ test('states the measured false-graduation rate for each null mode', () => {
   expect(screen.getByText('bootstrap:SPY')).toBeInTheDocument()
   expect(screen.getAllByText('1.00%')).toHaveLength(2)
   expect(screen.getAllByText('abcdef01')).toHaveLength(2)
+  expect(screen.getByRole('columnheader', { name: 'History' })).toBeInTheDocument()
+  expect(screen.getAllByText('5,400')).toHaveLength(2)
+})
+
+test('keeps separate rows for the same null measured at different histories', () => {
+  render(
+    <GateCalibrationPanel
+      calibrations={[calibration(), calibration({ n_bars: [7400] })]}
+    />,
+  )
+  expect(screen.getByText('5,400')).toBeInTheDocument()
+  expect(screen.getByText('7,400')).toBeInTheDocument()
 })
 
 test('says plainly that a positive deflated Sharpe is not sufficient on its own', () => {

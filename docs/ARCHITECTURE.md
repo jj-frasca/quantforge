@@ -368,6 +368,12 @@ hunt's own ~5400 bars, `n_bars` is recorded on both artifact types, and a sweep 
 cells measured at different lengths. Any change to the estimator, the catalog, or the grids
 invalidates Type-I and both power results together — re-dispatch all three, at the same `n_bars`.
 
+**Null evidence is retained by history length (ADR-065).** The null workflow writes one artifact
+per `(null mode, median n_bars)` identity, such as `bootstrap_spy_7400.json`, rather than replacing
+the only file for that mode. A rerun at the same length still replaces the same measurement. This
+lets ADR-064 compare transition cohorts against both their 5,400- and 7,400-bar nulls from the
+current tree; the API and dashboard expose every retained pair and label its History explicitly.
+
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.
 

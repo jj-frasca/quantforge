@@ -197,6 +197,7 @@ export const nullCalibrationSchema = z.object({
   max_deflated_sharpe: z.number(),
   max_holdout_sharpe: z.number().nullable(),
   holdout_years: z.array(z.number()).default([]),
+  n_bars: z.array(z.number().int()).default([]),
   walk_forward_oos_sharpes: z.array(z.number()).default([]),
   purged_cv_oos_sharpes: z.array(z.number()).default([]),
   gate_config_version: z.string(),
