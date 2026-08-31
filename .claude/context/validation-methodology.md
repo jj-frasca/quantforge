@@ -605,9 +605,11 @@ distinguishable from what the same search contributes on data with no edge by co
 is distinguishable in the NEGATIVE direction.** Three qualifications are part of the sentence:
 - **The interval is a LOWER BOUND on its own width.** Symbol clustering removes within-symbol
   repeats and symbol-level heterogeneity, not the cross-sectional correlation of one shared calendar
-  window. **The fix is a correlated-panel null** — generate the bootstrap null with cross-sectional
-  dependence rather than as 200 independent series. That changes what `null_calibration.py`
-  generates, so it is its own ADR and it is the obvious next piece of methodology here.
+  window. **FINDING-012:** one correlated 200-symbol null panel is not enough—it gives one draw of
+  the panel median, and feeding its symbols to the existing elementwise bootstrap erases their
+  dependence again. The fix needs independent panel-level null replicates (or another pre-specified
+  dependence-aware instrument), preserved as panel units in the artifact and comparison. That
+  changes ADR-037's sharding as well as what `null_calibration.py` generates.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

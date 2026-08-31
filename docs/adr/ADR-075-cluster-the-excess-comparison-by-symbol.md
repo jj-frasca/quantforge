@@ -69,9 +69,12 @@ correlation — 2008 and 2020 happened to all of them at once, and a strategy fa
 across the market in one regime fails on every symbol together. The interval this ADR produces is
 therefore a **lower bound on the true width**, and must be quoted that way.
 
-Removing that confound needs a null that has the same dependence structure: a bootstrap null drawn
-as a **correlated panel** rather than 200 independent series. That is a real piece of work and it
-belongs in its own ADR — it changes what `null_calibration.py` generates, not how a row is read.
+Removing that confound needs a null that has the same dependence structure. FINDING-012 sharpens the
+requirement: one **correlated panel** is not a sampling distribution for the panel median, and
+resampling its symbols independently would erase the dependence again. The future ADR must specify
+independent panel-level replicates (or another dependence-aware instrument), preserve their identity,
+and replace ADR-037's independent-symbol sharding. That changes both what `null_calibration.py`
+generates and how the row is read.
 
 ## Alternatives considered
 
@@ -96,7 +99,8 @@ belongs in its own ADR — it changes what `null_calibration.py` generates, not 
   still does not cover.
 - Two intervals now appear on one row. The panel and the CLI must label which question each answers,
   or the row becomes less honest than the one it replaced.
-- A correlated-panel null becomes the obvious next piece of methodology, with a named reason.
+- A replicated correlated-panel null (or another pre-specified dependence-aware panel instrument)
+  becomes the obvious next piece of methodology, with a named reason (FINDING-012).
 
 ## Reversal
 
@@ -122,8 +126,9 @@ nothing.
 Three qualifications travel with that sentence and must not be dropped from it:
 
 1. **The interval is a lower bound on its own width.** The 66 symbols share one calendar window, so
-   cross-sectional correlation is not resampled away. A correlated-panel null is the fix and it is
-   not this ADR.
+   cross-sectional correlation is not resampled away. FINDING-012 records that the fix needs
+   independent panel-level null replicates or an equivalent dependence-aware instrument; one
+   correlated 200-symbol panel followed by symbol-level resampling would repeat the error.
 2. **The single-draw verdict is unchanged and still says `does not separate`.** −0.125 is inside
    both nulls' p5. The two statements are not in conflict: one asks whether a single symbol could
    look like this (it easily could), the other whether the pool's centre differs from the null's

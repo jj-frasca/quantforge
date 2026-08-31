@@ -354,10 +354,11 @@ does not separate from a no-edge surrogate" but **"it separates in the wrong dir
 subtracts ~0.12 Sharpe more on real symbols than on data built to contain nothing. Reported BESIDE
 the single-draw verdict, never in place of it (ADR-068's rule). Three qualifications are printed
 with it and must never be dropped: the interval is a **lower bound on its own width** because the
-symbols share one calendar window — the fix is a **correlated-panel null**, which changes what
-`null_calibration.py` generates and needs its own ADR; the single-draw verdict is unchanged; and
-ADR-075 discloses that the point estimate was known before the scheme was fixed, so the
-pre-registration covers the procedure, not the answer.
+symbols share one calendar window — FINDING-012 says the repair needs **independent correlated-panel
+null replicates** (one correlated panel followed by symbol-level resampling repeats the independence
+error) and therefore changes both generation and ADR-037's sharding; the single-draw verdict is
+unchanged; and ADR-075 discloses that the point estimate was known before the scheme was fixed, so
+the pre-registration covers the procedure, not the answer.
 
 **ADR-074: ADR-063's second clause was unanswerable as phrased, and is now read paired within
 symbol.** A holdout Sharpe lives on a graduate and the live family has produced one in 3,029
