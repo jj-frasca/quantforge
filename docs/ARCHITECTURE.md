@@ -342,9 +342,22 @@ edge by construction.** ADR-072 made the band two-sided for that row only — `n
 `real_below_null_p5`, the latter False *by construction* on the raw rows, whose lower tail is a
 drift difference rather than a result — so the report can express a real median under the null
 instead of printing the same sentence it would for one just above. The verdict is unchanged:
-−0.125 sits inside both nulls' p5 (−0.233 / −0.251). The mismatch between a median of 77 and a band
-over individual draws is recorded in ADR-072 as an open question with its arithmetic, to be
-rescaled by a symbol-clustered criterion pre-stated in its own ADR — never after seeing the number.
+−0.125 sits inside both nulls' p5 (−0.233 / −0.251).
+
+**ADR-075 fixed the comparison and the answer flipped.** That band is over INDIVIDUAL null draws —
+it answers "could one symbol look like this", and one easily could. The row is asked whether the
+pool's CENTRE differs from the null's, which needs an interval on the difference of medians with the
+real side **clustered by symbol** (77 excesses from 66 symbols are not independent draws). Measured:
+**−0.119 [−0.215, −0.061]** vs `bootstrap:SPY` and **−0.125 [−0.218, −0.063]** vs `iid_normal` over
+66 clusters — **both exclude zero**. The project's central claim is therefore no longer "the search
+does not separate from a no-edge surrogate" but **"it separates in the wrong direction"**: it
+subtracts ~0.12 Sharpe more on real symbols than on data built to contain nothing. Reported BESIDE
+the single-draw verdict, never in place of it (ADR-068's rule). Three qualifications are printed
+with it and must never be dropped: the interval is a **lower bound on its own width** because the
+symbols share one calendar window — the fix is a **correlated-panel null**, which changes what
+`null_calibration.py` generates and needs its own ADR; the single-draw verdict is unchanged; and
+ADR-075 discloses that the point estimate was known before the scheme was fixed, so the
+pre-registration covers the procedure, not the answer.
 
 **ADR-074: ADR-063's second clause was unanswerable as phrased, and is now read paired within
 symbol.** A holdout Sharpe lives on a graduate and the live family has produced one in 3,029

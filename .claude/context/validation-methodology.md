@@ -576,14 +576,35 @@ a real median under a null says the median pool symbol drifted less than SPY. **
 flip on today's numbers** — −0.125 is inside both nulls' p5 — and that is reported rather than
 worked around.
 
-**The open question, recorded and deliberately not acted on.** The row compares a median of 77
-against a band over individual null draws. The sampling SE of a median of 77 draws from the
-bootstrap null's excess is ≈1.253 × 0.112 / √77 ≈ 0.016, which would put −0.125 about 7 SE below the
-null median; a correctly scaled test would call it a separation. It is not rescaled here because
-(a) ADR-070's meta-lesson forbids re-scaling a criterion after seeing the number it would act on,
-and (b) the 77 excesses are not independent — 66 symbols, one overlapping calendar window,
-`fifty_two_week_high` finalist in 30 of 77 — so the honest instrument is a symbol-clustered or block
-bootstrap, pre-stated in its own ADR and applied once.
+**The open question ADR-072 recorded, and how ADR-075 closed it.** The row compares a median of 77
+against a band over individual null draws — the right yardstick for "could ONE SYMBOL look like
+this" (one easily could), the wrong one for "is the pool's CENTRE different from the null's", which
+is what the row is asked. The naive rescaling (SE of a median of 77 ≈ 0.016 → about 7 SE) assumes 77
+independent draws, and they are 66 symbols over one calendar window with `fifty_two_week_high`
+winning 30 of 77.
+
+**ADR-075: `_clustered_difference_ci` reports a 95% interval for `median(real) − median(null)`,
+resampling the real side BY SYMBOL** (all of a symbol's experiments enter together) and the null
+side by draw (each null symbol is an independently generated series), B = 20,000, seed 7 — the same
+constants §7.8's bootstrap uses.
+
+| null (7,400 bars) | difference | 95% CI, symbol-clustered (66 clusters) |
+|---|---|---|
+| `bootstrap:SPY` | **−0.119** | **[−0.215, −0.061]** — excludes zero |
+| `iid_normal` | **−0.125** | **[−0.218, −0.063]** — excludes zero |
+
+**The project's central claim becomes: the search's drift-controlled contribution on real symbols is
+distinguishable from what the same search contributes on data with no edge by construction, and it
+is distinguishable in the NEGATIVE direction.** Three qualifications are part of the sentence:
+- **The interval is a LOWER BOUND on its own width.** Symbol clustering removes within-symbol
+  repeats and symbol-level heterogeneity, not the cross-sectional correlation of one shared calendar
+  window. **The fix is a correlated-panel null** — generate the bootstrap null with cross-sectional
+  dependence rather than as 200 independent series. That changes what `null_calibration.py`
+  generates, so it is its own ADR and it is the obvious next piece of methodology here.
+- **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
+  published verdict is not restated on a new statistic in place. They size different questions.
+- **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the
+  scheme was fixed, so the pre-registration covers the procedure, not the answer.
 
 ## §7.8 Reading a change in the SEARCH WINDOW (ADR-074)
 

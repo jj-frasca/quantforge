@@ -27,12 +27,15 @@ with it. Every number below is produced by a committed workflow and can be re-ru
 | How many discovered strategies clear that bar today? | **0 of 41.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
 | **Does what the search proposes beat a no-edge surrogate?** | **No**, and as of ADR-064 that is a valid comparison rather than a refused one. On the 2,427 experiments whose history matches the null's within 10%, walk-forward **+0.542** and purged-CV **+0.584** sit below a bootstrap null's own **+0.652 / +0.661** (p95 +0.983 / +1.003) | `scripts/pool_report.py` vs `null-calibration.yml` (ADR-051/064) |
 | **How much of that out-of-sample number is drift?** | **All of it, on a null.** Measured per symbol on 200 nulls each: the finalist's walk-forward Sharpe minus what holding the SAME series across the SAME windows earned is **−0.006** (bootstrap) and **+0.000** (iid-normal), and the finalist beats holding only **18.5% / 36.0%** of the time. `corr(OOS, hold) = 0.884` | ADR-068, `null-calibration.yml` run 33287465013 |
-| **What does the search ADD, with drift removed from both sides?** | **Less than nothing, on real data.** The finalist's walk-forward Sharpe minus what holding the same series across the same windows earned: **−0.125** on 77 matched real experiments (66 symbols, 7,345 bars), negative in **75.3%** of them, against **−0.006 / +0.000** on the two nulls. It sits at the bootstrap null's **11.5th** percentile — inside the null's own p5 of −0.233, so the row still reads *does not separate* | `scripts/pool_report.py` (ADR-068/072) |
+| **What does the search ADD, with drift removed from both sides?** | **Less than nothing, on real data.** The finalist's walk-forward Sharpe minus what holding the same series across the same windows earned: **−0.125** on 77 matched real experiments (66 symbols, 7,345 bars), negative in **75.3%** of them, against **−0.006 / +0.000** on the two nulls | `scripts/pool_report.py` (ADR-068/072) |
+| **Is that difference distinguishable from the null's?** | **Yes — and in the wrong direction.** Difference of medians **−0.119 [−0.215, −0.061]** against the bootstrap null and **−0.125 [−0.218, −0.063]** against the iid one, resampled with the real side clustered by symbol (66 clusters). Both exclude zero. The interval is a **lower bound on its own width** — the symbols share one calendar window, so cross-sectional correlation is not resampled away | `scripts/pool_report.py` (ADR-075) |
 | **Did lengthening the searched history make selection worse?** | **Not decidably.** Paired within symbol across ADR-063's window change, the finalist's out-of-sample Sharpe moved **−0.038 [−0.060, −0.009]** on 368 symbols while in-sample moved **+0.012 [−0.005, +0.034]**, and the search picks a *different strategy* on **257 of 368**. Re-searching 45 of them at the old window to remove the drift confound gives **−0.074 [−0.157, +0.030]** — the interval includes zero, so ADR-074's pre-stated criterion does not fire and the window stays | `scripts/window_experiment.py` (ADR-063/074) |
 
-The last four rows are the point, and the third of them is the sharpest thing this project has
-measured: with drift removed from both sides, the search subtracts more on real symbols than it does
-on data built to contain nothing. The retained per-symbol counters currently preserve 237,000+
+The last five rows are the point, and the third and fourth are the sharpest thing this project has
+measured. With drift removed from both sides, **the search subtracts about 0.12 Sharpe more on real
+symbols than on data built to contain nothing — and that difference is distinguishable from zero
+under a symbol-clustered bootstrap.** The pipeline does not merely fail to find an edge; measured
+against its own no-edge surrogate, the selection step is actively costly. The retained per-symbol counters currently preserve 237,000+
 candidate evaluations as the conservative cumulative DSR/MinTRL lower bound (ADR-062/066). The
 pipeline has **graduated nothing that is distinguishable from best-of-N selection luck** — and when
 the strategies it *proposes* are compared against a surrogate with no serial structure at all, they
@@ -77,13 +80,24 @@ the 77 experiments (66 symbols, 7,345 bars) that now carry the paired benchmark 
 7,400-bar nulls, the median excess is **−0.125**, negative in **75.3%** of them, against **−0.006**
 and **+0.000** on the two nulls. **What the search adds out-of-sample over holding the same series
 across the same windows is less than what it adds on data with no edge by construction.** The
-verdict rule does not change on it: −0.125 sits at the bootstrap null's 11.5th percentile, inside
-its p5 of −0.233, so the row reads *does not separate* — and ADR-072 made that band two-sided so a
-reader can see which side of it the number is on. The obvious objection, that a median of 77 against
-a band over individual draws is a mismatched comparison, is recorded in ADR-072 as an open question
-with its arithmetic rather than acted on: the 77 excesses come from one overlapping calendar window
-and are not independent draws, so the honest rescaling is a symbol-clustered one, pre-stated in its
-own ADR before it is applied.
+single-draw verdict rule does not change on it: −0.125 sits at the bootstrap null's 11.5th
+percentile, inside its p5 of −0.233, so that row reads *does not separate* — and ADR-072 made the
+band two-sided so a reader can see which side of it the number is on.
+
+**ADR-075 then fixed the comparison itself, and the answer flipped.** The band above is over
+*individual null draws*: it answers "could one symbol look like this", and one easily could. The
+question the row is actually asked is whether the pool's *centre* differs from the null's, and that
+needs an interval on the difference of medians — resampled with the real side **clustered by
+symbol**, because the 77 excesses come from 66 symbols and are not independent draws. Measured:
+**−0.119 [−0.215, −0.061]** against the bootstrap null and **−0.125 [−0.218, −0.063]** against the
+iid one, over 66 clusters. **Both exclude zero.** So the honest headline is not "the search does not
+separate from a no-edge surrogate" but **"the search separates from a no-edge surrogate in the wrong
+direction"** — the strongest evidence here that the in-sample argmax fits structure that does not
+persist. Three qualifications ship with that sentence and are printed beside it: the interval is a
+**lower bound on its own width** (the symbols share one calendar window, so cross-sectional
+correlation survives — a correlated-panel null is the fix and is not yet built); the single-draw
+verdict is reported unchanged rather than replaced; and ADR-075 discloses that the point estimate
+was known before the scheme was fixed, so what was pre-registered is the procedure, not the answer.
 
 That is a claim about this universe and this catalog jointly, not about the thresholds. The power
 row is what makes it sayable: a gate that detects nothing could not distinguish "no edge here" from
