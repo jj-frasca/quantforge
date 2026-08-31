@@ -68,6 +68,25 @@ export function NullComparisonPanel({ comparisons }: { comparisons: NullComparis
           ))}
         </tbody>
       </table>
+      {comparisons.map((c) =>
+        c.difference_ci_low === null || c.difference_ci_high === null ? null : (
+          <p
+            data-testid="difference-interval"
+            key={`diff-${c.statistic}-${c.null_mode}-${c.matched_n_bars ?? 'any'}`}
+          >
+            <strong>{c.null_mode}</strong>, difference of medians{' '}
+            {asSharpe(c.real_median - c.null_median)} [{asSharpe(c.difference_ci_low)},{' '}
+            {asSharpe(c.difference_ci_high)}] over {c.difference_n_clusters.toLocaleString('en-US')}{' '}
+            symbol clusters —{' '}
+            <strong>
+              {c.difference_ci_low <= 0 && c.difference_ci_high >= 0 ? 'spans zero' : 'excludes zero'}
+            </strong>
+            . This sizes whether the two <em>central tendencies</em> differ, which is a different
+            question from the verdict above; and it is a <strong>lower bound</strong> on its own
+            width, because the symbols share one calendar window.
+          </p>
+        ),
+      )}
       {!hasExcess && (
         <p data-testid="excess-note">
           Every row above is denominated in the drift of the series it was measured on — on a null

@@ -230,6 +230,13 @@ export const nullComparisonSchema = z.object({
   null_p5: z.number().default(0),
   real_exceeds_null_p95: z.boolean(),
   real_below_null_p5: z.boolean().default(false),
+  // ADR-075: a 95% interval for real_median - null_median with the real side clustered BY SYMBOL.
+  // It sizes whether the two central tendencies differ, not whether one symbol could look like
+  // this, so it is rendered BESIDE the verdict. Null on the raw rows, where it would size a drift
+  // gap. It is a LOWER BOUND on its own width — the symbols share one calendar window.
+  difference_ci_low: z.number().nullable().default(null),
+  difference_ci_high: z.number().nullable().default(null),
+  difference_n_clusters: z.number().int().default(0),
   comparable: z.boolean(),
   mismatch: z.string().default(''),
   matched_n: z.number().int().default(0),

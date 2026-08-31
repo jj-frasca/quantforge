@@ -222,6 +222,19 @@ def main() -> None:
                 f"p5 {row.null_p5:+.3f} p95 {row.null_p95:+.3f} (n={row.null_n}) "
                 f"-- {verdict}"
             )
+            # ADR-075: a different question from the band above — whether the two CENTRAL
+            # TENDENCIES differ, rather than whether one symbol could look like this. Printed
+            # beside the verdict, never instead of it.
+            if row.difference_ci_low is not None and row.difference_ci_high is not None:
+                spans_zero = row.difference_ci_low <= 0.0 <= row.difference_ci_high
+                print(
+                    f"                    difference of medians "
+                    f"{row.real_median - row.null_median:+.3f} "
+                    f"[{row.difference_ci_low:+.3f}, {row.difference_ci_high:+.3f}] "
+                    f"symbol-clustered, {row.difference_n_clusters} clusters -- "
+                    + ("spans zero" if spans_zero else "EXCLUDES ZERO")
+                    + "; a LOWER BOUND on the width (one shared calendar window, ADR-075)"
+                )
         if not any(row.statistic == EXCESS_STATISTIC for row in rows):
             # ADR-068: the raw rows above are denominated in each side's own drift. Saying so is
             # the point of the line — a reader who does not see the excess must know it is missing.

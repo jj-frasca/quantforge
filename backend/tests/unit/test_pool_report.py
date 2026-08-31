@@ -1125,3 +1125,73 @@ def test_the_sample_is_deterministic_and_capped() -> None:
 
 def test_no_candidate_is_an_empty_sample_not_an_error() -> None:
     assert window_experiment_symbols([_windowed("A", n_bars=5450, walk_forward=0.5)], 5) == []
+
+
+# --- ADR-075: the difference of medians, sized by a symbol-clustered bootstrap ---
+
+
+def test_the_excess_row_sizes_the_difference_between_the_two_medians() -> None:
+    pool = _pool_with_hold([(0.1, 0.9)] * 40)
+    null = _null(
+        "iid_normal", walk_forward=[0.5] * 40, purged_cv=[0.5] * 40, n_bars=5400
+    ).model_copy(update={"walk_forward_hold_sharpes": [0.5] * 40})
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.difference_ci_low is not None
+    assert excess.difference_ci_high is not None
+    # Real excess is -0.8 on every experiment, null excess 0.0 on every draw: no dispersion on
+    # either side, so the interval collapses onto the difference itself.
+    assert excess.difference_ci_low == pytest.approx(-0.8)
+    assert excess.difference_ci_high == pytest.approx(-0.8)
+
+
+def test_the_interval_is_clustered_on_symbols_not_experiments() -> None:
+    """ADR-075: all of a resampled symbol's experiments enter together, so a symbol searched twice
+    cannot widen the sample it was drawn from."""
+    repeated = [
+        *_pool_with_hold([(0.1, 0.9)] * 2),  # both rows belong to distinct symbols by default
+    ]
+    pool = [e.model_copy(update={"symbol": "AAA"}) for e in repeated] + _pool_with_hold(
+        [(0.5, 0.5)] * 30
+    )
+    null = _null(
+        "iid_normal", walk_forward=[0.5] * 32, purged_cv=[0.5] * 32, n_bars=5400
+    ).model_copy(update={"walk_forward_hold_sharpes": [0.5] * 32})
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.difference_n_clusters == 31  # 30 singletons + the one repeated symbol
+    assert excess.real_n == 32
+
+
+def test_the_raw_rows_are_never_given_a_difference_interval() -> None:
+    """ADR-068: their level IS each side's own drift, so an interval around that difference sizes a
+    drift gap and would read as a finding about the search."""
+    pool = _pool([0.5, 0.6, 0.7])
+    rows = compare_with_null(
+        summarize_pool(pool, []),
+        [_null("iid_normal", walk_forward=[0.1, 0.2, 0.3], purged_cv=[0.1, 0.2, 0.3])],
+        pool,
+    )
+
+    assert rows
+    assert all(r.difference_ci_low is None for r in rows)
+    assert all(r.difference_n_clusters == 0 for r in rows)
+
+
+def test_an_interval_that_spans_zero_leaves_the_published_verdict_alone() -> None:
+    """ADR-075 decision 4: the single-draw verdict is reported beside the interval, not replaced."""
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.1, 0.2, 0.3]).model_copy(
+        update={"walk_forward_hold_sharpes": [0.4, 0.4, 0.4]}
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.real_exceeds_null_p95 is False
+    assert excess.real_below_null_p5 is False
+    assert excess.difference_ci_low is not None

@@ -13,6 +13,7 @@ from collections import Counter, defaultdict
 from collections.abc import Sequence
 
 import numpy as np
+import numpy.typing as npt
 from pydantic import BaseModel, ConfigDict
 
 from app.research.lab.calibration import NullCalibration
@@ -178,6 +179,13 @@ class NullComparison(BaseModel):
     # statistic is centered the same way on both sides (ADR-068); on a raw row the two sides carry
     # different drifts, so a low real median is a fact about drift, not about the search.
     real_below_null_p5: bool = False
+    # ADR-075: a 95% interval for real_median - null_median, resampled with the real side CLUSTERED
+    # BY SYMBOL. It sizes a different question from the band above — "are the two central tendencies
+    # different", not "could one symbol look like this" — so it is reported BESIDE the verdict and
+    # never in place of it. None on the raw rows, where the difference is a drift gap.
+    difference_ci_low: float | None = None
+    difference_ci_high: float | None = None
+    difference_n_clusters: int = 0
     comparable: bool
     mismatch: str = ""
     # ADR-064: how many experiments the real side was actually computed from, and their median
@@ -334,6 +342,36 @@ def compare_with_null(
 EXCESS_STATISTIC = "walk-forward excess"
 
 
+def _clustered_difference_ci(
+    real_by_symbol: dict[str, list[float]], null_excess: npt.NDArray[np.float64]
+) -> tuple[float, float]:
+    """95% interval for `median(real) - median(null)`, resampling the real side BY SYMBOL (ADR-075).
+
+    Notes:
+        All of a resampled symbol's experiments enter together, so a name the discovery happened to
+        re-search twice cannot inflate the sample it was drawn from. The null side resamples draws,
+        which is its natural unit: each null symbol is an independently generated series.
+
+        It sizes a DIFFERENT question from `null_p5`/`null_p95` — whether the two sides' central
+        tendencies differ, rather than whether one symbol could look like this — so it is reported
+        beside that verdict, never in place of it.
+
+        It does NOT control for cross-sectional correlation: the real symbols share one calendar
+        window, so this interval is a LOWER BOUND on the true width. Removing that needs a null
+        generated as a correlated panel, which is a change to what the calibration generates.
+    """
+    clusters = list(real_by_symbol.values())
+    rng = np.random.default_rng(_BOOTSTRAP_SEED)
+    real_draws = rng.integers(0, len(clusters), size=(_BOOTSTRAP_DRAWS, len(clusters)))
+    null_draws = rng.choice(null_excess, size=(_BOOTSTRAP_DRAWS, len(null_excess)))
+    differences = [
+        float(np.median([v for i in row for v in clusters[i]]) - median)
+        for row, median in zip(real_draws, np.median(null_draws, axis=1), strict=True)
+    ]
+    low, high = np.percentile(differences, [2.5, 97.5])
+    return float(low), float(high)
+
+
 def _excess_rows(
     report: "PoolReport",
     calibrations: Sequence[NullCalibration],
@@ -368,19 +406,23 @@ def _excess_rows(
         null_bars = int(np.median(calibration.n_bars)) if calibration.n_bars else None
         matched = _matched(experiments, null_bars)
         matched_bars = [e.n_bars for e in matched if e.n_bars is not None]
-        real_values = [
-            finalist.walk_forward_oos_sharpe - e.walk_forward_hold_sharpe
-            for e in matched
-            if e.trials
-            and e.walk_forward_hold_sharpe is not None
-            and (finalist := max(e.trials, key=lambda t: t.deflated_sharpe)).walk_forward_oos_sharpe
-            is not None
-        ]
+        real_by_symbol: dict[str, list[float]] = defaultdict(list)
+        for e in matched:
+            if e.trials is None or e.walk_forward_hold_sharpe is None:
+                continue
+            finalist = max(e.trials, key=lambda t: t.deflated_sharpe)
+            if finalist.walk_forward_oos_sharpe is None:
+                continue
+            real_by_symbol[e.symbol].append(
+                finalist.walk_forward_oos_sharpe - e.walk_forward_hold_sharpe
+            )
+        real_values = [v for values in real_by_symbol.values() for v in values]
         if not real_values:
             continue
         real_median = float(np.median(np.asarray(real_values, dtype=float)))
         p95 = float(np.percentile(null_excess, 95))
         p5 = float(np.percentile(null_excess, 5))
+        low, high = _clustered_difference_ci(real_by_symbol, null_excess)
         mismatch = _mismatch(report, calibration, matched, len(real_values))
         rows.append(
             NullComparison(
@@ -394,6 +436,9 @@ def _excess_rows(
                 null_p5=p5,
                 real_exceeds_null_p95=real_median > p95,
                 real_below_null_p5=real_median < p5,
+                difference_ci_low=low,
+                difference_ci_high=high,
+                difference_n_clusters=len(real_by_symbol),
                 comparable=not mismatch,
                 mismatch=mismatch,
                 matched_n=len(matched),

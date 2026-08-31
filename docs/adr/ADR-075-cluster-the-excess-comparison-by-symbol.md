@@ -95,3 +95,38 @@ belongs in its own ADR — it changes what `null_calibration.py` generates, not 
 
 Drop `difference_ci_*` and `difference_n_clusters`. The row returns to comparing a median against a
 band over single draws, which is the state ADR-072 flagged and did not fix.
+
+## Measured (2026-08-31, same session) — both intervals exclude zero
+
+`PYTHONPATH=. uv run python scripts/pool_report.py` from `backend/`, on the same 77 experiments over
+**66 symbol clusters** at 7,345 bars that ADR-072 read:
+
+| null (7,400 bars) | real median | null median | difference | 95% CI, symbol-clustered | reading |
+|---|---|---|---|---|---|
+| `bootstrap:SPY` | −0.125 | −0.006 | **−0.119** | **[−0.215, −0.061]** | excludes zero |
+| `iid_normal` | −0.125 | +0.000 | **−0.125** | **[−0.218, −0.063]** | excludes zero |
+
+**Read as the procedure allows and no further: the drift-controlled contribution of the search on
+real symbols is distinguishable from what the same search contributes on data with no edge by
+construction, and it is distinguishable in the NEGATIVE direction.** The search subtracts about
+0.12 Sharpe more on real data than on structure-free surrogates, where it subtracts approximately
+nothing.
+
+Three qualifications travel with that sentence and must not be dropped from it:
+
+1. **The interval is a lower bound on its own width.** The 66 symbols share one calendar window, so
+   cross-sectional correlation is not resampled away. A correlated-panel null is the fix and it is
+   not this ADR.
+2. **The single-draw verdict is unchanged and still says `does not separate`.** −0.125 is inside
+   both nulls' p5. The two statements are not in conflict: one asks whether a single symbol could
+   look like this (it easily could), the other whether the pool's centre differs from the null's
+   (it does). The report prints both, labelled.
+3. **This was not a blind test.** The disclosure section above stands: the point estimate was known
+   before the scheme was fixed. What the scheme buys is that the interval could not be shopped, and
+   the outcome is the one the ADR said to expect.
+
+The most useful thing it changes: **the honest headline is no longer "the search does not separate
+from a no-edge surrogate" but "the search separates from a no-edge surrogate in the wrong
+direction."** That is a stronger claim about the pipeline's honesty than the neutral one it
+replaces, and it is the sharpest evidence yet that the in-sample argmax fits structure that does not
+persist.

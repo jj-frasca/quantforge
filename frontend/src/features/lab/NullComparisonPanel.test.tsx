@@ -16,6 +16,9 @@ const row = (overrides: Partial<NullComparison> = {}): NullComparison => ({
   null_p5: 0.22,
   real_exceeds_null_p95: false,
   real_below_null_p5: false,
+  difference_ci_low: null,
+  difference_ci_high: null,
+  difference_n_clusters: 0,
   comparable: true,
   mismatch: '',
   matched_n: 2427,
@@ -124,4 +127,52 @@ test('an excess row inside the band still reads as neutral', () => {
 
   expect(screen.getByText(/does not separate/i)).toBeInTheDocument()
   expect(screen.queryByText(/separates below/i)).not.toBeInTheDocument()
+})
+
+// --- ADR-075: the difference of medians, sized by a symbol-clustered bootstrap ---
+
+const excessRow = (overrides: Partial<NullComparison> = {}): NullComparison =>
+  row({
+    statistic: 'walk-forward excess',
+    real_median: -0.125,
+    null_median: -0.006,
+    null_p5: -0.233,
+    null_p95: 0.096,
+    difference_ci_low: -0.215,
+    difference_ci_high: -0.061,
+    difference_n_clusters: 66,
+    ...overrides,
+  })
+
+test('reports the clustered difference beside the verdict, not instead of it', () => {
+  render(<NullComparisonPanel comparisons={[excessRow()]} />)
+
+  expect(screen.getByText(/does not separate/i)).toBeInTheDocument()
+  expect(screen.getByTestId('difference-interval')).toHaveTextContent('-0.119')
+  expect(screen.getByTestId('difference-interval')).toHaveTextContent('[-0.215, -0.061]')
+  expect(screen.getByTestId('difference-interval')).toHaveTextContent(/66 symbol clusters/i)
+})
+
+test('says when the clustered interval excludes zero', () => {
+  render(<NullComparisonPanel comparisons={[excessRow()]} />)
+  expect(screen.getByTestId('difference-interval')).toHaveTextContent(/excludes zero/i)
+})
+
+test('says when the clustered interval spans zero', () => {
+  render(
+    <NullComparisonPanel
+      comparisons={[excessRow({ difference_ci_low: -0.2, difference_ci_high: 0.05 })]}
+    />,
+  )
+  expect(screen.getByTestId('difference-interval')).toHaveTextContent(/spans zero/i)
+})
+
+test('never hides that the interval is a lower bound on its own width', () => {
+  render(<NullComparisonPanel comparisons={[excessRow()]} />)
+  expect(screen.getByTestId('difference-interval')).toHaveTextContent(/lower bound/i)
+})
+
+test('a row with no clustered interval shows none', () => {
+  render(<NullComparisonPanel comparisons={[row()]} />)
+  expect(screen.queryByTestId('difference-interval')).not.toBeInTheDocument()
 })
