@@ -321,3 +321,45 @@ def test_null_comparison_endpoint_is_empty_when_nothing_has_been_measured(tmp_pa
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+# ---- GET /window-comparison (ADR-074: what the longer search window did to the finalist) --------
+
+
+def _window_experiment(symbol: str, *, n_bars: int, walk_forward: float, hold: float) -> Experiment:
+    return _diagnostic_experiment(symbol, walk_forward=walk_forward, hold=hold).model_copy(
+        update={"n_bars": n_bars}
+    )
+
+
+def test_window_comparison_endpoint_pairs_each_symbol_across_the_window_change(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    pool = tmp_path / "research_pool"
+    store = PartitionedExperimentStore(pool)
+    for symbol, short, long_ in (("AAA", 0.6, 0.5), ("BBB", 0.4, 0.3)):
+        store.add(_window_experiment(symbol, n_bars=5400, walk_forward=short, hold=0.5))
+        store.add(_window_experiment(symbol, n_bars=9200, walk_forward=long_, hold=0.5))
+    app.dependency_overrides[get_pool_path] = lambda: pool
+
+    try:
+        response = TestClient(app).get("/api/v1/window-comparison")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["n_symbols"] == 2
+    assert body["oos_delta_median"] == -0.1
+    assert body["excess_n"] == 2
+
+
+def test_window_comparison_endpoint_is_null_when_no_symbol_spans_both_windows(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Same contract as the other lab reads: nothing measured is a null body, never a 500."""
+    app.dependency_overrides[get_pool_path] = lambda: tmp_path / "nope"
+
+    try:
+        response = TestClient(app).get("/api/v1/window-comparison")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() is None

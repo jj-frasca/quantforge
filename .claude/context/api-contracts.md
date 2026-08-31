@@ -313,6 +313,7 @@ parameter today. Reading them together is the fastest way to understand what the
 | `/api/v1/pool-report` | `lab.py` | `PoolReport` | pool + portfolio |
 | `/api/v1/null-calibration` | `lab.py` | `list[NullCalibration]` | `data/null_calibration/` |
 | `/api/v1/null-comparison` | `lab.py` | `list[NullComparison]` | pool + portfolio + `data/null_calibration/` |
+| `/api/v1/window-comparison` | `lab.py` | `WindowComparison \| None` | `data/research_pool/` |
 | `/api/v1/power-calibration` | `lab.py` | `list[PowerSweep]` | `data/power_calibration/` |
 | `/api/v1/graduates` | `graduates.py` | `list[GraduateRow]` | `data/research_pool/` |
 | `/api/v1/cross-sectional` | `cross_sectional.py` | `CrossSectionalView \| None` | `data/cross_sectional_pool.json` |
@@ -341,6 +342,16 @@ parameter today. Reading them together is the fastest way to understand what the
   differenced against what holding ITS OWN series across the SAME test blocks earned; they are
   **absent, not zero**, until both sides carry the benchmark. Never render a row whose `comparable`
   is false as a result — render the `mismatch`. Same `[]`-and-200 contract as `/null-calibration`.
+- `/window-comparison` answers ADR-063's second clause on the statistic the pool can actually carry
+  (ADR-074). It pairs each symbol's finalist across the 6,000-bar window split, so it is a
+  within-symbol difference — the cross-symbol form compares young listings with old ones, since
+  `n_bars` tracks listing age under one search family. **`oos_delta_*` is an explicit SURROGATE**:
+  each side is denominated in its own window's drift (ADR-068), so render it labelled as such and
+  never as the verdict. **`excess_delta_*` is the criterion** and is `null` until both windows of a
+  symbol carry ADR-068's benchmark — null is NOT MEASURED, never a delta of zero (ADR-067). Every
+  delta ships with a bootstrap 95% interval; a point estimate with no interval is what made two of
+  this project's pre-stated criteria unreadable. **The body is `null`, not `{}`, when no symbol
+  spans both windows** — an object of zeros would read as a measured absence of effect.
 - `/power-calibration` returns the other half of the same question: how often the gate detects a
   PLANTED edge (ADR-041/042/053), one sweep per planted process, cells listed rather than merged
   because each plants a different effect size and is judged at its own N. Same `[]`-and-200

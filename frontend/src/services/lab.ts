@@ -10,6 +10,7 @@ import {
   powerSweepSchema,
   paperPortfolioSchema,
   poolReportSchema,
+  windowComparisonSchema,
   type CrossSectionalView,
   type EquityPoint,
   type GraduateRow,
@@ -19,6 +20,7 @@ import {
   type PaperPosition,
   type PoolReport,
   type PowerSweep,
+  type WindowComparison,
 } from '../types/lab'
 
 const API_BASE = ''
@@ -85,6 +87,15 @@ export async function requestNullComparison(): Promise<NullComparison[]> {
     throw new Error(`Null comparison request failed (${response.status})`)
   }
   return z.array(nullComparisonSchema).parse(await response.json())
+}
+
+export async function requestWindowComparison(): Promise<WindowComparison | null> {
+  const response = await fetch(`${API_BASE}/api/v1/window-comparison`)
+  if (!response.ok) {
+    throw new Error(`Window comparison request failed (${response.status})`)
+  }
+  const body = await response.json()
+  return body === null ? null : windowComparisonSchema.parse(body)
 }
 
 export async function requestPowerCalibration(): Promise<PowerSweep[]> {

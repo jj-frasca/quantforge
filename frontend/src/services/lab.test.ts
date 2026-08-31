@@ -6,6 +6,7 @@ import {
   requestGraduates,
   requestLeaderboard,
   requestPaperPortfolio,
+  requestWindowComparison,
 } from './lab'
 
 test('requestLeaderboard parses the leaderboard rows', async () => {
@@ -122,4 +123,44 @@ test('requestCrossSectional returns null when no hunt has run', async () => {
 test('requestCrossSectional throws on a non-2xx response', async () => {
   server.use(http.get('/api/v1/cross-sectional', () => new HttpResponse(null, { status: 500 })))
   await expect(requestCrossSectional()).rejects.toThrow(/Cross-sectional request failed \(500\)/)
+})
+
+// ADR-074: a null body means no symbol spans both windows. It must survive parsing as null rather
+// than being coerced into an object of zeros, which would read as a measured absence of effect.
+test('requestWindowComparison parses a measured comparison', async () => {
+  server.use(
+    http.get('/api/v1/window-comparison', () =>
+      HttpResponse.json({
+        n_symbols: 368,
+        short_n_bars: 5446,
+        long_n_bars: 9232,
+        oos_delta_median: -0.038,
+        oos_delta_ci_low: -0.06,
+        oos_delta_ci_high: -0.009,
+        in_sample_delta_median: 0.012,
+        in_sample_delta_ci_low: -0.005,
+        in_sample_delta_ci_high: 0.034,
+        n_finalist_changed: 257,
+        excess_n: 0,
+        excess_delta_median: null,
+        excess_delta_ci_low: null,
+        excess_delta_ci_high: null,
+      }),
+    ),
+  )
+  const comparison = await requestWindowComparison()
+  expect(comparison?.n_symbols).toBe(368)
+  expect(comparison?.excess_delta_median).toBeNull()
+})
+
+test('requestWindowComparison returns null when nothing spans both windows', async () => {
+  server.use(http.get('/api/v1/window-comparison', () => HttpResponse.json(null)))
+  await expect(requestWindowComparison()).resolves.toBeNull()
+})
+
+test('requestWindowComparison throws on a non-2xx response', async () => {
+  server.use(
+    http.get('/api/v1/window-comparison', () => new HttpResponse(null, { status: 503 })),
+  )
+  await expect(requestWindowComparison()).rejects.toThrow(/Window comparison request failed \(503\)/)
 })

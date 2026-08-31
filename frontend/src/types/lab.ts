@@ -238,6 +238,29 @@ export const nullComparisonSchema = z.object({
 
 export type NullComparison = z.infer<typeof nullComparisonSchema>
 
+// ADR-074: what ADR-063's longer search window did to the finalist the search picks, paired WITHIN
+// symbol across the 6,000-bar split. `oos_delta_*` is a SURROGATE — each side is denominated in its
+// own window's drift (ADR-068) — and `excess_delta_*` is the criterion, null until both windows of a
+// symbol carry the paired benchmark. Null is NOT MEASURED, never a delta of zero.
+export const windowComparisonSchema = z.object({
+  n_symbols: z.number().int(),
+  short_n_bars: z.number().int(),
+  long_n_bars: z.number().int(),
+  oos_delta_median: z.number(),
+  oos_delta_ci_low: z.number(),
+  oos_delta_ci_high: z.number(),
+  in_sample_delta_median: z.number(),
+  in_sample_delta_ci_low: z.number(),
+  in_sample_delta_ci_high: z.number(),
+  n_finalist_changed: z.number().int(),
+  excess_n: z.number().int().default(0),
+  excess_delta_median: z.number().nullable().default(null),
+  excess_delta_ci_low: z.number().nullable().default(null),
+  excess_delta_ci_high: z.number().nullable().default(null),
+})
+
+export type WindowComparison = z.infer<typeof windowComparisonSchema>
+
 // ADR-041/042/053: one cell of a power sweep — a planted process at one effect size, judged at its
 // own N. `phi` indexes an AR(1) sweep and `half_life` a band-reversion one; exactly one is set.
 export const powerCellSchema = z.object({

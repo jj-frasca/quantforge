@@ -6,12 +6,14 @@ import { LeaderboardTable } from './LeaderboardTable'
 import { NullComparisonPanel } from './NullComparisonPanel'
 import { PaperPortfolioTable } from './PaperPortfolioTable'
 import { PositionEquityCurve } from './PositionEquityCurve'
+import { WindowComparisonPanel } from './WindowComparisonPanel'
 import { useLeaderboard } from './useLeaderboard'
 import { useNullCalibration } from './useNullCalibration'
 import { useNullComparison } from './useNullComparison'
 import { usePaperPortfolio } from './usePaperPortfolio'
 import { usePoolReport } from './usePoolReport'
 import { usePowerCalibration } from './usePowerCalibration'
+import { useWindowComparison } from './useWindowComparison'
 
 export function LabDashboardPage() {
   const leaderboard = useLeaderboard()
@@ -20,6 +22,7 @@ export function LabDashboardPage() {
   const calibration = useNullCalibration()
   const power = usePowerCalibration()
   const comparison = useNullComparison()
+  const windows = useWindowComparison()
 
   return (
     <section aria-label="live dashboard page" className="page lab-dashboard">
@@ -38,6 +41,7 @@ export function LabDashboardPage() {
         {calibration.data && <GateCalibrationPanel calibrations={calibration.data} />}
         {power.data && <GatePowerPanel sweeps={power.data} />}
         {comparison.data && <NullComparisonPanel comparisons={comparison.data} />}
+        {windows.data && <WindowComparisonPanel comparison={windows.data} />}
       </section>
 
       <section aria-label="paper book" className="lab-section">

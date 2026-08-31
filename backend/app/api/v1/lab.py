@@ -9,6 +9,8 @@ from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
 from app.research.lab.pool_report import (
     NullComparison,
     PoolReport,
+    WindowComparison,
+    compare_search_windows,
     compare_with_null,
     summarize_pool,
 )
@@ -102,6 +104,17 @@ def null_comparison(
     ]
     report = summarize_pool(experiments, JsonFilePaperPortfolio(portfolio_path).positions())
     return compare_with_null(report, calibrations, experiments)
+
+
+# Sync + read-only: ADR-074 — what ADR-063's longer search window did to the finalist the search
+# picks, paired within symbol. Null (not a 500, not an empty object) when no symbol has been
+# searched at both windows under one family: an object of zeros would read as "no effect measured"
+# when the truth is that nothing was measured at all (ADR-067).
+@router.get("/window-comparison", response_model=WindowComparison | None)
+def window_comparison(
+    pool_path: Annotated[Path, Depends(get_pool_path)],
+) -> WindowComparison | None:
+    return compare_search_windows(PartitionedExperimentStore(pool_path).all())
 
 
 # Sync + read-only: the measured POWER of the whole gate (ADR-041/042/053), written by the two
