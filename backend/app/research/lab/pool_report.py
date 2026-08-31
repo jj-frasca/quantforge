@@ -703,6 +703,28 @@ class WindowComparison(BaseModel):
     excess_delta_ci_high: float | None = None
 
 
+class WindowExperiment(BaseModel):
+    """ADR-076's frozen answer to ADR-063's second clause, as written by
+    `scripts/window_experiment.py report` (ADR-077).
+
+    Notes:
+        This is a FROZEN result, not a live derivation. `sample` is the 200 symbols pre-registered
+        and committed before any of them was searched; `criterion` is the reading at
+        `criterion_alpha`, the Pocock two-look boundary, and it is look 2 of 2 — the sequence is
+        closed. `at_look_one_alpha` is the same estimator at the 0.05 look 1 was read at, carried
+        alongside so the two bands are never mistaken for one another. Recomputing any of this as
+        the pool grows would be a third look the boundary does not cover, which is why nothing
+        here derives: it parses.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    sample: list[str]
+    criterion_alpha: float
+    criterion: WindowComparison
+    at_look_one_alpha: WindowComparison
+
+
 def _median_ci(values: Sequence[float], alpha: float = 0.05) -> tuple[float, float, float]:
     """Median with a bootstrap interval at two-sided `alpha`. ADR-070: a point estimate with no
     interval is what made two of this project's pre-stated criteria unreadable after the fact.

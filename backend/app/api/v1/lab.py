@@ -10,6 +10,7 @@ from app.research.lab.pool_report import (
     NullComparison,
     PoolReport,
     WindowComparison,
+    WindowExperiment,
     compare_search_windows,
     compare_with_null,
     summarize_pool,
@@ -34,6 +35,11 @@ def get_portfolio_path() -> Path:
 def get_calibration_path() -> Path:
     """Directory of committed null-model calibrations, one per null mode (overridable in tests)."""
     return _DATA / "null_calibration"
+
+
+def get_window_experiment_path() -> Path:
+    """ADR-076's committed summary artifact — the frozen result, not a store (overridable)."""
+    return _DATA / "window_experiment" / "adr076_summary.json"
 
 
 # Sync + read-only: just reads the committed JSON stores (no running hunt, no DB).
@@ -115,6 +121,20 @@ def window_comparison(
     pool_path: Annotated[Path, Depends(get_pool_path)],
 ) -> WindowComparison | None:
     return compare_search_windows(PartitionedExperimentStore(pool_path).all())
+
+
+# Sync + read-only: ADR-077 — ADR-076's frozen answer to the same question the endpoint above
+# reports a surrogate for. Served by PARSING the committed artifact, never by recomputing it: the
+# reading is look 2 of a closed two-look sequence, and re-deriving it against a pool that has grown
+# would be a third look the boundary does not cover. Null when the experiment has not been run,
+# which reads as not measured rather than as a delta of zero (ADR-067).
+@router.get("/window-experiment", response_model=WindowExperiment | None)
+def window_experiment(
+    window_experiment_path: Annotated[Path, Depends(get_window_experiment_path)],
+) -> WindowExperiment | None:
+    if not window_experiment_path.is_file():
+        return None
+    return WindowExperiment.model_validate_json(window_experiment_path.read_text())
 
 
 # Sync + read-only: the measured POWER of the whole gate (ADR-041/042/053), written by the two

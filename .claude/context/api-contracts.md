@@ -314,6 +314,7 @@ parameter today. Reading them together is the fastest way to understand what the
 | `/api/v1/null-calibration` | `lab.py` | `list[NullCalibration]` | `data/null_calibration/` |
 | `/api/v1/null-comparison` | `lab.py` | `list[NullComparison]` | pool + portfolio + `data/null_calibration/` |
 | `/api/v1/window-comparison` | `lab.py` | `WindowComparison \| None` | `data/research_pool/` |
+| `/api/v1/window-experiment` | `lab.py` | `WindowExperiment \| None` | `data/window_experiment/adr076_summary.json` |
 | `/api/v1/power-calibration` | `lab.py` | `list[PowerSweep]` | `data/power_calibration/` |
 | `/api/v1/graduates` | `graduates.py` | `list[GraduateRow]` | `data/research_pool/` |
 | `/api/v1/cross-sectional` | `cross_sectional.py` | `CrossSectionalView \| None` | `data/cross_sectional_pool.json` |
@@ -355,6 +356,18 @@ parameter today. Reading them together is the fastest way to understand what the
   delta ships with a bootstrap 95% interval; a point estimate with no interval is what made two of
   this project's pre-stated criteria unreadable. **The body is `null`, not `{}`, when no symbol
   spans both windows** — an object of zeros would read as a measured absence of effect.
+- `/window-experiment` serves ADR-076's answer to the same question, and it is the **only endpoint
+  in this API that parses a result instead of deriving one** (ADR-077). `excess_delta_*` on
+  `/window-comparison` is `excess_n = 0` over the pool and structurally always will be — the pool's
+  pre-ADR-063 rows predate ADR-068's benchmark and production `SEARCH_HISTORY_START` is 1990, so the
+  discovery only ever adds long-window rows. The short side exists only in the frozen experiment.
+  **Never make this endpoint recompute.** ADR-076 read it at look 2 of a two-look Pocock sequence
+  and closed it; re-deriving against a pool that has grown is a third look the boundary does not
+  cover. Three things must travel with the number wherever it is rendered: `criterion_alpha`
+  (**0.0294, not 0.05** — its band is not comparable to any other band on the dashboard),
+  `len(sample)` (the frozen 200, not `/window-comparison`'s live 368), and the fact that the
+  sequence is closed. `at_look_one_alpha` is the same estimator at 0.05 and is for continuity only.
+  Absent file → `null` → *has not been run*, never a delta of zero (ADR-067).
 - `/power-calibration` returns the other half of the same question: how often the gate detects a
   PLANTED edge (ADR-041/042/053), one sweep per planted process, cells listed rather than merged
   because each plants a different effect size and is judged at its own N. Same `[]`-and-200

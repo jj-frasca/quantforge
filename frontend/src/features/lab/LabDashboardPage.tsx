@@ -14,6 +14,7 @@ import { usePaperPortfolio } from './usePaperPortfolio'
 import { usePoolReport } from './usePoolReport'
 import { usePowerCalibration } from './usePowerCalibration'
 import { useWindowComparison } from './useWindowComparison'
+import { useWindowExperiment } from './useWindowExperiment'
 
 export function LabDashboardPage() {
   const leaderboard = useLeaderboard()
@@ -23,6 +24,7 @@ export function LabDashboardPage() {
   const power = usePowerCalibration()
   const comparison = useNullComparison()
   const windows = useWindowComparison()
+  const windowExperiment = useWindowExperiment()
 
   return (
     <section aria-label="live dashboard page" className="page lab-dashboard">
@@ -41,7 +43,12 @@ export function LabDashboardPage() {
         {calibration.data && <GateCalibrationPanel calibrations={calibration.data} />}
         {power.data && <GatePowerPanel sweeps={power.data} />}
         {comparison.data && <NullComparisonPanel comparisons={comparison.data} />}
-        {windows.data && <WindowComparisonPanel comparison={windows.data} />}
+        {windows.data && (
+          <WindowComparisonPanel
+            comparison={windows.data}
+            experiment={windowExperiment.data ?? null}
+          />
+        )}
       </section>
 
       <section aria-label="paper book" className="lab-section">

@@ -1,6 +1,7 @@
 """Read-only lab endpoints (WP-D): expose the research-pool leaderboard + the paper portfolio for
 the dashboard. They read the committed JSON stores; paths are dependency-injected for tests."""
 
+import json
 from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
@@ -10,6 +11,7 @@ from app.api.v1.lab import (
     get_pool_path,
     get_portfolio_path,
     get_power_calibration_path,
+    get_window_experiment_path,
 )
 from app.main import app
 from app.research.lab.calibration import (
@@ -358,6 +360,83 @@ def test_window_comparison_endpoint_is_null_when_no_symbol_spans_both_windows(tm
 
     try:
         response = TestClient(app).get("/api/v1/window-comparison")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+# ---- GET /window-experiment (ADR-077: ADR-076's frozen result, read from its artifact) ----------
+
+_ADR076_SUMMARY = {
+    "sample": ["AAA", "BBB", "CCC"],
+    "criterion_alpha": 0.0294,
+    "criterion": {
+        "n_symbols": 368,
+        "short_n_bars": 5447,
+        "long_n_bars": 9232,
+        "oos_delta_median": -0.037,
+        "oos_delta_ci_low": -0.061,
+        "oos_delta_ci_high": -0.008,
+        "in_sample_delta_median": 0.014,
+        "in_sample_delta_ci_low": -0.004,
+        "in_sample_delta_ci_high": 0.036,
+        "n_finalist_changed": 258,
+        "excess_n": 200,
+        "excess_delta_median": -0.008,
+        "excess_delta_ci_low": -0.055,
+        "excess_delta_ci_high": 0.022,
+    },
+    "at_look_one_alpha": {
+        "n_symbols": 368,
+        "short_n_bars": 5447,
+        "long_n_bars": 9232,
+        "oos_delta_median": -0.037,
+        "oos_delta_ci_low": -0.059,
+        "oos_delta_ci_high": -0.009,
+        "in_sample_delta_median": 0.014,
+        "in_sample_delta_ci_low": -0.004,
+        "in_sample_delta_ci_high": 0.035,
+        "n_finalist_changed": 258,
+        "excess_n": 200,
+        "excess_delta_median": -0.008,
+        "excess_delta_ci_low": -0.053,
+        "excess_delta_ci_high": 0.016,
+    },
+}
+
+
+def test_window_experiment_endpoint_serves_the_frozen_artifact_verbatim(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """ADR-077 decision 1: the endpoint is a reader, not an estimator. What the artifact says is
+    what is served — including the alpha the interval was read at, which is NOT 95%."""
+    summary = tmp_path / "adr076_summary.json"
+    summary.write_text(json.dumps(_ADR076_SUMMARY))
+    app.dependency_overrides[get_window_experiment_path] = lambda: summary
+
+    try:
+        response = TestClient(app).get("/api/v1/window-experiment")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["criterion_alpha"] == 0.0294
+    assert body["criterion"]["excess_delta_median"] == -0.008
+    assert body["criterion"]["excess_delta_ci_low"] == -0.055
+    assert body["criterion"]["excess_delta_ci_high"] == 0.022
+    assert body["criterion"]["excess_n"] == 200
+    # The look-1 reading travels with it so the two are never mistaken for one another.
+    assert body["at_look_one_alpha"]["excess_delta_ci_high"] == 0.016
+    assert body["sample"] == ["AAA", "BBB", "CCC"]
+
+
+def test_window_experiment_endpoint_is_null_when_the_experiment_has_not_been_run(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """ADR-077 decision 5 / ADR-067: an absent artifact is NOT MEASURED, never a delta of zero."""
+    app.dependency_overrides[get_window_experiment_path] = lambda: tmp_path / "missing.json"
+
+    try:
+        response = TestClient(app).get("/api/v1/window-experiment")
     finally:
         app.dependency_overrides.clear()
 

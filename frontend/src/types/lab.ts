@@ -268,6 +268,20 @@ export const windowComparisonSchema = z.object({
 
 export type WindowComparison = z.infer<typeof windowComparisonSchema>
 
+// ADR-076/077: the FROZEN answer to the question `windowComparisonSchema` reports a surrogate for.
+// `sample` is the 200 symbols pre-registered and committed before any of them was searched;
+// `criterion` is read at `criterion_alpha`, the Pocock two-look boundary, and it is look 2 of 2 —
+// the sequence is closed. `at_look_one_alpha` is the same estimator at the 0.05 look 1 used, kept
+// alongside so a 0.0294 band is never compared to a 95% one. Parsed, never derived.
+export const windowExperimentSchema = z.object({
+  sample: z.array(z.string()),
+  criterion_alpha: z.number(),
+  criterion: windowComparisonSchema,
+  at_look_one_alpha: windowComparisonSchema,
+})
+
+export type WindowExperiment = z.infer<typeof windowExperimentSchema>
+
 // ADR-041/042/053: one cell of a power sweep — a planted process at one effect size, judged at its
 // own N. `phi` indexes an AR(1) sweep and `half_life` a band-reversion one; exactly one is set.
 export const powerCellSchema = z.object({

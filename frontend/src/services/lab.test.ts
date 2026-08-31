@@ -7,6 +7,7 @@ import {
   requestLeaderboard,
   requestPaperPortfolio,
   requestWindowComparison,
+  requestWindowExperiment,
 } from './lab'
 
 test('requestLeaderboard parses the leaderboard rows', async () => {
@@ -163,4 +164,52 @@ test('requestWindowComparison throws on a non-2xx response', async () => {
     http.get('/api/v1/window-comparison', () => new HttpResponse(null, { status: 503 })),
   )
   await expect(requestWindowComparison()).rejects.toThrow(/Window comparison request failed \(503\)/)
+})
+
+// ADR-077: the frozen artifact is parsed, never derived. A missing artifact is null — an
+// experiment nobody has run, which is not the same claim as an effect of zero.
+test('requestWindowExperiment parses the frozen result and its boundary alpha', async () => {
+  const side = {
+    n_symbols: 368,
+    short_n_bars: 5447,
+    long_n_bars: 9232,
+    oos_delta_median: -0.037,
+    oos_delta_ci_low: -0.061,
+    oos_delta_ci_high: -0.008,
+    in_sample_delta_median: 0.014,
+    in_sample_delta_ci_low: -0.004,
+    in_sample_delta_ci_high: 0.036,
+    n_finalist_changed: 258,
+    excess_n: 200,
+    excess_delta_median: -0.008,
+    excess_delta_ci_low: -0.055,
+    excess_delta_ci_high: 0.022,
+  }
+  server.use(
+    http.get('/api/v1/window-experiment', () =>
+      HttpResponse.json({
+        sample: ['AAA', 'BBB'],
+        criterion_alpha: 0.0294,
+        criterion: side,
+        at_look_one_alpha: { ...side, excess_delta_ci_high: 0.016 },
+      }),
+    ),
+  )
+  const experiment = await requestWindowExperiment()
+  expect(experiment?.criterion_alpha).toBe(0.0294)
+  expect(experiment?.criterion.excess_delta_median).toBe(-0.008)
+  expect(experiment?.at_look_one_alpha.excess_delta_ci_high).toBe(0.016)
+  expect(experiment?.sample).toHaveLength(2)
+})
+
+test('requestWindowExperiment returns null when the experiment has not been run', async () => {
+  server.use(http.get('/api/v1/window-experiment', () => HttpResponse.json(null)))
+  await expect(requestWindowExperiment()).resolves.toBeNull()
+})
+
+test('requestWindowExperiment throws on a non-2xx response', async () => {
+  server.use(
+    http.get('/api/v1/window-experiment', () => new HttpResponse(null, { status: 503 })),
+  )
+  await expect(requestWindowExperiment()).rejects.toThrow(/Window experiment request failed \(503\)/)
 })

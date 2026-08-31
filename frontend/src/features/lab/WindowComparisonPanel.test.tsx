@@ -2,7 +2,7 @@
 // (ADR-074). The surrogate and the criterion are different statistics and must not read alike.
 import { render, screen } from '@testing-library/react'
 
-import type { WindowComparison } from '../../types/lab'
+import type { WindowComparison, WindowExperiment } from '../../types/lab'
 import { WindowComparisonPanel } from './WindowComparisonPanel'
 
 const comparison = (overrides: Partial<WindowComparison> = {}): WindowComparison => ({
@@ -70,4 +70,62 @@ test('reports the two window lengths it paired across', () => {
   render(<WindowComparisonPanel comparison={comparison()} />)
   expect(screen.getByText(/5,446/)).toBeInTheDocument()
   expect(screen.getByText(/9,232/)).toBeInTheDocument()
+})
+
+// ADR-077: ADR-076's frozen result is a spent pre-registration, not a live statistic. It is read at
+// the Pocock two-look boundary rather than at 95%, over its own 200-symbol sample, and the panel
+// has to say all three of those things or the band gets compared to the wrong thing.
+const experiment = (overrides: Partial<WindowComparison> = {}): WindowExperiment => ({
+  sample: Array.from({ length: 200 }, (_, i) => `SYM${i}`),
+  criterion_alpha: 0.0294,
+  criterion: comparison({
+    excess_n: 200,
+    excess_delta_median: -0.008,
+    excess_delta_ci_low: -0.055,
+    excess_delta_ci_high: 0.022,
+    ...overrides,
+  }),
+  at_look_one_alpha: comparison({
+    excess_n: 200,
+    excess_delta_median: -0.008,
+    excess_delta_ci_low: -0.053,
+    excess_delta_ci_high: 0.016,
+  }),
+})
+
+test('reports the frozen experiment at its own boundary, not at 95%', () => {
+  render(<WindowComparisonPanel comparison={comparison()} experiment={experiment()} />)
+
+  const frozen = screen.getByTestId('window-experiment')
+  expect(frozen).toHaveTextContent('-0.008')
+  expect(frozen).toHaveTextContent('[-0.055, +0.022]')
+  expect(frozen).toHaveTextContent(/0\.0294/)
+})
+
+test('names the frozen sample size rather than the live one', () => {
+  render(<WindowComparisonPanel comparison={comparison()} experiment={experiment()} />)
+  expect(screen.getByTestId('window-experiment')).toHaveTextContent(/200/)
+})
+
+test('says the sequence is closed so nobody reads the null as an invitation to re-run', () => {
+  render(<WindowComparisonPanel comparison={comparison()} experiment={experiment()} />)
+  expect(screen.getByTestId('window-experiment')).toHaveTextContent(/closed/i)
+})
+
+test('carries the look-1 reading labelled as continuity, not as a second result', () => {
+  render(<WindowComparisonPanel comparison={comparison()} experiment={experiment()} />)
+
+  const frozen = screen.getByTestId('window-experiment')
+  expect(frozen).toHaveTextContent('[-0.053, +0.016]')
+  expect(frozen).toHaveTextContent(/continuity/i)
+})
+
+test('points the live not-measured row at the frozen experiment instead of dead-ending', () => {
+  render(<WindowComparisonPanel comparison={comparison()} experiment={experiment()} />)
+  expect(screen.getByTestId('excess-delta')).toHaveTextContent(/ADR-076/)
+})
+
+test('says the experiment has not been run when there is no artifact', () => {
+  render(<WindowComparisonPanel comparison={comparison()} experiment={null} />)
+  expect(screen.getByTestId('window-experiment')).toHaveTextContent(/has not been run/i)
 })

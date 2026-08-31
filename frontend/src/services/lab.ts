@@ -11,6 +11,7 @@ import {
   paperPortfolioSchema,
   poolReportSchema,
   windowComparisonSchema,
+  windowExperimentSchema,
   type CrossSectionalView,
   type EquityPoint,
   type GraduateRow,
@@ -21,6 +22,7 @@ import {
   type PoolReport,
   type PowerSweep,
   type WindowComparison,
+  type WindowExperiment,
 } from '../types/lab'
 
 const API_BASE = ''
@@ -96,6 +98,15 @@ export async function requestWindowComparison(): Promise<WindowComparison | null
   }
   const body = await response.json()
   return body === null ? null : windowComparisonSchema.parse(body)
+}
+
+export async function requestWindowExperiment(): Promise<WindowExperiment | null> {
+  const response = await fetch(`${API_BASE}/api/v1/window-experiment`)
+  if (!response.ok) {
+    throw new Error(`Window experiment request failed (${response.status})`)
+  }
+  const body = await response.json()
+  return body === null ? null : windowExperimentSchema.parse(body)
 }
 
 export async function requestPowerCalibration(): Promise<PowerSweep[]> {
