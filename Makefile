@@ -5,6 +5,12 @@
 BE := cd backend && uv run
 FE := cd frontend &&
 COV_MIN := 85
+# xdist worker count. `auto` is pytest-xdist's own default and asks for one worker per LOGICAL
+# core — 16 on this machine. That is right when the gate is the only thing running and wrong when
+# it is not: a second checkout of this repo running its own `make test` puts ~33 test processes on
+# 8 physical cores, which is what made the local gate appear to hang for 70 minutes (FINDING-014).
+# Override it — `make test PYTEST_WORKERS=4` — when `ps aux | grep "[p]ytest"` shows another one.
+PYTEST_WORKERS ?= auto
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -21,7 +27,7 @@ down: ## Stop the docker-compose stack
 	docker compose down
 
 test: ## Run tests with coverage — excludes live + integration (DB) tests
-	$(BE) pytest -m "not live and not integration" -n auto --cov=app --cov-report=term-missing --cov-fail-under=$(COV_MIN)
+	$(BE) pytest -m "not live and not integration" -n $(PYTEST_WORKERS) --cov=app --cov-report=term-missing --cov-fail-under=$(COV_MIN)
 
 test-live: ## Run live-data tests (yfinance). Local only — never in CI.
 	$(BE) pytest -m live
