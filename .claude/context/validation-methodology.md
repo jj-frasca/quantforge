@@ -551,3 +551,70 @@ Rules that hold here:
   unknown and the row is refused rather than differenced anyway.
 - **Purged-CV is out of scope**: its folds are not a prefix-ordered benchmark window, so the same
   subtraction would not be the same statistic. Extend it on its own terms or not at all.
+
+
+## §7.7 The real side of the excess row, and the two-sided band (ADR-072)
+
+Measured 2026-08-31, the first time both sides of the difference existed. 77 experiments over 66
+symbols at 7,345 bars carry `walk_forward_hold_sharpe` and match the 7,400-bar nulls under §7.5's
+±10% tolerance; both sides carry fingerprint `3f36fda2…`.
+
+| side | n | median | mean | p5 | p25 | p75 | p95 | share < 0 |
+|---|---|---|---|---|---|---|---|---|
+| **real, matched cohort** | 77 | **−0.125** | −0.186 | −0.549 | −0.308 | −0.018 | +0.021 | **75.3%** |
+| `bootstrap:SPY` null, 7,400 | 200 | −0.006 | −0.028 | −0.233 | −0.037 | +0.000 | +0.096 | 55.5% |
+| `iid_normal` null, 7,400 | 200 | +0.000 | +0.012 | −0.251 | −0.035 | +0.057 | +0.325 | 49.5% |
+
+**What the search adds out-of-sample, with drift removed from both sides, is −0.125 on real symbols
+and ≈0 on data with no edge by construction.** The real median sits at the bootstrap null's 11.5th
+percentile and the iid null's 14.0th. Quote it as a statement about the search — the in-sample
+argmax fits structure that does not persist — not about the market.
+
+`NullComparison` carries `null_p5` on every row and `real_below_null_p5` on the centered one only.
+The raw rows stay one-sided on purpose: §7.6 measured that their level IS each side's own drift, so
+a real median under a null says the median pool symbol drifted less than SPY. **The verdict does not
+flip on today's numbers** — −0.125 is inside both nulls' p5 — and that is reported rather than
+worked around.
+
+**The open question, recorded and deliberately not acted on.** The row compares a median of 77
+against a band over individual null draws. The sampling SE of a median of 77 draws from the
+bootstrap null's excess is ≈1.253 × 0.112 / √77 ≈ 0.016, which would put −0.125 about 7 SE below the
+null median; a correctly scaled test would call it a separation. It is not rescaled here because
+(a) ADR-070's meta-lesson forbids re-scaling a criterion after seeing the number it would act on,
+and (b) the 77 excesses are not independent — 66 symbols, one overlapping calendar window,
+`fifty_two_week_high` finalist in 30 of 77 — so the honest instrument is a symbol-clustered or block
+bootstrap, pre-stated in its own ADR and applied once.
+
+## §7.8 Reading a change in the SEARCH WINDOW (ADR-074)
+
+ADR-063's second clause ("the pool's median holdout Sharpe must not fall") is **unanswerable as
+phrased**: a holdout Sharpe exists only on a `Graduate`, 220 of the pool's 221 graduates are
+`legacy-unspecified`, and the live family has produced exactly one in 3,029 experiments. It is the
+third criterion in this project stated over a quantity nobody sized first — check the sample size
+of the statistic BEFORE writing the threshold.
+
+`compare_search_windows(experiments)` reads it on the finalist instead, and the pairing rules are
+the load-bearing part:
+- **Within symbol.** The cross-symbol form was measured and rejected: under one family `n_bars`
+  varies mostly with listing age, and the <6,000 / ≥6,000-bar cohorts share **zero symbols**.
+- **Within search family**, per §7.5's identity rule.
+- **Repeat runs at one window collapse to that symbol's median**, so a name the discovery happened
+  to re-search five times does not outweigh one it searched once.
+- **Every delta carries a bootstrap 95% interval** (20k draws, seed 7). ADR-070: a point estimate
+  with no interval is what made two pre-stated criteria unreadable.
+
+| paired delta (long − short) | n | median | 95% CI |
+|---|---|---|---|
+| finalist walk-forward OOS — **surrogate**, each side carries its own window's drift | 368 symbols | −0.038 | [−0.060, −0.009] |
+| finalist in-sample observed | 368 symbols | +0.012 | [−0.005, +0.034] |
+| **drift-controlled excess — the criterion** | 45 symbols | **−0.074** | **[−0.157, +0.030]** |
+
+The longer window changes which strategy the search picks on **257 of 368** symbols.
+`scripts/window_experiment.py N` supplies the criterion's short side by re-searching a deterministic
+sample at `PRE_ADR063_SEARCH_START` (pinned in `history.py`, never a literal in a driver) and
+writing to its own file — the pool is read as the ADR-062 prior only. **The interval includes zero,
+so ADR-074's pre-stated criterion does not fire and ADR-063's window stays.** Two things it did
+settle: removing the drift confound made the effect *larger* (−0.074 vs −0.038), so the confound is
+not what produced the surrogate; and the same 45 deltas give a **mean** of −0.086 against SE 0.032,
+which would have fired a criterion stated on the mean. **Pre-state the ESTIMATOR, not only the
+threshold** — a bootstrap median is robust but costs ≈1.6× the sample of a mean. Rerun at n ≈ 75.

@@ -332,9 +332,31 @@ symbols per mode at 7,400 bars): median per-symbol excess **−0.006** (bootstra
 (iid), the finalist beats holding only 18.5% / 36.0% of the time, and `corr(OOS, hold) = 0.884` on
 the bootstrap null. The excess is also a tighter instrument — bootstrap p95 falls from +0.968 raw to
 **+0.096** — so the drift-controlled comparison is roughly an order of magnitude more sensitive than
-the raw one. The verdict does not move; what moves is what the number means. The REAL side of the
-row still prints `NOT MEASURED` (ADR-067) until the daily discovery re-searches the universe at
-ADR-063's window carrying the paired value.
+the raw one. The verdict does not move; what moves is what the number means.
+
+**ADR-072: the real side measured on 2026-08-31, and it is negative.** 77 experiments (66 symbols,
+7,345 bars) now carry the paired benchmark and match the 7,400-bar nulls: median excess **−0.125**,
+negative in **75.3%**, against −0.006 / +0.000 on the nulls. **What the search adds out-of-sample
+over holding the same series across the same windows is less on real symbols than on data with no
+edge by construction.** ADR-072 made the band two-sided for that row only — `null_p5` and
+`real_below_null_p5`, the latter False *by construction* on the raw rows, whose lower tail is a
+drift difference rather than a result — so the report can express a real median under the null
+instead of printing the same sentence it would for one just above. The verdict is unchanged:
+−0.125 sits inside both nulls' p5 (−0.233 / −0.251). The mismatch between a median of 77 and a band
+over individual draws is recorded in ADR-072 as an open question with its arithmetic, to be
+rescaled by a symbol-clustered criterion pre-stated in its own ADR — never after seeing the number.
+
+**ADR-074: ADR-063's second clause was unanswerable as phrased, and is now read paired within
+symbol.** A holdout Sharpe lives on a graduate and the live family has produced one in 3,029
+experiments, so "the pool's median holdout Sharpe must not fall" has no sample. `compare_search_windows`
+differences each symbol's finalist across the 6,000-bar window split instead — the cross-symbol form
+was measured and rejected, since `n_bars` tracks listing age under one family and the two cohorts
+share zero symbols. On 368 symbols the OOS delta is **−0.038 [−0.060, −0.009]** against an in-sample
+delta of +0.012 [−0.005, +0.034], and the finalist strategy changes on **257 of 368**. That is a
+surrogate — both sides carry their own window's drift — so ADR-074 pre-stated a criterion and
+`scripts/window_experiment.py` re-searched 45 symbols at `PRE_ADR063_SEARCH_START`: the
+drift-controlled delta is **−0.074 [−0.157, +0.030]**, the interval includes zero, the criterion does
+not fire and the window stays. Served at `GET /api/v1/window-comparison`.
 
 **ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
 error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against
