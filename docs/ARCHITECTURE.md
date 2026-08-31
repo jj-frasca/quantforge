@@ -271,6 +271,10 @@ FINDING-010 later showed that calibration correctly gated the walk-forward-selec
 reported max-DSR finalist diagnostics and attribution. ADR-071 routes every finalist-level field
 through the requested rule. Detection and Type-I counts from ADR-070 remain valid; its non-default
 diagnostic observation requires a corrected rerun before reuse. No generated artifact changed.
+ADR-078 closes the corresponding persisted-real-side gap: new experiments store the exact selected
+trial index (a family name is ambiguous after refinement), and pool reporting uses that checked
+identity for every finalist-level statistic. Legacy rows remain max-DSR rather than receiving an
+invented selection identity.
 
 FINDING-007 is **resolved** (ADR-054): the paper's probability-form DSR is implemented, every
 user-facing claim now calls the stored value a selection-adjusted Sharpe *margin*, and every new

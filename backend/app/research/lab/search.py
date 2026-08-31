@@ -277,6 +277,7 @@ def run_search(
             None if best_report.purged_cv is None else best_report.purged_cv.mean_oos_hold_sharpe
         ),
         best_strategy_name=best_report.strategy_name,
+        selected_trial_index=best_idx,
         best_gate_result=gate_result,
         fundamentals=fundamentals,
         fundamental_screen=screen,

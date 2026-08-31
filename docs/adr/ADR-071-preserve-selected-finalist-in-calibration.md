@@ -38,7 +38,9 @@ function used by `run_search`.
    with the same strategy name, so a name does not identify the selected trial.
 2. **Store a selected trial index on every experiment.** Exact, but unnecessary schema growth: the
    rule and immutable trial list are already present at calibration time and selection is
-   deterministic.
+   deterministic. **ADR-078 follow-up:** this rejection applies only to in-memory calibration.
+   Persisted pool reporting does not retain `select_by`, and strategy name is ambiguous after
+   refinement, so ADR-078 adds the index to new real experiments.
 3. **Leave attribution on max DSR because only detection gates.** Rejected: ADR-049/057/059 made
    attribution part of the methodology precisely so a composite result can be interpreted. An
    artifact whose verdict and diagnostics describe different finalists is not self-consistent.
@@ -50,6 +52,7 @@ function used by `run_search`.
 - Existing committed default-rule artifacts are byte-for-byte semantically unchanged.
 - No cloud rerun is required to protect production because the non-default arm did not become the
   default and its artifacts were not committed. A future comparison must rerun the corrected arm.
+- ADR-078 applies the same identity guarantee to persisted real-pool reporting.
 
 ## Reversal
 

@@ -80,6 +80,10 @@ class Experiment(BaseModel):
     # The best candidate's verdict is always recorded — even a REJECTION, with its reasons.
     # "Honest when it fails" (ADR-014) needs the losing gate result, not just the winners.
     best_strategy_name: str | None = None
+    # ADR-078: strategy name is not a trial identity because refinement can append another trial
+    # from the same family. New producers persist the exact selected position; None is the honest
+    # legacy state and retains the historical max-DSR reconstruction in reports.
+    selected_trial_index: int | None = Field(default=None, ge=0)
     best_gate_result: GateResult | None = None
     # Fundamentals context for the symbol (ADR-017): the cited snapshot + whether it cleared the
     # 'sane fundamentals' screen. A failed screen vetoes graduation regardless of the technicals.

@@ -290,6 +290,52 @@ def test_report_summarizes_the_out_of_sample_diagnostics_of_every_finalist() -> 
     assert report.purged_cv_finalists.median == pytest.approx(0.2)
 
 
+def test_report_uses_the_persisted_non_default_finalist() -> None:
+    """ADR-071/FINDING-015: a walk-forward-selected family can differ from max DSR. The real side
+    must report the same selected family as its matching calibration, not reconstruct the default."""
+    max_dsr = _trial(0.9).model_copy(
+        update={"strategy_name": "sma", "walk_forward_oos_sharpe": -0.4}
+    )
+    selected = _trial(0.1).model_copy(
+        update={"strategy_name": "momentum", "walk_forward_oos_sharpe": 1.2}
+    )
+    experiment = _exp("AAA").model_copy(
+        update={
+            "trials": [max_dsr, selected],
+            "strategy_names": ["sma", "momentum"],
+            "best_strategy_name": "momentum",
+            "selected_trial_index": 1,
+        }
+    )
+
+    report = summarize_pool([experiment], [])
+
+    assert report.walk_forward_finalists is not None
+    assert report.walk_forward_finalists.median == pytest.approx(1.2)
+
+
+@pytest.mark.parametrize(
+    ("selected_trial_index", "best_strategy_name", "message"),
+    [(2, "momentum", "has 2 trials"), (1, "sma", "inconsistent with persisted best strategy")],
+)
+def test_report_refuses_a_corrupt_persisted_finalist_identity(
+    selected_trial_index: int, best_strategy_name: str, message: str
+) -> None:
+    experiment = _exp("AAA").model_copy(
+        update={
+            "trials": [
+                _trial(0.9),
+                _trial(0.1).model_copy(update={"strategy_name": "momentum"}),
+            ],
+            "selected_trial_index": selected_trial_index,
+            "best_strategy_name": best_strategy_name,
+        }
+    )
+
+    with pytest.raises(ValueError, match=message):
+        summarize_pool([experiment], [])
+
+
 def test_finalist_diagnostics_survive_a_pool_with_no_graduate_at_all() -> None:
     """The 2026-08-20 run: 603 experiments, 0 graduates. The gate-passer window is empty and the
     finalist window is the only one left, so it must not depend on graduation."""

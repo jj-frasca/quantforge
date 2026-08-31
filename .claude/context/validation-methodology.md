@@ -453,6 +453,12 @@ the requested selection rule. ADR-070's detection/Type-I counts remain valid bec
 the correctly selected gate result; its observation about the non-default null diagnostic is not
 reusable without a corrected rerun. Non-default artifacts were never committed.
 
+**ADR-078: persist the real finalist, too.** FINDING-015 found that pool reporting still rebuilt
+every real finalist as max DSR. `best_strategy_name` cannot identify a trial after refinement adds
+a second trial from the same family. New experiments therefore persist `selected_trial_index`, and
+all finalist-level pool statistics resolve it through one checked helper. Legacy rows retain the
+historical max-DSR reading; no old non-default identity is invented.
+
 ### 7.5 The real universe against the null (ADR-051) — `scripts/pool_report.py`
 ADR-038/039 recorded a walk-forward and a purged-CV OOS Sharpe on every trial with a stated revisit
 trigger: read them against `data/null_calibration/*.json`. Two things had to be repaired before that

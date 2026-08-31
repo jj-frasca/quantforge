@@ -536,6 +536,8 @@ def test_the_walk_forward_rule_picks_the_prequential_maximum() -> None:
     )
     best = max(exp.trials, key=lambda t: t.walk_forward_oos_sharpe or -math.inf)
     assert exp.best_strategy_name == best.strategy_name
+    assert exp.selected_trial_index is not None
+    assert exp.trials[exp.selected_trial_index] == best
 
 
 def test_the_two_rules_can_disagree_about_the_finalist() -> None:
