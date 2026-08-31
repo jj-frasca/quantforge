@@ -1,6 +1,8 @@
 # FINDING-014: the local gate was never hung — it was sharing eight cores with a second checkout
 
-- **Status**: Confirmed by direct measurement, 2026-08-31
+- **Status**: **PARTLY WRONG — corrected the same day. Read §Correction before quoting anything
+  above it.** The contention is real and measured; the causal claim in the title is not the reason
+  the gate fails to finish.
 - **Found by**: Autonomous session #17
 - **Affects**: local `make test` / `make check` wall time only. **No production code, no gate
   threshold, no published result.** CI has always been correct and green.
@@ -80,3 +82,57 @@ exist* (ADR-063), *the SE is larger than the effect* (ADR-070), *the estimator w
 **Measure the environment before diagnosing the code.** Session #16 sampled the stuck worker, read
 its stack, installed an instrument and wrote a hypothesis — all inside the process — without once
 asking what else was on the machine. One `ps` would have answered it.
+
+## Correction (2026-08-31, hours after the above)
+
+The run that followed this finding finished its own timing line, and it overturns the diagnosis:
+
+```
+make check PYTEST_WORKERS=6   476.31s user  5.37s system  10% cpu  1:16:13.84 total
+6 workers [1391 items]
+... F at ~20% ... F at ~25% ...
+.................................[gw4] node down: Not properly terminated
+F
+replacing crashed worker gw4
+........................................................   <- and there it stays
+```
+
+**476 seconds of user CPU — eight minutes, which is CI's 8m36s almost exactly — spread over 76
+minutes of wall clock at 10% CPU.** The suite is not slow and it is not CPU-starved. It is *idle*.
+The peer checkout's gate had exited half an hour before this run stalled, so by the end there was no
+contention left to blame.
+
+Per-process CPU deltas over a 30-second window, taken while the run was "stuck", say the same thing:
+five of the six workers were flat to the hundredth of a second, one was live, and the one `ps` had
+been reporting at 100% was blocked in `_io__Buffered_read` on its xdist channel — `ps` %CPU is a
+decaying average and it was stale. Sampling the "pegged" worker showed a main thread parked in
+`_Py_read`, waiting for the master to send it work.
+
+**What actually happens:** a test kills its worker (`node down: Not properly terminated`), xdist
+replaces the worker, and the run then waits forever on a worker that never reports back. That is a
+stall around a crashing test, not a hang inside one, and not starvation.
+
+### What survives from the original finding
+
+- The two-checkout contention is real and was measured: `~/claude-work/quantforge-codex` runs the
+  same `-n auto` gate, 16 workers per clone, load average 36.9 on 8 physical cores. It inflates
+  wall time severely and it is worth avoiding.
+- `PYTEST_WORKERS` is worth keeping for that reason. It is not a fix for the stall.
+- "Measure the environment before diagnosing the code" still stands. So does its complement, which
+  this correction is: **measure the environment and then keep measuring, because one `ps` snapshot
+  supports a story that a CPU delta over 30 seconds destroys.** The first measurement was right
+  about what it saw and wrong about what it meant.
+
+### Still open
+
+- **Which test crashes its worker.** It is fast on CI (which runs the same suite, with the same
+  300s timeout, green on every pushed SHA) and fatal here.
+- **Two real `F` failures**, seen at ~20% and ~25% in the 6-worker run and at ~93%/~98% in session
+  #16's — different positions because xdist distributes differently run to run, so they are probably
+  the same two tests. A follow-up run at `--timeout=90` on an idle machine reached 48% with **no**
+  failures, which suggests those `F`s were the 300s timeout firing under contention rather than
+  assertion failures. Unconfirmed.
+- The stall means the run never reaches its own `-rf` summary, which is why none of these have names
+  yet. The instrument that would produce one without waiting for the summary is
+  `pytest --faulthandler-timeout=N`: it uses `faulthandler.dump_traceback_later`, a C-level watchdog
+  that does not need the GIL, so it names the test even when a native call is holding it.
