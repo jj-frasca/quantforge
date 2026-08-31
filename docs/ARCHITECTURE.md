@@ -360,6 +360,25 @@ error) and therefore changes both generation and ADR-037's sharding; the single-
 unchanged; and ADR-075 discloses that the point estimate was known before the scheme was fixed, so
 the pre-registration covers the procedure, not the answer.
 
+**Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
+standing watch item on this row was what it would do as the re-searched cohort matured. It has more
+than doubled — **n = 166 excesses over 89 symbol clusters**, up from 77 over 66 — and the answer is
+stable while the interval TIGHTENS: real median **−0.127** (was −0.125), difference of medians
+**−0.122 [−0.191, −0.067]** vs `bootstrap:SPY` (was −0.119 [−0.215, −0.061]) and **−0.127
+[−0.194, −0.068]** vs `iid_normal` (was −0.125 [−0.218, −0.063]). Both still exclude zero, and the
+bootstrap interval's width fell from 0.154 to 0.124. A point estimate that does not move while its
+sample doubles is the behaviour of an effect, not of a fluctuation — contrast ADR-076's look 1,
+where −0.074 at n=45 collapsed to −0.008 at n=200.
+
+**But this row is a REPORT LINE, not a test, and the distinction is load-bearing.** It is recomputed
+every time `pool_report.py` runs, against a pool that grows daily, so it is read an unbounded number
+of times with no spending rule. Its band is therefore **descriptive**. Any *decision* taken on it —
+changing a threshold, declaring the direction settled, acting on the sign — needs its own ADR with a
+pre-stated criterion, an estimator, and a boundary, exactly as ADR-076 did for the window question.
+Quoting the refreshed numbers is fine; treating them as a test that fired is not. ADR-075's three
+qualifications above still apply in full, the width is still a lower bound, and the single-draw
+verdict is still `does not separate`.
+
 **ADR-074: ADR-063's second clause was unanswerable as phrased, and is now read paired within
 symbol.** A holdout Sharpe lives on a graduate and the live family has produced one in 3,029
 experiments, so "the pool's median holdout Sharpe must not fall" has no sample. `compare_search_windows`
@@ -370,7 +389,12 @@ delta of +0.012 [−0.005, +0.034], and the finalist strategy changes on **257 o
 surrogate — both sides carry their own window's drift — so ADR-074 pre-stated a criterion and
 `scripts/window_experiment.py` re-searched 45 symbols at `PRE_ADR063_SEARCH_START`: the
 drift-controlled delta is **−0.074 [−0.157, +0.030]**, the interval includes zero, the criterion does
-not fire and the window stays. Served at `GET /api/v1/window-comparison`.
+not fire and the window stays. Served at `GET /api/v1/window-comparison`. (That live row now reads
+**−0.034 [−0.054, −0.005] over 422 symbols**, the finalist changing on 296 of them, as the pool has
+grown — the same surrogate, moving barely at all. **ADR-076 is the answer to it, and ADR-076 is
+frozen at its own 200 symbols**: do not re-derive the controlled number from the grown pool, which
+would be a third look on a closed sequence. ADR-077's separate endpoint exists for exactly that
+reason.)
 
 **ADR-076 spent the second look, and the window change's OOS penalty turns out to be drift.**
 ADR-074's n = 45 was under-powered *by choice* — the candidate set held 368 all along and 45 was a
