@@ -7,6 +7,9 @@ const EXCESS_STATISTIC = 'walk-forward excess'
 // ADR-051/064/068. The leaderboard says what the search found; this says whether what it found is
 // distinguishable from what the same search finds on data with NO EDGE by construction. The verdict
 // is computed by the backend and rendered here verbatim — never re-derived from the numbers.
+// ADR-072: the band has two edges. `real_below_null_p5` is only ever set on the centered excess
+// row, where zero means the same thing on both sides, so a real median under the null is a result
+// rather than a statement about drift.
 export function NullComparisonPanel({ comparisons }: { comparisons: NullComparison[] }) {
   if (comparisons.length === 0) {
     return null
@@ -28,6 +31,7 @@ export function NullComparisonPanel({ comparisons }: { comparisons: NullComparis
             <th scope="col">Real median</th>
             <th scope="col">Matched sample</th>
             <th scope="col">Null median</th>
+            <th scope="col">Null p5</th>
             <th scope="col">Null p95</th>
             <th scope="col">Verdict</th>
           </tr>
@@ -45,6 +49,7 @@ export function NullComparisonPanel({ comparisons }: { comparisons: NullComparis
                   : ` @ ${c.matched_n_bars.toLocaleString('en-US')} bars`}
               </td>
               <td>{asSharpe(c.null_median)}</td>
+              <td>{asSharpe(c.null_p5)}</td>
               <td>{asSharpe(c.null_p95)}</td>
               <td>
                 {!c.comparable ? (
@@ -53,6 +58,8 @@ export function NullComparisonPanel({ comparisons }: { comparisons: NullComparis
                   </>
                 ) : c.real_exceeds_null_p95 ? (
                   'Separates'
+                ) : c.real_below_null_p5 ? (
+                  'Separates below — the search subtracts'
                 ) : (
                   'Does not separate'
                 )}

@@ -13,7 +13,9 @@ const row = (overrides: Partial<NullComparison> = {}): NullComparison => ({
   null_n: 200,
   null_median: 0.652,
   null_p95: 0.983,
+  null_p5: 0.22,
   real_exceeds_null_p95: false,
+  real_below_null_p5: false,
   comparable: true,
   mismatch: '',
   matched_n: 2427,
@@ -75,4 +77,51 @@ test('renders the excess row as its own statistic once both sides carry it', () 
 test('renders nothing when nothing has been compared', () => {
   const { container } = render(<NullComparisonPanel comparisons={[]} />)
   expect(container).toBeEmptyDOMElement()
+})
+
+// --- ADR-072: the centered row is read two-sided ---
+
+test('reports the null band lower edge beside its upper one', () => {
+  render(<NullComparisonPanel comparisons={[row()]} />)
+  expect(screen.getByText('+0.220')).toBeInTheDocument()
+  expect(screen.getByText('+0.983')).toBeInTheDocument()
+})
+
+test('an excess row under the null band says the search subtracts', () => {
+  render(
+    <NullComparisonPanel
+      comparisons={[
+        row({
+          statistic: 'walk-forward excess',
+          real_median: -0.4,
+          null_median: -0.006,
+          null_p5: -0.233,
+          null_p95: 0.096,
+          real_below_null_p5: true,
+        }),
+      ]}
+    />,
+  )
+
+  expect(screen.getByText(/separates below/i)).toBeInTheDocument()
+  expect(screen.queryByText(/does not separate/i)).not.toBeInTheDocument()
+})
+
+test('an excess row inside the band still reads as neutral', () => {
+  render(
+    <NullComparisonPanel
+      comparisons={[
+        row({
+          statistic: 'walk-forward excess',
+          real_median: -0.125,
+          null_median: -0.006,
+          null_p5: -0.233,
+          null_p95: 0.096,
+        }),
+      ]}
+    />,
+  )
+
+  expect(screen.getByText(/does not separate/i)).toBeInTheDocument()
+  expect(screen.queryByText(/separates below/i)).not.toBeInTheDocument()
 })
