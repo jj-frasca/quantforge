@@ -24,11 +24,15 @@ with it. Every number below is produced by a committed workflow and can be re-ru
 | **Power** — does the gate detect a *planted* edge at production parity? | **Yes, and it is measured: 66%** at AR(1) oracle Sharpe 3.9 (33/50 also clear the deflation bar), 40% at oracle 4.0 in the reverting direction, **0%** at oracle 1.3. Lengthening the searched history to 1990 raised every cell that had an edge to find — 34/22/14/64% → 40/36/24/66% — and moved none down (ADR-063) | `power-calibration.yml` (ADR-041/049/050/051/063) |
 | **Is the effect size those rates are quoted against achievable?** | Not always. Charged the same 10bp turnover cost the catalog pays, the oracle at \|φ\| = 0.10 is **+0.02 / −0.09** — the two zero-power cells contained no tradeable edge at all | `power-calibration.yml` (ADR-055) |
 | **Resolution** — what must an edge actually *be* to be found here? | **A true annualized Sharpe of 2.13** at the 607-symbol universe and the 4.3-year holdout the pool reports today, falling to **1.82** as the re-searched cohort reaches the 5.9-year holdout ADR-063 bought. The bar falls as `1/sqrt(T)` in holdout length but only `sqrt(ln N)` in universe size, so history is the lever | `scripts/pool_report.py` (ADR-043/063) |
-| How many discovered strategies clear that bar today? | **0 of 40.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
+| How many discovered strategies clear that bar today? | **0 of 41.** They are forward-tested on paper, never recommended | `GET /api/v1/pool-report` |
 | **Does what the search proposes beat a no-edge surrogate?** | **No**, and as of ADR-064 that is a valid comparison rather than a refused one. On the 2,427 experiments whose history matches the null's within 10%, walk-forward **+0.542** and purged-CV **+0.584** sit below a bootstrap null's own **+0.652 / +0.661** (p95 +0.983 / +1.003) | `scripts/pool_report.py` vs `null-calibration.yml` (ADR-051/064) |
 | **How much of that out-of-sample number is drift?** | **All of it, on a null.** Measured per symbol on 200 nulls each: the finalist's walk-forward Sharpe minus what holding the SAME series across the SAME windows earned is **−0.006** (bootstrap) and **+0.000** (iid-normal), and the finalist beats holding only **18.5% / 36.0%** of the time. `corr(OOS, hold) = 0.884` | ADR-068, `null-calibration.yml` run 33287465013 |
+| **What does the search ADD, with drift removed from both sides?** | **Less than nothing, on real data.** The finalist's walk-forward Sharpe minus what holding the same series across the same windows earned: **−0.125** on 77 matched real experiments (66 symbols, 7,345 bars), negative in **75.3%** of them, against **−0.006 / +0.000** on the two nulls. It sits at the bootstrap null's **11.5th** percentile — inside the null's own p5 of −0.233, so the row still reads *does not separate* | `scripts/pool_report.py` (ADR-068/072) |
+| **Did lengthening the searched history make selection worse?** | **Not decidably.** Paired within symbol across ADR-063's window change, the finalist's out-of-sample Sharpe moved **−0.038 [−0.060, −0.009]** on 368 symbols while in-sample moved **+0.012 [−0.005, +0.034]**, and the search picks a *different strategy* on **257 of 368**. Re-searching 45 of them at the old window to remove the drift confound gives **−0.074 [−0.157, +0.030]** — the interval includes zero, so ADR-074's pre-stated criterion does not fire and the window stays | `scripts/window_experiment.py` (ADR-063/074) |
 
-The last two rows are the point. The retained per-symbol counters currently preserve 122,000+
+The last four rows are the point, and the third of them is the sharpest thing this project has
+measured: with drift removed from both sides, the search subtracts more on real symbols than it does
+on data built to contain nothing. The retained per-symbol counters currently preserve 237,000+
 candidate evaluations as the conservative cumulative DSR/MinTRL lower bound (ADR-062/066). The
 pipeline has **graduated nothing that is distinguishable from best-of-N selection luck** — and when
 the strategies it *proposes* are compared against a surrogate with no serial structure at all, they
@@ -66,9 +70,20 @@ holding the same series across the same windows is **−0.006** against the boot
 and **36.0%** of the time — it pays turnover costs for a signal that is not there, exactly as it
 should. Controlling for drift also makes the comparison **an order of magnitude more sensitive**:
 the bootstrap null's p95 falls from **+0.968 raw to +0.096 in excess terms**, so a real edge no
-longer has to out-run the spread of market drift to be visible. The real side of that row prints
-`NOT MEASURED` until the daily discovery re-searches the universe carrying the paired number; the
-−0.004 above is a 39-symbol sample, quoted as evidence about the confound, not as a result.
+longer has to out-run the spread of market drift to be visible.
+
+**The real side of that row measured for the first time on 2026-08-31, and it is negative.** Across
+the 77 experiments (66 symbols, 7,345 bars) that now carry the paired benchmark and match the
+7,400-bar nulls, the median excess is **−0.125**, negative in **75.3%** of them, against **−0.006**
+and **+0.000** on the two nulls. **What the search adds out-of-sample over holding the same series
+across the same windows is less than what it adds on data with no edge by construction.** The
+verdict rule does not change on it: −0.125 sits at the bootstrap null's 11.5th percentile, inside
+its p5 of −0.233, so the row reads *does not separate* — and ADR-072 made that band two-sided so a
+reader can see which side of it the number is on. The obvious objection, that a median of 77 against
+a band over individual draws is a mismatched comparison, is recorded in ADR-072 as an open question
+with its arithmetic rather than acted on: the 77 excesses come from one overlapping calendar window
+and are not independent draws, so the honest rescaling is a symbol-clustered one, pre-stated in its
+own ADR before it is applied.
 
 That is a claim about this universe and this catalog jointly, not about the thresholds. The power
 row is what makes it sayable: a gate that detects nothing could not distinguish "no edge here" from
