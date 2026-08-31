@@ -4,6 +4,7 @@ from pathlib import Path
 
 from app.research.lab.history import (
     CALIBRATION_N_BARS,
+    PRE_ADR063_SEARCH_START,
     RECENT_HISTORY_START,
     SEARCH_HISTORY_START,
 )
@@ -69,3 +70,11 @@ def test_the_calibration_drivers_share_one_length() -> None:
         source = (SCRIPTS / name).read_text()
         assert "CALIBRATION_N_BARS" in source, name
         assert not re.search(r"^N_BARS = \d+", source, re.MULTILINE), name
+
+
+def test_the_window_adr_063_replaced_is_pinned_where_the_experiment_can_find_it() -> None:
+    """ADR-074 measures the OLD setting, so the old setting has to be a named fact rather than a
+    literal in one driver — and it must not drift when the live window does."""
+    assert datetime(2005, 1, 1, tzinfo=UTC) == PRE_ADR063_SEARCH_START
+    assert SEARCH_HISTORY_START < PRE_ADR063_SEARCH_START
+    assert "PRE_ADR063_SEARCH_START" in (SCRIPTS / "window_experiment.py").read_text()

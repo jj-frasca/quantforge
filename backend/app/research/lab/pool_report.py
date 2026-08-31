@@ -739,3 +739,25 @@ def compare_search_windows(experiments: Sequence[Experiment]) -> WindowCompariso
         excess_delta_ci_low=excess_stats[1] if excess_stats else None,
         excess_delta_ci_high=excess_stats[2] if excess_stats else None,
     )
+
+
+def window_experiment_symbols(experiments: Sequence[Experiment], n: int) -> list[str]:
+    """The sample for ADR-074 decision 3's pre-registered re-search.
+
+    A symbol qualifies when its LONG window already carries ADR-068's benchmark and its short one
+    does not: the re-search supplies the missing side, and the pairing then reads as a
+    drift-controlled excess rather than the confounded surrogate. Deterministic (sorted, then a
+    seeded shuffle) so re-running the driver hits the same names — a sample that moves between runs
+    would let the criterion be re-rolled, which is the failure ADR-070 recorded.
+    """
+    has_long: set[str] = set()
+    has_short: set[str] = set()
+    for experiment in experiments:
+        if experiment.n_bars is None or experiment.walk_forward_hold_sharpe is None:
+            continue
+        target = has_long if experiment.n_bars >= WINDOW_SPLIT_BARS else has_short
+        target.add(experiment.symbol)
+    candidates = sorted(has_long - has_short)
+    rng = np.random.default_rng(_BOOTSTRAP_SEED)
+    rng.shuffle(candidates)
+    return sorted(candidates[:n])

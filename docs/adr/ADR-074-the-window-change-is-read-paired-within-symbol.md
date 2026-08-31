@@ -104,3 +104,40 @@ re-search at the old window with the benchmark recorded will.
 
 Drop `compare_search_windows` and its report section. ADR-063's second clause then returns to being
 open and unanswerable, which is the state this ADR found it in.
+
+## Measured (2026-08-31, same session) — the criterion was applied as stated and it FAILS
+
+`PYTHONPATH=. uv run python scripts/window_experiment.py 45` re-searched all **45** symbols that
+carry ADR-068's benchmark at the long window and not at the short one, at
+`PRE_ADR063_SEARCH_START = 2005-01-01`, full 34-strategy catalog, 100% yield, median 5,448 bars.
+The comparison and its sample are committed at `data/window_experiment/adr074_summary.json`;
+the ~1 MB raw store beside it is refused by the repo's large-file hook and stays local.
+
+| paired delta (long − short), n = 45 symbols | median | 95% CI (bootstrap 20k, seed 7) | mean | SE |
+|---|---|---|---|---|
+| **drift-controlled excess** — *the criterion* | **−0.074** | **[−0.157, +0.030]** | −0.086 | 0.032 |
+| raw walk-forward OOS — the surrogate | −0.038 | [−0.060, −0.009] | — | 0.015 |
+
+**The interval includes zero, so the criterion does not fire and ADR-063's window stays.** That is
+the decision, applied exactly as pre-stated, and it is recorded before anything is argued around it.
+
+Three things the run did establish:
+
+1. **The drift confound does not explain the surrogate.** Decision 3 existed because a
+   1990-vs-2005 drift difference could have produced the whole −0.038. It did not: with each side
+   differenced against holding its own series over its own windows, the point estimate is **−0.074**
+   — twice the surrogate's magnitude, same sign, negative on 60% of symbols. Removing the confound
+   made the effect larger, not smaller.
+2. **The sizing warning written into decision 3 was correct, and it is why this is inconclusive
+   rather than a pass.** The interval's half-width is 0.093, about 2.4× the surrogate effect.
+   Resolving −0.074 on this estimator needs **n ≈ 75**; the candidate pool held exactly 45 today and
+   grows as the discovery records the benchmark on more symbols.
+3. **The estimator mattered as much as the threshold.** The same 45 deltas give a mean of −0.086
+   against an SE of 0.032 — 2.7 standard errors from zero, which *would* have fired a criterion
+   stated on the mean. The criterion was stated on the median before the data existed, so the median
+   is what governs. **The lesson to carry forward is to pre-state the ESTIMATOR, not only the
+   threshold, and to prefer the one with the tighter interval when both are defensible** — a median
+   with a bootstrap interval is robust but costs roughly 1.6× the sample of a mean.
+
+**Re-run the same command when the candidate pool reaches ~75 symbols.** The sample is deterministic
+and only ever grows, so the rerun is a strict extension of this one rather than a new roll.

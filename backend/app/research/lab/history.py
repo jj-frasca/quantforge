@@ -18,6 +18,12 @@ SEARCH_HISTORY_START = datetime(1990, 1, 1, tzinfo=UTC)
 # by its newest member, so older bars per symbol buy it nothing).
 RECENT_HISTORY_START = datetime(2005, 1, 1, tzinfo=UTC)
 
+# The search window ADR-063 REPLACED, kept solely so ADR-074's experiment can re-search a sample at
+# the old setting and pair it against the live rows. It is a historical fact, not a knob: moving it
+# would silently change what that comparison means. It coincides with RECENT_HISTORY_START today,
+# which is why it is named separately rather than reused.
+PRE_ADR063_SEARCH_START = datetime(2005, 1, 1, tzinfo=UTC)
+
 # Bars of synthetic history per null/planted-edge symbol. A calibration is only informative at the
 # length the hunt actually searches (ADR-051), and this is the measured MEDIAN of the discovery
 # universe under SEARCH_HISTORY_START — not the maximum, because most of the universe is younger

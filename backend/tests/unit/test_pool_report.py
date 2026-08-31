@@ -16,6 +16,7 @@ from app.research.lab.pool_report import (
     compare_search_windows,
     compare_with_null,
     summarize_pool,
+    window_experiment_symbols,
 )
 
 _NOW = datetime(2026, 8, 18, tzinfo=UTC)
@@ -1086,3 +1087,41 @@ def test_how_often_the_longer_window_changes_the_finalist() -> None:
 
 def test_a_pool_with_no_symbol_at_both_windows_has_nothing_to_compare() -> None:
     assert compare_search_windows([_windowed("AAA", n_bars=5450, walk_forward=0.6)]) is None
+
+
+# --- ADR-074 decision 3: choosing the sample for the pre-registered re-search ---
+
+
+def test_the_research_sample_is_symbols_whose_long_window_carries_the_benchmark() -> None:
+    """Only the long side of ADR-068's benchmark exists in the pool today, so the re-search has to
+    supply the short side for symbols that already have the long one."""
+    pool = [
+        _windowed("HAS", n_bars=9200, walk_forward=0.5, hold=0.6),
+        _windowed("LACKS", n_bars=9200, walk_forward=0.5),
+        _windowed("SHORT_ONLY", n_bars=5450, walk_forward=0.5, hold=0.6),
+    ]
+
+    assert window_experiment_symbols(pool, 10) == ["HAS"]
+
+
+def test_a_symbol_that_already_has_both_sides_is_not_re_searched() -> None:
+    pool = [
+        _windowed("DONE", n_bars=9200, walk_forward=0.5, hold=0.6),
+        _windowed("DONE", n_bars=5450, walk_forward=0.5, hold=0.5),
+        _windowed("TODO", n_bars=9200, walk_forward=0.5, hold=0.6),
+    ]
+
+    assert window_experiment_symbols(pool, 10) == ["TODO"]
+
+
+def test_the_sample_is_deterministic_and_capped() -> None:
+    pool = [_windowed(f"S{i:02d}", n_bars=9200, walk_forward=0.5, hold=0.6) for i in range(40)]
+
+    first = window_experiment_symbols(pool, 8)
+    assert len(first) == 8
+    assert first == window_experiment_symbols(pool, 8)
+    assert set(first) <= {f"S{i:02d}" for i in range(40)}
+
+
+def test_no_candidate_is_an_empty_sample_not_an_error() -> None:
+    assert window_experiment_symbols([_windowed("A", n_bars=5450, walk_forward=0.5)], 5) == []
