@@ -341,6 +341,30 @@ def compare_with_null(
 
 
 EXCESS_STATISTIC = "walk-forward excess"
+PURGED_EXCESS_STATISTIC = "purged-CV excess"
+# Both drift-controlled rows: zero means the same thing on each side, so both are read two-sided
+# (ADR-072) while the raw rows keep ADR-038's one-sided criterion verbatim.
+EXCESS_STATISTICS = frozenset({EXCESS_STATISTIC, PURGED_EXCESS_STATISTIC})
+# (row label, null OOS field, null hold field, Trial OOS field, Experiment hold field). ADR-078:
+# the two controls cover different index sets — walk-forward benchmarks the suffix after the first
+# train block, purged CV benchmarks the whole window its folds tile — so each row differences
+# against its OWN benchmark and neither may stand in for the other.
+_EXCESS_SPECS = (
+    (
+        EXCESS_STATISTIC,
+        "walk_forward_oos_sharpes",
+        "walk_forward_hold_sharpes",
+        "walk_forward_oos_sharpe",
+        "walk_forward_hold_sharpe",
+    ),
+    (
+        PURGED_EXCESS_STATISTIC,
+        "purged_cv_oos_sharpes",
+        "purged_cv_hold_sharpes",
+        "purged_cv_oos_sharpe",
+        "purged_cv_hold_sharpe",
+    ),
+)
 
 
 def _clustered_difference_ci(
@@ -388,8 +412,10 @@ def _excess_rows(
         search added. Emitted only where both sides measured it — every artifact written before
         ADR-068 carries neither, and an excess of zero is a measurement nobody made (ADR-067).
 
-        The purged-CV row is deliberately absent: its folds are not a prefix-ordered benchmark
-        window, so the same subtraction would not be the same statistic.
+        ADR-078 added the purged-CV row, overturning ADR-068's deferral of it: fold ordering is a
+        fact about SELECTION, and buy-and-hold has no config to select. Scoring it on a fold's test
+        indices is the same operation on both diagnostics, and purged CV tests every index once, so
+        its control covers the whole searched window rather than a suffix of it.
 
         ADR-072: this is the ONLY row read two-sided. Because both sides are differenced against
         holding their own series over the same windows, zero means the same thing on each, so a
@@ -397,61 +423,63 @@ def _excess_rows(
         pool measured first.
     """
     rows: list[NullComparison] = []
-    for calibration in calibrations:
-        oos, hold = calibration.walk_forward_oos_sharpes, calibration.walk_forward_hold_sharpes
-        # Paired per searched symbol; unequal lengths mean the pairing is unknown, and
-        # differencing them anyway would invent a measurement.
-        if not hold or len(hold) != len(oos):
-            continue
-        null_excess = np.asarray(oos, dtype=float) - np.asarray(hold, dtype=float)
-        null_bars = int(np.median(calibration.n_bars)) if calibration.n_bars else None
-        matched = _matched(experiments, null_bars)
-        matched_bars = [e.n_bars for e in matched if e.n_bars is not None]
-        real_by_symbol: dict[str, list[float]] = defaultdict(list)
-        for e in matched:
-            if e.trials is None or e.walk_forward_hold_sharpe is None:
+    for label, null_oos_field, null_hold_field, trial_field, hold_field in _EXCESS_SPECS:
+        for calibration in calibrations:
+            oos = getattr(calibration, null_oos_field)
+            hold = getattr(calibration, null_hold_field)
+            # Paired per searched symbol; unequal lengths mean the pairing is unknown, and
+            # differencing them anyway would invent a measurement.
+            if not hold or len(hold) != len(oos):
                 continue
-            finalist = max(e.trials, key=lambda t: t.deflated_sharpe)
-            if finalist.walk_forward_oos_sharpe is None:
+            null_excess = np.asarray(oos, dtype=float) - np.asarray(hold, dtype=float)
+            null_bars = int(np.median(calibration.n_bars)) if calibration.n_bars else None
+            matched = _matched(experiments, null_bars)
+            matched_bars = [e.n_bars for e in matched if e.n_bars is not None]
+            real_by_symbol: dict[str, list[float]] = defaultdict(list)
+            for e in matched:
+                real_hold = getattr(e, hold_field)
+                if e.trials is None or real_hold is None:
+                    continue
+                finalist = max(e.trials, key=lambda t: t.deflated_sharpe)
+                finalist_oos = getattr(finalist, trial_field)
+                if finalist_oos is None:
+                    continue
+                real_by_symbol[e.symbol].append(finalist_oos - real_hold)
+            real_values = [v for values in real_by_symbol.values() for v in values]
+            if not real_values:
                 continue
-            real_by_symbol[e.symbol].append(
-                finalist.walk_forward_oos_sharpe - e.walk_forward_hold_sharpe
+            real_median = float(np.median(np.asarray(real_values, dtype=float)))
+            p95 = float(np.percentile(null_excess, 95))
+            p5 = float(np.percentile(null_excess, 5))
+            mismatch = _mismatch(report, calibration, matched, len(real_values))
+            # FINDING-011: the clustered interval is itself a comparison. ADR-064/067's identity
+            # and sample guards therefore apply before it can be exposed as `EXCLUDES ZERO`.
+            low: float | None = None
+            high: float | None = None
+            n_clusters = len(real_by_symbol) if not mismatch else 0
+            if not mismatch and n_clusters >= MIN_MATCHED:
+                low, high = _clustered_difference_ci(real_by_symbol, null_excess)
+            rows.append(
+                NullComparison(
+                    statistic=label,
+                    null_mode=calibration.null_mode,
+                    real_n=len(real_values),
+                    real_median=real_median,
+                    null_n=len(null_excess),
+                    null_median=float(np.median(null_excess)),
+                    null_p95=p95,
+                    null_p5=p5,
+                    real_exceeds_null_p95=real_median > p95,
+                    real_below_null_p5=real_median < p5,
+                    difference_ci_low=low,
+                    difference_ci_high=high,
+                    difference_n_clusters=n_clusters,
+                    comparable=not mismatch,
+                    mismatch=mismatch,
+                    matched_n=len(matched),
+                    matched_n_bars=int(np.median(matched_bars)) if matched_bars else None,
+                )
             )
-        real_values = [v for values in real_by_symbol.values() for v in values]
-        if not real_values:
-            continue
-        real_median = float(np.median(np.asarray(real_values, dtype=float)))
-        p95 = float(np.percentile(null_excess, 95))
-        p5 = float(np.percentile(null_excess, 5))
-        mismatch = _mismatch(report, calibration, matched, len(real_values))
-        # FINDING-011: the clustered interval is itself a comparison. ADR-064/067's identity and
-        # sample guards therefore apply before it can be exposed as an `EXCLUDES ZERO` result.
-        low: float | None = None
-        high: float | None = None
-        n_clusters = len(real_by_symbol) if not mismatch else 0
-        if not mismatch and n_clusters >= MIN_MATCHED:
-            low, high = _clustered_difference_ci(real_by_symbol, null_excess)
-        rows.append(
-            NullComparison(
-                statistic=EXCESS_STATISTIC,
-                null_mode=calibration.null_mode,
-                real_n=len(real_values),
-                real_median=real_median,
-                null_n=len(null_excess),
-                null_median=float(np.median(null_excess)),
-                null_p95=p95,
-                null_p5=p5,
-                real_exceeds_null_p95=real_median > p95,
-                real_below_null_p5=real_median < p5,
-                difference_ci_low=low,
-                difference_ci_high=high,
-                difference_n_clusters=n_clusters,
-                comparable=not mismatch,
-                mismatch=mismatch,
-                matched_n=len(matched),
-                matched_n_bars=int(np.median(matched_bars)) if matched_bars else None,
-            )
-        )
     return rows
 
 

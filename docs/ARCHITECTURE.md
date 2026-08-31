@@ -387,6 +387,25 @@ out-of-sample penalty is an artifact of the two windows spanning different marke
 something the search does**; the finalist still changes on 258 of 368 symbols. |δ|/SE ≈ 0.45 against
 a boundary of 2.178, so this is a measured null rather than a failure to resolve.
 
+**ADR-078 finishes the audit ADR-076 implied, and finds exactly one uncontrolled headline.**
+ADR-076 showed that on the SAME 200 symbols a raw statistic excluded zero (−0.037 [−0.061, −0.008])
+while its drift-controlled version covered it (−0.008 [−0.055, +0.022]) — so every published number
+was re-read against one question: *what does this read on data with no edge by construction, and is
+that level subtracted?* Everything else is controlled — ADR-055/061 charge the capture ratios their
+cost and their achievable oracle, ADR-060's category lead is differenced within symbol, ADR-075's
+interval is built on the controlled statistic — but the **purged-CV row of `compare_with_null` was
+raw**, next to a walk-forward row that ADR-068 had controlled. ADR-068 deferred it because
+"purged-CV's folds are not a prefix-ordered benchmark window"; that reason does not survive, since
+fold ordering is a fact about SELECTION and buy-and-hold has no config to select. `purged_cv_evaluate`
+now takes the same `benchmark` and reports `mean_oos_hold_sharpe` over the folds it KEPT, and a
+`purged-CV excess` row is emitted beside the raw one. Purged CV tests every index once, so its
+control covers the whole searched window where walk-forward's covers a suffix — the two hold Sharpes
+are separate fields and neither may stand in for the other. Nothing gates on either statistic and no
+threshold moves. Every artifact on disk predates the field, so the row reads **NOT MEASURED** until
+the pool re-searches and `null-calibration.yml` is re-dispatched (ADR-067) — and the first thing it
+will answer is whether purged CV's excess band collapses the way walk-forward's did (p95 +0.968 raw
+→ +0.096 excess). If it does not, that is a real difference between the two diagnostics.
+
 **ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
 error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against
 1.722), and AR(1) detection moved **34/22/0/0/14/64% → 40/36/0/0/24/66%** for φ = −0.3…+0.3 — four

@@ -185,7 +185,9 @@ class ValidationEngine:
         embargo = lookback_embargo(configs, floor=self._embargo)
         cv_splits = purged_kfold_splits(n_obs, self._purged_folds, embargo)
         try:
-            purged_cv = purged_cv_evaluate(performance, cv_splits, embargo=embargo)
+            purged_cv = purged_cv_evaluate(
+                performance, cv_splits, embargo=embargo, benchmark=hold_returns
+            )
         except ValueError:
             # Too few bars to hold a fold AND an honest embargo. Reporting nothing is the correct
             # answer: shrinking the embargo to fit would produce a leaky number labelled "purged".

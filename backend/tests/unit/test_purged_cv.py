@@ -155,3 +155,71 @@ def test_a_single_bar_fold_has_no_measurable_sharpe() -> None:
     result = purged_cv_evaluate(performance, splits, embargo=0)
     assert result.folds[0].oos_sharpe == 0.0
     assert result.oos_sharpe_std == 0.0  # ddof=1 on one fold would be NaN
+
+
+# --- ADR-078: the same folds, scored on buy-and-hold ---
+
+
+def test_the_benchmark_is_scored_on_the_same_folds() -> None:
+    rng = np.random.default_rng(11)
+    n = 400
+    performance = _matrix([list(rng.normal(0.001, 0.01, n)) for _ in range(3)])
+    hold = rng.normal(0.01, 0.008, n)
+    splits = purged_kfold_splits(n, n_splits=5, embargo=3)
+
+    result = purged_cv_evaluate(performance, splits, embargo=3, benchmark=hold)
+
+    assert result.mean_oos_hold_sharpe == pytest.approx(
+        float(np.mean([sharpe_ratio(pd.Series(hold[test_idx])) for _, test_idx in splits]))
+    )
+
+
+def test_an_unbenchmarked_purged_cv_reports_not_measured() -> None:
+    """ADR-067: a missing benchmark is not a benchmark of zero."""
+    performance = _matrix([[0.01] * 60, [0.02] * 60])
+    splits = purged_kfold_splits(60, n_splits=3, embargo=0)
+
+    assert purged_cv_evaluate(performance, splits, embargo=0).mean_oos_hold_sharpe is None
+
+
+def test_a_benchmark_that_does_not_span_the_window_is_refused() -> None:
+    performance = _matrix([[0.01] * 60, [0.02] * 60])
+    splits = purged_kfold_splits(60, n_splits=3, embargo=0)
+
+    with pytest.raises(ValueError, match="benchmark"):
+        purged_cv_evaluate(performance, splits, embargo=0, benchmark=np.full(59, 0.01))
+
+
+def test_the_benchmark_average_covers_only_the_folds_that_were_kept() -> None:
+    """A fold purged away entirely is dropped (ADR-039), so averaging the benchmark over it would
+    pair the strategy's score with blocks it was never scored on — the confound ADR-078 removes,
+    reintroduced one fold at a time."""
+    n = 40
+    performance = _matrix([[0.01] * n, [0.02] * n])
+    kept = np.arange(20, 40, dtype=np.intp)
+    splits = [
+        (np.array([], dtype=np.intp), np.arange(0, 20, dtype=np.intp)),
+        (np.arange(0, 20, dtype=np.intp), kept),
+    ]
+    hold = np.concatenate([np.full(20, 0.05), np.linspace(0.001, 0.002, 20)])
+
+    result = purged_cv_evaluate(performance, splits, embargo=100, benchmark=hold)
+
+    assert result.n_folds == 1
+    assert result.mean_oos_hold_sharpe == pytest.approx(sharpe_ratio(pd.Series(hold[kept])))
+
+
+def test_holding_beats_a_strategy_that_only_scales_the_drift() -> None:
+    """The point of the benchmark (ADR-078, following ADR-068): on a series whose whole return is
+    drift, a finalist that merely scales it has a Sharpe equal to holding, and the EXCESS is zero.
+    Purged CV's folds tile the whole window, so the control covers exactly the searched history."""
+    rng = np.random.default_rng(5)
+    n = 600
+    hold = rng.normal(0.0008, 0.01, n)
+    performance = _matrix([list(hold), list(hold * 0.5)])
+    splits = purged_kfold_splits(n, n_splits=5, embargo=2)
+
+    result = purged_cv_evaluate(performance, splits, embargo=2, benchmark=hold)
+
+    assert result.mean_oos_hold_sharpe is not None
+    assert result.mean_oos_sharpe - result.mean_oos_hold_sharpe == pytest.approx(0.0, abs=1e-9)

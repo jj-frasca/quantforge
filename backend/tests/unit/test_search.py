@@ -22,6 +22,7 @@ from app.research.lab.search import _select_index, run_search
 from app.research.strategies.builder import build_strategy_from_dict
 from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
 from app.validation.deflated_sharpe import probabilistic_sharpe_ratio
+from app.validation.purged_cv import purged_kfold_splits
 from app.validation.walk_forward import walk_forward_splits
 
 _LENIENT = GateConfig(
@@ -465,6 +466,55 @@ def test_an_experiment_written_before_the_benchmark_reads_as_not_measured() -> N
             trials=[],
             lifetime_trials=0,
         ).walk_forward_hold_sharpe
+        is None
+    )
+
+
+# --- ADR-078: the same control on the purged-CV diagnostic ---
+
+
+def test_the_purged_cv_hold_sharpe_excludes_the_sealed_holdout() -> None:
+    """Like ADR-068's, it benchmarks windows inside the search split only — the sealed holdout is
+    never scored by either diagnostic (ADR-016). The exact per-fold value is pinned at the engine
+    level; what the search must get right is WHICH bars it was measured over."""
+    frame = _random_walk_frame(31)
+    exp = run_search(frame, "AAPL", ["sma", "momentum"], rationale="unit")
+    handle, _ = split_holdout(frame, "AAPL")
+
+    assert exp.purged_cv_hold_sharpe is not None
+    whole = frame["close"].pct_change().fillna(0.0).to_numpy(dtype=float)
+    search_only = handle.frame["close"].pct_change().fillna(0.0).to_numpy(dtype=float)
+    for folds in (3, 5, 8):
+        for embargo in (2, 20, 60):
+            splits = purged_kfold_splits(len(frame), folds, embargo)
+            over_whole = float(
+                np.mean([sharpe_ratio(pd.Series(whole[test_idx])) for _, test_idx in splits])
+            )
+            assert exp.purged_cv_hold_sharpe != pytest.approx(over_whole)
+    assert len(search_only) < len(whole)
+
+
+def test_the_two_hold_sharpes_are_not_the_same_number() -> None:
+    """They control different index sets: walk-forward's test blocks are a suffix, purged CV's
+    folds tile the whole window. Reusing one for the other is the confound ADR-078 removes."""
+    frame = _random_walk_frame(33)
+    exp = run_search(frame, "AAPL", ["sma", "momentum"], rationale="unit")
+
+    assert exp.purged_cv_hold_sharpe is not None
+    assert exp.walk_forward_hold_sharpe is not None
+    assert exp.purged_cv_hold_sharpe != pytest.approx(exp.walk_forward_hold_sharpe)
+
+
+def test_an_experiment_written_before_the_purged_benchmark_reads_as_not_measured() -> None:
+    """ADR-067: the pool predates the field and must not report an excess of zero."""
+    assert (
+        Experiment(
+            symbol="AAPL",
+            strategy_names=["sma"],
+            gate_config=GateConfig(),
+            trials=[],
+            lifetime_trials=0,
+        ).purged_cv_hold_sharpe
         is None
     )
 

@@ -1484,6 +1484,51 @@ def test_an_artifact_predating_the_benchmark_carries_no_hold_distribution() -> N
     assert artifact.walk_forward_hold_sharpes == []
 
 
+# --- ADR-078: the null carries the purged-CV benchmark too ---
+
+
+def test_the_null_records_what_holding_its_own_series_earned_across_the_folds() -> None:
+    frames = {f"NULL{i}": iid_normal_null(900, seed=i) for i in range(3)}
+    result = calibrate_gate(frames, ["sma", "momentum"], null_mode="iid_normal")
+
+    assert len(result.purged_cv_hold_sharpes) == result.n_symbols
+
+
+def test_merging_shards_concatenates_the_purged_hold_distribution() -> None:
+    shards = [
+        calibrate_gate(
+            {f"NULL{i}": iid_normal_null(900, seed=i)}, ["sma", "momentum"], null_mode="iid_normal"
+        )
+        for i in range(2)
+    ]
+    merged = merge_calibrations(shards)
+
+    assert merged.purged_cv_hold_sharpes == (
+        shards[0].purged_cv_hold_sharpes + shards[1].purged_cv_hold_sharpes
+    )
+
+
+def test_an_artifact_predating_the_purged_benchmark_carries_no_hold_distribution() -> None:
+    """ADR-067: absent is not zero."""
+    artifact = NullCalibration(
+        n_symbols=1,
+        n_graduates=0,
+        false_graduation_rate=0.0,
+        n_clear_deflation_bar=0,
+        deflation_bar=1.3,
+        max_deflated_sharpe=-0.2,
+        max_holdout_sharpe=None,
+        graduates=[],
+        holdout_years=[4.0],
+        n_bars=[5400],
+        errors={},
+        gate_config_version="v1",
+        null_mode="iid_normal",
+    )
+
+    assert artifact.purged_cv_hold_sharpes == []
+
+
 # --- ADR-069: both arms of the selection rule measured by the same code path ---
 
 

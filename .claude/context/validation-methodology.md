@@ -134,6 +134,25 @@ that gap IS the optimistic bias, and it is why the two are never averaged.
 - A sample too short to hold the folds plus an honest embargo reports `purged_cv=None` plus a
   flag. Shrinking the embargo to fit would emit a leaky number labelled "purged".
 
+**ADR-078: it carries a drift control, exactly as walk-forward does.** `purged_cv_evaluate` takes
+an optional `benchmark` of per-bar returns and reports `mean_oos_hold_sharpe` — buy-and-hold scored
+on the same folds, averaged over the folds that were KEPT (a fold purged away entirely is dropped,
+and a benchmark averaged over blocks the strategy was never scored on is not the paired quantity).
+`ValidationEngine` passes the same series it passes to walk-forward, `run_search` stores it as
+`Experiment.purged_cv_hold_sharpe`, `calibrate_gate` collects
+`NullCalibration.purged_cv_hold_sharpes`, and `compare_with_null` emits a `purged-CV excess` row
+beside the raw one.
+
+**The two hold Sharpes are NOT interchangeable.** Purged CV tests every index exactly once, so its
+control covers the whole searched window; walk-forward's test blocks skip the first train block, so
+its control covers a suffix. Substituting one for the other mixes a correction measured on one
+index set into a statistic measured on another — which is the confound both exist to remove.
+
+ADR-068 had deferred this on the grounds that "purged CV's folds are not a prefix-ordered benchmark
+window". ADR-078 overturned it: fold ordering is a fact about SELECTION, and buy-and-hold has no
+config to select. Every artifact on disk predates the field, so the row reads NOT MEASURED until
+the pool re-searches and `null-calibration.yml` is re-dispatched (ADR-067).
+
 ---
 
 ## 5. ValidationReport

@@ -16,6 +16,8 @@ from app.research.lab.frontier import describe_frontier
 from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.pool_report import (
     EXCESS_STATISTIC,
+    EXCESS_STATISTICS,
+    PURGED_EXCESS_STATISTIC,
     DiagnosticSummary,
     compare_search_windows,
     compare_with_null,
@@ -202,7 +204,7 @@ def main() -> None:
                 verdict = "SEPARATES"
             elif row.real_below_null_p5:
                 verdict = "SEPARATES BELOW (real median < null p5 -- the search subtracts)"
-            elif row.statistic == EXCESS_STATISTIC:
+            elif row.statistic in EXCESS_STATISTICS:
                 verdict = "does not separate (real median inside the null band)"
             else:
                 verdict = "does not separate (real median <= null p95)"
@@ -216,7 +218,7 @@ def main() -> None:
                 else f"{row.matched_n} matched"
             )
             print(
-                f"  {row.statistic:<13} vs {row.null_mode:<14} "
+                f"  {row.statistic:<16} vs {row.null_mode:<14} "
                 f"real {row.real_median:+.3f} (n={row.real_n}, {matched}) | "
                 f"null median {row.null_median:+.3f} "
                 f"p5 {row.null_p5:+.3f} p95 {row.null_p95:+.3f} (n={row.null_n}) "
@@ -235,13 +237,14 @@ def main() -> None:
                     + ("spans zero" if spans_zero else "EXCLUDES ZERO")
                     + "; a LOWER BOUND on the width (one shared calendar window, ADR-075)"
                 )
-        if not any(row.statistic == EXCESS_STATISTIC for row in rows):
-            # ADR-068: the raw rows above are denominated in each side's own drift. Saying so is
-            # the point of the line — a reader who does not see the excess must know it is missing.
-            print(
-                "  walk-forward excess: NOT MEASURED -- the pool, the null artifacts, or both "
-                "predate ADR-068's benchmark; re-search and re-dispatch before reading a lead"
-            )
+        # ADR-068/078: the raw rows above are denominated in each side's own drift. Saying so is
+        # the point of these lines — a reader who does not see an excess must know it is missing.
+        for statistic, adr in ((EXCESS_STATISTIC, "ADR-068"), (PURGED_EXCESS_STATISTIC, "ADR-078")):
+            if not any(row.statistic == statistic for row in rows):
+                print(
+                    f"  {statistic}: NOT MEASURED -- the pool, the null artifacts, or both "
+                    f"predate {adr}'s benchmark; re-search and re-dispatch before reading a lead"
+                )
 
     # ADR-074: ADR-063's second clause, on the statistic the pool can actually carry. The gate has
     # produced one graduate under the live family, so a median holdout Sharpe does not exist.

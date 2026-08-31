@@ -9,6 +9,7 @@ from app.research.backtesting.metrics import sharpe_ratio
 from app.research.frames import bars_to_frame
 from app.research.strategies.sma import SMAStrategy
 from app.validation.engine import ValidationEngine
+from app.validation.purged_cv import lookback_embargo, purged_kfold_splits
 from app.validation.report import ValidationReport
 from app.validation.walk_forward import walk_forward_splits
 
@@ -138,3 +139,19 @@ def test_report_carries_the_buy_and_hold_of_the_same_windows() -> None:
     expected = float(np.mean([sharpe_ratio(pd.Series(hold[test_idx])) for _, test_idx in splits]))
 
     assert report.walk_forward.mean_oos_hold_sharpe == pytest.approx(expected)
+
+
+def test_purged_cv_carries_the_buy_and_hold_of_its_own_folds() -> None:
+    """ADR-078: the same control, on the folds purged CV actually scored. One benchmark, both
+    diagnostics, one window — a benchmark from a different window is the confound, not the fix."""
+    frame = _random_walk_frame(seed=4, n=300)
+    report = ValidationEngine().validate("sma_crossover", _CONFIGS, frame)
+
+    assert report.purged_cv is not None
+    hold = frame["close"].pct_change().fillna(0.0).to_numpy(dtype=float)
+    splits = purged_kfold_splits(
+        len(frame), report.n_purged_folds, lookback_embargo(_CONFIGS, floor=0)
+    )
+    expected = float(np.mean([sharpe_ratio(pd.Series(hold[test_idx])) for _, test_idx in splits]))
+
+    assert report.purged_cv.mean_oos_hold_sharpe == pytest.approx(expected)

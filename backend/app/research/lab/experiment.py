@@ -109,6 +109,11 @@ class Experiment(BaseModel):
     # experiment, not per trial: every family shares the window and the splits. None on the
     # records written before the field, which must read as not measured, never as zero excess.
     walk_forward_hold_sharpe: float | None = None
+    # ADR-078: the same control for the purged-CV diagnostic, over ITS folds. Not interchangeable
+    # with the walk-forward one: purged CV tests every index once so its benchmark covers the whole
+    # search window, while walk-forward's covers the suffix after the first train block. None on
+    # the records written before the field, which must read as not measured, never as zero excess.
+    purged_cv_hold_sharpe: float | None = None
     rationale: str = ""
 
 

@@ -1320,3 +1320,92 @@ def test_a_fully_searched_shard_has_nothing_left_to_do() -> None:
     frozen = [f"S{i}" for i in range(4)]
 
     assert window_experiment_workload(frozen, set(frozen), n_shards=2, shard_index=1) == []
+
+
+# --- ADR-078: the same control, applied to the purged-CV row ---
+
+
+def _pool_with_both_holds(triples: list[tuple[float, float, float]]) -> list[Experiment]:
+    return [
+        _exp_with_diagnostics(f"S{i}", walk_forward=wf, purged_cv=cv, graduated=False).model_copy(
+            update={
+                "search_config_version": "fam-a",
+                "n_bars": 5400,
+                "walk_forward_hold_sharpe": hold,
+                "purged_cv_hold_sharpe": hold,
+            }
+        )
+        for i, (wf, cv, hold) in enumerate(triples)
+    ]
+
+
+def test_the_purged_cv_row_gets_its_own_excess_row() -> None:
+    pool = _pool_with_both_holds([(0.5, 0.8, 0.5), (0.6, 0.9, 0.55), (0.7, 1.0, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.5, 0.6, 0.7]).model_copy(
+        update={
+            "walk_forward_hold_sharpes": [0.4, 0.4, 0.4],
+            "purged_cv_hold_sharpes": [0.3, 0.3, 0.3],
+        }
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    excess = next(r for r in rows if r.statistic == "purged-CV excess")
+    assert excess.real_median == pytest.approx(0.35)
+    assert excess.null_median == pytest.approx(0.3)
+    assert excess.real_n == 3
+    assert excess.null_n == 3
+
+
+def test_the_raw_purged_cv_row_survives_its_excess_row() -> None:
+    """ADR-078 decision 4, inheriting ADR-068's: a published verdict is not restated in place."""
+    pool = _pool_with_both_holds([(0.5, 0.8, 0.5), (0.6, 0.9, 0.55), (0.7, 1.0, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.5, 0.6, 0.7]).model_copy(
+        update={
+            "walk_forward_hold_sharpes": [0.4, 0.4, 0.4],
+            "purged_cv_hold_sharpes": [0.3, 0.3, 0.3],
+        }
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    assert [r.statistic for r in rows].count("purged-CV") == 1
+    assert next(r for r in rows if r.statistic == "purged-CV").real_median == pytest.approx(0.9)
+
+
+def test_the_purged_excess_row_is_absent_until_both_sides_measured_it() -> None:
+    """ADR-067: the artifacts on disk predate the field and an excess of zero is a measurement
+    nobody made. The walk-forward excess row is unaffected — the two controls are independent."""
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.5, 0.6, 0.7]).model_copy(
+        update={"walk_forward_hold_sharpes": [0.4, 0.4, 0.4]}
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    assert not any(r.statistic == "purged-CV excess" for r in rows)
+    assert any(r.statistic == "walk-forward excess" for r in rows)
+
+
+def test_the_two_excess_rows_do_not_borrow_each_others_control() -> None:
+    """The alternative ADR-078 rejected: reusing one hold Sharpe for both would mix a correction
+    measured on one index set into a statistic measured on another."""
+    pool = [
+        e.model_copy(update={"purged_cv_hold_sharpe": 0.1})
+        for e in _pool_with_both_holds([(0.5, 0.8, 0.5), (0.6, 0.9, 0.5), (0.7, 1.0, 0.5)])
+    ]
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.5, 0.6, 0.7]).model_copy(
+        update={
+            "walk_forward_hold_sharpes": [0.4, 0.4, 0.4],
+            "purged_cv_hold_sharpes": [0.3, 0.3, 0.3],
+        }
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    assert next(r for r in rows if r.statistic == "walk-forward excess").real_median == (
+        pytest.approx(0.1)
+    )
+    assert next(r for r in rows if r.statistic == "purged-CV excess").real_median == (
+        pytest.approx(0.8)
+    )

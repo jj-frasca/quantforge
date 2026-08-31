@@ -76,6 +76,13 @@ class PurgedCVResult(BaseModel):
     mean_oos_sharpe: float
     oos_sharpe_std: float
     consistency: float
+    # ADR-078: buy-and-hold scored across the SAME folds, averaged over the folds that were KEPT.
+    # `mean_oos_sharpe` is denominated in the drift of the series it was computed on exactly as the
+    # walk-forward statistic is (ADR-068), so the two are only interpretable together. Purged CV
+    # tests every index once, so this control covers the whole searched window rather than a
+    # suffix of it. None means no benchmark was supplied, which is not a benchmark of zero
+    # (ADR-067).
+    mean_oos_hold_sharpe: float | None = None
 
 
 def lookback_embargo(configs: Sequence[BaseStrategy], floor: int) -> int:
@@ -108,7 +115,11 @@ def _sharpe(returns: FloatArray) -> float:
 
 
 def purged_cv_evaluate(
-    performance: FloatArray, splits: list[tuple[IntArray, IntArray]], *, embargo: int
+    performance: FloatArray,
+    splits: list[tuple[IntArray, IntArray]],
+    *,
+    embargo: int,
+    benchmark: FloatArray | None = None,
 ) -> PurgedCVResult:
     """Select on each fold's purged train rows, score that choice on the fold (ADR-039).
 
@@ -117,6 +128,9 @@ def purged_cv_evaluate(
         splits: purged K-fold splits from ``purged_kfold_splits``.
         embargo: the embargo those splits were built with, recorded on the result so a stored
             measurement says how hard it was actually purged.
+        benchmark: optional per-bar buy-and-hold returns for the same window, scored across the
+            same folds (ADR-078). Pairing it here rather than at the call site is the point: a
+            benchmark measured over a different window is the confound it exists to remove.
 
     Notes:
         A fold whose training set was purged away entirely has nothing to select on and is
@@ -129,10 +143,19 @@ def purged_cv_evaluate(
     if not splits:
         raise ValueError("need >= 1 fold")
 
+    n_obs = performance.shape[0]
+    if benchmark is not None:
+        benchmark = np.asarray(benchmark, dtype=np.float64)
+        if benchmark.shape != (n_obs,):
+            raise ValueError("benchmark must carry one return per bar of the performance matrix")
+
     folds: list[PurgedCVFoldResult] = []
+    hold_sharpes: list[float] = []
     for train_idx, test_idx in splits:
         if len(train_idx) == 0 or len(test_idx) == 0:
             continue
+        if benchmark is not None:
+            hold_sharpes.append(_sharpe(benchmark[test_idx]))
         train_sharpes = [_sharpe(performance[train_idx, c]) for c in range(performance.shape[1])]
         best = int(np.argmax(train_sharpes))
         folds.append(
@@ -155,4 +178,5 @@ def purged_cv_evaluate(
         mean_oos_sharpe=float(scores.mean()),
         oos_sharpe_std=float(scores.std(ddof=1)) if len(scores) > 1 else 0.0,
         consistency=float((scores > 0.0).mean()),
+        mean_oos_hold_sharpe=float(np.mean(hold_sharpes)) if benchmark is not None else None,
     )
