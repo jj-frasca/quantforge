@@ -8,6 +8,9 @@
 - **Relates to**: ADR-063 (the window change under test), ADR-068 (the drift-controlled statistic),
   ADR-070/074 (state the standard error and the estimator before the threshold), ADR-075 (the
   most recent pre-registration in this family), FINDING-013 (the record this ADR corrects)
+- **Outcome (2026-08-31, session #17)**: the sample was searched in full and the second look
+  spent. **−0.008 [−0.055, +0.022]** at the boundary — the criterion does **not** fire,
+  ADR-063's window **stays**, and the sequence is closed. See §Measured below.
 
 ## Context
 
@@ -131,6 +134,57 @@ claims to control.
   does not exist", "the SE is larger than the effect", and "the estimator was not pre-stated".
 - `data/window_experiment/adr076_sample.json` becomes a committed artifact whose only job is to make
   the pre-registration checkable by a reader who does not trust this file.
+
+## Measured (2026-08-31, autonomous session #17) — the criterion does NOT fire, and this is the last look
+
+All 200 frozen symbols were searched at `PRE_ADR063_SEARCH_START`: 45 as ADR-074's look-1 prefix,
+126 by session #16's shards, and the last 29 by session #17, which resumed the same shards. The
+resumability decision 6 called "execution, not design" is what let a measurement span three sessions
+without any of them re-searching a symbol or re-rolling the sample. Every one of the 200 ended carrying
+the ADR-068 benchmark at both windows, so `excess_n = 200` — the frozen sample contributed in full,
+with nothing dropped for a missing side. `data/window_experiment/adr076_summary.json` is the
+committed artifact.
+
+| statistic | median | interval | reads |
+| --- | --- | --- | --- |
+| **drift-controlled excess delta — THE CRITERION** | **−0.008** | **[−0.055, +0.022]** at α = 0.0294 | includes zero → **does not fire** |
+| the same, at look 1's α = 0.05 (continuity only) | −0.008 | [−0.053, +0.016] | includes zero |
+| surrogate raw OOS delta (confounded by drift) | −0.037 | [−0.061, −0.008] | excludes zero |
+| in-sample delta | +0.014 | [−0.004, +0.036] | includes zero |
+
+**ADR-063's search window stays.** Decision 3 fixed this as look 2 of 2, so the sequence is now
+closed: no further look at this question is available without a new ADR carrying a three-look
+boundary, and decision 7's "revisit, do not revert" clause is not reached.
+
+### This is a null result that says something, not one that says nothing
+
+The distinction matters and it is the reason the sizing in decision 2 was worth doing.
+
+- **The experiment had the power it was designed to have.** The boundary half-width came in at
+  ≈0.039, against the ≈0.049 predicted from look 1's dispersion — slightly *tighter* than the
+  sizing assumed, so the ≈87% power against a −0.074 effect was if anything an underestimate.
+- **The point estimate moved to the null, it did not merely fail to clear a bar.** |δ|/SE ≈ 0.45
+  against a boundary of 2.178. Look 1's −0.074 at n = 45 shrank to −0.008 at n = 200 — the
+  behaviour of a sampling fluctuation, not of a real effect the first look was too small to resolve.
+- **The surrogate still separates and the controlled statistic does not, on the very same symbols.**
+  Raw OOS is −0.037 with an interval excluding zero; subtract what holding the same series across
+  the same windows earned and −0.037 becomes −0.008 with an interval covering zero. **The apparent
+  out-of-sample penalty of the longer window is a drift artifact of the two windows spanning
+  different market history — not something the search does.** That is exactly the confound ADR-068
+  was built to remove and ADR-074 flagged its own reading as vulnerable to, now measured rather
+  than argued: the surrogate's headline number, quoted in ARCHITECTURE.md since ADR-074, does not
+  survive the control.
+- **The finalist still changes on 258 of 368 symbols.** The longer window picks a different strategy
+  most of the time; what it does not do is pick a measurably worse one once drift is accounted for.
+
+### What this retires
+
+ADR-063's second clause, open since 2026-08-29 and unanswerable as originally phrased (ADR-074),
+is answered and closed. The pre-registration held end to end: sample frozen and committed before
+any of it was searched, size and boundary and estimator fixed before the data existed, a partial
+run refused a reading, and the result reported as it came back rather than as it was wanted. Four
+criteria in this series failed on their own construction (FINDING-013 and ADR-070/074's meta-lesson);
+this is the first one that was constructed well enough to return an answer either way.
 
 ## Reversal
 

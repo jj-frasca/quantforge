@@ -372,6 +372,21 @@ surrogate — both sides carry their own window's drift — so ADR-074 pre-state
 drift-controlled delta is **−0.074 [−0.157, +0.030]**, the interval includes zero, the criterion does
 not fire and the window stays. Served at `GET /api/v1/window-comparison`.
 
+**ADR-076 spent the second look, and the window change's OOS penalty turns out to be drift.**
+ADR-074's n = 45 was under-powered *by choice* — the candidate set held 368 all along and 45 was a
+command-line argument (FINDING-013). ADR-076 froze a 200-symbol sample to
+`data/window_experiment/adr076_sample.json` and committed it before searching any of it, sized n
+from look 1's dispersion (≈87% power), and pre-stated a **Pocock two-look boundary, nominal
+two-sided α = 0.0294**, so the two looks together still spend 0.05. All 200 were searched on
+2026-08-31 and all 200 carried the benchmark at both windows. **The drift-controlled excess delta is
+−0.008 [−0.055, +0.022]: the criterion does not fire, ADR-063's window stays, and the sequence is
+closed.** The informative part is the contrast on the same symbols — the raw OOS delta is still
+−0.037 [−0.061, −0.008], excluding zero, and subtracting what holding the same series across the
+same windows earned collapses it to −0.008 covering zero. **The longer window's apparent
+out-of-sample penalty is an artifact of the two windows spanning different market history, not
+something the search does**; the finalist still changes on 258 of 368 symbols. |δ|/SE ≈ 0.45 against
+a boundary of 2.178, so this is a measured null rather than a failure to resolve.
+
 **ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
 error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against
 1.722), and AR(1) detection moved **34/22/0/0/14/64% → 40/36/0/0/24/66%** for φ = −0.3…+0.3 — four
