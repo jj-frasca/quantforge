@@ -3,6 +3,7 @@ import type { NullComparison } from '../../types/lab'
 const asSharpe = (value: number): string => (value >= 0 ? `+${value.toFixed(3)}` : value.toFixed(3))
 
 const EXCESS_STATISTIC = 'walk-forward excess'
+const MIN_DIFFERENCE_CLUSTERS = 30
 
 // ADR-051/064/068. The leaderboard says what the search found; this says whether what it found is
 // distinguishable from what the same search finds on data with NO EDGE by construction. The verdict
@@ -69,7 +70,10 @@ export function NullComparisonPanel({ comparisons }: { comparisons: NullComparis
         </tbody>
       </table>
       {comparisons.map((c) =>
-        c.difference_ci_low === null || c.difference_ci_high === null ? null : (
+        !c.comparable ||
+        c.difference_n_clusters < MIN_DIFFERENCE_CLUSTERS ||
+        c.difference_ci_low === null ||
+        c.difference_ci_high === null ? null : (
           <p
             data-testid="difference-interval"
             key={`diff-${c.statistic}-${c.null_mode}-${c.matched_n_bars ?? 'any'}`}

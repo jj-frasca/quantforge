@@ -53,6 +53,13 @@ difference between the two sides' medians**.
    their single-draw band stay exactly as they are, and stay the headline verdict. ADR-068's rule
    holds — **a published verdict is not restated on a new statistic in place**; the interval is
    reported beside it and each says what it sizes.
+5. **ADR-064/067 comparability is a precondition.** FINDING-011 found that the first implementation
+   attached and rendered `EXCLUDES ZERO` even when the row was refused for its search family,
+   history, or effective sample. A refused row retains its medians and mismatch as context, but its
+   difference interval is absent; renderers also enforce that boundary defensively. Because the
+   interval resamples symbols, ADR-067's minimum of 30 applies again to the number of symbol
+   clusters—a row with 30 repeat experiments from one name can retain its single-draw comparison
+   but cannot publish a one-cluster difference interval.
 
 ## What this deliberately does NOT control for, and it matters
 

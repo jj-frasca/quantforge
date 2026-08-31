@@ -422,8 +422,14 @@ def _excess_rows(
         real_median = float(np.median(np.asarray(real_values, dtype=float)))
         p95 = float(np.percentile(null_excess, 95))
         p5 = float(np.percentile(null_excess, 5))
-        low, high = _clustered_difference_ci(real_by_symbol, null_excess)
         mismatch = _mismatch(report, calibration, matched, len(real_values))
+        # FINDING-011: the clustered interval is itself a comparison. ADR-064/067's identity and
+        # sample guards therefore apply before it can be exposed as an `EXCLUDES ZERO` result.
+        low: float | None = None
+        high: float | None = None
+        n_clusters = len(real_by_symbol) if not mismatch else 0
+        if not mismatch and n_clusters >= MIN_MATCHED:
+            low, high = _clustered_difference_ci(real_by_symbol, null_excess)
         rows.append(
             NullComparison(
                 statistic=EXCESS_STATISTIC,
@@ -438,7 +444,7 @@ def _excess_rows(
                 real_below_null_p5=real_median < p5,
                 difference_ci_low=low,
                 difference_ci_high=high,
-                difference_n_clusters=len(real_by_symbol),
+                difference_n_clusters=n_clusters,
                 comparable=not mismatch,
                 mismatch=mismatch,
                 matched_n=len(matched),

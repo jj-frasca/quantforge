@@ -1184,10 +1184,12 @@ def test_the_raw_rows_are_never_given_a_difference_interval() -> None:
 
 def test_an_interval_that_spans_zero_leaves_the_published_verdict_alone() -> None:
     """ADR-075 decision 4: the single-draw verdict is reported beside the interval, not replaced."""
-    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
-    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.1, 0.2, 0.3]).model_copy(
-        update={"walk_forward_hold_sharpes": [0.4, 0.4, 0.4]}
-    )
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)] * 10)
+    null = _null(
+        "iid_normal",
+        walk_forward=[0.4, 0.5, 0.6] * 10,
+        purged_cv=[0.1, 0.2, 0.3] * 10,
+    ).model_copy(update={"walk_forward_hold_sharpes": [0.4, 0.4, 0.4] * 10})
 
     rows = compare_with_null(summarize_pool(pool, []), [null], pool)
 
@@ -1195,3 +1197,36 @@ def test_an_interval_that_spans_zero_leaves_the_published_verdict_alone() -> Non
     assert excess.real_exceeds_null_p95 is False
     assert excess.real_below_null_p5 is False
     assert excess.difference_ci_low is not None
+
+
+def test_a_refused_excess_row_has_no_difference_interval() -> None:
+    """FINDING-011: an underpowered row cannot also publish `EXCLUDES ZERO`."""
+    pool = _pool_with_hold([(0.1, 0.9)] * 3)
+    null = _null(
+        "iid_normal", walk_forward=[0.5] * 40, purged_cv=[0.5] * 40, n_bars=5400
+    ).model_copy(update={"walk_forward_hold_sharpes": [0.5] * 40})
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.comparable is False
+    assert "only 3 experiments matched" in excess.mismatch
+    assert excess.difference_ci_low is None
+    assert excess.difference_ci_high is None
+    assert excess.difference_n_clusters == 0
+
+
+def test_the_difference_interval_requires_the_minimum_number_of_symbol_clusters() -> None:
+    """FINDING-011: 30 repeated searches of one name are one bootstrap sampling unit."""
+    repeated = [e.model_copy(update={"symbol": "AAA"}) for e in _pool_with_hold([(0.1, 0.9)] * 30)]
+    null = _null(
+        "iid_normal", walk_forward=[0.5] * 40, purged_cv=[0.5] * 40, n_bars=5400
+    ).model_copy(update={"walk_forward_hold_sharpes": [0.5] * 40})
+
+    rows = compare_with_null(summarize_pool(repeated, []), [null], repeated)
+
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.comparable is True  # The inherited single-draw comparison still has 30 rows.
+    assert excess.difference_ci_low is None
+    assert excess.difference_ci_high is None
+    assert excess.difference_n_clusters == 1

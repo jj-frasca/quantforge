@@ -176,3 +176,25 @@ test('a row with no clustered interval shows none', () => {
   render(<NullComparisonPanel comparisons={[row()]} />)
   expect(screen.queryByTestId('difference-interval')).not.toBeInTheDocument()
 })
+
+test('a refused row never renders a clustered significance interval', () => {
+  render(
+    <NullComparisonPanel
+      comparisons={[
+        excessRow({
+          comparable: false,
+          mismatch: 'only 3 matched diagnostics measured (need 30 to measure a median)',
+        }),
+      ]}
+    />,
+  )
+
+  expect(screen.getByText(/not comparable/i)).toBeInTheDocument()
+  expect(screen.queryByTestId('difference-interval')).not.toBeInTheDocument()
+})
+
+test('an interval below the minimum symbol-cluster sample is not rendered', () => {
+  render(<NullComparisonPanel comparisons={[excessRow({ difference_n_clusters: 1 })]} />)
+
+  expect(screen.queryByTestId('difference-interval')).not.toBeInTheDocument()
+})

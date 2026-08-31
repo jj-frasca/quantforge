@@ -588,6 +588,13 @@ resampling the real side BY SYMBOL** (all of a symbol's experiments enter togeth
 side by draw (each null symbol is an independently generated series), B = 20,000, seed 7 — the same
 constants §7.8's bootstrap uses.
 
+**FINDING-011:** ADR-064/067's `comparable` guard applies before this interval is exposed. A row
+refused for search-family identity, matched history, or fewer than 30 measured diagnostics retains
+its medians and mismatch as context but carries no difference interval and cannot say `EXCLUDES
+ZERO`. The same 30-observation floor applies to the interval's effective symbol-cluster units, not
+only to experiment rows. The dashboard repeats both guards so a stale payload cannot turn a refusal
+or one-cluster resample into a finding.
+
 | null (7,400 bars) | difference | 95% CI, symbol-clustered (66 clusters) |
 |---|---|---|
 | `bootstrap:SPY` | **−0.119** | **[−0.215, −0.061]** — excludes zero |

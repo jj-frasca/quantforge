@@ -340,8 +340,11 @@ parameter today. Reading them together is the fastest way to understand what the
   `matched_n_bars`, the ADR-064 subset the real median was actually taken over. Rows with
   `statistic = "walk-forward excess"` are ADR-068's drift-controlled form, where each side is
   differenced against what holding ITS OWN series across the SAME test blocks earned; they are
-  **absent, not zero**, until both sides carry the benchmark. Never render a row whose `comparable`
-  is false as a result — render the `mismatch`. Same `[]`-and-200 contract as `/null-calibration`.
+  **absent, not zero**, until both sides carry the benchmark. ADR-075's `difference_ci_low` /
+  `difference_ci_high` and `difference_n_clusters` exist only on a comparable centered row;
+  FINDING-011 forbids attaching or rendering their `EXCLUDES ZERO` reading on a refused row or on
+  fewer than 30 effective symbol clusters. Never render a row whose `comparable` is false as a
+  result — render the `mismatch`. Same `[]`-and-200 contract as `/null-calibration`.
 - `/window-comparison` answers ADR-063's second clause on the statistic the pool can actually carry
   (ADR-074). It pairs each symbol's finalist across the 6,000-bar window split, so it is a
   within-symbol difference — the cross-symbol form compares young listings with old ones, since
