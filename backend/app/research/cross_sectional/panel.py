@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -13,21 +14,24 @@ def long_short_weights(signals: pd.DataFrame, quantile: float = 0.2) -> pd.DataF
     Notes:
         ``quantile`` must be in (0, 0.5]; at 0.5 the universe splits cleanly into long and short
         halves. ``k = max(1, int(quantile · n_valid))`` per leg, so a small cross-section still
-        trades one name per side.
+        trades one name per side. ``k`` is per DATE, not per panel.
+
+        Vectorised over the whole frame rather than looped per date. The row loop this replaces
+        used ``DataFrame.iterrows()``, which rebuilds and copies a Series for every date, and it
+        was slow enough that one Hypothesis property test over it exceeded the suite's 300s
+        per-test timeout on a developer machine — killing its xdist worker and stalling the run.
+        Every cross-sectional backtest goes through here, so the cost was never only a test's.
     """
     if not 0.0 < quantile <= 0.5:
         raise ValueError("quantile must be in (0, 0.5]")
 
-    weights = pd.DataFrame(0.0, index=signals.index, columns=signals.columns)
-    for date, row in signals.iterrows():
-        valid = row.dropna()
-        n = len(valid)
-        if n < 2:
-            continue
-        k = max(1, int(quantile * n))
-        ranked = valid.rank(method="first")  # 1 = lowest signal
-        longs = ranked.index[ranked > n - k]
-        shorts = ranked.index[ranked <= k]
-        weights.loc[date, longs] = 1.0 / len(longs)
-        weights.loc[date, shorts] = -1.0 / len(shorts)
-    return weights
+    ranked = signals.rank(axis=1, method="first")  # 1 = lowest signal; NaN stays NaN
+    n_valid = signals.notna().sum(axis=1)
+    k = np.maximum(1, (quantile * n_valid).astype(int))
+
+    # Both legs hold exactly k names, so each name's share is 1/k. Comparisons against NaN ranks
+    # are False, which is how unscorable names stay out of either leg.
+    longs = ranked.gt(n_valid - k, axis=0).astype(float)
+    shorts = ranked.le(k, axis=0).astype(float)
+    weights = longs.sub(shorts).div(k, axis=0)
+    return weights.where(n_valid >= 2, 0.0, axis=0)

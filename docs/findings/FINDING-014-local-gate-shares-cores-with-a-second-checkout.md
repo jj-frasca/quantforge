@@ -1,8 +1,8 @@
 # FINDING-014: the local gate was never hung — it was sharing eight cores with a second checkout
 
-- **Status**: **PARTLY WRONG — corrected the same day. Read §Correction before quoting anything
-  above it.** The contention is real and measured; the causal claim in the title is not the reason
-  the gate fails to finish.
+- **Status**: **RESOLVED, and PARTLY WRONG on the way there. Read §Correction and §Resolved before
+  quoting anything above them.** The contention is real and measured; the causal claim in the title
+  is not the reason the gate fails to finish. The real cause is named in §Resolved and is fixed.
 - **Found by**: Autonomous session #17
 - **Affects**: local `make test` / `make check` wall time only. **No production code, no gate
   threshold, no published result.** CI has always been correct and green.
@@ -123,16 +123,54 @@ stall around a crashing test, not a hang inside one, and not starvation.
   supports a story that a CPU delta over 30 seconds destroys.** The first measurement was right
   about what it saw and wrong about what it meant.
 
+### Resolved (2026-08-31, session #18) — one `iterrows()` in a production hot path
+
+**The test is `tests/unit/test_cross_sectional_forward.py::test_score_forward_is_truncation_invariant_no_lookahead`.**
+A serial run (`-p no:xdist --timeout=90`) named it in one line, because without xdist a timeout is
+reported instead of taking a worker down with it. The traceback lands in the same frame every time:
+
+```
+tests/unit/test_cross_sectional_forward.py:284  trunc_equity = score_forward(pos, truncated)
+app/research/cross_sectional/forward.py:116     fwd = _factor_returns(position, panel)[forward_mask]
+app/research/cross_sectional/forward.py:88      portfolio_returns(signal, panel, ...)
+app/research/cross_sectional/engine.py:30       long_short_weights(signals, quantile)
+app/research/cross_sectional/panel.py:22        for date, row in signals.iterrows():
+pandas/core/frame.py:1586  iterrows -> Series.__init__ -> data.copy()
++++ Timeout +++
+```
+
+`long_short_weights` walked the signal panel with `DataFrame.iterrows()`, which rebuilds and copies
+a Series per date, and a Hypothesis `@given(cut=st.integers(1, 200))` property calls `score_forward`
+twice per example. **This was never only a test's cost — every cross-sectional backtest ranks
+through this function.**
+
+The fix is to rank the whole frame at once (`DataFrame.rank(axis=1)` plus two row-wise comparisons)
+rather than per date. Measured on a 2,000 x 200 panel: **3.664s -> 0.053s, a 69x speedup**, with the
+two implementations agreeing exactly across 1,500 randomised panels (ragged NaN masks, duplicate
+columns to exercise tie-breaking, quantiles 0.1/0.2/0.25/1-3/0.5). The test file that could not
+finish inside 300s now runs in **17.6s end to end**.
+
+**Why CI was green while this machine was not: it is the same slow code on both.** CI squeaked in
+under the 300s per-test timeout and this x86-64 mac did not. Nothing about the defect was
+environment-specific — only which side of the timeout it landed on. So the gate was honest and the
+code was slow, and raising the timeout would have been the wrong fix: it would have bought a green
+local gate and kept the 69x in the backtester.
+
+**And that is the full chain to "the suite no longer finishes":** under `-n auto` the timeout kills
+the worker (`node down: Not properly terminated`), xdist replaces it, and the master then waits
+forever for a worker that never reports. One `iterrows()`, five sessions of symptoms.
+
+**The two unnamed `F` failures are also accounted for** and were never assertion failures: they are
+this same timeout firing on whichever worker drew the slow property test, which is why they moved
+position between runs. Nothing else in the suite exceeded the timeout in the serial run.
+
 ### Still open
 
-- **Which test crashes its worker.** It is fast on CI (which runs the same suite, with the same
-  300s timeout, green on every pushed SHA) and fatal here.
-- **Two real `F` failures**, seen at ~20% and ~25% in the 6-worker run and at ~93%/~98% in session
-  #16's — different positions because xdist distributes differently run to run, so they are probably
-  the same two tests. A follow-up run at `--timeout=90` on an idle machine reached 48% with **no**
-  failures, which suggests those `F`s were the 300s timeout firing under contention rather than
-  assertion failures. Unconfirmed.
-- The stall means the run never reaches its own `-rf` summary, which is why none of these have names
-  yet. The instrument that would produce one without waiting for the summary is
-  `pytest --faulthandler-timeout=N`: it uses `faulthandler.dump_traceback_later`, a C-level watchdog
-  that does not need the GIL, so it names the test even when a native call is holding it.
+~~Which test crashes its worker~~ and ~~the two unnamed `F` failures~~ are both answered in
+§Resolved above. What remains is a property of the tooling rather than of this suite:
+
+- **xdist turns a per-test timeout into an indefinite stall.** The worker dies, `replace` brings a
+  new one up, and the master never reports. Any future test that exceeds `--timeout` will present
+  as "the gate hangs" again rather than as a named failure. The instrument that shortcuts the
+  investigation is a serial run — `pytest -p no:xdist --timeout=90 -rf` — which names the offender
+  in minutes; `--faulthandler-timeout=N` is the fallback if a native call is holding the GIL.

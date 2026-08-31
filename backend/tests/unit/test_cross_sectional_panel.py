@@ -66,3 +66,36 @@ def test_long_short_weights_breaks_ties_deterministically() -> None:
     w2 = long_short_weights(signals, quantile=0.25)
     pd.testing.assert_frame_equal(w1, w2)
     assert w1.iloc[0].sum() == pytest.approx(0.0)
+
+
+def test_long_short_weights_sizes_each_date_from_that_date_own_valid_count() -> None:
+    """The per-leg size k is a function of the valid names ON THAT DATE, not of the panel.
+
+    This is the invariant a vectorised ranker is most likely to get wrong — it is easy to compute
+    one k for the whole frame — and it was untested while the implementation was a row loop.
+    """
+    signals = _panel(
+        {
+            "A": [1.0, 1.0, 1.0],
+            "B": [2.0, 2.0, np.nan],
+            "C": [3.0, 3.0, np.nan],
+            "D": [4.0, np.nan, np.nan],
+        },
+        3,
+    )
+    w = long_short_weights(signals, quantile=0.5)
+
+    # date 0: 4 valid, k=2 -> C,D long at 1/2 each; A,B short at -1/2 each
+    assert w.iloc[0].to_dict() == {"A": -0.5, "B": -0.5, "C": 0.5, "D": 0.5}
+    # date 1: 3 valid, k=int(1.5)=1 -> C long, A short, B flat
+    assert w.iloc[1].to_dict() == {"A": -1.0, "B": 0.0, "C": 1.0, "D": 0.0}
+    # date 2: 1 valid -> cannot form both legs, trades flat
+    assert w.iloc[2].to_dict() == {"A": 0.0, "B": 0.0, "C": 0.0, "D": 0.0}
+
+
+def test_long_short_weights_are_flat_where_a_date_has_no_valid_names_at_all() -> None:
+    signals = _panel({"A": [np.nan, 1.0], "B": [np.nan, 2.0]}, 2)
+    w = long_short_weights(signals, quantile=0.5)
+
+    assert w.iloc[0].to_dict() == {"A": 0.0, "B": 0.0}
+    assert w.iloc[1].to_dict() == {"A": -1.0, "B": 1.0}
