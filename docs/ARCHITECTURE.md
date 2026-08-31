@@ -263,6 +263,15 @@ strategy the search selects is not distinguishable from the kind it rejected, on
 the same reason ADR-061 gives on synthetic ones: at this history length the data does not separate
 the hypotheses. That points the next unit at **holdout length**, not at the selection rule.
 
+**The first measured selection-rule alternative did not replace the default (ADR-069/070), and its
+artifact extraction is repaired by ADR-071.** Ranking families by walk-forward OOS Sharpe moved
+AR(1) detections only 63/200 → 66/200 across the four cells with recoverable edge and decreased one
+cell, failing the pre-stated criterion; production therefore still selects by observed Sharpe.
+FINDING-010 later showed that calibration correctly gated the walk-forward-selected family but
+reported max-DSR finalist diagnostics and attribution. ADR-071 routes every finalist-level field
+through the requested rule. Detection and Type-I counts from ADR-070 remain valid; its non-default
+diagnostic observation requires a corrected rerun before reuse. No generated artifact changed.
+
 FINDING-007 is **resolved** (ADR-054): the paper's probability-form DSR is implemented, every
 user-facing claim now calls the stored value a selection-adjusted Sharpe *margin*, and every new
 trial records both. What remains is the threshold question — whether the gate should switch to the

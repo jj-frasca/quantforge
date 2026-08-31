@@ -425,6 +425,15 @@ Two things this closes, so they are not retried:
 The AR(1) sweep deliberately records no achievable oracle: its state IS the observed return, which
 is why its capture already exceeds 100%.
 
+**ADR-069/070/071: selection-rule sweeps must preserve the selected finalist.** ADR-069 measured
+`observed` against `walk_forward` cross-family selection; the non-default arm failed its pre-stated
+power criterion, so ADR-070 keeps `observed` as production default. FINDING-010 then found that
+calibration extracted diagnostics and attribution from max DSR even when `run_search` sent the
+walk-forward winner to the holdout and gate. ADR-071 makes every finalist-level artifact field use
+the requested selection rule. ADR-070's detection/Type-I counts remain valid because they came from
+the correctly selected gate result; its observation about the non-default null diagnostic is not
+reusable without a corrected rerun. Non-default artifacts were never committed.
+
 ### 7.5 The real universe against the null (ADR-051) — `scripts/pool_report.py`
 ADR-038/039 recorded a walk-forward and a purged-CV OOS Sharpe on every trial with a stated revisit
 trigger: read them against `data/null_calibration/*.json`. Two things had to be repaired before that

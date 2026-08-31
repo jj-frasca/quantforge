@@ -16,7 +16,7 @@ from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.frontier import sharpe_standard_error
 from app.research.lab.gate import GateConfig
 from app.research.lab.holdout import split_holdout
-from app.research.lab.search import SelectBy, run_search
+from app.research.lab.search import SelectBy, _select_index, run_search
 from app.research.lab.universe import expected_max_sharpe_under_null
 from app.research.strategies.catalog import CATEGORY_OF
 
@@ -753,7 +753,7 @@ def measure_power(
             net_oracles.append(net_oracle_sharpes[symbol])
         if achievable_oracle_sharpes is not None:
             achievable_oracles.append(achievable_oracle_sharpes[symbol])
-        finalist = _finalist(experiment)
+        finalist = _finalist(experiment, select_by)
         finalist_observed_sharpes.append(finalist.observed_sharpe)
         finalist_strategy_names.append(finalist.strategy_name)
         for category, best in _best_by_category(experiment).items():
@@ -837,9 +837,9 @@ def _best_by_category(experiment: Experiment) -> dict[str, float]:
     return best
 
 
-def _finalist(experiment: Experiment) -> Trial:
-    """The max-DSR trial — the same one run_search sends to the gate."""
-    return max(experiment.trials, key=lambda t: t.deflated_sharpe)
+def _finalist(experiment: Experiment, select_by: SelectBy) -> Trial:
+    """The trial selected by the same rule ``run_search`` sent to the gate (ADR-071)."""
+    return experiment.trials[_select_index(experiment.trials, select_by)]
 
 
 def calibrate_gate(
@@ -919,9 +919,9 @@ def calibrate_gate(
                 symbol=e.symbol,
                 holdout_sharpe=e.graduate.holdout_sharpe,
                 holdout_n_bars=e.graduate.holdout_n_bars,
-                # The finalist is the max-DSR trial by construction in run_search, and Graduate
-                # does not carry the statistic itself.
-                deflated_sharpe=max(t.deflated_sharpe for t in e.trials),
+                # Graduate does not carry the statistic itself. Resolve the same finalist that
+                # run_search sent to the gate; a non-default selection rule need not pick max DSR.
+                deflated_sharpe=_finalist(e, select_by).deflated_sharpe,
             )
             for e in graduates
             if e.graduate is not None
@@ -929,10 +929,14 @@ def calibrate_gate(
         holdout_years=holdout_years,
         n_bars=n_bars,
         walk_forward_oos_sharpes=[
-            wf for e in experiments if (wf := _finalist(e).walk_forward_oos_sharpe) is not None
+            wf
+            for e in experiments
+            if (wf := _finalist(e, select_by).walk_forward_oos_sharpe) is not None
         ],
         purged_cv_oos_sharpes=[
-            cv for e in experiments if (cv := _finalist(e).purged_cv_oos_sharpe) is not None
+            cv
+            for e in experiments
+            if (cv := _finalist(e, select_by).purged_cv_oos_sharpe) is not None
         ],
         walk_forward_hold_sharpes=[
             hold for e in experiments if (hold := e.walk_forward_hold_sharpe) is not None

@@ -22,6 +22,7 @@ from app.research.lab.calibration import (
     NullCalibration,
     NullGraduate,
     PowerCalibration,
+    _finalist,
     autocorrelated_edge,
     bootstrap_null,
     calibrate_gate,
@@ -37,6 +38,7 @@ from app.research.lab.calibration import (
     oracle_sharpe,
     oracle_sharpe_of,
 )
+from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.gate import GateConfig
 from app.research.lab.search import run_search
 from app.research.lab.universe import expected_max_sharpe_under_null
@@ -1493,6 +1495,72 @@ def test_the_null_can_be_calibrated_under_the_walk_forward_rule() -> None:
 
     assert walk.search_config_version != default.search_config_version
     assert walk.n_symbols == default.n_symbols
+
+
+def test_calibration_extracts_the_finalist_selected_by_the_requested_rule() -> None:
+    """ADR-071: verdict and diagnostic attribution must describe the same family.
+
+    ADR-069 exists because observed and walk-forward ranking can disagree. Reconstructing every
+    calibration finalist as max DSR silently puts the default family's diagnostics into a
+    non-default artifact even though another family was sent to the holdout and gate.
+    """
+    observed_winner = Trial(
+        strategy_name="sma",
+        parameters={},
+        observed_sharpe=2.0,
+        deflated_sharpe=1.0,
+        pbo=0.1,
+        parameter_stability_score=0.8,
+        walk_forward_oos_sharpe=0.1,
+    )
+    walk_forward_winner = Trial(
+        strategy_name="momentum",
+        parameters={},
+        observed_sharpe=1.0,
+        deflated_sharpe=0.0,
+        pbo=0.1,
+        parameter_stability_score=0.8,
+        walk_forward_oos_sharpe=0.9,
+    )
+    experiment = Experiment(
+        symbol="TEST",
+        strategy_names=["sma", "momentum"],
+        gate_config=GateConfig(),
+        trials=[observed_winner, walk_forward_winner],
+        lifetime_trials=2,
+        best_strategy_name="momentum",
+    )
+
+    assert _finalist(experiment, "observed") == observed_winner
+    assert _finalist(experiment, "walk_forward") == walk_forward_winner
+
+
+def test_walk_forward_null_diagnostics_describe_the_family_sent_to_the_gate() -> None:
+    frame = iid_normal_null(900, seed=0)
+    names = ["sma", "momentum", "rsi_mean_reversion"]
+    experiment = run_search(frame, "NULL0", names, refine=True, select_by="walk_forward")
+    selected = _finalist(experiment, "walk_forward")
+    assert selected.strategy_name != _finalist(experiment, "observed").strategy_name
+
+    calibration = calibrate_gate(
+        {"NULL0": frame}, names, null_mode="iid_normal", select_by="walk_forward"
+    )
+
+    assert calibration.walk_forward_oos_sharpes == [selected.walk_forward_oos_sharpe]
+    assert calibration.purged_cv_oos_sharpes == [selected.purged_cv_oos_sharpe]
+
+
+def test_walk_forward_power_attribution_describes_the_family_sent_to_the_gate() -> None:
+    frame = iid_normal_null(900, seed=0)
+    names = ["sma", "momentum", "rsi_mean_reversion"]
+    experiment = run_search(frame, "EDGE0", names, refine=True, select_by="walk_forward")
+    selected = _finalist(experiment, "walk_forward")
+    assert selected.strategy_name != _finalist(experiment, "observed").strategy_name
+
+    calibration = measure_power({"EDGE0": frame}, names, phi=-0.3, select_by="walk_forward")
+
+    assert calibration.finalist_strategy_names == [selected.strategy_name]
+    assert calibration.finalist_observed_sharpes == [selected.observed_sharpe]
 
 
 def test_a_power_sweep_records_which_rule_selected_its_finalists() -> None:
