@@ -42,6 +42,10 @@ export const forwardScoreSchema = z.object({
   beats_buy_and_hold: z.boolean(),
   as_of: z.string(),
   forward_equity: z.array(forwardEquityPointSchema).default([]),
+  // ADR-073. Zero means the strategy never took a position in the forward window, so every
+  // Sharpe on this row is the degenerate-series 0.0 rather than a measurement. Defaulted for
+  // scores persisted before ADR-073.
+  forward_trades: z.number().int().nonnegative().default(0),
 })
 
 export type ForwardScore = z.infer<typeof forwardScoreSchema>
@@ -213,6 +217,8 @@ export type NullCalibration = z.infer<typeof nullCalibrationSchema>
 // `matched_n_bars` are the subset the real median was actually taken over. A row whose `statistic`
 // ends in "excess" is the drift-controlled form: each side differenced against what holding its own
 // series across the same test blocks earned. Absent, never zero, until both sides measured it.
+// ADR-072: only that centered row is read two-sided — `real_below_null_p5` is false by
+// construction on the raw rows, where a low real median is a fact about drift, not about the search.
 export const nullComparisonSchema = z.object({
   statistic: z.string(),
   null_mode: z.string(),
@@ -221,7 +227,9 @@ export const nullComparisonSchema = z.object({
   null_n: z.number().int(),
   null_median: z.number(),
   null_p95: z.number(),
+  null_p5: z.number().default(0),
   real_exceeds_null_p95: z.boolean(),
+  real_below_null_p5: z.boolean().default(false),
   comparable: z.boolean(),
   mismatch: z.string().default(''),
   matched_n: z.number().int().default(0),

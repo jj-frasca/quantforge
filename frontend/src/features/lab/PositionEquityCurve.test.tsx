@@ -19,6 +19,7 @@ const base: PaperPosition = {
     buy_and_hold_return: -0.146,
     buy_and_hold_sharpe: -0.4,
     beats_buy_and_hold: true,
+    forward_trades: 7,
     as_of: '2026-07-09T00:00:00Z',
     forward_equity: [
       { timestamp: '2026-07-07T00:00:00Z', strategy_equity: 1.01, buy_and_hold_equity: 0.99 },

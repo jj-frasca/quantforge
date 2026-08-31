@@ -43,6 +43,9 @@ export function PaperPortfolioTable({ positions }: Props) {
             {positions.map((position) => {
               const score = position.score ?? undefined
               const beats = score?.beats_buy_and_hold ?? false
+              // ADR-073: with no forward trades every Sharpe on this row is the degenerate-series
+              // 0.0, not a measurement. Render it as unmeasured rather than as a score of zero.
+              const untraded = score !== undefined && score.forward_bars > 0 && score.forward_trades === 0
               return (
                 <tr
                   key={`${position.symbol}-${position.strategy_name}`}
@@ -55,11 +58,11 @@ export function PaperPortfolioTable({ positions }: Props) {
                       {position.status}
                     </span>
                   </td>
-                  <td className={score ? (beats ? 'beats' : 'lags') : undefined}>
-                    {fmtSharpe(score?.forward_sharpe)}
+                  <td className={score && !untraded ? (beats ? 'beats' : 'lags') : undefined}>
+                    {untraded ? '—' : fmtSharpe(score?.forward_sharpe)}
                   </td>
                   <td>{fmtSharpe(score?.buy_and_hold_sharpe)}</td>
-                  <td>{fmtPct(score?.forward_return)}</td>
+                  <td>{untraded ? '—' : fmtPct(score?.forward_return)}</td>
                   <td>
                     {position.status === 'closed' && position.exit_reasons.length > 0 ? (
                       <ul className="exit-reasons">
@@ -67,6 +70,8 @@ export function PaperPortfolioTable({ positions }: Props) {
                           <li key={reason}>{reason}</li>
                         ))}
                       </ul>
+                    ) : untraded ? (
+                      `not yet measurable — 0 trades in ${score.forward_bars} forward bar${score.forward_bars === 1 ? '' : 's'}`
                     ) : score ? (
                       `${score.forward_bars} forward bar${score.forward_bars === 1 ? '' : 's'}`
                     ) : (

@@ -46,6 +46,9 @@ class ForwardScore(BaseModel):
     beats_buy_and_hold: bool
     as_of: datetime
     forward_equity: list[ForwardEquityPoint] = []
+    # ADR-073. Defaulted so scores persisted before it still validate; a stored 0 on an old score
+    # is indistinguishable from "never traded", which is the honest reading of a zero-return series.
+    forward_trades: int = 0
 
 
 class PaperPosition(BaseModel):
@@ -85,6 +88,10 @@ class ExitPolicy(BaseModel):
     min_rolling_sharpe: float = 0.0
     max_forward_drawdown: float = 0.25
     require_beat_buy_and_hold_forward: bool = True
+    # ADR-073: how long a position that has NEVER traded is held before it is retired as
+    # unevaluable. Not a performance bar — the Sharpe rules cannot run on zero trades at all.
+    # ASSUMPTION, not a measurement: calibrate against observed time-to-first-trade.
+    max_bars_without_trade: int = 126
 
     @property
     def version_hash(self) -> str:
@@ -102,10 +109,20 @@ class LifecycleDecision(BaseModel):
 
 
 def lifecycle_from_returns(
-    forward_returns: pd.Series, buy_and_hold_returns: pd.Series, policy: ExitPolicy
+    forward_returns: pd.Series,
+    buy_and_hold_returns: pd.Series,
+    policy: ExitPolicy,
+    n_forward_trades: int,
 ) -> LifecycleDecision:
     """Decide hold/exit from a position's FORWARD returns (ADR-020). Uses a rolling trailing window
-    so recent decay isn't masked by early gains. Pure — no engine/network, fully controllable."""
+    so recent decay isn't masked by early gains. Pure — no engine/network, fully controllable.
+
+    `n_forward_trades` is required, not inferred (ADR-073): the Sharpe rules below are verdicts on
+    a strategy's TRADING, and on zero trades the return series is all zeros, whose Sharpe
+    `sharpe_ratio` manufactures as 0.0 for a degenerate series. Applying the rules to that constant
+    reads "no evidence" as "failing grade" and cut 18 of the book's 27 closed positions before they
+    ever took a position.
+    """
     n = len(forward_returns)
     if n < policy.min_forward_bars_before_exit:
         return LifecycleDecision(
@@ -114,6 +131,27 @@ def lifecycle_from_returns(
             forward_drawdown=0.0,
             rolling_buy_and_hold_sharpe=0.0,
             reasons=["grace period (insufficient forward data)"],
+        )
+    if n_forward_trades == 0:
+        # ADR-073: unmeasured, not failed. Retired only for being unevaluable, in wording that
+        # cannot be read back as a performance verdict.
+        if n >= policy.max_bars_without_trade:
+            return LifecycleDecision(
+                action="exit",
+                rolling_sharpe=0.0,
+                forward_drawdown=0.0,
+                rolling_buy_and_hold_sharpe=0.0,
+                reasons=[
+                    f"never traded in {n} forward bars "
+                    f"(>= {policy.max_bars_without_trade}; signal too rare to evaluate)"
+                ],
+            )
+        return LifecycleDecision(
+            action="hold",
+            rolling_sharpe=0.0,
+            forward_drawdown=0.0,
+            rolling_buy_and_hold_sharpe=0.0,
+            reasons=[f"not yet measurable (0 trades in {n} forward bars)"],
         )
     equity = (1.0 + forward_returns).cumprod()
     forward_drawdown = abs(max_drawdown(equity))
@@ -162,7 +200,7 @@ def evaluate_lifecycle(
     result = BacktestEngine().run_strategy(frame, strategy)
     fwd = result.returns[forward_mask]
     bh = frame["close"].pct_change().fillna(0.0)[forward_mask]
-    return lifecycle_from_returns(fwd, bh, policy)
+    return lifecycle_from_returns(fwd, bh, policy, _forward_trades(result.position, forward_mask))
 
 
 def freeze_graduate(
@@ -194,6 +232,17 @@ def freeze_graduate(
     )
 
 
+def _forward_trades(positions: pd.Series, forward_mask: "pd.Series[bool]") -> int:
+    """Trades taken inside the forward window, in the engine's own convention (ADR-073).
+
+    Mirrors `BacktestEngine.run_strategy`: turnover is |Δposition| with the first bar charged at
+    |position|. Differencing over the FULL series before masking is deliberate — an entry taken on
+    the first forward bar is a forward trade, and diffing the slice would hide it.
+    """
+    turnover = positions.diff().abs().fillna(positions.abs())
+    return int((turnover[forward_mask] > 0).sum())
+
+
 def evaluate_forward(position: PaperPosition, frame: pd.DataFrame) -> ForwardScore:
     """Score `position` on the bars of `frame` strictly after its freeze date.
 
@@ -212,6 +261,7 @@ def evaluate_forward(position: PaperPosition, frame: pd.DataFrame) -> ForwardSco
             buy_and_hold_sharpe=0.0,
             beats_buy_and_hold=False,
             as_of=as_of,
+            forward_trades=0,
         )
 
     strategy = build_strategy_from_dict(position.strategy_name, position.parameters)
@@ -233,15 +283,19 @@ def evaluate_forward(position: PaperPosition, frame: pd.DataFrame) -> ForwardSco
         )
         for i, ts in enumerate(fwd.index)
     ]
+    n_trades = _forward_trades(result.position, forward_mask)
     return ForwardScore(
         forward_bars=int(forward_mask.sum()),
         forward_return=float((1.0 + fwd).prod() - 1.0),
         forward_sharpe=fwd_sharpe,
         buy_and_hold_return=float((1.0 + bh).prod() - 1.0),
         buy_and_hold_sharpe=bh_sharpe,
-        beats_buy_and_hold=fwd_sharpe > bh_sharpe,
+        # ADR-073: on zero trades `fwd_sharpe` is 0.0 by the degenerate-series guard, and
+        # `0.0 > bh_sharpe` scored not-participating-in-a-decline as a win. Never traded, never beat.
+        beats_buy_and_hold=bool(n_trades > 0 and fwd_sharpe > bh_sharpe),
         as_of=as_of,
         forward_equity=forward_equity,
+        forward_trades=n_trades,
     )
 
 

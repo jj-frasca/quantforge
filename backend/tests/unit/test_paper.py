@@ -187,7 +187,7 @@ def _series(vals: list[float]) -> pd.Series:
 
 
 def test_grace_period_holds() -> None:
-    d = lifecycle_from_returns(_series([0.001] * 10), _series([0.0] * 10), ExitPolicy())
+    d = lifecycle_from_returns(_series([0.001] * 10), _series([0.0] * 10), ExitPolicy(), 3)
     assert isinstance(d, LifecycleDecision)
     assert d.action == "hold" and "grace" in d.reasons[0]
 
@@ -196,7 +196,7 @@ def test_healthy_forward_holds() -> None:
     rng = np.random.default_rng(1)
     fwd = _series(list(rng.normal(0.0015, 0.004, 100)))
     bh = _series(list(rng.normal(-0.001, 0.004, 100)))
-    d = lifecycle_from_returns(fwd, bh, ExitPolicy())
+    d = lifecycle_from_returns(fwd, bh, ExitPolicy(), 12)
     assert d.action == "hold" and d.reasons == []
 
 
@@ -204,7 +204,7 @@ def test_decayed_rolling_sharpe_exits() -> None:
     policy = ExitPolicy(require_beat_buy_and_hold_forward=False, max_forward_drawdown=10.0)
     rng = np.random.default_rng(0)
     fwd = _series(list(rng.normal(-0.002, 0.008, 100)))
-    d = lifecycle_from_returns(fwd, _series(list(rng.normal(0.0, 0.008, 100))), policy)
+    d = lifecycle_from_returns(fwd, _series(list(rng.normal(0.0, 0.008, 100))), policy, 12)
     assert d.action == "exit" and any("rolling Sharpe" in r for r in d.reasons)
 
 
@@ -215,7 +215,7 @@ def test_forward_drawdown_breach_exits() -> None:
         max_forward_drawdown=0.05,
     )
     vals = [-0.03] * 12 + [0.0005] * 90  # ~30% drop then drift up
-    d = lifecycle_from_returns(_series(vals), _series([0.0] * 102), policy)
+    d = lifecycle_from_returns(_series(vals), _series([0.0] * 102), policy, 12)
     assert d.action == "exit" and any("drawdown" in r for r in d.reasons)
 
 
@@ -224,8 +224,45 @@ def test_stops_beating_buy_and_hold_forward_exits() -> None:
     rng = np.random.default_rng(2)
     fwd = _series(list(rng.normal(0.0005, 0.01, 100)))
     bh = _series(list(rng.normal(0.003, 0.008, 100)))
-    d = lifecycle_from_returns(fwd, bh, policy)
+    d = lifecycle_from_returns(fwd, bh, policy, 12)
     assert d.action == "exit" and any("buy-and-hold" in r for r in d.reasons)
+
+
+def test_zero_trades_within_window_is_unmeasured_not_failed() -> None:
+    """ADR-073: an all-zero forward series has Sharpe 0.0 by the degenerate-series guard, which
+    both exit rules used to read as a failing grade. It is absence of evidence."""
+    policy = ExitPolicy()
+    n = policy.min_forward_bars_before_exit
+    rising = _series(list(np.linspace(0.001, 0.003, n)))  # the name went up; old rule cut on this
+    d = lifecycle_from_returns(_series([0.0] * n), rising, policy, 0)
+    assert d.action == "hold"
+    assert "not yet measurable" in d.reasons[0]
+    assert not any("decayed" in r or "buy-and-hold" in r for r in d.reasons)
+
+
+def test_zero_trades_beyond_window_retires_as_unevaluable() -> None:
+    """ADR-073: retired for being unevaluable, in wording that cannot be read as a verdict."""
+    policy = ExitPolicy()
+    n = policy.max_bars_without_trade
+    d = lifecycle_from_returns(_series([0.0] * n), _series([0.0] * n), policy, 0)
+    assert d.action == "exit"
+    assert "never traded" in d.reasons[0]
+    assert not any("decayed" in r for r in d.reasons)
+
+
+def test_zero_trade_score_does_not_beat_buy_and_hold() -> None:
+    """ADR-073: not participating in a decline is not a win. The old rule scored it as one."""
+    score = ForwardScore(
+        forward_bars=21,
+        forward_return=0.0,
+        forward_sharpe=0.0,
+        buy_and_hold_return=-0.21,
+        buy_and_hold_sharpe=-4.045,  # the live DVA row, recorded as beats=True
+        beats_buy_and_hold=False,
+        as_of=datetime(2026, 8, 28, tzinfo=UTC),
+        forward_trades=0,
+    )
+    assert score.beats_buy_and_hold is False
 
 
 def test_exit_policy_version_hash_is_deterministic_and_sensitive() -> None:

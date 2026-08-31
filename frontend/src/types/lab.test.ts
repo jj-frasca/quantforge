@@ -151,6 +151,7 @@ test('paperPortfolioSchema parses an open position with a forward score + equity
         buy_and_hold_return: -0.146,
         buy_and_hold_sharpe: -0.4,
         beats_buy_and_hold: true,
+        forward_trades: 7,
         as_of: '2026-07-08T00:00:00Z',
         forward_equity: [
           { timestamp: '2026-07-07T00:00:00Z', strategy_equity: 1.02, buy_and_hold_equity: 0.99 },
@@ -183,6 +184,7 @@ test('forwardScoreSchema defaults forward_equity to [] when absent (pre-ADR-023 
         buy_and_hold_return: 0.0,
         buy_and_hold_sharpe: 0.0,
         beats_buy_and_hold: false,
+        forward_trades: 7,
         as_of: '2026-07-08T00:00:00Z',
       },
       status: 'open',

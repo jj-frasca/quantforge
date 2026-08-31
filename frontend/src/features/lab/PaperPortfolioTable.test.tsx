@@ -17,6 +17,7 @@ const open: PaperPosition = {
     buy_and_hold_return: -0.146,
     buy_and_hold_sharpe: -0.4,
     beats_buy_and_hold: true,
+    forward_trades: 7,
     as_of: '2026-07-08T00:00:00Z',
     forward_equity: [],
   },
@@ -39,6 +40,26 @@ test('renders a row per position with symbol, strategy and forward Sharpe', () =
   expect(screen.getByRole('cell', { name: 'trend_filtered_mean_reversion' })).toBeInTheDocument()
   expect(screen.getByRole('cell', { name: '0.90' })).toBeInTheDocument()
   expect(screen.getByText(/42 forward bars/i)).toBeInTheDocument()
+})
+
+test('renders a position that has never traded as unmeasured, not as a score of zero', () => {
+  // ADR-073: an all-zero forward series has Sharpe 0.0 by the degenerate-series guard. The table
+  // used to render that as a real 0.00 next to a "beats" colour, which is how 18 of the book's
+  // closed positions looked healthy right up until they were cut for a decayed edge they never had.
+  const untraded: PaperPosition = {
+    ...open,
+    score: {
+      ...open.score!,
+      forward_bars: 21,
+      forward_trades: 0,
+      forward_return: 0,
+      forward_sharpe: 0,
+      beats_buy_and_hold: false,
+    },
+  }
+  render(<PaperPortfolioTable positions={[untraded]} />)
+  expect(screen.getByText(/not yet measurable — 0 trades in 21 forward bars/i)).toBeInTheDocument()
+  expect(screen.queryByRole('cell', { name: '0.00' })).not.toBeInTheDocument()
 })
 
 test('summarizes the position count and open count', () => {
