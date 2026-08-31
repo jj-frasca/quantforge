@@ -195,11 +195,16 @@ def main() -> None:
     if rows:
         print("\nvs the null (finalist window on both sides):")
         for row in rows:
-            verdict = (
-                "SEPARATES"
-                if row.real_exceeds_null_p95
-                else "does not separate (real median <= null p95)"
-            )
+            # ADR-072: `real_below_null_p5` is set only on the centered row, where zero means the
+            # same thing on both sides. The raw rows keep ADR-038's one-sided criterion verbatim.
+            if row.real_exceeds_null_p95:
+                verdict = "SEPARATES"
+            elif row.real_below_null_p5:
+                verdict = "SEPARATES BELOW (real median < null p5 -- the search subtracts)"
+            elif row.statistic == EXCESS_STATISTIC:
+                verdict = "does not separate (real median inside the null band)"
+            else:
+                verdict = "does not separate (real median <= null p95)"
             if not row.comparable:
                 verdict = f"NOT COMPARABLE -- {row.mismatch}"
             # ADR-064: the matched history IS the sample the real median was taken over, so it
@@ -212,7 +217,8 @@ def main() -> None:
             print(
                 f"  {row.statistic:<13} vs {row.null_mode:<14} "
                 f"real {row.real_median:+.3f} (n={row.real_n}, {matched}) | "
-                f"null median {row.null_median:+.3f} p95 {row.null_p95:+.3f} (n={row.null_n}) "
+                f"null median {row.null_median:+.3f} "
+                f"p5 {row.null_p5:+.3f} p95 {row.null_p95:+.3f} (n={row.null_n}) "
                 f"-- {verdict}"
             )
         if not any(row.statistic == EXCESS_STATISTIC for row in rows):

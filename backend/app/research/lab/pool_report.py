@@ -168,9 +168,16 @@ class NullComparison(BaseModel):
     null_n: int
     null_median: float
     null_p95: float
+    # ADR-072: the lower edge of the same band. Reported on every row so a real median under the
+    # null is visible, and read as a verdict only where it means something (below).
+    null_p5: float = 0.0
     # Stated criterion, not a threshold anything gates on: ADR-038 reads a pool median below the
     # null's p95 as the search producing what it produces from noise.
     real_exceeds_null_p95: bool
+    # ADR-072: the mirror criterion, and FALSE BY CONSTRUCTION on the raw rows. Only the excess
+    # statistic is centered the same way on both sides (ADR-068); on a raw row the two sides carry
+    # different drifts, so a low real median is a fact about drift, not about the search.
+    real_below_null_p5: bool = False
     comparable: bool
     mismatch: str = ""
     # ADR-064: how many experiments the real side was actually computed from, and their median
@@ -312,6 +319,7 @@ def compare_with_null(
                     null_n=len(values),
                     null_median=float(np.median(array)),
                     null_p95=p95,
+                    null_p5=float(np.percentile(array, 5)),
                     real_exceeds_null_p95=real.median > p95,
                     comparable=not mismatch,
                     mismatch=mismatch,
@@ -343,6 +351,11 @@ def _excess_rows(
 
         The purged-CV row is deliberately absent: its folds are not a prefix-ordered benchmark
         window, so the same subtraction would not be the same statistic.
+
+        ADR-072: this is the ONLY row read two-sided. Because both sides are differenced against
+        holding their own series over the same windows, zero means the same thing on each, so a
+        real median under the null band is as interpretable as one over it — and it is what the
+        pool measured first.
     """
     rows: list[NullComparison] = []
     for calibration in calibrations:
@@ -367,6 +380,7 @@ def _excess_rows(
             continue
         real_median = float(np.median(np.asarray(real_values, dtype=float)))
         p95 = float(np.percentile(null_excess, 95))
+        p5 = float(np.percentile(null_excess, 5))
         mismatch = _mismatch(report, calibration, matched, len(real_values))
         rows.append(
             NullComparison(
@@ -377,7 +391,9 @@ def _excess_rows(
                 null_n=len(null_excess),
                 null_median=float(np.median(null_excess)),
                 null_p95=p95,
+                null_p5=p5,
                 real_exceeds_null_p95=real_median > p95,
+                real_below_null_p5=real_median < p5,
                 comparable=not mismatch,
                 mismatch=mismatch,
                 matched_n=len(matched),

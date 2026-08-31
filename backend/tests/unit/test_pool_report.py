@@ -5,6 +5,7 @@ survivors are outperforming the non-survivors in the forward book."""
 
 from datetime import UTC, datetime
 
+import numpy as np
 import pytest
 
 from app.research.lab.calibration import NullCalibration
@@ -870,3 +871,63 @@ def test_a_null_whose_two_distributions_do_not_pair_up_is_refused() -> None:
     rows = compare_with_null(summarize_pool(pool, []), [null], pool)
 
     assert all(r.statistic != "walk-forward excess" for r in rows)
+
+
+# --- ADR-072: the centered statistic is read against a two-sided band ---
+
+
+def test_the_excess_row_reports_the_null_lower_edge_too() -> None:
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
+    null = _null(
+        "iid_normal", walk_forward=[0.4, 0.5, 0.6, 0.7], purged_cv=[0.1, 0.2, 0.3, 0.4]
+    ).model_copy(update={"walk_forward_hold_sharpes": [0.4, 0.4, 0.4, 0.4]})
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.null_p5 == pytest.approx(np.percentile([0.0, 0.1, 0.2, 0.3], 5))
+    assert excess.null_p5 < excess.null_p95
+
+
+def test_a_real_excess_under_the_null_band_separates_below() -> None:
+    """The result ADR-072 was written for: with drift out of both sides, a real median BELOW the
+    null is as interpretable as one above, and the one-sided rule printed it as neutral."""
+    pool = _pool_with_hold([(0.1, 0.9), (0.2, 0.9), (0.3, 0.9)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.1, 0.2, 0.3]).model_copy(
+        update={"walk_forward_hold_sharpes": [0.4, 0.5, 0.6]}
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.real_median == pytest.approx(-0.7)
+    assert excess.real_below_null_p5 is True
+    assert excess.real_exceeds_null_p95 is False
+
+
+def test_an_excess_inside_the_band_separates_in_neither_direction() -> None:
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.0, 0.5, 1.0], purged_cv=[0.1, 0.2, 0.3]).model_copy(
+        update={"walk_forward_hold_sharpes": [0.5, 0.5, 0.5]}
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.real_below_null_p5 is False
+    assert excess.real_exceeds_null_p95 is False
+
+
+def test_the_raw_row_is_never_read_below_the_null() -> None:
+    """ADR-068 measured that the raw statistic's level IS the series' own drift, so a real median
+    under the null says the median pool symbol drifted less than SPY — not that the search is
+    worse. ADR-072 keeps that row one-sided."""
+    pool = _pool([0.1, 0.2, 0.3])
+    null = _null("bootstrap", walk_forward=[0.9, 1.0, 1.1], purged_cv=[0.9, 1.0, 1.1])
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    raw = [r for r in rows if r.statistic != "walk-forward excess"]
+    assert raw
+    assert all(r.real_below_null_p5 is False for r in raw)
+    assert all(r.real_median < r.null_p5 for r in raw)
