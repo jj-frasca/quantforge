@@ -107,7 +107,15 @@ open and unanswerable, which is the state this ADR found it in.
 
 ## Measured (2026-08-31, same session) — the criterion was applied as stated and it FAILS
 
-`PYTHONPATH=. uv run python scripts/window_experiment.py 45` re-searched all **45** symbols that
+> **Correction (2026-08-31, session #16 — FINDING-013).** The two sentences below that call 45 the
+> whole candidate pool are wrong. The candidate set held **368** symbols when this was written and
+> holds 368 today; `window_experiment.py 45` searched 45 because 45 was its argument. The reading
+> and the decision stand exactly as recorded — the criterion was applied as pre-stated and did not
+> fire — but the *reason* for stopping at 45 was a misreading, and "re-run when the pool reaches
+> ~75" is void. **ADR-076 supersedes the closing instruction**: it freezes a sample of 200, sizes it
+> from the dispersion measured here, and reads it under a two-look Pocock boundary.
+
+`PYTHONPATH=. uv run python scripts/window_experiment.py 45` re-searched **45** symbols that
 carry ADR-068's benchmark at the long window and not at the short one, at
 `PRE_ADR063_SEARCH_START = 2005-01-01`, full 34-strategy catalog, 100% yield, median 5,448 bars.
 The comparison and its sample are committed at `data/window_experiment/adr074_summary.json`;
@@ -130,8 +138,9 @@ Three things the run did establish:
    made the effect larger, not smaller.
 2. **The sizing warning written into decision 3 was correct, and it is why this is inconclusive
    rather than a pass.** The interval's half-width is 0.093, about 2.4× the surrogate effect.
-   Resolving −0.074 on this estimator needs **n ≈ 75**; the candidate pool held exactly 45 today and
-   grows as the discovery records the benchmark on more symbols.
+   Resolving −0.074 on this estimator needs **n ≈ 75** at 95%, and ≈200 at the two-look boundary
+   ADR-076 applies. ~~the candidate pool held exactly 45 today~~ — see the correction above: it held
+   368.
 3. **The estimator mattered as much as the threshold.** The same 45 deltas give a mean of −0.086
    against an SE of 0.032 — 2.7 standard errors from zero, which *would* have fired a criterion
    stated on the mean. The criterion was stated on the median before the data existed, so the median
@@ -139,5 +148,8 @@ Three things the run did establish:
    threshold, and to prefer the one with the tighter interval when both are defensible** — a median
    with a bootstrap interval is robust but costs roughly 1.6× the sample of a mean.
 
-**Re-run the same command when the candidate pool reaches ~75 symbols.** The sample is deterministic
-and only ever grows, so the rerun is a strict extension of this one rather than a new roll.
+~~**Re-run the same command when the candidate pool reaches ~75 symbols.**~~ **Void — see the
+correction above.** The candidates were already there, and "the same command" does not reproduce
+the same experiment: the shuffle is over the *current* candidate list, so a growing pool re-rolls
+which symbols are in the sample. **ADR-076 carries this forward** with the sample frozen to a
+committed artifact, n = 200, and the second look read at a Pocock boundary.
