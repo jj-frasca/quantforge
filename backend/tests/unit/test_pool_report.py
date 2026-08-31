@@ -12,7 +12,11 @@ from app.research.lab.calibration import NullCalibration
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import PaperPosition
-from app.research.lab.pool_report import compare_with_null, summarize_pool
+from app.research.lab.pool_report import (
+    compare_search_windows,
+    compare_with_null,
+    summarize_pool,
+)
 
 _NOW = datetime(2026, 8, 18, tzinfo=UTC)
 
@@ -931,3 +935,154 @@ def test_the_raw_row_is_never_read_below_the_null() -> None:
     assert raw
     assert all(r.real_below_null_p5 is False for r in raw)
     assert all(r.real_median < r.null_p5 for r in raw)
+
+
+# --- ADR-074: the ADR-063 window change, read paired within symbol ---
+
+
+def _windowed(
+    symbol: str,
+    *,
+    n_bars: int,
+    walk_forward: float,
+    observed: float = 1.0,
+    hold: float | None = None,
+    strategy: str = "sma",
+) -> Experiment:
+    experiment = _exp(symbol, strategy=strategy)
+    trial = experiment.trials[0].model_copy(
+        update={
+            "walk_forward_oos_sharpe": walk_forward,
+            "observed_sharpe": observed,
+            "strategy_name": strategy,
+        }
+    )
+    return experiment.model_copy(
+        update={
+            "trials": [trial],
+            "n_bars": n_bars,
+            "search_config_version": "fam-a",
+            "walk_forward_hold_sharpe": hold,
+        }
+    )
+
+
+def _both_windows(symbol: str, short: float, long_: float, **kwargs: float) -> list[Experiment]:
+    return [
+        _windowed(symbol, n_bars=5450, walk_forward=short, **kwargs),
+        _windowed(symbol, n_bars=9200, walk_forward=long_, **kwargs),
+    ]
+
+
+def test_the_window_change_is_paired_within_each_symbol() -> None:
+    pool = (
+        _both_windows("AAA", 0.60, 0.50)
+        + _both_windows("BBB", 0.40, 0.35)
+        + _both_windows("CCC", 0.80, 0.90)
+    )
+
+    comparison = compare_search_windows(pool)
+
+    assert comparison is not None
+    assert comparison.n_symbols == 3
+    assert comparison.oos_delta_median == pytest.approx(-0.05)
+    assert comparison.short_n_bars == 5450
+    assert comparison.long_n_bars == 9200
+
+
+def test_a_symbol_searched_at_only_one_window_is_not_paired() -> None:
+    """A young listing never reaches the long window, so it has nothing to difference."""
+    pool = [
+        *_both_windows("AAA", 0.6, 0.5),
+        _windowed("YOUNG", n_bars=1200, walk_forward=0.9),
+        _windowed("YOUNG", n_bars=1400, walk_forward=0.2),
+    ]
+
+    comparison = compare_search_windows(pool)
+
+    assert comparison is not None
+    assert comparison.n_symbols == 1
+
+
+def test_repeat_runs_at_the_same_window_are_collapsed_to_that_symbol_median() -> None:
+    """The daily discovery re-searches a symbol several times per window; a symbol with five short
+    runs and one long run must not outweigh a symbol with one of each."""
+    pool = [
+        _windowed("AAA", n_bars=5450, walk_forward=0.2),
+        _windowed("AAA", n_bars=5460, walk_forward=0.6),
+        _windowed("AAA", n_bars=5470, walk_forward=1.0),
+        _windowed("AAA", n_bars=9200, walk_forward=0.4),
+    ]
+
+    comparison = compare_search_windows(pool)
+
+    assert comparison is not None
+    assert comparison.n_symbols == 1
+    assert comparison.oos_delta_median == pytest.approx(-0.2)
+
+
+def test_the_pairing_never_crosses_two_search_families() -> None:
+    """ADR-052/064: a difference between two families is not a finding about a window. A symbol
+    whose windows were searched by different families has no pair, even though it has both."""
+    crossed = _both_windows("AAA", 0.6, 0.5)
+    crossed[1] = crossed[1].model_copy(update={"search_config_version": "fam-b"})
+
+    assert compare_search_windows(crossed) is None
+    assert compare_search_windows(crossed + _both_windows("BBB", 0.9, 0.1)) is not None
+
+
+def test_the_drift_controlled_delta_is_absent_until_both_windows_carry_the_benchmark() -> None:
+    """ADR-068/074: the pre-ADR-063 rows predate the paired benchmark, so the excess delta is not
+    measured — never zero."""
+    pool = _both_windows("AAA", 0.6, 0.5) + _both_windows("BBB", 0.4, 0.3)
+    pool[1] = pool[1].model_copy(update={"walk_forward_hold_sharpe": 0.5})
+
+    comparison = compare_search_windows(pool)
+
+    assert comparison is not None
+    assert comparison.excess_delta_median is None
+    assert comparison.excess_n == 0
+
+
+def test_the_drift_controlled_delta_is_measured_where_both_windows_carry_it() -> None:
+    pool = [
+        _windowed("AAA", n_bars=5450, walk_forward=0.60, hold=0.50),
+        _windowed("AAA", n_bars=9200, walk_forward=0.55, hold=0.60),
+        _windowed("BBB", n_bars=5450, walk_forward=0.40, hold=0.30),
+        _windowed("BBB", n_bars=9200, walk_forward=0.30, hold=0.30),
+    ]
+
+    comparison = compare_search_windows(pool)
+
+    assert comparison is not None
+    assert comparison.excess_n == 2
+    # AAA: (0.55-0.60) - (0.60-0.50) = -0.15 ; BBB: (0.30-0.30) - (0.40-0.30) = -0.10
+    assert comparison.excess_delta_median == pytest.approx(-0.125)
+
+
+def test_the_delta_carries_an_interval_that_can_include_zero() -> None:
+    """ADR-070: a point estimate with no interval is what made two criteria unreadable."""
+    pool = [e for i in range(20) for e in _both_windows(f"S{i}", 0.5 + 0.01 * i, 0.5 - 0.01 * i)]
+
+    comparison = compare_search_windows(pool)
+
+    assert comparison is not None
+    assert comparison.oos_delta_ci_low < comparison.oos_delta_median < comparison.oos_delta_ci_high
+
+
+def test_how_often_the_longer_window_changes_the_finalist() -> None:
+    pool = [
+        _windowed("AAA", n_bars=5450, walk_forward=0.6, strategy="sma"),
+        _windowed("AAA", n_bars=9200, walk_forward=0.5, strategy="rsi"),
+        _windowed("BBB", n_bars=5450, walk_forward=0.4, strategy="sma"),
+        _windowed("BBB", n_bars=9200, walk_forward=0.3, strategy="sma"),
+    ]
+
+    comparison = compare_search_windows(pool)
+
+    assert comparison is not None
+    assert comparison.n_finalist_changed == 1
+
+
+def test_a_pool_with_no_symbol_at_both_windows_has_nothing_to_compare() -> None:
+    assert compare_search_windows([_windowed("AAA", n_bars=5450, walk_forward=0.6)]) is None

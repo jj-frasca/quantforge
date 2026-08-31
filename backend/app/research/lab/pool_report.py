@@ -601,3 +601,141 @@ def summarize_pool(
             experiments, int(np.median(searched_bars)) if searched_bars else None
         ),
     )
+
+
+# --- ADR-074: the ADR-063 window change, read paired within symbol ---
+
+# ADR-063 moved `SEARCH_HISTORY_START` from 2005 to 1990, which takes a full-history name from
+# ~5,450 bars to ~7,400+. A symbol too young for the change to reach lands all its rows on one side
+# and drops out of the pairing, which is the conservative direction.
+WINDOW_SPLIT_BARS = 6000
+_BOOTSTRAP_DRAWS = 20_000
+_BOOTSTRAP_SEED = 7
+
+
+class WindowComparison(BaseModel):
+    """What the longer in-sample window did to the finalist the search picks (ADR-074).
+
+    Notes:
+        Paired WITHIN symbol and within search family. The cross-symbol form was measured and
+        rejected: under one family `n_bars` varies mostly with a symbol's listing age, so the short
+        and long cohorts share no symbols and the comparison is between young companies and old
+        ones. Repeat runs at the same window collapse to that symbol's median so a name the
+        discovery happened to re-search five times does not outweigh one it searched once.
+
+        `oos_delta_*` is denominated in each window's own drift (ADR-068) — the long side's folds
+        reach into the 1990s — so it is a surrogate, not the verdict. `excess_delta_*` is the
+        drift-controlled statistic ADR-074 judges on, and it stays None until both windows of the
+        same symbol carry ADR-068's benchmark. Absent is not zero (ADR-067).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    n_symbols: int
+    short_n_bars: int
+    long_n_bars: int
+    oos_delta_median: float
+    oos_delta_ci_low: float
+    oos_delta_ci_high: float
+    in_sample_delta_median: float
+    in_sample_delta_ci_low: float
+    in_sample_delta_ci_high: float
+    n_finalist_changed: int
+    excess_n: int = 0
+    excess_delta_median: float | None = None
+    excess_delta_ci_low: float | None = None
+    excess_delta_ci_high: float | None = None
+
+
+def _median_ci(values: Sequence[float]) -> tuple[float, float, float]:
+    """Median with a bootstrap 95% interval. ADR-070: a point estimate with no interval is what
+    made two of this project's pre-stated criteria unreadable after the fact."""
+    array = np.asarray(values, dtype=float)
+    rng = np.random.default_rng(_BOOTSTRAP_SEED)
+    draws = rng.choice(array, size=(_BOOTSTRAP_DRAWS, len(array)))
+    medians = np.median(draws, axis=1)
+    low, high = np.percentile(medians, [2.5, 97.5])
+    return float(np.median(array)), float(low), float(high)
+
+
+def compare_search_windows(experiments: Sequence[Experiment]) -> WindowComparison | None:
+    """Difference each symbol's finalist across the ADR-063 window change, or None when no symbol
+    was searched under one family at both windows."""
+    by_key: dict[tuple[str, str], list[Experiment]] = defaultdict(list)
+    for experiment in experiments:
+        if experiment.trials and experiment.n_bars is not None:
+            by_key[(experiment.symbol, experiment.search_config_version)].append(experiment)
+
+    oos: list[float] = []
+    in_sample: list[float] = []
+    excess: list[float] = []
+    short_bars: list[int] = []
+    long_bars: list[int] = []
+    changed = 0
+    for group in by_key.values():
+        short = [e for e in group if e.n_bars is not None and e.n_bars < WINDOW_SPLIT_BARS]
+        long_ = [e for e in group if e.n_bars is not None and e.n_bars >= WINDOW_SPLIT_BARS]
+        if not short or not long_:
+            continue
+        short_finalists = [max(e.trials, key=lambda t: t.deflated_sharpe) for e in short]
+        long_finalists = [max(e.trials, key=lambda t: t.deflated_sharpe) for e in long_]
+        short_oos = [
+            t.walk_forward_oos_sharpe
+            for t in short_finalists
+            if t.walk_forward_oos_sharpe is not None
+        ]
+        long_oos = [
+            t.walk_forward_oos_sharpe
+            for t in long_finalists
+            if t.walk_forward_oos_sharpe is not None
+        ]
+        if not short_oos or not long_oos:
+            continue
+        oos.append(float(np.median(long_oos) - np.median(short_oos)))
+        in_sample.append(
+            float(
+                np.median([t.observed_sharpe for t in long_finalists])
+                - np.median([t.observed_sharpe for t in short_finalists])
+            )
+        )
+        short_bars.append(int(np.median([e.n_bars for e in short if e.n_bars is not None])))
+        long_bars.append(int(np.median([e.n_bars for e in long_ if e.n_bars is not None])))
+        changed += (
+            Counter(t.strategy_name for t in short_finalists).most_common(1)[0][0]
+            != Counter(t.strategy_name for t in long_finalists).most_common(1)[0][0]
+        )
+        short_hold = [
+            e.walk_forward_hold_sharpe for e in short if e.walk_forward_hold_sharpe is not None
+        ]
+        long_hold = [
+            e.walk_forward_hold_sharpe for e in long_ if e.walk_forward_hold_sharpe is not None
+        ]
+        if short_hold and long_hold:
+            excess.append(
+                float(
+                    (np.median(long_oos) - np.median(long_hold))
+                    - (np.median(short_oos) - np.median(short_hold))
+                )
+            )
+    if not oos:
+        return None
+
+    oos_median, oos_low, oos_high = _median_ci(oos)
+    in_median, in_low, in_high = _median_ci(in_sample)
+    excess_stats = _median_ci(excess) if excess else None
+    return WindowComparison(
+        n_symbols=len(oos),
+        short_n_bars=int(np.median(short_bars)),
+        long_n_bars=int(np.median(long_bars)),
+        oos_delta_median=oos_median,
+        oos_delta_ci_low=oos_low,
+        oos_delta_ci_high=oos_high,
+        in_sample_delta_median=in_median,
+        in_sample_delta_ci_low=in_low,
+        in_sample_delta_ci_high=in_high,
+        n_finalist_changed=changed,
+        excess_n=len(excess),
+        excess_delta_median=excess_stats[0] if excess_stats else None,
+        excess_delta_ci_low=excess_stats[1] if excess_stats else None,
+        excess_delta_ci_high=excess_stats[2] if excess_stats else None,
+    )

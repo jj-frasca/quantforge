@@ -34,19 +34,20 @@ the longer in-sample window may make the search prefer configurations that trade
 longer exists. That is a statement about the finalist the search picks, which every experiment
 records — not about the graduates, of which there are none.
 
-**347 symbols have been searched under the same family at both windows** (~5,448 bars before
+**368 symbols have been searched under the same family at both windows** (median ~5,446 bars before
 ADR-063, ~9,232 after), so the comparison can be made *within symbol*, taking each symbol's median
-across its repeat runs at each window. Measured 2026-08-31:
+across its repeat runs at each window. Measured 2026-08-31, and reproducible from a checkout with
+`PYTHONPATH=. uv run python scripts/pool_report.py`:
 
-| paired delta (long window − short window), n = 347 symbols | median | 95% CI (bootstrap, 20k) | mean | SE |
+| paired delta (long window − short window), n = 368 symbols | median | 95% CI (bootstrap, 20k, seed 7) | mean | SE |
 |---|---|---|---|---|
-| finalist **walk-forward OOS** Sharpe | **−0.041** | **[−0.070, −0.015]** | −0.048 | 0.015 |
-| finalist **in-sample observed** Sharpe | +0.010 | [−0.008, +0.030] | +0.049 | 0.014 |
+| finalist **walk-forward OOS** Sharpe | **−0.038** | **[−0.060, −0.009]** | −0.042 | 0.015 |
+| finalist **in-sample observed** Sharpe | +0.012 | [−0.005, +0.034] | — | — |
 
-The out-of-sample delta is negative on 59% of symbols and its interval excludes zero; the in-sample
-delta's does not. The search also picks a **different finalist strategy on 244 of the 347 symbols**.
-That is the shape the anachronism risk predicts: in-sample selection unchanged or marginally better,
-out-of-sample selection slightly worse, with the choice itself moving.
+The out-of-sample delta is negative on 57.6% of symbols and its interval excludes zero; the
+in-sample delta's does not. The search also picks a **different finalist strategy on 257 of the 368
+symbols**. That is the shape the anachronism risk predicts: in-sample selection unchanged or
+marginally better, out-of-sample selection slightly worse, with the choice itself moving.
 
 **It is not yet the answer, for a reason ADR-068 already established.** The two sides' walk-forward
 OOS Sharpes are computed over different calendar windows — the long side's folds reach into the
@@ -69,9 +70,11 @@ re-search at the old window with the benchmark recorded will.
    symbols is re-searched at `SEARCH_HISTORY_START = 2005-01-01` with `walk_forward_hold_sharpe`
    recorded, and paired against the same symbols' live long-window rows. **ADR-063's window is
    revisited only if the paired median excess delta is negative AND its bootstrap 95% CI excludes
-   zero.** On the confounded surrogate above the delta's SE is 0.015, so an effect of the size seen
-   (−0.041) is resolvable at n ≈ 40–350; the criterion is not being stated at a sample size that
-   cannot see it, which is the failure ADR-070 recorded.
+   zero.** On the confounded surrogate above the per-symbol delta's SD is ≈0.29, so at n = 40 the
+   SE of the mean is ≈0.046 — larger than the −0.038 seen, which means **n = 40 can only resolve an
+   effect roughly twice that size, and a null result at n = 40 must be reported as inconclusive
+   rather than as a pass.** Stating that now is the point: it is the sizing ADR-070 recorded twice
+   as missing.
 4. Nothing is reverted on today's evidence. ADR-063's window stays.
 
 ## Alternatives considered

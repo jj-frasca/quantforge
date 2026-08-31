@@ -17,6 +17,7 @@ from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.pool_report import (
     EXCESS_STATISTIC,
     DiagnosticSummary,
+    compare_search_windows,
     compare_with_null,
     summarize_pool,
 )
@@ -228,6 +229,41 @@ def main() -> None:
                 "  walk-forward excess: NOT MEASURED -- the pool, the null artifacts, or both "
                 "predate ADR-068's benchmark; re-search and re-dispatch before reading a lead"
             )
+
+    # ADR-074: ADR-063's second clause, on the statistic the pool can actually carry. The gate has
+    # produced one graduate under the live family, so a median holdout Sharpe does not exist.
+    window = compare_search_windows(experiments)
+    if window is not None:
+        print(
+            f"\nthe ADR-063 window change, paired within symbol "
+            f"({window.n_symbols} symbols searched at both, "
+            f"{window.short_n_bars} -> {window.long_n_bars} bars):"
+        )
+        print(
+            f"  finalist walk-forward OOS  {window.oos_delta_median:+.3f} "
+            f"[{window.oos_delta_ci_low:+.3f}, {window.oos_delta_ci_high:+.3f}] "
+            f"-- SURROGATE: each side is denominated in its own window's drift (ADR-068)"
+        )
+        print(
+            f"  finalist in-sample observed {window.in_sample_delta_median:+.3f} "
+            f"[{window.in_sample_delta_ci_low:+.3f}, {window.in_sample_delta_ci_high:+.3f}]"
+        )
+        if window.excess_delta_median is None:
+            print(
+                "  drift-controlled excess: NOT MEASURED -- the pre-ADR-063 rows predate ADR-068's "
+                "benchmark;\n     re-search a sample at SEARCH_HISTORY_START=2005-01-01 to read it "
+                "(ADR-074 decision 3)"
+            )
+        else:
+            print(
+                f"  drift-controlled excess    {window.excess_delta_median:+.3f} "
+                f"[{window.excess_delta_ci_low:+.3f}, {window.excess_delta_ci_high:+.3f}] "
+                f"(n={window.excess_n}) -- THE CRITERION (ADR-074)"
+            )
+        print(
+            f"  the longer window changes which strategy the search picks on "
+            f"{window.n_finalist_changed} of {window.n_symbols} symbols"
+        )
 
     book = report.book
     print(
