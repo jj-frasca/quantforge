@@ -40,13 +40,26 @@ def probability_of_backtest_overfitting(
     overfit = 0
     total = 0
 
+    # Every subset of `half` groups appears twice across the C(n, n/2) splits — once in-sample and
+    # once, as the complement of another split, out-of-sample. Scoring each subset once halves the
+    # work exactly, and PBO is 40% of a search's runtime. Memoized rather than restructured because
+    # the identity is between splits, not within one.
+    cache: dict[tuple[int, ...], FloatArray] = {}
+
+    def sharpe_for(subset: tuple[int, ...]) -> FloatArray:
+        cached = cache.get(subset)
+        if cached is None:
+            rows = np.concatenate([groups[g] for g in subset])
+            cached = _sharpe_per_config(performance[rows])
+            cache[subset] = cached
+        return cached
+
     for is_groups in combinations(range(n_splits), half):
         is_set = set(is_groups)
-        is_rows = np.concatenate([groups[g] for g in is_groups])
-        oos_rows = np.concatenate([groups[g] for g in range(n_splits) if g not in is_set])
+        oos_groups = tuple(g for g in range(n_splits) if g not in is_set)
 
-        best = int(np.argmax(_sharpe_per_config(performance[is_rows])))
-        oos_sharpe = _sharpe_per_config(performance[oos_rows])
+        best = int(np.argmax(sharpe_for(is_groups)))
+        oos_sharpe = sharpe_for(oos_groups)
         # rank of the IS-best config among OOS configs (0 = worst), as a fraction in (0, 1)
         oos_rank = int(np.argsort(np.argsort(oos_sharpe))[best])
         w = (oos_rank + 1) / (n_configs + 1)
