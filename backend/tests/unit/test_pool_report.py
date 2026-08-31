@@ -13,10 +13,12 @@ from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import PaperPosition
 from app.research.lab.pool_report import (
+    POCOCK_TWO_LOOK_ALPHA,
     compare_search_windows,
     compare_with_null,
     summarize_pool,
     window_experiment_symbols,
+    window_experiment_workload,
 )
 
 _NOW = datetime(2026, 8, 18, tzinfo=UTC)
@@ -1230,3 +1232,91 @@ def test_the_difference_interval_requires_the_minimum_number_of_symbol_clusters(
     assert excess.difference_ci_low is None
     assert excess.difference_ci_high is None
     assert excess.difference_n_clusters == 1
+
+
+# --- ADR-076: the second look is read at a two-look boundary, on a frozen sharded sample ---
+
+
+def _spread_pool(n: int = 40) -> list[Experiment]:
+    """A pool whose drift-controlled delta has real dispersion, so an interval has width to compare."""
+    return [
+        e
+        for i in range(n)
+        for e in [
+            _windowed(f"S{i:02d}", n_bars=5450, walk_forward=0.6, hold=0.5, observed=1.0),
+            _windowed(
+                f"S{i:02d}",
+                n_bars=9200,
+                walk_forward=0.5 + 0.01 * i,
+                hold=0.5,
+                observed=0.9 + 0.01 * i,
+            ),
+        ]
+    ]
+
+
+def test_the_two_look_boundary_is_stricter_than_a_single_look() -> None:
+    """ADR-076 decision 3: two looks at nominal 0.05 spend a family-wise alpha near 0.08."""
+    assert 0.0 < POCOCK_TWO_LOOK_ALPHA < 0.05
+
+
+def test_the_boundary_interval_is_wider_than_the_interval_look_one_was_read_at() -> None:
+    """Spending less alpha per look has to buy a wider interval, or the correction does nothing."""
+    pool = _spread_pool()
+
+    single = compare_search_windows(pool)
+    boundary = compare_search_windows(pool, alpha=POCOCK_TWO_LOOK_ALPHA)
+
+    assert single is not None and boundary is not None
+    assert single.excess_delta_ci_low is not None and boundary.excess_delta_ci_low is not None
+    assert single.excess_delta_ci_high is not None and boundary.excess_delta_ci_high is not None
+    assert boundary.excess_delta_ci_low < single.excess_delta_ci_low
+    assert boundary.excess_delta_ci_high > single.excess_delta_ci_high
+    assert boundary.excess_delta_median == pytest.approx(single.excess_delta_median)
+
+
+def test_the_stricter_alpha_widens_the_surrogate_rows_too() -> None:
+    pool = _spread_pool()
+
+    single = compare_search_windows(pool)
+    boundary = compare_search_windows(pool, alpha=POCOCK_TWO_LOOK_ALPHA)
+
+    assert single is not None and boundary is not None
+    assert boundary.oos_delta_ci_low < single.oos_delta_ci_low
+    assert boundary.in_sample_delta_ci_high > single.in_sample_delta_ci_high
+
+
+def test_the_default_reading_is_unchanged_at_ninety_five_percent() -> None:
+    """Every published row predating ADR-076 was read at 0.05; the default must not move."""
+    pool = _spread_pool()
+
+    assert compare_search_windows(pool) == compare_search_windows(pool, alpha=0.05)
+
+
+def test_the_workload_shards_the_frozen_sample_before_dropping_what_is_searched() -> None:
+    """ADR-076 decisions 1+5: shard membership comes from the FROZEN sample, so resuming a
+    half-finished run cannot move a symbol from one shard to another."""
+    frozen = [f"S{i}" for i in range(6)]
+
+    fresh = window_experiment_workload(frozen, set(), n_shards=2, shard_index=0)
+    resumed = window_experiment_workload(frozen, {"S0"}, n_shards=2, shard_index=0)
+
+    assert fresh == ["S0", "S2", "S4"]
+    assert resumed == ["S2", "S4"]
+
+
+def test_the_shards_of_the_frozen_sample_partition_it_exactly() -> None:
+    frozen = [f"S{i:02d}" for i in range(17)]
+
+    shards = [
+        window_experiment_workload(frozen, set(), n_shards=4, shard_index=i) for i in range(4)
+    ]
+
+    assert sorted(s for shard in shards for s in shard) == frozen
+    assert sum(len(shard) for shard in shards) == len(frozen)
+
+
+def test_a_fully_searched_shard_has_nothing_left_to_do() -> None:
+    frozen = [f"S{i}" for i in range(4)]
+
+    assert window_experiment_workload(frozen, set(frozen), n_shards=2, shard_index=1) == []

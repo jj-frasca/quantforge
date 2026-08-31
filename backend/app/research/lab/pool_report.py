@@ -10,7 +10,7 @@ Pure — the caller supplies the experiments and the book.
 """
 
 from collections import Counter, defaultdict
-from collections.abc import Sequence
+from collections.abc import Container, Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -25,6 +25,7 @@ from app.research.lab.frontier import (
 )
 from app.research.lab.paper import PaperPosition
 from app.research.lab.portfolio_manager import DeflationCohorts, deflation_cohorts
+from app.research.lab.sharding import shard_universe
 from app.research.lab.universe import expected_max_sharpe_under_null, rank_experiments
 from app.research.strategies.catalog import CATEGORY_OF
 
@@ -662,6 +663,10 @@ def summarize_pool(
 WINDOW_SPLIT_BARS = 6000
 _BOOTSTRAP_DRAWS = 20_000
 _BOOTSTRAP_SEED = 7
+# ADR-076: the nominal two-sided level of each look in a two-look Pocock design whose family-wise
+# Type-I is 0.05. ADR-074's criterion was already read once at 0.05; reading its re-run at 0.05 as
+# well would spend closer to 0.08 on the one test that could reverse a published decision.
+POCOCK_TWO_LOOK_ALPHA = 0.0294
 
 
 class WindowComparison(BaseModel):
@@ -698,20 +703,40 @@ class WindowComparison(BaseModel):
     excess_delta_ci_high: float | None = None
 
 
-def _median_ci(values: Sequence[float]) -> tuple[float, float, float]:
-    """Median with a bootstrap 95% interval. ADR-070: a point estimate with no interval is what
-    made two of this project's pre-stated criteria unreadable after the fact."""
+def _median_ci(values: Sequence[float], alpha: float = 0.05) -> tuple[float, float, float]:
+    """Median with a bootstrap interval at two-sided `alpha`. ADR-070: a point estimate with no
+    interval is what made two of this project's pre-stated criteria unreadable after the fact.
+    ADR-076 reads the same estimator at a stricter alpha when the reading is a repeat look."""
     array = np.asarray(values, dtype=float)
     rng = np.random.default_rng(_BOOTSTRAP_SEED)
     draws = rng.choice(array, size=(_BOOTSTRAP_DRAWS, len(array)))
     medians = np.median(draws, axis=1)
-    low, high = np.percentile(medians, [2.5, 97.5])
+    low, high = np.percentile(medians, [100 * alpha / 2, 100 * (1 - alpha / 2)])
     return float(np.median(array)), float(low), float(high)
 
 
-def compare_search_windows(experiments: Sequence[Experiment]) -> WindowComparison | None:
+def window_experiment_workload(
+    frozen: Sequence[str], searched: Container[str], *, n_shards: int, shard_index: int
+) -> list[str]:
+    """What this shard still has to search, out of ADR-076's frozen sample.
+
+    Sharding is applied to the FROZEN sample and only then filtered by what already exists, so a
+    resumed run keeps every symbol on the shard it started on. Filtering first would re-pack the
+    shards on each restart and make the split depend on how far the previous attempt got.
+    """
+    return [s for s in shard_universe(list(frozen), n_shards, shard_index) if s not in searched]
+
+
+def compare_search_windows(
+    experiments: Sequence[Experiment], alpha: float = 0.05
+) -> WindowComparison | None:
     """Difference each symbol's finalist across the ADR-063 window change, or None when no symbol
-    was searched under one family at both windows."""
+    was searched under one family at both windows.
+
+    `alpha` is the two-sided level of every interval returned. It stays at 0.05 for the pool
+    report, which is a single look; ADR-076 passes `POCOCK_TWO_LOOK_ALPHA` for the second look at
+    its pre-registered sample, so two looks together still spend 0.05.
+    """
     by_key: dict[tuple[str, str], list[Experiment]] = defaultdict(list)
     for experiment in experiments:
         if experiment.trials and experiment.n_bars is not None:
@@ -771,9 +796,9 @@ def compare_search_windows(experiments: Sequence[Experiment]) -> WindowCompariso
     if not oos:
         return None
 
-    oos_median, oos_low, oos_high = _median_ci(oos)
-    in_median, in_low, in_high = _median_ci(in_sample)
-    excess_stats = _median_ci(excess) if excess else None
+    oos_median, oos_low, oos_high = _median_ci(oos, alpha)
+    in_median, in_low, in_high = _median_ci(in_sample, alpha)
+    excess_stats = _median_ci(excess, alpha) if excess else None
     return WindowComparison(
         n_symbols=len(oos),
         short_n_bars=int(np.median(short_bars)),
