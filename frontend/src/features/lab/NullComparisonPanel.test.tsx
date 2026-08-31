@@ -62,7 +62,8 @@ test('shows the matched sample the real median was taken over', () => {
 
 test('says the drift-controlled comparison is not measured when no excess row exists', () => {
   render(<NullComparisonPanel comparisons={[row()]} />)
-  expect(screen.getByTestId('excess-note')).toHaveTextContent(/not measured/i)
+  expect(screen.getByTestId('excess-note-walk-forward excess')).toHaveTextContent(/not measured/i)
+  expect(screen.getByTestId('excess-note-purged-CV excess')).toHaveTextContent(/not measured/i)
 })
 
 test('renders the excess row as its own statistic once both sides carry it', () => {
@@ -74,7 +75,7 @@ test('renders the excess row as its own statistic once both sides carry it', () 
 
   expect(screen.getByText('walk-forward excess')).toBeInTheDocument()
   expect(screen.getByText('-0.004')).toBeInTheDocument()
-  expect(screen.queryByTestId('excess-note')).not.toBeInTheDocument()
+  expect(screen.queryByTestId('excess-note-walk-forward excess')).not.toBeInTheDocument()
 })
 
 test('renders nothing when nothing has been compared', () => {
@@ -197,4 +198,62 @@ test('an interval below the minimum symbol-cluster sample is not rendered', () =
   render(<NullComparisonPanel comparisons={[excessRow({ difference_n_clusters: 1 })]} />)
 
   expect(screen.queryByTestId('difference-interval')).not.toBeInTheDocument()
+})
+
+// --- ADR-078: a second drift-controlled row, and the two must be told apart ---
+
+test('names each missing control separately rather than hiding one behind the other', () => {
+  render(
+    <NullComparisonPanel
+      comparisons={[
+        row(),
+        row({ statistic: 'purged-CV' }),
+        row({ statistic: 'walk-forward excess', real_median: -0.127 }),
+      ]}
+    />,
+  )
+
+  // The walk-forward control exists, so only the purged-CV one is outstanding. Before ADR-078 a
+  // single `hasExcess` flag suppressed the whole note as soon as EITHER control landed, which
+  // silently told the reader the purged-CV row was drift-controlled when it was not (ADR-067).
+  expect(screen.getByTestId('excess-note-purged-CV excess')).toHaveTextContent(/not measured/i)
+  expect(screen.queryByTestId('excess-note-walk-forward excess')).not.toBeInTheDocument()
+})
+
+test('drops both notes once both controls are measured', () => {
+  render(
+    <NullComparisonPanel
+      comparisons={[
+        row({ statistic: 'walk-forward excess', real_median: -0.127 }),
+        row({ statistic: 'purged-CV excess', real_median: -0.09 }),
+      ]}
+    />,
+  )
+
+  expect(screen.queryByTestId('excess-note-walk-forward excess')).not.toBeInTheDocument()
+  expect(screen.queryByTestId('excess-note-purged-CV excess')).not.toBeInTheDocument()
+  expect(screen.getByText('purged-CV excess')).toBeInTheDocument()
+})
+
+test('a difference interval says which statistic it belongs to', () => {
+  render(
+    <NullComparisonPanel
+      comparisons={[
+        excessRow(),
+        excessRow({
+          statistic: 'purged-CV excess',
+          real_median: -0.09,
+          difference_ci_low: -0.18,
+          difference_ci_high: -0.02,
+        }),
+      ]}
+    />,
+  )
+
+  // Two intervals, same null mode, different statistics — without the label they are two
+  // identically-headed paragraphs of different numbers.
+  const intervals = screen.getAllByTestId('difference-interval')
+  expect(intervals).toHaveLength(2)
+  expect(intervals[0]).toHaveTextContent('walk-forward excess')
+  expect(intervals[1]).toHaveTextContent('purged-CV excess')
 })

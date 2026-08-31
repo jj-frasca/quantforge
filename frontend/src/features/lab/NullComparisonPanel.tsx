@@ -2,7 +2,10 @@ import type { NullComparison } from '../../types/lab'
 
 const asSharpe = (value: number): string => (value >= 0 ? `+${value.toFixed(3)}` : value.toFixed(3))
 
-const EXCESS_STATISTIC = 'walk-forward excess'
+// ADR-068 and ADR-078 each add a drift-controlled row. They are listed rather than derived so a
+// control that has not landed yet is named in its own sentence: a single "is any excess present"
+// flag would report the purged-CV row as controlled the moment the walk-forward one arrived.
+const EXCESS_STATISTICS = ['walk-forward excess', 'purged-CV excess'] as const
 const MIN_DIFFERENCE_CLUSTERS = 30
 
 // ADR-051/064/068. The leaderboard says what the search found; this says whether what it found is
@@ -15,7 +18,9 @@ export function NullComparisonPanel({ comparisons }: { comparisons: NullComparis
   if (comparisons.length === 0) {
     return null
   }
-  const hasExcess = comparisons.some((c) => c.statistic === EXCESS_STATISTIC)
+  const missingExcess = EXCESS_STATISTICS.filter(
+    (statistic) => !comparisons.some((c) => c.statistic === statistic),
+  )
 
   return (
     <section aria-label="null comparison" className="deflation-headline">
@@ -78,7 +83,10 @@ export function NullComparisonPanel({ comparisons }: { comparisons: NullComparis
             data-testid="difference-interval"
             key={`diff-${c.statistic}-${c.null_mode}-${c.matched_n_bars ?? 'any'}`}
           >
-            <strong>{c.null_mode}</strong>, difference of medians{' '}
+            <strong>
+              {c.statistic} vs {c.null_mode}
+            </strong>
+            , difference of medians{' '}
             {asSharpe(c.real_median - c.null_median)} [{asSharpe(c.difference_ci_low)},{' '}
             {asSharpe(c.difference_ci_high)}] over {c.difference_n_clusters.toLocaleString('en-US')}{' '}
             symbol clusters —{' '}
@@ -91,14 +99,14 @@ export function NullComparisonPanel({ comparisons }: { comparisons: NullComparis
           </p>
         ),
       )}
-      {!hasExcess && (
-        <p data-testid="excess-note">
-          Every row above is denominated in the drift of the series it was measured on — on a null
-          the finalist&apos;s Sharpe comes out at that series&apos; own buy-and-hold Sharpe. The
-          drift-controlled comparison is <strong>not measured</strong> here: the pool, the null
-          artifacts, or both predate the paired benchmark.
+      {missingExcess.map((statistic) => (
+        <p data-testid={`excess-note-${statistic}`} key={`missing-${statistic}`}>
+          The raw rows above are denominated in the drift of the series they were measured on — on a
+          null the finalist&apos;s Sharpe comes out at that series&apos; own buy-and-hold Sharpe.{' '}
+          <strong>{statistic}</strong> is <strong>not measured</strong> here: the pool, the null
+          artifacts, or both predate that paired benchmark.
         </p>
-      )}
+      ))}
     </section>
   )
 }

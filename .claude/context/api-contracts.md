@@ -339,9 +339,13 @@ parameter today. Reading them together is the fastest way to understand what the
   `comparable` and `mismatch` — a difference between two measurements that resolved different search
   families, or were judged on different history lengths, is not a finding — plus `matched_n` /
   `matched_n_bars`, the ADR-064 subset the real median was actually taken over. Rows with
-  `statistic = "walk-forward excess"` are ADR-068's drift-controlled form, where each side is
-  differenced against what holding ITS OWN series across the SAME test blocks earned; they are
-  **absent, not zero**, until both sides carry the benchmark. ADR-075's `difference_ci_low` /
+  `statistic = "walk-forward excess"` (ADR-068) and `"purged-CV excess"` (ADR-078) are the
+  drift-controlled forms, where each side is differenced against what holding ITS OWN series across
+  the SAME blocks earned; they are **absent, not zero**, until both sides carry the benchmark.
+  **The two controls are independent and neither implies the other** — walk-forward's benchmark
+  covers the suffix after the first train block, purged CV's covers the whole window its folds
+  tile — so the "not measured" note is rendered PER STATISTIC. Suppressing it as soon as either
+  control lands tells the reader the other row is controlled when it is not (ADR-067). ADR-075's `difference_ci_low` /
   `difference_ci_high` and `difference_n_clusters` exist only on a comparable centered row;
   FINDING-011 forbids attaching or rendering their `EXCLUDES ZERO` reading on a refused row or on
   fewer than 30 effective symbol clusters. Never render a row whose `comparable` is false as a
