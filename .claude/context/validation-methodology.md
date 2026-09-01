@@ -453,7 +453,7 @@ the requested selection rule. ADR-070's detection/Type-I counts remain valid bec
 the correctly selected gate result; its observation about the non-default null diagnostic is not
 reusable without a corrected rerun. Non-default artifacts were never committed.
 
-**ADR-078: persist the real finalist, too.** FINDING-015 found that pool reporting still rebuilt
+**ADR-079: persist the real finalist, too.** FINDING-015 found that pool reporting still rebuilt
 every real finalist as max DSR. `best_strategy_name` cannot identify a trial after refinement adds
 a second trial from the same family. New experiments therefore persist `selected_trial_index`, and
 all finalist-level pool statistics resolve it through one checked helper. Legacy rows retain the

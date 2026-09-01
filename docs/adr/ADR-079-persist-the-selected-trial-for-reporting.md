@@ -1,4 +1,4 @@
-# ADR-078: Persist the selected trial for reporting
+# ADR-079: Persist the selected trial for reporting
 
 - **Status:** Accepted
 - **Date:** 2026-08-30

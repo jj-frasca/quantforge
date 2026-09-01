@@ -2,7 +2,7 @@
 
 - **Severity:** High — methodology attribution and real-versus-null identity
 - **Found:** 2026-08-30 by Codex follow-up review of FINDING-010 / ADR-071
-- **Status:** Resolved by ADR-078
+- **Status:** Resolved by ADR-079
 - **Affected:** `backend/app/research/lab/pool_report.py`
 
 ## Finding
