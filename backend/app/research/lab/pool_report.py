@@ -449,13 +449,13 @@ def _excess_rows(
     rows: list[NullComparison] = []
     for label, null_oos_field, null_hold_field, trial_field, hold_field in _EXCESS_SPECS:
         for calibration in calibrations:
-            oos = getattr(calibration, null_oos_field)
-            hold = getattr(calibration, null_hold_field)
-            # Paired per searched symbol; unequal lengths mean the pairing is unknown, and
-            # differencing them anyway would invent a measurement.
-            if not hold or len(hold) != len(oos):
+            # ADR-080: new artifacts pair by explicit symbol identity. A legacy positional pair is
+            # accepted only when both arrays cover every searched symbol; equal partial lengths do
+            # not prove independently filtered arrays retained the same observations.
+            paired_excess = calibration.paired_excess(null_oos_field, null_hold_field)
+            if paired_excess is None:
                 continue
-            null_excess = np.asarray(oos, dtype=float) - np.asarray(hold, dtype=float)
+            null_excess = np.asarray(paired_excess, dtype=float)
             null_bars = int(np.median(calibration.n_bars)) if calibration.n_bars else None
             matched = _matched(experiments, null_bars)
             matched_bars = [e.n_bars for e in matched if e.n_bars is not None]

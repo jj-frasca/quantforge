@@ -150,8 +150,14 @@ index set into a statistic measured on another — which is the confound both ex
 
 ADR-068 had deferred this on the grounds that "purged CV's folds are not a prefix-ordered benchmark
 window". ADR-078 overturned it: fold ordering is a fact about SELECTION, and buy-and-hold has no
-config to select. Every artifact on disk predates the field, so the row reads NOT MEASURED until
-the pool re-searches and `null-calibration.yml` is re-dispatched (ADR-067).
+config to select. The 7,400-bar nulls were refreshed on 2026-09-01 and carry the control; the
+matched real-pool cohort and retained 5,400-bar nulls still predate it, so the row remains NOT
+MEASURED until both sides carry the pair (ADR-067).
+
+**ADR-080 applies to both controls.** Walk-forward and purged-CV OOS/hold values share one
+per-symbol calibration record, remain independently nullable, and are paired only within that
+record. Shard merge rejects mixed legacy/paired generations and duplicate symbols. This changes no
+raw distribution or gate; it prevents complementary missingness from becoming cross-symbol excess.
 
 ---
 
@@ -572,10 +578,14 @@ Rules that hold here:
 - **Absent is not zero** (ADR-067). Every artifact written before ADR-068 carries neither side of
   the difference, so the row prints `NOT MEASURED` until the pool is re-searched and the null
   re-dispatched. An excess of zero is a measurement nobody made.
-- **The two null lists are paired per searched symbol.** Unequal lengths mean the pairing is
-  unknown and the row is refused rather than differenced anyway.
-- **Purged-CV is out of scope**: its folds are not a prefix-ordered benchmark window, so the same
-  subtraction would not be the same statistic. Extend it on its own terms or not at all.
+- **The two null lists are paired per searched symbol.** ADR-080 makes that identity structural:
+  new calibrations store one `NullSymbolDiagnostics` record per symbol and excess is derived from
+  fields on that record. Equal-length partial legacy arrays are refused; positional legacy pairing
+  is allowed only when both sides contain exactly `n_symbols` entries. The original arrays remain
+  raw-distribution/API projections, not pairing identity.
+- **Purged-CV is a separate measurement, not a reused walk-forward control.** ADR-078 later added
+  its own whole-window buy-and-hold benchmark because purged folds partition the searched window;
+  neither control may stand in for the other.
 
 
 ## §7.7 The real side of the excess row, and the two-sided band (ADR-072)

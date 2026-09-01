@@ -7,7 +7,7 @@ from typing import Any, NamedTuple
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.backtesting.manifest import compute_parameter_hash
@@ -40,6 +40,20 @@ class NullGraduate(BaseModel):
     holdout_sharpe: float
     holdout_n_bars: int
     deflated_sharpe: float
+
+
+class NullSymbolDiagnostics(BaseModel):
+    """All nullable null diagnostics tied to the searched symbol that produced them (ADR-080)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    n_bars: int
+    holdout_years: float
+    walk_forward_oos_sharpe: float | None = None
+    walk_forward_hold_sharpe: float | None = None
+    purged_cv_oos_sharpe: float | None = None
+    purged_cv_hold_sharpe: float | None = None
 
 
 class NullCalibration(BaseModel):
@@ -84,6 +98,10 @@ class NullCalibration(BaseModel):
     # are separate — the two benchmarks cover different index sets, so one cannot stand in for the
     # other. Empty on artifacts predating the field (ADR-067).
     purged_cv_hold_sharpes: list[float] = []
+    # ADR-080: the canonical pairing identity. The list projections above remain for API and
+    # historical compatibility, but an excess observation is derived from this per-symbol record.
+    # Empty means a legacy artifact, never a calibration with zero searched symbols.
+    symbol_diagnostics: list[NullSymbolDiagnostics] = []
     errors: dict[str, str]
     gate_config_version: str
     # ADR-044: the result measures search + gate, not thresholds alone. Old committed artifacts
@@ -94,6 +112,63 @@ class NullCalibration(BaseModel):
     refine: bool = False
     refine_span: float = 0.25
     null_mode: str = "unspecified"
+
+    @model_validator(mode="after")
+    def _validate_symbol_diagnostics(self) -> "NullCalibration":
+        """Keep additive list projections honest whenever the paired ADR-080 schema is present."""
+        if not self.symbol_diagnostics:
+            return self
+        if len(self.symbol_diagnostics) != self.n_symbols:
+            raise ValueError("symbol_diagnostics must carry one record per searched symbol")
+        symbols = [d.symbol for d in self.symbol_diagnostics]
+        if len(set(symbols)) != len(symbols):
+            raise ValueError("symbol_diagnostics contains a duplicate null symbol")
+
+        expected: dict[str, list[float] | list[int]] = {
+            "holdout_years": [d.holdout_years for d in self.symbol_diagnostics],
+            "n_bars": [d.n_bars for d in self.symbol_diagnostics],
+            "walk_forward_oos_sharpes": [
+                d.walk_forward_oos_sharpe
+                for d in self.symbol_diagnostics
+                if d.walk_forward_oos_sharpe is not None
+            ],
+            "walk_forward_hold_sharpes": [
+                d.walk_forward_hold_sharpe
+                for d in self.symbol_diagnostics
+                if d.walk_forward_hold_sharpe is not None
+            ],
+            "purged_cv_oos_sharpes": [
+                d.purged_cv_oos_sharpe
+                for d in self.symbol_diagnostics
+                if d.purged_cv_oos_sharpe is not None
+            ],
+            "purged_cv_hold_sharpes": [
+                d.purged_cv_hold_sharpe
+                for d in self.symbol_diagnostics
+                if d.purged_cv_hold_sharpe is not None
+            ],
+        }
+        for field, projection in expected.items():
+            if getattr(self, field) != projection:
+                raise ValueError(f"{field} does not match symbol_diagnostics")
+        return self
+
+    def paired_excess(self, oos_field: str, hold_field: str) -> list[float] | None:
+        """Return only explicit per-symbol pairs, with a strict complete-array legacy fallback."""
+        if self.symbol_diagnostics:
+            oos_name = oos_field.removesuffix("s")
+            hold_name = hold_field.removesuffix("s")
+            pairs = [(getattr(d, oos_name), getattr(d, hold_name)) for d in self.symbol_diagnostics]
+            values = [oos - hold for oos, hold in pairs if oos is not None and hold is not None]
+            return values or None
+
+        oos = getattr(self, oos_field)
+        hold = getattr(self, hold_field)
+        # FINDING-016: equal partial lengths do not prove the independently filtered lists kept the
+        # same symbols. Historical positional pairing is safe only when neither side dropped one.
+        if len(oos) != self.n_symbols or len(hold) != self.n_symbols:
+            return None
+        return [left - right for left, right in zip(oos, hold, strict=True)]
 
     @property
     def graduate_symbols(self) -> list[str]:
@@ -897,6 +972,18 @@ def calibrate_gate(
     if not experiments:
         raise ValueError("need at least one null symbol that can be searched")
 
+    symbol_diagnostics = [
+        NullSymbolDiagnostics(
+            symbol=experiment.symbol,
+            n_bars=bars,
+            holdout_years=years,
+            walk_forward_oos_sharpe=_finalist(experiment, select_by).walk_forward_oos_sharpe,
+            walk_forward_hold_sharpe=experiment.walk_forward_hold_sharpe,
+            purged_cv_oos_sharpe=_finalist(experiment, select_by).purged_cv_oos_sharpe,
+            purged_cv_hold_sharpe=experiment.purged_cv_hold_sharpe,
+        )
+        for experiment, bars, years in zip(experiments, n_bars, holdout_years, strict=True)
+    ]
     n_symbols = len(experiments)
     graduates = [e for e in experiments if e.graduate is not None]
     cleared = [
@@ -933,21 +1020,24 @@ def calibrate_gate(
         holdout_years=holdout_years,
         n_bars=n_bars,
         walk_forward_oos_sharpes=[
-            wf
-            for e in experiments
-            if (wf := _finalist(e, select_by).walk_forward_oos_sharpe) is not None
+            d.walk_forward_oos_sharpe
+            for d in symbol_diagnostics
+            if d.walk_forward_oos_sharpe is not None
         ],
         purged_cv_oos_sharpes=[
-            cv
-            for e in experiments
-            if (cv := _finalist(e, select_by).purged_cv_oos_sharpe) is not None
+            d.purged_cv_oos_sharpe for d in symbol_diagnostics if d.purged_cv_oos_sharpe is not None
         ],
         walk_forward_hold_sharpes=[
-            hold for e in experiments if (hold := e.walk_forward_hold_sharpe) is not None
+            d.walk_forward_hold_sharpe
+            for d in symbol_diagnostics
+            if d.walk_forward_hold_sharpe is not None
         ],
         purged_cv_hold_sharpes=[
-            hold for e in experiments if (hold := e.purged_cv_hold_sharpe) is not None
+            d.purged_cv_hold_sharpe
+            for d in symbol_diagnostics
+            if d.purged_cv_hold_sharpe is not None
         ],
+        symbol_diagnostics=symbol_diagnostics,
         errors=errors,
         gate_config_version=gate_config.version_hash,
         search_config_version=calibration_search_version(
@@ -1162,6 +1252,14 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
     if len(modes) > 1:
         raise ValueError(f"cannot merge shards with different null_mode: {sorted(modes)}")
 
+    paired = [bool(s.symbol_diagnostics) for s in shards]
+    if any(paired) and not all(paired):
+        raise ValueError("cannot merge paired and legacy null-diagnostic shards")
+    symbol_diagnostics = [d for s in shards for d in s.symbol_diagnostics]
+    symbols = [d.symbol for d in symbol_diagnostics]
+    if len(set(symbols)) != len(symbols):
+        raise ValueError("cannot merge shards with a duplicate null symbol")
+
     n_symbols = sum(s.n_symbols for s in shards)
     graduates = [g for s in shards for g in s.graduates]
     holdout_years = [y for s in shards for y in s.holdout_years]
@@ -1185,6 +1283,7 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
         purged_cv_oos_sharpes=[v for s in shards for v in s.purged_cv_oos_sharpes],
         walk_forward_hold_sharpes=[v for s in shards for v in s.walk_forward_hold_sharpes],
         purged_cv_hold_sharpes=[v for s in shards for v in s.purged_cv_hold_sharpes],
+        symbol_diagnostics=symbol_diagnostics,
         errors={sym: why for s in shards for sym, why in s.errors.items()},
         gate_config_version=versions.pop(),
         search_config_version=search_versions.pop(),

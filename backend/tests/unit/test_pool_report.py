@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 import numpy as np
 import pytest
 
-from app.research.lab.calibration import NullCalibration
+from app.research.lab.calibration import NullCalibration, NullSymbolDiagnostics
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import PaperPosition
@@ -924,6 +924,61 @@ def test_a_null_whose_two_distributions_do_not_pair_up_is_refused() -> None:
     rows = compare_with_null(summarize_pool(pool, []), [null], pool)
 
     assert all(r.statistic != "walk-forward excess" for r in rows)
+
+
+def test_partial_legacy_arrays_cannot_claim_pairing_from_equal_lengths() -> None:
+    """FINDING-016: equal counts do not prove that independently filtered arrays retained the
+    same symbols. Positional legacy pairing is safe only when both sides cover every search."""
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.1, 0.2, 0.3]).model_copy(
+        update={
+            "n_symbols": 3,
+            "walk_forward_oos_sharpes": [0.4, 0.6],
+            "walk_forward_hold_sharpes": [0.3, 0.5],
+        }
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    assert all(r.statistic != "walk-forward excess" for r in rows)
+
+
+def test_paired_records_keep_partial_diagnostics_on_their_own_symbols() -> None:
+    pool = _pool_with_hold([(0.5, 0.5), (0.6, 0.55), (0.7, 0.6)])
+    null = _null("iid_normal", walk_forward=[0.4, 0.5, 0.6], purged_cv=[0.1, 0.2, 0.3]).model_copy(
+        update={
+            "walk_forward_hold_sharpes": [0.3, 0.4, 0.5],
+            "symbol_diagnostics": [
+                NullSymbolDiagnostics(
+                    symbol="NULL0",
+                    n_bars=5400,
+                    holdout_years=4.3,
+                    walk_forward_oos_sharpe=0.4,
+                    walk_forward_hold_sharpe=None,
+                ),
+                NullSymbolDiagnostics(
+                    symbol="NULL1",
+                    n_bars=5400,
+                    holdout_years=4.3,
+                    walk_forward_oos_sharpe=None,
+                    walk_forward_hold_sharpe=0.4,
+                ),
+                NullSymbolDiagnostics(
+                    symbol="NULL2",
+                    n_bars=5400,
+                    holdout_years=4.3,
+                    walk_forward_oos_sharpe=0.6,
+                    walk_forward_hold_sharpe=0.5,
+                ),
+            ],
+        }
+    )
+
+    rows = compare_with_null(summarize_pool(pool, []), [null], pool)
+
+    excess = next(r for r in rows if r.statistic == "walk-forward excess")
+    assert excess.null_n == 1
+    assert excess.null_median == pytest.approx(0.1)
 
 
 # --- ADR-072: the centered statistic is read against a two-sided band ---

@@ -21,6 +21,7 @@ from app.research.lab import calibration as calibration_module
 from app.research.lab.calibration import (
     NullCalibration,
     NullGraduate,
+    NullSymbolDiagnostics,
     PowerCalibration,
     _finalist,
     autocorrelated_edge,
@@ -391,6 +392,39 @@ def test_calibration_records_the_walk_forward_null_distribution() -> None:
 
     assert len(result.walk_forward_oos_sharpes) == result.n_symbols
     assert all(isinstance(v, float) for v in result.walk_forward_oos_sharpes)
+
+
+def test_calibration_pairs_every_null_diagnostic_with_its_symbol() -> None:
+    frames = {f"NULL{i}": iid_normal_null(900, seed=i) for i in range(3)}
+    result = calibrate_gate(frames, ["sma", "momentum"], null_mode="iid_normal")
+
+    assert [d.symbol for d in result.symbol_diagnostics] == list(frames)
+    assert len(result.symbol_diagnostics) == result.n_symbols
+    assert [d.walk_forward_oos_sharpe for d in result.symbol_diagnostics] == (
+        result.walk_forward_oos_sharpes
+    )
+    assert [d.walk_forward_hold_sharpe for d in result.symbol_diagnostics] == (
+        result.walk_forward_hold_sharpes
+    )
+    assert [d.purged_cv_oos_sharpe for d in result.symbol_diagnostics] == (
+        result.purged_cv_oos_sharpes
+    )
+    assert [d.purged_cv_hold_sharpe for d in result.symbol_diagnostics] == (
+        result.purged_cv_hold_sharpes
+    )
+
+
+def test_paired_artifact_rejects_a_drifting_list_projection() -> None:
+    result = calibrate_gate(
+        {"NULL0": iid_normal_null(900, seed=0)},
+        ["sma", "momentum"],
+        null_mode="iid_normal",
+    )
+    payload = result.model_dump()
+    payload["walk_forward_hold_sharpes"] = [result.walk_forward_hold_sharpes[0] + 1.0]
+
+    with pytest.raises(ValueError, match="walk_forward_hold_sharpes"):
+        NullCalibration.model_validate(payload)
 
 
 def test_merging_shards_concatenates_the_walk_forward_distribution() -> None:
@@ -1461,6 +1495,47 @@ def test_merging_shards_concatenates_the_hold_distribution() -> None:
     assert merged.walk_forward_hold_sharpes == (
         shards[0].walk_forward_hold_sharpes + shards[1].walk_forward_hold_sharpes
     )
+
+
+def test_merging_shards_preserves_symbol_paired_diagnostics() -> None:
+    shards = [
+        calibrate_gate(
+            {f"NULL{i}": iid_normal_null(900, seed=i)},
+            ["sma", "momentum"],
+            null_mode="iid_normal",
+        )
+        for i in range(2)
+    ]
+
+    merged = merge_calibrations(shards)
+
+    assert merged.symbol_diagnostics == (
+        shards[0].symbol_diagnostics + shards[1].symbol_diagnostics
+    )
+
+
+def test_merge_refuses_mixed_paired_and_legacy_shards() -> None:
+    paired = _shard(n_symbols=1).model_copy(
+        update={
+            "symbol_diagnostics": [
+                NullSymbolDiagnostics(symbol="NULL0000", n_bars=5040, holdout_years=4.0)
+            ]
+        }
+    )
+
+    with pytest.raises(ValueError, match="paired and legacy"):
+        merge_calibrations([paired, _shard(n_symbols=1)])
+
+
+def test_merge_refuses_duplicate_paired_symbol_identity() -> None:
+    diagnostic = NullSymbolDiagnostics(symbol="NULL0000", n_bars=5040, holdout_years=4.0)
+    shards = [
+        _shard(n_symbols=1).model_copy(update={"symbol_diagnostics": [diagnostic]})
+        for _ in range(2)
+    ]
+
+    with pytest.raises(ValueError, match="duplicate null symbol"):
+        merge_calibrations(shards)
 
 
 def test_an_artifact_predating_the_benchmark_carries_no_hold_distribution() -> None:

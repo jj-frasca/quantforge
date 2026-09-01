@@ -333,7 +333,10 @@ parameter today. Reading them together is the fastest way to understand what the
 - `/null-calibration` returns the gate's measured Type-I error on symbols with no edge by
   construction (ADR-036/037). **A missing data directory returns `[]` with a 200**, deliberately:
   a 500 here would take the whole dashboard down for the sake of a summary panel. The same
-  degrade-don't-fail rule applies to `/pool-report` on the frontend side.
+  degrade-don't-fail rule applies to `/pool-report` on the frontend side. ADR-080 adds
+  `symbol_diagnostics`, one record per searched null symbol tying nullable walk-forward/purged-CV
+  OOS and hold values to their identity. The existing list fields remain backward-compatible raw
+  projections; clients must not infer pairing from equal partial list lengths.
 - `/null-comparison` serves the project's headline claim as a computation rather than a retyped
   sentence: the pool's finalist OOS diagnostics read against each null mode's own. Every row carries
   `comparable` and `mismatch` — a difference between two measurements that resolved different search

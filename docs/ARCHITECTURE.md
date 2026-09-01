@@ -429,10 +429,11 @@ now takes the same `benchmark` and reports `mean_oos_hold_sharpe` over the folds
 `purged-CV excess` row is emitted beside the raw one. Purged CV tests every index once, so its
 control covers the whole searched window where walk-forward's covers a suffix — the two hold Sharpes
 are separate fields and neither may stand in for the other. Nothing gates on either statistic and no
-threshold moves. Every artifact on disk predates the field, so the row reads **NOT MEASURED** until
-the pool re-searches and `null-calibration.yml` is re-dispatched (ADR-067) — and the first thing it
-will answer is whether purged CV's excess band collapses the way walk-forward's did (p95 +0.968 raw
-→ +0.096 excess). If it does not, that is a real difference between the two diagnostics.
+threshold moves. The 7,400-bar nulls were refreshed on 2026-09-01 and now carry the control; the
+matched real-pool cohort and the retained 5,400-bar nulls still predate it, so the row correctly
+reads **NOT MEASURED** (ADR-067). The first complete cohort will answer whether purged CV's excess
+band collapses the way walk-forward's did (p95 +0.968 raw → +0.096 excess). If it does not, that is
+a real difference between the two diagnostics.
 
 **ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
 error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against
@@ -504,6 +505,15 @@ current tree; the API and dashboard expose every retained pair and label its His
 not an observation: rows whose finalist lacks walk-forward or purged-CV output do not count toward
 that statistic's `MIN_MATCHED` floor. The report keeps history-cohort `matched_n` and diagnostic
 `real_n` visible separately and refuses a pool-wide fallback as formally comparable.
+
+**Null excess diagnostics are paired by symbol (ADR-080).** The four OOS/hold distributions used
+to be independently filtered arrays, so equal lengths could not prove they retained the same null
+symbols after partial missingness or shard merge. New artifacts carry one `symbol_diagnostics`
+record per searched symbol and consolidation rejects mixed schema generations or duplicate symbol
+identity. Existing list fields remain compatible projections. A legacy artifact may produce an
+excess row only when both arrays are complete for every `n_symbols`; partial legacy distributions
+remain valid as raw evidence but are not a paired measurement. The committed 2026-09-01 7,400-bar
+artifacts are complete and their published values are unaffected.
 
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.
