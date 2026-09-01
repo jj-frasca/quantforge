@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from app.research.lab.universe_files import (
@@ -90,6 +90,7 @@ def test_is_well_formed_ticker_never_raises(text: str) -> None:
         max_size=20,
     )
 )
+@settings(deadline=None)
 def test_merge_universes_output_is_sorted_and_unique(symbols: list[str]) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "u.txt"

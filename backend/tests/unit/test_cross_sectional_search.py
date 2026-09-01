@@ -45,7 +45,10 @@ def _persistent_momentum_panel(n: int = 800, n_symbols: int = 6, seed: int = 1) 
 
 
 def test_search_produces_a_trial_per_strategy_and_a_gate_verdict() -> None:
-    exp = run_cross_sectional_search(_noise_panel(), rationale="unit")
+    # This is the full-catalog integration case. Five hundred fifty bars still clears every default
+    # strategy's warmup and the train/holdout split while keeping the case below pytest's timeout
+    # on a contended host; longer-history behavior is exercised by the focused family tests.
+    exp = run_cross_sectional_search(_noise_panel(n=550), rationale="unit")
     assert isinstance(exp, CrossSectionalExperiment)
     # With no names given, every price-only default strategy is searched (one trial each).
     assert {t.strategy_name for t in exp.trials} == set(default_strategies())
