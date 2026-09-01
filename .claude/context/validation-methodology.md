@@ -150,9 +150,10 @@ index set into a statistic measured on another — which is the confound both ex
 
 ADR-068 had deferred this on the grounds that "purged CV's folds are not a prefix-ordered benchmark
 window". ADR-078 overturned it: fold ordering is a fact about SELECTION, and buy-and-hold has no
-config to select. The 7,400-bar nulls were refreshed on 2026-09-01 and carry the control; the
-matched real-pool cohort and retained 5,400-bar nulls still predate it, so the row remains NOT
-MEASURED until both sides carry the pair (ADR-067).
+config to select. The 7,400-bar nulls and the first 88-symbol matched real cohort now carry the
+control (FINDING-017). Real paired excess is `-0.000`; its difference from the bootstrap null is
+`+0.000 [-0.048, +0.002]` and from iid-normal is `+0.000 [-0.048, +0.000]`, clustered by symbol.
+Both intervals span zero. The retained 5,400-bar nulls remain legacy and correctly unmeasured.
 
 **ADR-080 applies to both controls.** Walk-forward and purged-CV OOS/hold values share one
 per-symbol calibration record, remain independently nullable, and are paired only within that

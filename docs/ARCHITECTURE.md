@@ -429,11 +429,11 @@ now takes the same `benchmark` and reports `mean_oos_hold_sharpe` over the folds
 `purged-CV excess` row is emitted beside the raw one. Purged CV tests every index once, so its
 control covers the whole searched window where walk-forward's covers a suffix — the two hold Sharpes
 are separate fields and neither may stand in for the other. Nothing gates on either statistic and no
-threshold moves. The 7,400-bar nulls were refreshed on 2026-09-01 and now carry the control; the
-matched real-pool cohort and the retained 5,400-bar nulls still predate it, so the row correctly
-reads **NOT MEASURED** (ADR-067). The first complete cohort will answer whether purged CV's excess
-band collapses the way walk-forward's did (p95 +0.968 raw → +0.096 excess). If it does not, that is
-a real difference between the two diagnostics.
+threshold moves. The 7,400-bar nulls and the first 88-symbol matched real cohort now carry the
+control (FINDING-017). Real paired excess is **−0.000**; its clustered difference from bootstrap is
+**+0.000 [−0.048, +0.002]** and from iid-normal **+0.000 [−0.048, +0.000]**. Both span zero: purged
+CV adds no measured performance beyond holding the same series, and its real excess does not
+separate from the null's. The retained 5,400-bar null cohort remains correctly unmeasured.
 
 **ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
 error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against

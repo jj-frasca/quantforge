@@ -116,6 +116,14 @@ only). This ADR adds a control to a number the project already publishes.
   statistic is added, the check is "what does this number read on data with no edge by
   construction, and is that level subtracted?"
 
+## Measured outcome (2026-09-01)
+
+The first daily refresh made the 7,400-bar row measurable on 88 matched real symbols
+(FINDING-017). Real paired purged-CV excess is `-0.000`; its symbol-clustered difference from the
+bootstrap null is `+0.000 [-0.048, +0.002]` and from iid-normal is `+0.000 [-0.048, +0.000]`.
+Both span zero. The raw statistic's level did contain drift, and after controlling it there is no
+measured real-versus-null difference. The diagnostic remains non-gating.
+
 ## Reversal
 
 Delete `mean_oos_hold_sharpe` from `PurgedCVResult`, the `benchmark` argument from
