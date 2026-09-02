@@ -3,7 +3,7 @@
 - **Severity:** High — a plausible follow-up can repeat ADR-075's independence error under a new
   generator name
 - **Found:** 2026-08-30 by Codex design review of ADR-075's correlated-panel follow-up
-- **Status:** Design accepted in ADR-081; implementation and measurement pending
+- **Status:** ADR-081 identity/consolidation implemented; generation and measurement pending
 - **Affected:** ADR-075, `null-calibration.yml`, `NullCalibration`, `_clustered_difference_ci`
 
 ## Finding
@@ -62,3 +62,7 @@ joint iid resampling of complete calendar vectors, 400 independent whole-panel r
 source/cohort/search identity, and a separate manual workflow sharded only by complete panel index.
 The ADR-075 headline and lower-bound qualification remain unchanged until an authorized completed
 artifact is interpreted under a later ADR.
+
+The first implementation slice is intentionally non-measuring: `panel_null.py` makes the whole
+panel an indivisible, globally indexed artifact and refuses partial/mixed consolidation. It does not
+yet generate a correlated panel, compute tail inference, dispatch a workflow, or change the headline.

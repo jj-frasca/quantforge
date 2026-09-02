@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted design; implementation and measurement pending
+- **Status:** Accepted; artifact identity/consolidation implemented, generation and measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
 - **Acts on:** FINDING-012, ADR-075
@@ -115,6 +115,18 @@ stores summaries and identities, not the fetched source prices. The workflow is 
 because it is expensive and is rerun only after an explicitly reviewed identity change.
 
 No workflow is dispatched by this ADR. Local tests use tiny deterministic panels and scratch paths.
+
+### Implementation progress
+
+`app/research/lab/panel_null.py` now defines the frozen cohort, per-symbol real values, complete
+panel replicate, shard, and consolidated artifact contracts. The cohort identity includes the base
+seed, fixed replicate count, effective-symbol floor, ordered symbols and their exact real values,
+source digest/dates, history rule, both fingerprints, and generator/diagnostic versions.
+`merge_panel_null_shards` derives the expected global index set and symbol floor from that identity,
+sorts complete panels deterministically, and rejects identity drift, missing/duplicate indices,
+duplicate panel IDs, non-derived seeds, unknown/duplicate error symbols, and any panel that does not
+account for the whole frozen cohort. Generation, inference, scripts, the manual workflow, and the
+sole-writer artifact remain unimplemented; this local slice spends no measurement.
 
 ## Alternatives considered
 
