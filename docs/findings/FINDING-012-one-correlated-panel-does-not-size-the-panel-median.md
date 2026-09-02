@@ -3,7 +3,7 @@
 - **Severity:** High — a plausible follow-up can repeat ADR-075's independence error under a new
   generator name
 - **Found:** 2026-08-30 by Codex design review of ADR-075's correlated-panel follow-up
-- **Status:** Open; requires a separately authorized, pre-specified measurement design
+- **Status:** Design accepted in ADR-081; implementation and measurement pending
 - **Affected:** ADR-075, `null-calibration.yml`, `NullCalibration`, `_clustered_difference_ci`
 
 ## Finding
@@ -54,3 +54,11 @@ statistic still assumes independent null draws.
 5. Do not dispatch the expensive repeated-panel experiment under a no-cloud/no-billable-runner
    mandate. Code mechanics can be tested locally, but no headline changes without the authorized
    full measurement.
+
+## Accepted design
+
+ADR-081 freezes the missing design without spending the measurement: equal weight per real symbol,
+joint iid resampling of complete calendar vectors, 400 independent whole-panel replicates, exact
+source/cohort/search identity, and a separate manual workflow sharded only by complete panel index.
+The ADR-075 headline and lower-bound qualification remain unchanged until an authorized completed
+artifact is interpreted under a later ADR.

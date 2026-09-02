@@ -360,9 +360,11 @@ the single-draw verdict, never in place of it (ADR-068's rule). Three qualificat
 with it and must never be dropped: the interval is a **lower bound on its own width** because the
 symbols share one calendar window — FINDING-012 says the repair needs **independent correlated-panel
 null replicates** (one correlated panel followed by symbol-level resampling repeats the independence
-error) and therefore changes both generation and ADR-037's sharding; the single-draw verdict is
-unchanged; and ADR-075 discloses that the point estimate was known before the scheme was fixed, so
-the pre-registration covers the procedure, not the answer.
+error). **ADR-081 now pre-registers, without running, an equal-symbol statistic, joint iid
+resampling of complete calendar vectors, 400 independent whole-panel replicates, and a separate
+manual workflow sharded only by complete panel index.** The single-draw verdict is unchanged; and
+ADR-075 discloses that the point estimate was known before the scheme was fixed, so the
+pre-registration covers the procedure, not the answer.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

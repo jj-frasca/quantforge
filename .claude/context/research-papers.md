@@ -154,3 +154,15 @@ SSRN: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551
   length, skewness, and kurtosis. QuantForge currently stores a value-form selection-adjusted
   Sharpe margin instead; FINDING-007 records that source mismatch. The local invariant
   `margin <= observed Sharpe` is not an invariant of the paper's probability statistic.
+
+**Efron (1979)** — "Bootstrap Methods: Another Look at the Jackknife".
+*Annals of Statistics* 7(1), pp. 1–26. DOI: https://doi.org/10.1214/aos/1176344552
+- The empirical distribution is resampled at the observation's actual dimension. For ADR-081 the
+  observation is one complete same-day cross-sectional return vector, not one scalar symbol return;
+  resampling vector rows preserves contemporaneous dependence inside a draw.
+
+**Politis & Romano (1994)** — "The Stationary Bootstrap".
+*Journal of the American Statistical Association* 89(428), pp. 1303–1313.
+- Resampling time blocks is appropriate when inference should retain weak serial dependence. It is
+  deliberately not ADR-081's no-edge generator: retaining blocks can retain the momentum/reversion
+  structure the catalog searches. ADR-081 samples complete vector rows iid instead.
