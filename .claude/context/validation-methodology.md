@@ -648,7 +648,8 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   manual workflow sharded only by complete panel index. The existing result remains qualified until
   that instrument is implemented, authorized, measured, and interpreted in a later ADR. The first
   non-measuring slice is in `app/research/lab/panel_null.py`: frozen cohort/replicate identity,
-  batching-invariant global-index seeds, and fail-closed whole-panel consolidation. Generation,
+  batching-invariant global-index seeds, fail-closed whole-panel consolidation and equally strict
+  direct final-artifact validation. Every persisted real/panel statistic must be finite. Generation,
   inference, workflow dispatch, and the sole-writer result remain pending.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.

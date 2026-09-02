@@ -8,6 +8,7 @@ symbol shard as an independent panel observation.
 from collections.abc import Sequence
 from datetime import date
 from hashlib import sha256
+from math import isfinite
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -15,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 class PanelSymbolExcess(BaseModel):
     """The frozen real-side value for one equally weighted cohort symbol."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     symbol: str = Field(min_length=1)
     walk_forward: float
@@ -58,6 +59,12 @@ class PanelNullCohort(BaseModel):
         measured_symbols = tuple(value.symbol for value in self.symbol_excesses)
         if measured_symbols != self.symbols:
             raise ValueError("symbol_excesses must match the ordered symbols exactly")
+        if any(
+            not isfinite(value.walk_forward)
+            or (value.purged_cv is not None and not isfinite(value.purged_cv))
+            for value in self.symbol_excesses
+        ):
+            raise ValueError("symbol excess statistics must be finite")
         if self.min_successful_symbols > len(self.symbols):
             raise ValueError("min_successful_symbols cannot exceed the frozen cohort size")
         if self.source_end < self.source_start:
@@ -77,7 +84,7 @@ class PanelNullError(BaseModel):
 class PanelNullReplicate(BaseModel):
     """One independent draw of the complete panel statistic, never a symbol shard."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     panel_index: int = Field(ge=0)
     panel_id: str = Field(min_length=1)
@@ -105,6 +112,14 @@ class PanelNullCalibration(BaseModel):
     cohort: PanelNullCohort
     replicates: tuple[PanelNullReplicate, ...]
 
+    @model_validator(mode="after")
+    def _validate_complete_measurement(self) -> "PanelNullCalibration":
+        _validate_complete_replicates(self.cohort, self.replicates)
+        indices = tuple(replicate.panel_index for replicate in self.replicates)
+        if indices != tuple(range(self.cohort.n_replicates)):
+            raise ValueError("replicates must be ordered by panel index")
+        return self
+
 
 def panel_seed(base_seed: int, panel_index: int) -> int:
     """Derive a batching-invariant signed-64-bit seed from one global panel index."""
@@ -114,6 +129,47 @@ def panel_seed(base_seed: int, panel_index: int) -> int:
         raise ValueError("panel_index must be non-negative")
     digest = sha256(f"{base_seed}:{panel_index}".encode()).digest()
     return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+
+
+def _validate_complete_replicates(
+    cohort: PanelNullCohort,
+    replicates: Sequence[PanelNullReplicate],
+) -> None:
+    if any(
+        not isfinite(value.walk_forward)
+        or (value.purged_cv is not None and not isfinite(value.purged_cv))
+        for value in cohort.symbol_excesses
+    ):
+        raise ValueError("symbol excess statistics must be finite")
+    indices = [replicate.panel_index for replicate in replicates]
+    if len(set(indices)) != len(indices):
+        raise ValueError("duplicate panel index")
+    if set(indices) != set(range(cohort.n_replicates)):
+        raise ValueError("shards must contain the complete panel indices")
+    if any(
+        replicate.seed != panel_seed(cohort.base_seed, replicate.panel_index)
+        for replicate in replicates
+    ):
+        raise ValueError("replicate seed does not match the derived seed")
+
+    panel_ids = [replicate.panel_id for replicate in replicates]
+    if len(set(panel_ids)) != len(panel_ids):
+        raise ValueError("duplicate panel id")
+    cohort_symbols = set(cohort.symbols)
+    for replicate in replicates:
+        if not isfinite(replicate.walk_forward_excess) or (
+            replicate.purged_cv_excess is not None and not isfinite(replicate.purged_cv_excess)
+        ):
+            raise ValueError("replicate statistics must be finite")
+        error_symbols = [error.symbol for error in replicate.errors]
+        if len(set(error_symbols)) != len(error_symbols):
+            raise ValueError("replicate contains a duplicate error symbol")
+        if any(symbol not in cohort_symbols for symbol in error_symbols):
+            raise ValueError("replicate contains an error symbol outside the frozen cohort")
+        if replicate.successful_symbols < cohort.min_successful_symbols:
+            raise ValueError("replicate is below the successful-symbol floor")
+        if replicate.successful_symbols + len(replicate.errors) != len(cohort.symbols):
+            raise ValueError("replicate must account for every cohort symbol")
 
 
 def merge_panel_null_shards(
@@ -128,35 +184,7 @@ def merge_panel_null_shards(
         raise ValueError("all shards must share the same cohort identity")
 
     replicates = [replicate for shard in shards for replicate in shard.replicates]
-    indices = [replicate.panel_index for replicate in replicates]
-    if len(set(indices)) != len(indices):
-        raise ValueError("duplicate panel index")
-    expected_indices = set(range(cohort.n_replicates))
-    if set(indices) != expected_indices:
-        raise ValueError("shards must contain the complete panel indices")
-    if any(
-        replicate.seed != panel_seed(cohort.base_seed, replicate.panel_index)
-        for replicate in replicates
-    ):
-        raise ValueError("replicate seed does not match the derived seed")
-
-    panel_ids = [replicate.panel_id for replicate in replicates]
-    if len(set(panel_ids)) != len(panel_ids):
-        raise ValueError("duplicate panel id")
-    cohort_symbols = set(cohort.symbols)
-    for replicate in replicates:
-        error_symbols = [error.symbol for error in replicate.errors]
-        if len(set(error_symbols)) != len(error_symbols):
-            raise ValueError("replicate contains a duplicate error symbol")
-        if any(symbol not in cohort_symbols for symbol in error_symbols):
-            raise ValueError("replicate contains an error symbol outside the frozen cohort")
-    if any(
-        replicate.successful_symbols < cohort.min_successful_symbols for replicate in replicates
-    ):
-        raise ValueError("replicate is below the successful-symbol floor")
-    for replicate in replicates:
-        if replicate.successful_symbols + len(replicate.errors) != len(cohort.symbols):
-            raise ValueError("replicate must account for every cohort symbol")
+    _validate_complete_replicates(cohort, replicates)
 
     ordered = tuple(sorted(replicates, key=lambda replicate: replicate.panel_index))
     return PanelNullCalibration(cohort=cohort, replicates=ordered)

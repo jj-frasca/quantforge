@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.research.lab.panel_null import (
+    PanelNullCalibration,
     PanelNullCohort,
     PanelNullError,
     PanelNullReplicate,
@@ -81,6 +82,64 @@ def test_panel_artifacts_are_frozen() -> None:
     cohort = _cohort()
     with pytest.raises(ValidationError, match="frozen"):
         cohort.target_n_bars = 5400  # type: ignore[misc]
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_panel_artifacts_reject_non_finite_statistics(value: float) -> None:
+    with pytest.raises(ValidationError, match="finite number"):
+        PanelSymbolExcess(symbol="AAA", walk_forward=value, purged_cv=0.1)
+    with pytest.raises(ValidationError, match="finite number"):
+        PanelSymbolExcess(symbol="AAA", walk_forward=0.1, purged_cv=value)
+    with pytest.raises(ValidationError, match="finite number"):
+        PanelNullReplicate(
+            panel_index=0,
+            panel_id="panel-000",
+            seed=panel_seed(17, 0),
+            successful_symbols=2,
+            walk_forward_excess=value,
+            purged_cv_excess=0.1,
+        )
+    with pytest.raises(ValidationError, match="finite number"):
+        PanelNullReplicate(
+            panel_index=0,
+            panel_id="panel-000",
+            seed=panel_seed(17, 0),
+            successful_symbols=2,
+            walk_forward_excess=0.1,
+            purged_cv_excess=value,
+        )
+
+
+@pytest.mark.parametrize(
+    ("replicates", "message"),
+    [
+        ((_replicate(0),), "complete panel indices"),
+        ((_replicate(1), _replicate(0)), "ordered by panel index"),
+        (
+            (
+                _replicate(0),
+                _replicate(1).model_copy(update={"seed": panel_seed(18, 1)}),
+            ),
+            "derived seed",
+        ),
+        (
+            (
+                _replicate(0),
+                _replicate(1).model_copy(update={"panel_id": "panel-000"}),
+            ),
+            "duplicate panel id",
+        ),
+        (
+            (_replicate(0), _replicate(1, successful_symbols=1)),
+            "successful-symbol floor",
+        ),
+    ],
+)
+def test_direct_calibration_construction_cannot_bypass_merge_invariants(
+    replicates: tuple[PanelNullReplicate, ...], message: str
+) -> None:
+    with pytest.raises(ValidationError, match=message):
+        PanelNullCalibration(cohort=_cohort(n_replicates=2), replicates=replicates)
 
 
 def test_merge_sorts_complete_panel_units_by_global_index() -> None:

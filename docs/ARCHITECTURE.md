@@ -366,7 +366,9 @@ manual workflow sharded only by complete panel index.** The single-draw verdict 
 ADR-075 discloses that the point estimate was known before the scheme was fixed, so the
 pre-registration covers the procedure, not the answer. Its first local implementation slice freezes
 cohort and complete-panel artifact identity, derives seeds from global indices, and rejects partial
-or mixed consolidation; generation, inference, workflow dispatch, and measurement remain pending.
+or mixed consolidation. Direct final-artifact construction cannot bypass those checks, and persisted
+statistics reject NaN/infinity; generation, inference, workflow dispatch, and measurement remain
+pending.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

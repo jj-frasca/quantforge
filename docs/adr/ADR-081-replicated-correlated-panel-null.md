@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; artifact identity/consolidation implemented, generation and measurement pending
+- **Status:** Accepted; artifact identity/consolidation hardened, generation and measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
 - **Acts on:** FINDING-012, ADR-075
@@ -125,8 +125,11 @@ source digest/dates, history rule, both fingerprints, and generator/diagnostic v
 `merge_panel_null_shards` derives the expected global index set and symbol floor from that identity,
 sorts complete panels deterministically, and rejects identity drift, missing/duplicate indices,
 duplicate panel IDs, non-derived seeds, unknown/duplicate error symbols, and any panel that does not
-account for the whole frozen cohort. Generation, inference, scripts, the manual workflow, and the
-sole-writer artifact remain unimplemented; this local slice spends no measurement.
+account for the whole frozen cohort. `PanelNullCalibration` applies those same invariants during
+direct construction, so deserializing a purported final artifact cannot bypass consolidation, and
+every real-side or replicate statistic rejects NaN and infinity. Generation, inference, scripts,
+the manual workflow, and the sole-writer artifact remain unimplemented; this local slice spends no
+measurement.
 
 ## Alternatives considered
 
