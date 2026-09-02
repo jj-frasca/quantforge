@@ -1,16 +1,21 @@
 """Replicated whole-panel null artifact contracts (ADR-081).
 
-This module deliberately contains identity and consolidation only. Generation, inference, and the
-manual sole-writer workflow build on these contracts without being able to reinterpret a partial
-symbol shard as an independent panel observation.
+This module contains identity, deterministic joint-row generation, and consolidation. Inference
+and the manual sole-writer workflow build on these contracts without being able to reinterpret a
+partial symbol shard as an independent panel observation.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import date
 from hashlib import sha256
 from math import isfinite
 
+import numpy as np
+import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+_OHLCV_COLUMNS = ("open", "high", "low", "close", "volume")
+_GENERATED_START = "2010-01-04"
 
 
 class PanelSymbolExcess(BaseModel):
@@ -129,6 +134,73 @@ def panel_seed(base_seed: int, panel_index: int) -> int:
         raise ValueError("panel_index must be non-negative")
     digest = sha256(f"{base_seed}:{panel_index}".encode()).digest()
     return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+
+
+def joint_iid_panel_null(
+    source_panel: Mapping[str, pd.DataFrame],
+    n_bars: int,
+    *,
+    seed: int,
+) -> dict[str, pd.DataFrame]:
+    """Jointly resample complete calendar rows and reconstruct every symbol's OHLCV path.
+
+    The caller supplies the already aligned, complete source panel frozen by ADR-081. One iid row
+    draw is shared across symbols, preserving contemporaneous dependence while destroying calendar
+    order. Each selected row carries its close return and same-bar OHLCV geometry together.
+    """
+    if n_bars < 1:
+        raise ValueError("n_bars must be >= 1")
+    if not source_panel:
+        raise ValueError("source panel must contain at least one symbol")
+
+    frames = list(source_panel.items())
+    reference_index = frames[0][1].index
+    if len(reference_index) < 2:
+        raise ValueError("source panel needs at least two aligned rows")
+    if not isinstance(reference_index, pd.DatetimeIndex) or reference_index.tz is None:
+        raise ValueError("source panel calendar index must be timezone-aware")
+
+    for symbol, frame in frames:
+        missing = set(_OHLCV_COLUMNS).difference(frame.columns)
+        if missing:
+            raise ValueError(f"source panel symbol {symbol} is missing OHLCV columns")
+        if not frame.index.equals(reference_index):
+            raise ValueError("source panel symbols must have exactly aligned calendar rows")
+        if not reference_index.is_monotonic_increasing or not reference_index.is_unique:
+            raise ValueError("source panel calendar rows must be ordered and unique")
+        values = frame.loc[:, _OHLCV_COLUMNS].to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError("source panel OHLCV values must be finite")
+        if (frame.loc[:, ("open", "high", "low", "close")] <= 0).any().any():
+            raise ValueError("source panel prices must be positive")
+        if (frame["volume"] < 0).any():
+            raise ValueError("source panel volume must be non-negative")
+        if (frame["high"] < frame.loc[:, ("open", "close")].max(axis=1)).any() or (
+            frame["low"] > frame.loc[:, ("open", "close")].min(axis=1)
+        ).any():
+            raise ValueError("source panel must have valid OHLCV geometry")
+
+    rng = np.random.default_rng(seed)
+    draw = rng.integers(0, len(reference_index) - 1, n_bars)
+    generated_index = pd.date_range(_GENERATED_START, periods=n_bars, freq="B", tz="UTC")
+    generated: dict[str, pd.DataFrame] = {}
+    for symbol, frame in frames:
+        returns = frame["close"].pct_change().iloc[1:].to_numpy()
+        if not np.isfinite(returns).all() or (returns <= -1.0).any():
+            raise ValueError("source panel close returns must be finite and greater than -1")
+        bars = frame.iloc[1:]
+        closes = float(frame["close"].iloc[0]) * np.cumprod(1.0 + returns[draw])
+        generated[symbol] = pd.DataFrame(
+            {
+                "open": closes * (bars["open"] / bars["close"]).to_numpy()[draw],
+                "high": closes * (bars["high"] / bars["close"]).to_numpy()[draw],
+                "low": closes * (bars["low"] / bars["close"]).to_numpy()[draw],
+                "close": closes,
+                "volume": bars["volume"].to_numpy()[draw],
+            },
+            index=generated_index,
+        ).loc[:, _OHLCV_COLUMNS]
+    return generated
 
 
 def _validate_complete_replicates(

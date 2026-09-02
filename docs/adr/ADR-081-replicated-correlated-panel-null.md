@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; artifact identity/consolidation hardened, generation and measurement pending
+- **Status:** Accepted; artifact identity and joint-row generator implemented, measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
 - **Acts on:** FINDING-012, ADR-075
@@ -127,9 +127,18 @@ sorts complete panels deterministically, and rejects identity drift, missing/dup
 duplicate panel IDs, non-derived seeds, unknown/duplicate error symbols, and any panel that does not
 account for the whole frozen cohort. `PanelNullCalibration` applies those same invariants during
 direct construction, so deserializing a purported final artifact cannot bypass consolidation, and
-every real-side or replicate statistic rejects NaN and infinity. Generation, inference, scripts,
-the manual workflow, and the sole-writer artifact remain unimplemented; this local slice spends no
-measurement.
+every real-side or replicate statistic rejects NaN and infinity. Source preparation, search
+execution, inference, scripts, the manual workflow, and the sole-writer artifact remain
+unimplemented; this local slice spends no measurement.
+
+`joint_iid_panel_null` implements the first generator boundary on an already frozen, aligned source
+panel. It rejects missing, misaligned, non-finite, non-positive, or geometrically invalid OHLCV
+inputs; derives one seeded iid sequence of complete calendar-row indices; applies that exact sequence
+to every symbol; and reconstructs each path from the selected close returns plus same-row
+open/high/low/volume geometry. Tiny deterministic tests recover the identical selected source row
+from both symbols and verify every reconstructed return and ratio. Source-panel preparation, running
+the unmodified search over each generated symbol, panel-statistic inference, scripts, the manual
+workflow, and the sole-writer artifact remain unimplemented; this slice still spends no measurement.
 
 ## Alternatives considered
 

@@ -1,7 +1,9 @@
-"""Whole-panel artifact identity and consolidation for ADR-081."""
+"""Whole-panel artifact identity, joint-row generation, and consolidation for ADR-081."""
 
 from datetime import date
 
+import numpy as np
+import pandas as pd
 import pytest
 from pydantic import ValidationError
 
@@ -12,6 +14,7 @@ from app.research.lab.panel_null import (
     PanelNullReplicate,
     PanelNullShard,
     PanelSymbolExcess,
+    joint_iid_panel_null,
     merge_panel_null_shards,
     panel_seed,
 )
@@ -54,6 +57,87 @@ def _replicate(index: int, *, successful_symbols: int = 2) -> PanelNullReplicate
         walk_forward_excess=-0.01 + index / 1000,
         purged_cv_excess=index / 2000,
     )
+
+
+def _source_panel() -> dict[str, pd.DataFrame]:
+    index = pd.date_range("2020-01-02", periods=6, freq="B", tz="UTC")
+    returns = {
+        "AAA": np.array([0.0, 0.01, -0.02, 0.03, -0.01, 0.02]),
+        "BBB": np.array([0.0, 0.02, -0.01, 0.04, -0.03, 0.01]),
+    }
+    panel: dict[str, pd.DataFrame] = {}
+    for offset, (symbol, values) in enumerate(returns.items(), start=1):
+        closes = 100.0 * np.cumprod(1.0 + values)
+        panel[symbol] = pd.DataFrame(
+            {
+                "open": closes * (0.99 + offset / 1000),
+                "high": closes * (1.01 + offset / 1000),
+                "low": closes * (0.98 + offset / 1000),
+                "close": closes,
+                "volume": offset * 1000 + np.arange(len(index)),
+            },
+            index=index,
+        )
+    return panel
+
+
+def test_joint_iid_panel_null_uses_one_calendar_draw_for_every_symbol() -> None:
+    source = _source_panel()
+    generated = joint_iid_panel_null(source, 12, seed=23)
+
+    aaa_rows = generated["AAA"]["volume"].to_numpy(dtype=int) - 1000
+    bbb_rows = generated["BBB"]["volume"].to_numpy(dtype=int) - 2000
+    assert np.array_equal(aaa_rows, bbb_rows)
+    assert (aaa_rows >= 1).all()  # row zero has no close-to-close return to resample
+
+    for symbol, frame in generated.items():
+        base = float(source[symbol]["close"].iloc[0])
+        reconstructed = np.r_[
+            float(frame["close"].iloc[0]) / base - 1.0,
+            frame["close"].pct_change().iloc[1:].to_numpy(),
+        ]
+        expected = source[symbol]["close"].pct_change().to_numpy()[aaa_rows]
+        assert reconstructed == pytest.approx(expected)
+
+
+def test_joint_iid_panel_null_reconstructs_same_bar_ohlcv_geometry() -> None:
+    source = _source_panel()
+    first = joint_iid_panel_null(source, 10, seed=31)
+    second = joint_iid_panel_null(source, 10, seed=31)
+
+    for symbol, frame in first.items():
+        pd.testing.assert_frame_equal(frame, second[symbol])
+        drawn_rows = frame["volume"].to_numpy(dtype=int) - (1000 if symbol == "AAA" else 2000)
+        source_rows = source[symbol].iloc[drawn_rows]
+        for column in ("open", "high", "low"):
+            assert (frame[column] / frame["close"]).to_numpy() == pytest.approx(
+                (source_rows[column] / source_rows["close"]).to_numpy()
+            )
+        assert np.isfinite(frame.to_numpy()).all()
+        assert (frame[["open", "high", "low", "close"]] > 0).all().all()
+        assert (frame["high"] >= frame[["open", "close"]].max(axis=1)).all()
+        assert (frame["low"] <= frame[["open", "close"]].min(axis=1)).all()
+
+
+def test_joint_iid_panel_null_rejects_unaligned_or_incomplete_sources() -> None:
+    source = _source_panel()
+    misaligned = {**source, "BBB": source["BBB"].iloc[1:]}
+    with pytest.raises(ValueError, match="aligned"):
+        joint_iid_panel_null(misaligned, 5, seed=1)
+
+    naive = {symbol: frame.tz_localize(None) for symbol, frame in source.items()}
+    with pytest.raises(ValueError, match="timezone-aware"):
+        joint_iid_panel_null(naive, 5, seed=1)
+
+    incomplete = {symbol: frame.copy() for symbol, frame in source.items()}
+    incomplete["AAA"].iloc[2, incomplete["AAA"].columns.get_loc("volume")] = np.nan
+    with pytest.raises(ValueError, match="finite"):
+        joint_iid_panel_null(incomplete, 5, seed=1)
+
+    with pytest.raises(ValueError, match="at least one symbol"):
+        joint_iid_panel_null({}, 5, seed=1)
+    with pytest.raises(ValueError, match="n_bars"):
+        joint_iid_panel_null(source, 0, seed=1)
 
 
 def test_panel_cohort_requires_exactly_one_value_per_ordered_symbol() -> None:

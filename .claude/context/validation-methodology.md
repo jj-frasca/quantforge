@@ -649,8 +649,11 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   that instrument is implemented, authorized, measured, and interpreted in a later ADR. The first
   non-measuring slice is in `app/research/lab/panel_null.py`: frozen cohort/replicate identity,
   batching-invariant global-index seeds, fail-closed whole-panel consolidation and equally strict
-  direct final-artifact validation. Every persisted real/panel statistic must be finite. Generation,
-  inference, workflow dispatch, and the sole-writer result remain pending.
+  direct final-artifact validation. Every persisted real/panel statistic must be finite. The first
+  generator primitive validates an already aligned complete OHLCV panel, draws one seeded iid
+  sequence of whole calendar rows, applies it across every symbol, and reconstructs each path from
+  selected close returns and same-row geometry. Source preparation, search execution, panel
+  inference, workflow dispatch, and the sole-writer result remain separate unimplemented boundaries.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

@@ -3,7 +3,7 @@
 - **Severity:** High — a plausible follow-up can repeat ADR-075's independence error under a new
   generator name
 - **Found:** 2026-08-30 by Codex design review of ADR-075's correlated-panel follow-up
-- **Status:** ADR-081 identity/consolidation hardened; generation and measurement pending
+- **Status:** ADR-081 identity and joint-row generator implemented; measurement pending
 - **Affected:** ADR-075, `null-calibration.yml`, `NullCalibration`, `_clustered_difference_ci`
 
 ## Finding
@@ -65,6 +65,11 @@ artifact is interpreted under a later ADR.
 
 The first implementation slice is intentionally non-measuring: `panel_null.py` makes the whole
 panel an indivisible, globally indexed artifact and refuses partial/mixed consolidation. It does not
-yet generate a correlated panel, compute tail inference, dispatch a workflow, or change the headline.
-Direct final-artifact construction now enforces the same complete-panel invariants, and all persisted
-real/panel statistics must be finite.
+compute tail inference, dispatch a workflow, or change the headline. Direct final-artifact
+construction enforces the same complete-panel invariants, and all persisted real/panel statistics
+must be finite.
+
+The deterministic generator primitive now consumes an already aligned complete source panel, draws
+one iid sequence of whole calendar rows, shares it across every symbol, and reconstructs each OHLCV
+path with the selected row's geometry. It does not yet prepare/fetch a cohort, run searches, compute
+tail inference, dispatch a workflow, or change the headline.
