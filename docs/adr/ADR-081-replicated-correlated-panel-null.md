@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; artifact identity and joint-row generator implemented, measurement pending
+- **Status:** Accepted; identity, joint-row generator, and inference implemented; measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
 - **Acts on:** FINDING-012, ADR-075
@@ -136,9 +136,12 @@ panel. It rejects missing, misaligned, non-finite, non-positive, or geometricall
 inputs; derives one seeded iid sequence of complete calendar-row indices; applies that exact sequence
 to every symbol; and reconstructs each path from the selected close returns plus same-row
 open/high/low/volume geometry. Tiny deterministic tests recover the identical selected source row
-from both symbols and verify every reconstructed return and ratio. Source-panel preparation, running
-the unmodified search over each generated symbol, panel-statistic inference, scripts, the manual
-workflow, and the sole-writer artifact remain unimplemented; this slice still spends no measurement.
+from both symbols and verify every reconstructed return and ratio. `infer_panel_null` now applies
+the pre-registered equal-symbol statistic, inclusive tail counts, plus-one two-sided p-value, and
+ADR-082's simultaneous exact confidence construction to a complete artifact. Purged-CV remains
+unmeasured unless the complete real cohort and every null panel carry it. Source-panel preparation,
+running the unmodified search over each generated symbol, scripts, the manual workflow, and the
+sole-writer artifact remain unimplemented; this slice still spends no measurement.
 
 ## Alternatives considered
 

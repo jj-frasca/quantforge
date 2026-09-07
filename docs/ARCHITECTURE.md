@@ -369,8 +369,10 @@ cohort and complete-panel artifact identity, derives seeds from global indices, 
 or mixed consolidation. Direct final-artifact construction cannot bypass those checks, and persisted
 statistics reject NaN/infinity. The local generator now applies one deterministic iid sequence of
 complete calendar-row indices to every symbol and reconstructs close returns plus same-row OHLCV
-geometry from a validated aligned source panel. Source preparation, search execution, inference,
-workflow dispatch, and measurement remain pending.
+geometry from a validated aligned source panel. Pure inference reports inclusive tail counts, a
+plus-one two-sided Monte Carlo p-value, and two 97.5% Clopper-Pearson intervals with at least 95%
+simultaneous coverage (ADR-082); partial secondary diagnostics remain unmeasured. Source
+preparation, search execution, workflow dispatch, and measurement remain pending.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

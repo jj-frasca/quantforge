@@ -652,8 +652,12 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   direct final-artifact validation. Every persisted real/panel statistic must be finite. The first
   generator primitive validates an already aligned complete OHLCV panel, draws one seeded iid
   sequence of whole calendar rows, applies it across every symbol, and reconstructs each path from
-  selected close returns and same-row geometry. Source preparation, search execution, panel
-  inference, workflow dispatch, and the sole-writer result remain separate unimplemented boundaries.
+  selected close returns and same-row geometry. `infer_panel_null` now applies the frozen
+  equal-symbol statistic, inclusive lower/upper tail counts, plus-one two-sided Monte Carlo p-value,
+  and ADR-082's two 97.5% Clopper-Pearson intervals (at least 95% simultaneous coverage). A 3/400
+  tail resolves below 0.025; 4/400 remains unresolved. Purged-CV is emitted only when every real and
+  null panel value exists. Source preparation, search execution, workflow dispatch, and the
+  sole-writer result remain separate unimplemented boundaries.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

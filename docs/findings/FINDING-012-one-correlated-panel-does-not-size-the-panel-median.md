@@ -3,7 +3,7 @@
 - **Severity:** High — a plausible follow-up can repeat ADR-075's independence error under a new
   generator name
 - **Found:** 2026-08-30 by Codex design review of ADR-075's correlated-panel follow-up
-- **Status:** ADR-081 identity and joint-row generator implemented; measurement pending
+- **Status:** ADR-081 identity, joint-row generator, and inference implemented; measurement pending
 - **Affected:** ADR-075, `null-calibration.yml`, `NullCalibration`, `_clustered_difference_ci`
 
 ## Finding
@@ -71,5 +71,6 @@ must be finite.
 
 The deterministic generator primitive now consumes an already aligned complete source panel, draws
 one iid sequence of whole calendar rows, shares it across every symbol, and reconstructs each OHLCV
-path with the selected row's geometry. It does not yet prepare/fetch a cohort, run searches, compute
-tail inference, dispatch a workflow, or change the headline.
+path with the selected row's geometry. ADR-082 freezes and implements pure tail inference over a
+complete artifact, including simultaneous exact binomial uncertainty. It does not yet prepare/fetch
+a cohort, run searches, dispatch a workflow, write a generated artifact, or change the headline.

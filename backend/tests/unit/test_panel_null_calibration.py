@@ -8,12 +8,14 @@ import pytest
 from pydantic import ValidationError
 
 from app.research.lab.panel_null import (
+    PanelDiagnosticInference,
     PanelNullCalibration,
     PanelNullCohort,
     PanelNullError,
     PanelNullReplicate,
     PanelNullShard,
     PanelSymbolExcess,
+    infer_panel_null,
     joint_iid_panel_null,
     merge_panel_null_shards,
     panel_seed,
@@ -57,6 +59,87 @@ def _replicate(index: int, *, successful_symbols: int = 2) -> PanelNullReplicate
         walk_forward_excess=-0.01 + index / 1000,
         purged_cv_excess=index / 2000,
     )
+
+
+def _calibration_with_walk_forward(values: list[float]) -> PanelNullCalibration:
+    cohort = _cohort(n_replicates=len(values))
+    cohort = cohort.model_copy(
+        update={
+            "symbol_excesses": tuple(
+                value.model_copy(update={"purged_cv": value.walk_forward})
+                for value in cohort.symbol_excesses
+            )
+        }
+    )
+    replicates = tuple(
+        _replicate(index).model_copy(update={"walk_forward_excess": value})
+        for index, value in enumerate(values)
+    )
+    return PanelNullCalibration(cohort=cohort, replicates=replicates)
+
+
+def test_panel_null_inference_uses_fixed_tail_counts_and_plus_one_p_value() -> None:
+    calibration = _calibration_with_walk_forward([-1.0] * 3 + [1.0] * 397)
+
+    result = infer_panel_null(calibration).walk_forward
+
+    assert isinstance(result, PanelDiagnosticInference)
+    assert result.real_statistic == pytest.approx(-0.1)
+    assert result.null_median == pytest.approx(1.0)
+    assert result.null_p025 == pytest.approx(1.0)
+    assert result.null_p975 == pytest.approx(1.0)
+    assert result.lower_tail_count == 3
+    assert result.upper_tail_count == 397
+    assert result.two_sided_p_value == pytest.approx(8 / 401)
+    assert result.tail_interval_confidence == pytest.approx(0.975)
+    assert result.simultaneous_confidence == pytest.approx(0.95)
+    assert result.lower_tail_interval.low == pytest.approx(0.0011875146623632955)
+    assert result.lower_tail_interval.high == pytest.approx(0.024143766938848475)
+    assert result.resolution == "separated_below"
+
+
+def test_panel_null_inference_keeps_four_tail_hits_unresolved() -> None:
+    result = infer_panel_null(_calibration_with_walk_forward([-1.0] * 4 + [1.0] * 396)).walk_forward
+
+    assert result.lower_tail_interval.high == pytest.approx(0.02794221048906605)
+    assert result.resolution == "unresolved"
+
+
+def test_panel_null_inference_resolves_the_fixed_upper_tail() -> None:
+    result = infer_panel_null(_calibration_with_walk_forward([-1.0] * 397 + [1.0] * 3)).walk_forward
+
+    assert result.upper_tail_count == 3
+    assert result.upper_tail_interval.high < 0.025
+    assert result.resolution == "separated_above"
+
+
+def test_panel_null_inference_calls_both_well_inside_tails_not_separated() -> None:
+    result = infer_panel_null(
+        _calibration_with_walk_forward([-1.0] * 200 + [1.0] * 200)
+    ).walk_forward
+
+    assert result.lower_tail_interval.low > 0.025
+    assert result.upper_tail_interval.low > 0.025
+    assert result.two_sided_p_value == 1.0
+    assert result.resolution == "not_separated"
+
+
+def test_panel_null_inference_does_not_filter_partial_secondary_diagnostics() -> None:
+    calibration = _calibration_with_walk_forward([-1.0, 1.0, -1.0, 1.0])
+    assert infer_panel_null(calibration).purged_cv is not None
+
+    incomplete = calibration.model_copy(
+        update={
+            "replicates": (
+                *calibration.replicates[:-1],
+                calibration.replicates[-1].model_copy(update={"purged_cv_excess": None}),
+            )
+        }
+    )
+    assert infer_panel_null(incomplete).purged_cv is None
+
+    missing_real = calibration.model_copy(update={"cohort": _cohort(n_replicates=4)})
+    assert infer_panel_null(missing_real).purged_cv is None
 
 
 def _source_panel() -> dict[str, pd.DataFrame]:

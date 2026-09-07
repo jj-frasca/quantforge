@@ -1,21 +1,26 @@
 """Replicated whole-panel null artifact contracts (ADR-081).
 
-This module contains identity, deterministic joint-row generation, and consolidation. Inference
-and the manual sole-writer workflow build on these contracts without being able to reinterpret a
-partial symbol shard as an independent panel observation.
+This module contains identity, deterministic joint-row generation, consolidation, and the fixed
+tail inference. The manual sole-writer workflow builds on these contracts without being able to
+reinterpret a partial symbol shard as an independent panel observation.
 """
 
 from collections.abc import Mapping, Sequence
 from datetime import date
 from hashlib import sha256
 from math import isfinite
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from scipy.stats import beta
 
 _OHLCV_COLUMNS = ("open", "high", "low", "close", "volume")
 _GENERATED_START = "2010-01-04"
+_TAIL_THRESHOLD = 0.025
+_TAIL_INTERVAL_CONFIDENCE = 0.975
+_SIMULTANEOUS_CONFIDENCE = 0.95
 
 
 class PanelSymbolExcess(BaseModel):
@@ -126,6 +131,51 @@ class PanelNullCalibration(BaseModel):
         return self
 
 
+class BinomialConfidenceInterval(BaseModel):
+    """One exact interval for a panel-level tail probability."""
+
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
+
+    low: float = Field(ge=0.0, le=1.0)
+    high: float = Field(ge=0.0, le=1.0)
+
+
+class PanelDiagnosticInference(BaseModel):
+    """The pre-registered ADR-081/082 reading for one panel diagnostic."""
+
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
+
+    diagnostic: Literal["walk_forward", "purged_cv"]
+    real_statistic: float
+    null_median: float
+    null_p025: float
+    null_p975: float
+    n_replicates: int = Field(gt=0)
+    lower_tail_count: int = Field(ge=0)
+    upper_tail_count: int = Field(ge=0)
+    two_sided_p_value: float = Field(ge=0.0, le=1.0)
+    lower_tail_interval: BinomialConfidenceInterval
+    upper_tail_interval: BinomialConfidenceInterval
+    tail_interval_confidence: float = Field(
+        default=_TAIL_INTERVAL_CONFIDENCE,
+        ge=_TAIL_INTERVAL_CONFIDENCE,
+        le=_TAIL_INTERVAL_CONFIDENCE,
+    )
+    simultaneous_confidence: float = Field(
+        default=_SIMULTANEOUS_CONFIDENCE, ge=_SIMULTANEOUS_CONFIDENCE, le=_SIMULTANEOUS_CONFIDENCE
+    )
+    resolution: Literal["separated_below", "separated_above", "not_separated", "unresolved"]
+
+
+class PanelNullInference(BaseModel):
+    """Primary and optional secondary inference from one complete panel calibration."""
+
+    model_config = ConfigDict(frozen=True)
+
+    walk_forward: PanelDiagnosticInference
+    purged_cv: PanelDiagnosticInference | None = None
+
+
 def panel_seed(base_seed: int, panel_index: int) -> int:
     """Derive a batching-invariant signed-64-bit seed from one global panel index."""
     if base_seed < 0:
@@ -201,6 +251,81 @@ def joint_iid_panel_null(
             index=generated_index,
         ).loc[:, _OHLCV_COLUMNS]
     return generated
+
+
+def _exact_tail_interval(count: int, n_replicates: int) -> BinomialConfidenceInterval:
+    bound_alpha = (1.0 - _TAIL_INTERVAL_CONFIDENCE) / 2.0
+    low = 0.0 if count == 0 else float(beta.ppf(bound_alpha, count, n_replicates - count + 1))
+    high = (
+        1.0
+        if count == n_replicates
+        else float(beta.ppf(1.0 - bound_alpha, count + 1, n_replicates - count))
+    )
+    return BinomialConfidenceInterval(low=low, high=high)
+
+
+def _infer_diagnostic(
+    diagnostic: Literal["walk_forward", "purged_cv"],
+    real_values: Sequence[float],
+    null_values: Sequence[float],
+) -> PanelDiagnosticInference:
+    real_statistic = float(np.median(real_values))
+    null_array = np.asarray(null_values, dtype=float)
+    n_replicates = len(null_values)
+    lower_count = int(np.count_nonzero(null_array <= real_statistic))
+    upper_count = int(np.count_nonzero(null_array >= real_statistic))
+    lower_interval = _exact_tail_interval(lower_count, n_replicates)
+    upper_interval = _exact_tail_interval(upper_count, n_replicates)
+
+    resolution: Literal["separated_below", "separated_above", "not_separated", "unresolved"]
+    if lower_interval.high < _TAIL_THRESHOLD:
+        resolution = "separated_below"
+    elif upper_interval.high < _TAIL_THRESHOLD:
+        resolution = "separated_above"
+    elif lower_interval.low > _TAIL_THRESHOLD and upper_interval.low > _TAIL_THRESHOLD:
+        resolution = "not_separated"
+    else:
+        resolution = "unresolved"
+
+    plus_one_lower = (1 + lower_count) / (n_replicates + 1)
+    plus_one_upper = (1 + upper_count) / (n_replicates + 1)
+    return PanelDiagnosticInference(
+        diagnostic=diagnostic,
+        real_statistic=real_statistic,
+        null_median=float(np.median(null_array)),
+        null_p025=float(np.percentile(null_array, 2.5)),
+        null_p975=float(np.percentile(null_array, 97.5)),
+        n_replicates=n_replicates,
+        lower_tail_count=lower_count,
+        upper_tail_count=upper_count,
+        two_sided_p_value=min(1.0, 2.0 * min(plus_one_lower, plus_one_upper)),
+        lower_tail_interval=lower_interval,
+        upper_tail_interval=upper_interval,
+        resolution=resolution,
+    )
+
+
+def infer_panel_null(calibration: PanelNullCalibration) -> PanelNullInference:
+    """Apply the fixed ADR-081/082 interpretation to a complete panel measurement."""
+    walk_forward = _infer_diagnostic(
+        "walk_forward",
+        [value.walk_forward for value in calibration.cohort.symbol_excesses],
+        [replicate.walk_forward_excess for replicate in calibration.replicates],
+    )
+
+    real_purged = [value.purged_cv for value in calibration.cohort.symbol_excesses]
+    null_purged = [replicate.purged_cv_excess for replicate in calibration.replicates]
+    purged_cv = None
+    if all(value is not None for value in real_purged) and all(
+        value is not None for value in null_purged
+    ):
+        purged_cv = _infer_diagnostic(
+            "purged_cv",
+            [value for value in real_purged if value is not None],
+            [value for value in null_purged if value is not None],
+        )
+
+    return PanelNullInference(walk_forward=walk_forward, purged_cv=purged_cv)
 
 
 def _validate_complete_replicates(
