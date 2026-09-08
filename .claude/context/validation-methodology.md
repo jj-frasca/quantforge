@@ -659,9 +659,11 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   null panel value exists. `prepare_panel_null_source` freezes the caller's explicit ordered symbol
   cohort, intersects complete timestamps across every frame, retains exactly the newest requested
   history, records its UTC date range, and hashes canonical ordered timestamps and OHLCV values;
-  missing/unexpected symbols or insufficient common history fail closed. Cohort selection/fetching,
-  search execution, workflow dispatch, and the sole-writer result remain separate unimplemented
-  boundaries.
+  missing/unexpected symbols or insufficient common history fail closed. Real cohort selection now
+  matches exact search/gate/history identity, resolves ADR-079's persisted finalist, rejects
+  duplicate experiment IDs, and median-collapses repeats to one value per canonically ordered
+  symbol. Source fetching, binding selection to the prepared source, search execution, workflow
+  dispatch, and the sole-writer result remain separate unimplemented boundaries.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

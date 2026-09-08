@@ -18,6 +18,8 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from scipy.stats import beta
 
+from app.research.lab.experiment import Experiment, selected_trial
+
 _OHLCV_COLUMNS = ("open", "high", "low", "close", "volume")
 _GENERATED_START = "2010-01-04"
 _TAIL_THRESHOLD = 0.025
@@ -66,6 +68,34 @@ class PanelSymbolExcess(BaseModel):
     symbol: str = Field(min_length=1)
     walk_forward: float
     purged_cv: float | None = None
+
+
+class SelectedPanelNullCohort(BaseModel):
+    """The pre-source-fetch real cohort and its equal-symbol excess estimand."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbols: tuple[str, ...]
+    symbol_excesses: tuple[PanelSymbolExcess, ...]
+    target_n_bars: int = Field(gt=0)
+    history_tolerance: float = Field(ge=0.0, lt=1.0)
+    search_config_version: str = Field(min_length=1)
+    gate_config_version: str = Field(min_length=1)
+    min_symbols: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def _validate_selection(self) -> "SelectedPanelNullCohort":
+        if len(self.symbols) < self.min_symbols:
+            raise ValueError(
+                f"only {len(self.symbols)} measured symbols; selection requires {self.min_symbols}"
+            )
+        if self.symbols != tuple(sorted(self.symbols)):
+            raise ValueError("selected cohort symbols must be in canonical order")
+        if len(set(self.symbols)) != len(self.symbols):
+            raise ValueError("selected cohort contains a duplicate symbol")
+        if tuple(value.symbol for value in self.symbol_excesses) != self.symbols:
+            raise ValueError("symbol excesses must match the selected symbols")
+        return self
 
 
 class PanelNullCohort(BaseModel):
@@ -219,6 +249,78 @@ def panel_seed(base_seed: int, panel_index: int) -> int:
         raise ValueError("panel_index must be non-negative")
     digest = sha256(f"{base_seed}:{panel_index}".encode()).digest()
     return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+
+
+def select_panel_null_cohort(
+    experiments: Sequence[Experiment],
+    *,
+    target_n_bars: int,
+    history_tolerance: float,
+    search_config_version: str,
+    gate_config_version: str,
+    min_symbols: int = 30,
+) -> SelectedPanelNullCohort:
+    """Freeze the matched real excess panel with one median-weighted value per symbol."""
+    if target_n_bars < 1:
+        raise ValueError("target_n_bars must be positive")
+    if not 0.0 <= history_tolerance < 1.0:
+        raise ValueError("history_tolerance must be in [0, 1)")
+    if not search_config_version or not gate_config_version:
+        raise ValueError("search and gate config versions must be non-empty")
+    if min_symbols < 1:
+        raise ValueError("min_symbols must be positive")
+
+    matched = [
+        experiment
+        for experiment in experiments
+        if experiment.n_bars is not None
+        and abs(experiment.n_bars - target_n_bars) <= history_tolerance * target_n_bars
+        and experiment.search_config_version == search_config_version
+        and experiment.gate_config.version_hash == gate_config_version
+    ]
+    experiment_ids = [experiment.experiment_id for experiment in matched]
+    if len(set(experiment_ids)) != len(experiment_ids):
+        raise ValueError("matched cohort contains a duplicate experiment id")
+
+    walk_forward_by_symbol: dict[str, list[float]] = {}
+    purged_cv_by_symbol: dict[str, list[float]] = {}
+    for experiment in matched:
+        finalist = selected_trial(experiment)
+        if finalist.walk_forward_oos_sharpe is None or experiment.walk_forward_hold_sharpe is None:
+            continue
+        walk_forward_by_symbol.setdefault(experiment.symbol, []).append(
+            finalist.walk_forward_oos_sharpe - experiment.walk_forward_hold_sharpe
+        )
+        if (
+            finalist.purged_cv_oos_sharpe is not None
+            and experiment.purged_cv_hold_sharpe is not None
+        ):
+            purged_cv_by_symbol.setdefault(experiment.symbol, []).append(
+                finalist.purged_cv_oos_sharpe - experiment.purged_cv_hold_sharpe
+            )
+
+    symbols = tuple(sorted(walk_forward_by_symbol))
+    symbol_excesses = tuple(
+        PanelSymbolExcess(
+            symbol=symbol,
+            walk_forward=float(np.median(walk_forward_by_symbol[symbol])),
+            purged_cv=(
+                float(np.median(purged_cv_by_symbol[symbol]))
+                if symbol in purged_cv_by_symbol
+                else None
+            ),
+        )
+        for symbol in symbols
+    )
+    return SelectedPanelNullCohort(
+        symbols=symbols,
+        symbol_excesses=symbol_excesses,
+        target_n_bars=target_n_bars,
+        history_tolerance=history_tolerance,
+        search_config_version=search_config_version,
+        gate_config_version=gate_config_version,
+        min_symbols=min_symbols,
+    )
 
 
 def _digest_source_panel(frames: Sequence[tuple[str, pd.DataFrame]]) -> str:

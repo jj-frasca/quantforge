@@ -121,6 +121,30 @@ class Experiment(BaseModel):
     rationale: str = ""
 
 
+def selected_trial(experiment: Experiment) -> Trial:
+    """Resolve the persisted production finalist; reconstruct max DSR only for legacy rows."""
+    if not experiment.trials:
+        raise ValueError(f"experiment {experiment.experiment_id} has no trials")
+    if experiment.selected_trial_index is None:
+        return max(experiment.trials, key=lambda trial: trial.deflated_sharpe)
+    if experiment.selected_trial_index >= len(experiment.trials):
+        raise ValueError(
+            f"experiment {experiment.experiment_id} selected trial index "
+            f"{experiment.selected_trial_index} but has {len(experiment.trials)} trials"
+        )
+    selected = experiment.trials[experiment.selected_trial_index]
+    if (
+        experiment.best_strategy_name is not None
+        and selected.strategy_name != experiment.best_strategy_name
+    ):
+        raise ValueError(
+            f"experiment {experiment.experiment_id} selected {selected.strategy_name!r} at index "
+            f"{experiment.selected_trial_index}, inconsistent with persisted best strategy "
+            f"{experiment.best_strategy_name!r}"
+        )
+    return selected
+
+
 class ExperimentStore(Protocol):
     def add(self, experiment: Experiment) -> None: ...
     def all(self) -> list[Experiment]: ...

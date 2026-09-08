@@ -74,5 +74,8 @@ one iid sequence of whole calendar rows, shares it across every symbol, and reco
 path with the selected row's geometry. Source preparation now freezes an explicit ordered cohort,
 the most recent exact complete-case calendar, and a canonical digest before generation. ADR-082
 freezes and implements pure tail inference over a complete artifact, including simultaneous exact
-binomial uncertainty. The project does not yet fetch/select the real cohort, run searches, dispatch
-a workflow, write a generated artifact, or change the headline.
+binomial uncertainty. Real cohort selection now matches exact search/gate/history identity, uses the
+persisted finalist, rejects duplicate experiment IDs, and collapses repeats to one median excess per
+canonically ordered symbol. The project does not yet fetch source data, bind selection to the
+prepared source, run searches, dispatch a workflow, write a generated artifact, or change the
+headline.

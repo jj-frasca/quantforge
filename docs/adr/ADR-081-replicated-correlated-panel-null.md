@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; source preparation, identity, generator, and inference implemented;
+- **Status:** Accepted; cohort/source preparation, identity, generator, and inference implemented;
   measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
@@ -128,7 +128,7 @@ sorts complete panels deterministically, and rejects identity drift, missing/dup
 duplicate panel IDs, non-derived seeds, unknown/duplicate error symbols, and any panel that does not
 account for the whole frozen cohort. `PanelNullCalibration` applies those same invariants during
 direct construction, so deserializing a purported final artifact cannot bypass consolidation, and
-every real-side or replicate statistic rejects NaN and infinity. Fetching/cohort selection, search
+every real-side or replicate statistic rejects NaN and infinity. Source fetching, search
 execution, scripts, the manual workflow, and the sole-writer artifact remain unimplemented.
 
 `joint_iid_panel_null` implements the first generator boundary on an already frozen, aligned source
@@ -151,6 +151,15 @@ OHLCV column order, and big-endian float64 values. Input and exported frames are
 so caller mutation cannot change the source identified by the digest. Fetching, real-cohort
 selection from the pool, running the unmodified search, scripts, workflow dispatch, and measurement
 remain unimplemented.
+
+`select_panel_null_cohort` now implements the pre-fetch real-side boundary. It accepts only
+experiments matching the exact search and gate fingerprints and ADR-064 history band, resolves the
+persisted production finalist under ADR-079, collapses repeat searches to one median excess per
+symbol, and sorts the full measured cohort canonically. Missing primary pairs are excluded before
+the fixed 30-symbol floor; duplicate experiment identity fails closed rather than silently
+reweighting a repeat. Purged-CV remains nullable per selected symbol. Source fetching, combining the
+selection with a prepared source into the final cohort identity, search execution, scripts,
+workflow dispatch, and measurement remain unimplemented.
 
 ## Alternatives considered
 

@@ -374,7 +374,10 @@ plus-one two-sided Monte Carlo p-value, and two 97.5% Clopper-Pearson intervals 
 simultaneous coverage (ADR-082); partial secondary diagnostics remain unmeasured. Source preparation
 now freezes the explicit ordered cohort, exact most-recent complete-case UTC calendar, and a
 canonical digest over ordered timestamps and OHLCV values before generation. Cohort
-selection/fetching, search execution, workflow dispatch, and measurement remain pending.
+selection now matches exact search/gate identity and the history band, resolves the persisted
+finalist, and collapses repeats to one median excess per canonically ordered symbol. Source fetching,
+binding selection to the prepared source, search execution, workflow dispatch, and measurement
+remain pending.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

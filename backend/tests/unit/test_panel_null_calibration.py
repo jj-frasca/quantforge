@@ -8,6 +8,8 @@ import pandas as pd
 import pytest
 from pydantic import ValidationError
 
+from app.research.lab.experiment import Experiment, Trial
+from app.research.lab.gate import GateConfig
 from app.research.lab.panel_null import (
     PanelDiagnosticInference,
     PanelNullCalibration,
@@ -21,6 +23,7 @@ from app.research.lab.panel_null import (
     merge_panel_null_shards,
     panel_seed,
     prepare_panel_null_source,
+    select_panel_null_cohort,
 )
 
 
@@ -164,6 +167,180 @@ def _source_panel() -> dict[str, pd.DataFrame]:
             index=index,
         )
     return panel
+
+
+def _experiment(
+    symbol: str,
+    *,
+    walk_forward: float | None,
+    walk_forward_hold: float | None,
+    purged_cv: float | None = None,
+    purged_cv_hold: float | None = None,
+    n_bars: int = 7400,
+    search_version: str = "search-v1",
+    gate_config: GateConfig | None = None,
+    selected_trial_index: int | None = 0,
+) -> Experiment:
+    trials = [
+        Trial(
+            strategy_name="selected",
+            parameters={},
+            observed_sharpe=0.0,
+            deflated_sharpe=-1.0,
+            pbo=0.1,
+            parameter_stability_score=0.8,
+            walk_forward_oos_sharpe=walk_forward,
+            purged_cv_oos_sharpe=purged_cv,
+        ),
+        Trial(
+            strategy_name="max-dsr",
+            parameters={},
+            observed_sharpe=0.0,
+            deflated_sharpe=2.0,
+            pbo=0.1,
+            parameter_stability_score=0.8,
+            walk_forward_oos_sharpe=99.0,
+            purged_cv_oos_sharpe=99.0,
+        ),
+    ]
+    return Experiment(
+        symbol=symbol,
+        strategy_names=[trial.strategy_name for trial in trials],
+        gate_config=gate_config or GateConfig(),
+        trials=trials,
+        lifetime_trials=2,
+        best_strategy_name="selected" if selected_trial_index == 0 else None,
+        selected_trial_index=selected_trial_index,
+        search_config_version=search_version,
+        n_bars=n_bars,
+        walk_forward_hold_sharpe=walk_forward_hold,
+        purged_cv_hold_sharpe=purged_cv_hold,
+    )
+
+
+def test_select_panel_null_cohort_matches_identity_and_weights_each_symbol_once() -> None:
+    gate = GateConfig()
+    experiments = [
+        _experiment(
+            "BBB",
+            walk_forward=0.5,
+            walk_forward_hold=0.2,
+            purged_cv=0.6,
+            purged_cv_hold=0.1,
+            gate_config=gate,
+        ),
+        _experiment(
+            "AAA",
+            walk_forward=0.4,
+            walk_forward_hold=0.2,
+            purged_cv=0.3,
+            purged_cv_hold=0.1,
+            gate_config=gate,
+        ),
+        _experiment(
+            "AAA",
+            walk_forward=0.8,
+            walk_forward_hold=0.2,
+            purged_cv=None,
+            purged_cv_hold=None,
+            gate_config=gate,
+        ),
+        _experiment(
+            "WRONG-HISTORY",
+            walk_forward=1.0,
+            walk_forward_hold=0.0,
+            n_bars=6500,
+            gate_config=gate,
+        ),
+        _experiment(
+            "WRONG-SEARCH",
+            walk_forward=1.0,
+            walk_forward_hold=0.0,
+            search_version="search-v2",
+            gate_config=gate,
+        ),
+        _experiment(
+            "WRONG-GATE",
+            walk_forward=1.0,
+            walk_forward_hold=0.0,
+            gate_config=GateConfig(trial_budget=199),
+        ),
+        _experiment(
+            "UNMEASURED",
+            walk_forward=None,
+            walk_forward_hold=None,
+            gate_config=gate,
+        ),
+    ]
+
+    selected = select_panel_null_cohort(
+        experiments,
+        target_n_bars=7400,
+        history_tolerance=0.10,
+        search_config_version="search-v1",
+        gate_config_version=gate.version_hash,
+        min_symbols=2,
+    )
+
+    assert selected.symbols == ("AAA", "BBB")
+    assert selected.target_n_bars == 7400
+    assert selected.history_tolerance == pytest.approx(0.10)
+    assert selected.search_config_version == "search-v1"
+    assert selected.gate_config_version == gate.version_hash
+    assert [value.symbol for value in selected.symbol_excesses] == ["AAA", "BBB"]
+    assert [value.walk_forward for value in selected.symbol_excesses] == pytest.approx([0.4, 0.3])
+    assert [value.purged_cv for value in selected.symbol_excesses] == pytest.approx([0.2, 0.5])
+
+
+def test_select_panel_null_cohort_uses_the_persisted_selected_trial() -> None:
+    gate = GateConfig()
+
+    selected = select_panel_null_cohort(
+        [
+            _experiment("AAA", walk_forward=0.4, walk_forward_hold=0.2, gate_config=gate),
+            _experiment("BBB", walk_forward=0.5, walk_forward_hold=0.2, gate_config=gate),
+        ],
+        target_n_bars=7400,
+        history_tolerance=0.10,
+        search_config_version="search-v1",
+        gate_config_version=gate.version_hash,
+        min_symbols=2,
+    )
+
+    assert [value.walk_forward for value in selected.symbol_excesses] == pytest.approx([0.2, 0.3])
+
+
+def test_select_panel_null_cohort_fails_before_generation_below_symbol_floor() -> None:
+    gate = GateConfig()
+
+    with pytest.raises(ValueError, match=r"only 1 measured symbols.*requires 2"):
+        select_panel_null_cohort(
+            [_experiment("AAA", walk_forward=0.4, walk_forward_hold=0.2, gate_config=gate)],
+            target_n_bars=7400,
+            history_tolerance=0.10,
+            search_config_version="search-v1",
+            gate_config_version=gate.version_hash,
+            min_symbols=2,
+        )
+
+
+def test_select_panel_null_cohort_rejects_duplicate_experiment_identity() -> None:
+    gate = GateConfig()
+    duplicated = _experiment("AAA", walk_forward=0.4, walk_forward_hold=0.2, gate_config=gate)
+
+    with pytest.raises(ValueError, match="duplicate experiment id"):
+        select_panel_null_cohort(
+            [
+                duplicated,
+                duplicated,
+                _experiment("BBB", walk_forward=0.5, walk_forward_hold=0.2, gate_config=gate),
+            ],
+            target_n_bars=7400,
+            history_tolerance=0.10,
+            search_config_version="search-v1",
+            gate_config_version=gate.version_hash,
+            min_symbols=2,
+        )
 
 
 def test_prepare_panel_null_source_freezes_order_calendar_and_digest() -> None:

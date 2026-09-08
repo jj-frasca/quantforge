@@ -17,7 +17,7 @@ import numpy.typing as npt
 from pydantic import BaseModel, ConfigDict
 
 from app.research.lab.calibration import NullCalibration
-from app.research.lab.experiment import Experiment, Trial
+from app.research.lab.experiment import Experiment, Trial, selected_trial
 from app.research.lab.frontier import (
     DetectionFrontier,
     describe_frontier,
@@ -209,33 +209,9 @@ HISTORY_TOLERANCE = 0.10
 MIN_MATCHED = 30
 
 
-def _finalist(experiment: Experiment) -> Trial:
-    """Resolve the family production selected; reconstruct max DSR only for legacy rows."""
-    if not experiment.trials:
-        raise ValueError(f"experiment {experiment.experiment_id} has no trials")
-    if experiment.selected_trial_index is None:
-        return max(experiment.trials, key=lambda t: t.deflated_sharpe)
-    if experiment.selected_trial_index >= len(experiment.trials):
-        raise ValueError(
-            f"experiment {experiment.experiment_id} selected trial index "
-            f"{experiment.selected_trial_index} but has {len(experiment.trials)} trials"
-        )
-    selected = experiment.trials[experiment.selected_trial_index]
-    if (
-        experiment.best_strategy_name is not None
-        and selected.strategy_name != experiment.best_strategy_name
-    ):
-        raise ValueError(
-            f"experiment {experiment.experiment_id} selected {selected.strategy_name!r} at index "
-            f"{experiment.selected_trial_index}, inconsistent with persisted best strategy "
-            f"{experiment.best_strategy_name!r}"
-        )
-    return selected
-
-
 def _finalists(experiments: Sequence[Experiment]) -> list[Trial]:
     """The persisted production finalist of every experiment that has trials (FINDING-015)."""
-    return [_finalist(e) for e in experiments if e.trials]
+    return [selected_trial(e) for e in experiments if e.trials]
 
 
 def _matched(experiments: Sequence[Experiment], null_bars: int | None) -> list[Experiment]:
@@ -464,7 +440,7 @@ def _excess_rows(
                 real_hold = getattr(e, hold_field)
                 if e.trials is None or real_hold is None:
                     continue
-                finalist = _finalist(e)
+                finalist = selected_trial(e)
                 finalist_oos = getattr(finalist, trial_field)
                 if finalist_oos is None:
                     continue
@@ -588,7 +564,7 @@ def _separation(
             continue
         for covered, sharpe in best.items():
             per_category[covered].append(sharpe)
-        winner = _finalist(experiment)
+        winner = selected_trial(experiment)
         winning_category = CATEGORY_OF.get(winner.strategy_name)
         if winning_category is not None:
             winners[winning_category] += 1
@@ -658,8 +634,10 @@ def summarize_pool(
     # Each finalist is judged against the `dsr_min` ITS OWN experiment recorded: the threshold is
     # versioned per experiment (ADR-015/016), so a single pool-wide bar would misreport any row
     # searched under a different rubric.
-    judged = [(_finalist(e), e.gate_config.dsr_min) for e in experiments if e.trials]
-    passing_finalists = [_finalist(e) for e in experiments if e.graduate is not None and e.trials]
+    judged = [(selected_trial(e), e.gate_config.dsr_min) for e in experiments if e.trials]
+    passing_finalists = [
+        selected_trial(e) for e in experiments if e.graduate is not None and e.trials
+    ]
 
     # Quoted at the MEDIAN graduate holdout length: a pool mixing 1-year and 10-year holdouts has
     # no single bar, and taking the longest or the shortest would flatter or damn the design by
@@ -819,8 +797,8 @@ def compare_search_windows(
         long_ = [e for e in group if e.n_bars is not None and e.n_bars >= WINDOW_SPLIT_BARS]
         if not short or not long_:
             continue
-        short_finalists = [_finalist(e) for e in short]
-        long_finalists = [_finalist(e) for e in long_]
+        short_finalists = [selected_trial(e) for e in short]
+        long_finalists = [selected_trial(e) for e in long_]
         short_oos = [
             t.walk_forward_oos_sharpe
             for t in short_finalists
