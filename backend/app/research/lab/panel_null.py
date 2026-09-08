@@ -6,6 +6,8 @@ reinterpret a partial symbol shard as an independent panel observation.
 """
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from datetime import date
 from hashlib import sha256
 from math import isfinite
@@ -21,6 +23,39 @@ _GENERATED_START = "2010-01-04"
 _TAIL_THRESHOLD = 0.025
 _TAIL_INTERVAL_CONFIDENCE = 0.975
 _SIMULTANEOUS_CONFIDENCE = 0.95
+
+
+@dataclass(frozen=True)
+class PreparedPanelNullSource:
+    """One copied, complete, canonically identified source panel."""
+
+    symbols: tuple[str, ...]
+    target_n_bars: int
+    source_start: date
+    source_end: date
+    source_sha256: str
+    _frames: tuple[tuple[str, pd.DataFrame], ...] = dataclass_field(repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        copied = tuple((symbol, frame.copy(deep=True)) for symbol, frame in self._frames)
+        object.__setattr__(self, "_frames", copied)
+        if tuple(symbol for symbol, _ in copied) != self.symbols:
+            raise ValueError("prepared source frames must match the ordered symbols")
+        if self.target_n_bars < 2 or any(len(frame) != self.target_n_bars for _, frame in copied):
+            raise ValueError("prepared source frames must match target_n_bars")
+        _validate_prepared_source_frames(copied)
+        reference_index = copied[0][1].index
+        if (reference_index[0].date(), reference_index[-1].date()) != (
+            self.source_start,
+            self.source_end,
+        ):
+            raise ValueError("prepared source calendar range does not match its frames")
+        if _digest_source_panel(copied) != self.source_sha256:
+            raise ValueError("prepared source digest does not match its frames")
+
+    def to_frames(self) -> dict[str, pd.DataFrame]:
+        """Return defensive copies in the frozen cohort order."""
+        return {symbol: frame.copy(deep=True) for symbol, frame in self._frames}
 
 
 class PanelSymbolExcess(BaseModel):
@@ -184,6 +219,124 @@ def panel_seed(base_seed: int, panel_index: int) -> int:
         raise ValueError("panel_index must be non-negative")
     digest = sha256(f"{base_seed}:{panel_index}".encode()).digest()
     return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+
+
+def _digest_source_panel(frames: Sequence[tuple[str, pd.DataFrame]]) -> str:
+    digest = sha256(b"quantforge-panel-null-source-v1\0")
+
+    def update_length_prefixed(payload: bytes) -> None:
+        digest.update(len(payload).to_bytes(8, "big"))
+        digest.update(payload)
+
+    update_length_prefixed("\0".join(_OHLCV_COLUMNS).encode())
+    for symbol, frame in frames:
+        update_length_prefixed(symbol.encode())
+        timestamps = np.asarray(frame.index.asi8, dtype=">i8").tobytes(order="C")
+        values = np.asarray(frame.loc[:, _OHLCV_COLUMNS], dtype=">f8").tobytes(order="C")
+        update_length_prefixed(timestamps)
+        update_length_prefixed(values)
+    return digest.hexdigest()
+
+
+def _validate_prepared_source_frames(frames: Sequence[tuple[str, pd.DataFrame]]) -> None:
+    if not frames:
+        raise ValueError("prepared source must contain at least one frame")
+    reference_index = frames[0][1].index
+    if not isinstance(reference_index, pd.DatetimeIndex) or reference_index.tz is None:
+        raise ValueError("prepared source calendar index must be timezone-aware")
+    if str(reference_index.tz) != "UTC":
+        raise ValueError("prepared source calendar index must be UTC")
+    if not reference_index.is_monotonic_increasing or not reference_index.is_unique:
+        raise ValueError("prepared source calendar rows must be ordered and unique")
+
+    for symbol, frame in frames:
+        if tuple(frame.columns) != _OHLCV_COLUMNS:
+            raise ValueError(
+                f"prepared source symbol {symbol} must contain canonical OHLCV columns"
+            )
+        if not frame.index.equals(reference_index):
+            raise ValueError("prepared source symbols must have exactly aligned calendar rows")
+        values = frame.to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError(f"prepared source symbol {symbol} contains non-finite OHLCV values")
+        if (frame.loc[:, ("open", "high", "low", "close")] <= 0).any().any():
+            raise ValueError(f"prepared source symbol {symbol} contains non-positive prices")
+        if (frame["volume"] < 0).any():
+            raise ValueError(f"prepared source symbol {symbol} contains negative volume")
+        if (frame["high"] < frame.loc[:, ("open", "close")].max(axis=1)).any() or (
+            frame["low"] > frame.loc[:, ("open", "close")].min(axis=1)
+        ).any():
+            raise ValueError(f"prepared source symbol {symbol} has invalid OHLCV geometry")
+
+
+def prepare_panel_null_source(
+    source_panel: Mapping[str, pd.DataFrame],
+    symbols: Sequence[str],
+    *,
+    target_n_bars: int,
+) -> PreparedPanelNullSource:
+    """Freeze the ordered complete-case calendar and canonical source digest."""
+    ordered_symbols = tuple(symbols)
+    if not ordered_symbols:
+        raise ValueError("cohort must contain at least one symbol")
+    if len(set(ordered_symbols)) != len(ordered_symbols):
+        raise ValueError("cohort contains a duplicate symbol")
+    if target_n_bars < 2:
+        raise ValueError("target_n_bars must be >= 2")
+
+    supplied = set(source_panel)
+    requested = set(ordered_symbols)
+    missing = sorted(requested - supplied)
+    unexpected = sorted(supplied - requested)
+    if missing:
+        raise ValueError(f"source panel is missing symbols: {', '.join(missing)}")
+    if unexpected:
+        raise ValueError(f"source panel contains unexpected symbols: {', '.join(unexpected)}")
+
+    normalized: list[tuple[str, pd.DataFrame]] = []
+    common_index: pd.DatetimeIndex | None = None
+    for symbol in ordered_symbols:
+        frame = source_panel[symbol]
+        missing_columns = set(_OHLCV_COLUMNS).difference(frame.columns)
+        if missing_columns:
+            raise ValueError(f"source panel symbol {symbol} is missing OHLCV columns")
+        if not isinstance(frame.index, pd.DatetimeIndex) or frame.index.tz is None:
+            raise ValueError("source panel calendar index must be timezone-aware")
+        if not frame.index.is_monotonic_increasing or not frame.index.is_unique:
+            raise ValueError("source panel calendar rows must be ordered and unique")
+
+        selected = frame.loc[:, _OHLCV_COLUMNS].copy(deep=True)
+        selected.index = selected.index.tz_convert("UTC")
+        normalized.append((symbol, selected))
+        common_index = (
+            selected.index
+            if common_index is None
+            else common_index.intersection(selected.index, sort=False)
+        )
+
+    assert common_index is not None
+    complete = np.ones(len(common_index), dtype=bool)
+    for _, frame in normalized:
+        complete &= frame.reindex(common_index).notna().all(axis=1).to_numpy()
+    complete_index = common_index[complete]
+    if len(complete_index) < target_n_bars:
+        raise ValueError(
+            f"complete calendar has {len(complete_index)} rows but requires {target_n_bars} "
+            f"for symbols: {', '.join(ordered_symbols)}"
+        )
+
+    retained_index = complete_index[-target_n_bars:]
+    retained = tuple(
+        (symbol, frame.loc[retained_index].copy(deep=True)) for symbol, frame in normalized
+    )
+    return PreparedPanelNullSource(
+        symbols=ordered_symbols,
+        target_n_bars=target_n_bars,
+        source_start=retained_index[0].date(),
+        source_end=retained_index[-1].date(),
+        source_sha256=_digest_source_panel(retained),
+        _frames=retained,
+    )
 
 
 def joint_iid_panel_null(

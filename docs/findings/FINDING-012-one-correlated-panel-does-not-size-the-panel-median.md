@@ -71,6 +71,8 @@ must be finite.
 
 The deterministic generator primitive now consumes an already aligned complete source panel, draws
 one iid sequence of whole calendar rows, shares it across every symbol, and reconstructs each OHLCV
-path with the selected row's geometry. ADR-082 freezes and implements pure tail inference over a
-complete artifact, including simultaneous exact binomial uncertainty. It does not yet prepare/fetch
-a cohort, run searches, dispatch a workflow, write a generated artifact, or change the headline.
+path with the selected row's geometry. Source preparation now freezes an explicit ordered cohort,
+the most recent exact complete-case calendar, and a canonical digest before generation. ADR-082
+freezes and implements pure tail inference over a complete artifact, including simultaneous exact
+binomial uncertainty. The project does not yet fetch/select the real cohort, run searches, dispatch
+a workflow, write a generated artifact, or change the headline.

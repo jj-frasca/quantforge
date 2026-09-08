@@ -1,6 +1,7 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; identity, joint-row generator, and inference implemented; measurement pending
+- **Status:** Accepted; source preparation, identity, generator, and inference implemented;
+  measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
 - **Acts on:** FINDING-012, ADR-075
@@ -127,9 +128,8 @@ sorts complete panels deterministically, and rejects identity drift, missing/dup
 duplicate panel IDs, non-derived seeds, unknown/duplicate error symbols, and any panel that does not
 account for the whole frozen cohort. `PanelNullCalibration` applies those same invariants during
 direct construction, so deserializing a purported final artifact cannot bypass consolidation, and
-every real-side or replicate statistic rejects NaN and infinity. Source preparation, search
-execution, inference, scripts, the manual workflow, and the sole-writer artifact remain
-unimplemented; this local slice spends no measurement.
+every real-side or replicate statistic rejects NaN and infinity. Fetching/cohort selection, search
+execution, scripts, the manual workflow, and the sole-writer artifact remain unimplemented.
 
 `joint_iid_panel_null` implements the first generator boundary on an already frozen, aligned source
 panel. It rejects missing, misaligned, non-finite, non-positive, or geometrically invalid OHLCV
@@ -139,9 +139,18 @@ open/high/low/volume geometry. Tiny deterministic tests recover the identical se
 from both symbols and verify every reconstructed return and ratio. `infer_panel_null` now applies
 the pre-registered equal-symbol statistic, inclusive tail counts, plus-one two-sided p-value, and
 ADR-082's simultaneous exact confidence construction to a complete artifact. Purged-CV remains
-unmeasured unless the complete real cohort and every null panel carry it. Source-panel preparation,
-running the unmodified search over each generated symbol, scripts, the manual workflow, and the
-sole-writer artifact remain unimplemented; this slice still spends no measurement.
+unmeasured unless the complete real cohort and every null panel carry it.
+
+`prepare_panel_null_source` now implements the non-network preparation boundary. The caller supplies
+the explicit ordered cohort and one fetched OHLCV frame per symbol. Preparation rejects missing,
+unexpected, or duplicate symbol identity; intersects timestamps across the whole cohort; drops only
+jointly incomplete rows; retains exactly the most recent `target_n_bars`; and fails rather than
+shrinking the requested history. It records the exact retained UTC calendar range and hashes a
+versioned canonical byte stream containing the ordered symbols, UTC nanosecond timestamps, fixed
+OHLCV column order, and big-endian float64 values. Input and exported frames are defensively copied,
+so caller mutation cannot change the source identified by the digest. Fetching, real-cohort
+selection from the pool, running the unmodified search, scripts, workflow dispatch, and measurement
+remain unimplemented.
 
 ## Alternatives considered
 

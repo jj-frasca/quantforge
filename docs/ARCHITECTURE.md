@@ -371,8 +371,10 @@ statistics reject NaN/infinity. The local generator now applies one deterministi
 complete calendar-row indices to every symbol and reconstructs close returns plus same-row OHLCV
 geometry from a validated aligned source panel. Pure inference reports inclusive tail counts, a
 plus-one two-sided Monte Carlo p-value, and two 97.5% Clopper-Pearson intervals with at least 95%
-simultaneous coverage (ADR-082); partial secondary diagnostics remain unmeasured. Source
-preparation, search execution, workflow dispatch, and measurement remain pending.
+simultaneous coverage (ADR-082); partial secondary diagnostics remain unmeasured. Source preparation
+now freezes the explicit ordered cohort, exact most-recent complete-case UTC calendar, and a
+canonical digest over ordered timestamps and OHLCV values before generation. Cohort
+selection/fetching, search execution, workflow dispatch, and measurement remain pending.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

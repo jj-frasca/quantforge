@@ -1,5 +1,6 @@
 """Whole-panel artifact identity, joint-row generation, and consolidation for ADR-081."""
 
+from dataclasses import replace
 from datetime import date
 
 import numpy as np
@@ -19,6 +20,7 @@ from app.research.lab.panel_null import (
     joint_iid_panel_null,
     merge_panel_null_shards,
     panel_seed,
+    prepare_panel_null_source,
 )
 
 
@@ -162,6 +164,89 @@ def _source_panel() -> dict[str, pd.DataFrame]:
             index=index,
         )
     return panel
+
+
+def test_prepare_panel_null_source_freezes_order_calendar_and_digest() -> None:
+    source = _source_panel()
+    source["AAA"].iloc[1, source["AAA"].columns.get_loc("volume")] = np.nan
+    source["BBB"].iloc[4, source["BBB"].columns.get_loc("close")] = np.nan
+
+    prepared = prepare_panel_null_source(source, ("BBB", "AAA"), target_n_bars=3)
+
+    assert prepared.symbols == ("BBB", "AAA")
+    assert prepared.target_n_bars == 3
+    assert prepared.source_start == date(2020, 1, 6)
+    assert prepared.source_end == date(2020, 1, 9)
+    assert len(prepared.source_sha256) == 64
+    panel = prepared.to_frames()
+    assert tuple(panel) == prepared.symbols
+    assert panel["AAA"].index.equals(panel["BBB"].index)
+    assert panel["AAA"].index.tolist() == [
+        pd.Timestamp("2020-01-06", tz="UTC"),
+        pd.Timestamp("2020-01-07", tz="UTC"),
+        pd.Timestamp("2020-01-09", tz="UTC"),
+    ]
+    assert not any(frame.isna().any().any() for frame in panel.values())
+
+
+def test_prepare_panel_null_source_digest_is_canonical_and_value_sensitive() -> None:
+    source = _source_panel()
+    reordered = {
+        symbol: frame.loc[:, ["volume", "close", "low", "high", "open"]]
+        for symbol, frame in reversed(tuple(source.items()))
+    }
+
+    first = prepare_panel_null_source(source, ("AAA", "BBB"), target_n_bars=5)
+    second = prepare_panel_null_source(reordered, ("AAA", "BBB"), target_n_bars=5)
+    assert second.source_sha256 == first.source_sha256
+
+    changed = {symbol: frame.copy() for symbol, frame in source.items()}
+    changed["AAA"].iloc[-1, changed["AAA"].columns.get_loc("volume")] += 1
+    assert (
+        prepare_panel_null_source(changed, ("AAA", "BBB"), target_n_bars=5).source_sha256
+        != first.source_sha256
+    )
+    assert (
+        prepare_panel_null_source(source, ("BBB", "AAA"), target_n_bars=5).source_sha256
+        != first.source_sha256
+    )
+
+
+def test_prepare_panel_null_source_copies_the_frozen_source() -> None:
+    source = _source_panel()
+    prepared = prepare_panel_null_source(source, ("AAA", "BBB"), target_n_bars=5)
+    digest = prepared.source_sha256
+
+    source["AAA"].iloc[-1, source["AAA"].columns.get_loc("close")] = 1.0
+    exported = prepared.to_frames()
+    exported["AAA"].iloc[-1, exported["AAA"].columns.get_loc("close")] = 2.0
+
+    assert prepared.source_sha256 == digest
+    assert prepared.to_frames()["AAA"].iloc[-1]["close"] != 2.0
+
+
+def test_prepared_panel_source_direct_construction_cannot_drift_from_its_frames() -> None:
+    prepared = prepare_panel_null_source(_source_panel(), ("AAA", "BBB"), target_n_bars=5)
+
+    with pytest.raises(ValueError, match="digest"):
+        replace(prepared, source_sha256="a" * 64)
+    with pytest.raises(ValueError, match="calendar range"):
+        replace(prepared, source_start=date(1999, 1, 1))
+
+
+def test_prepare_panel_null_source_fails_closed_on_cohort_or_history_mismatch() -> None:
+    source = _source_panel()
+    with pytest.raises(ValueError, match=r"missing symbols.*ZZZ"):
+        prepare_panel_null_source(source, ("AAA", "ZZZ"), target_n_bars=5)
+    with pytest.raises(ValueError, match=r"unexpected symbols.*BBB"):
+        prepare_panel_null_source(source, ("AAA",), target_n_bars=5)
+    with pytest.raises(ValueError, match="duplicate symbol"):
+        prepare_panel_null_source(source, ("AAA", "AAA"), target_n_bars=5)
+    with pytest.raises(ValueError, match=r"complete calendar has 4 rows.*requires 5"):
+        incomplete = {symbol: frame.copy() for symbol, frame in source.items()}
+        incomplete["AAA"].iloc[2, incomplete["AAA"].columns.get_loc("volume")] = np.nan
+        incomplete["BBB"].iloc[4, incomplete["BBB"].columns.get_loc("close")] = np.nan
+        prepare_panel_null_source(incomplete, ("AAA", "BBB"), target_n_bars=5)
 
 
 def test_joint_iid_panel_null_uses_one_calendar_draw_for_every_symbol() -> None:

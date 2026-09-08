@@ -656,8 +656,12 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   equal-symbol statistic, inclusive lower/upper tail counts, plus-one two-sided Monte Carlo p-value,
   and ADR-082's two 97.5% Clopper-Pearson intervals (at least 95% simultaneous coverage). A 3/400
   tail resolves below 0.025; 4/400 remains unresolved. Purged-CV is emitted only when every real and
-  null panel value exists. Source preparation, search execution, workflow dispatch, and the
-  sole-writer result remain separate unimplemented boundaries.
+  null panel value exists. `prepare_panel_null_source` freezes the caller's explicit ordered symbol
+  cohort, intersects complete timestamps across every frame, retains exactly the newest requested
+  history, records its UTC date range, and hashes canonical ordered timestamps and OHLCV values;
+  missing/unexpected symbols or insufficient common history fail closed. Cohort selection/fetching,
+  search execution, workflow dispatch, and the sole-writer result remain separate unimplemented
+  boundaries.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the
