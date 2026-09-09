@@ -76,6 +76,7 @@ the most recent exact complete-case calendar, and a canonical digest before gene
 freezes and implements pure tail inference over a complete artifact, including simultaneous exact
 binomial uncertainty. Real cohort selection now matches exact search/gate/history identity, uses the
 persisted finalist, rejects duplicate experiment IDs, and collapses repeats to one median excess per
-canonically ordered symbol. The project does not yet fetch source data, bind selection to the
-prepared source, run searches, dispatch a workflow, write a generated artifact, or change the
-headline.
+canonically ordered symbol. The binding boundary refuses symbol-order or target-history drift before
+freezing that selection with the prepared panel's exact source identity, 400 replicates, and the
+selected effective-symbol floor. The project does not yet fetch source data, run searches, dispatch
+a workflow, write a generated artifact, or change the headline.

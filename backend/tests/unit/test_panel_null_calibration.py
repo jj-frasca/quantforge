@@ -18,6 +18,7 @@ from app.research.lab.panel_null import (
     PanelNullReplicate,
     PanelNullShard,
     PanelSymbolExcess,
+    bind_panel_null_cohort,
     infer_panel_null,
     joint_iid_panel_null,
     merge_panel_null_shards,
@@ -424,6 +425,79 @@ def test_prepare_panel_null_source_fails_closed_on_cohort_or_history_mismatch() 
         incomplete["AAA"].iloc[2, incomplete["AAA"].columns.get_loc("volume")] = np.nan
         incomplete["BBB"].iloc[4, incomplete["BBB"].columns.get_loc("close")] = np.nan
         prepare_panel_null_source(incomplete, ("AAA", "BBB"), target_n_bars=5)
+
+
+def test_bind_panel_null_cohort_freezes_selection_and_prepared_source_identity() -> None:
+    gate = GateConfig()
+    selected = select_panel_null_cohort(
+        [
+            _experiment("AAA", walk_forward=0.4, walk_forward_hold=0.2, n_bars=5, gate_config=gate),
+            _experiment("BBB", walk_forward=0.5, walk_forward_hold=0.2, n_bars=5, gate_config=gate),
+        ],
+        target_n_bars=5,
+        history_tolerance=0.10,
+        search_config_version="search-v1",
+        gate_config_version=gate.version_hash,
+        min_symbols=2,
+    )
+    prepared = prepare_panel_null_source(_source_panel(), selected.symbols, target_n_bars=5)
+
+    cohort = bind_panel_null_cohort(
+        selected,
+        prepared,
+        generator_version="joint-iid-calendar-v1",
+        diagnostic_version="equal-symbol-excess-v1",
+        base_seed=17,
+    )
+
+    assert cohort.symbols == selected.symbols
+    assert cohort.symbol_excesses == selected.symbol_excesses
+    assert cohort.target_n_bars == selected.target_n_bars
+    assert cohort.history_tolerance == selected.history_tolerance
+    assert cohort.search_config_version == selected.search_config_version
+    assert cohort.gate_config_version == selected.gate_config_version
+    assert cohort.source_start == prepared.source_start
+    assert cohort.source_end == prepared.source_end
+    assert cohort.source_sha256 == prepared.source_sha256
+    assert cohort.n_replicates == 400
+    assert cohort.min_successful_symbols == selected.min_symbols
+
+
+def test_bind_panel_null_cohort_rejects_source_cohort_or_history_drift() -> None:
+    gate = GateConfig()
+    selected = select_panel_null_cohort(
+        [
+            _experiment("AAA", walk_forward=0.4, walk_forward_hold=0.2, n_bars=5, gate_config=gate),
+            _experiment("BBB", walk_forward=0.5, walk_forward_hold=0.2, n_bars=5, gate_config=gate),
+        ],
+        target_n_bars=5,
+        history_tolerance=0.10,
+        search_config_version="search-v1",
+        gate_config_version=gate.version_hash,
+        min_symbols=2,
+    )
+
+    wrong_order = prepare_panel_null_source(
+        _source_panel(), tuple(reversed(selected.symbols)), target_n_bars=5
+    )
+    with pytest.raises(ValueError, match="ordered symbols"):
+        bind_panel_null_cohort(
+            selected,
+            wrong_order,
+            generator_version="joint-iid-calendar-v1",
+            diagnostic_version="equal-symbol-excess-v1",
+            base_seed=17,
+        )
+
+    wrong_history = prepare_panel_null_source(_source_panel(), selected.symbols, target_n_bars=4)
+    with pytest.raises(ValueError, match="target history"):
+        bind_panel_null_cohort(
+            selected,
+            wrong_history,
+            generator_version="joint-iid-calendar-v1",
+            diagnostic_version="equal-symbol-excess-v1",
+            base_seed=17,
+        )
 
 
 def test_joint_iid_panel_null_uses_one_calendar_draw_for_every_symbol() -> None:

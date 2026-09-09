@@ -22,6 +22,7 @@ from app.research.lab.experiment import Experiment, selected_trial
 
 _OHLCV_COLUMNS = ("open", "high", "low", "close", "volume")
 _GENERATED_START = "2010-01-04"
+_PANEL_REPLICATES = 400
 _TAIL_THRESHOLD = 0.025
 _TAIL_INTERVAL_CONFIDENCE = 0.975
 _SIMULTANEOUS_CONFIDENCE = 0.95
@@ -438,6 +439,39 @@ def prepare_panel_null_source(
         source_end=retained_index[-1].date(),
         source_sha256=_digest_source_panel(retained),
         _frames=retained,
+    )
+
+
+def bind_panel_null_cohort(
+    selected: SelectedPanelNullCohort,
+    prepared: PreparedPanelNullSource,
+    *,
+    generator_version: str,
+    diagnostic_version: str,
+    base_seed: int,
+) -> PanelNullCohort:
+    """Bind the frozen real estimand to its exact prepared source-panel identity."""
+    selected = SelectedPanelNullCohort.model_validate(selected.model_dump())
+    if selected.symbols != prepared.symbols:
+        raise ValueError("prepared source ordered symbols do not match the selected cohort")
+    if selected.target_n_bars != prepared.target_n_bars:
+        raise ValueError("prepared source target history does not match the selected cohort")
+
+    return PanelNullCohort(
+        symbols=selected.symbols,
+        symbol_excesses=selected.symbol_excesses,
+        source_start=prepared.source_start,
+        source_end=prepared.source_end,
+        source_sha256=prepared.source_sha256,
+        target_n_bars=selected.target_n_bars,
+        history_tolerance=selected.history_tolerance,
+        search_config_version=selected.search_config_version,
+        gate_config_version=selected.gate_config_version,
+        generator_version=generator_version,
+        diagnostic_version=diagnostic_version,
+        base_seed=base_seed,
+        n_replicates=_PANEL_REPLICATES,
+        min_successful_symbols=selected.min_symbols,
     )
 
 
