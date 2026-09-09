@@ -86,5 +86,9 @@ inside one panel statistic. Its production adapter rejects search/gate policy dr
 a direct wrapper over unmodified `run_search`; tests alone inject a stand-in. The prepared source
 can now be written once to an exclusive-create, pickle-free compressed archive and loaded by a
 future batch without trusting its stored digest: exact fields, UTC-nanosecond calendar, array shape,
-and canonical digest are revalidated after reconstruction. Driver/workflow wiring remains
-unimplemented. The project does not write a generated artifact or change the headline.
+and canonical digest are revalidated after reconstruction. The local batch boundary loads that
+archive, executes only explicit unique in-range global panel indices as complete panels, and
+exclusively creates one validated scratch shard. Direct construction and reload both reject seed,
+index, panel-identity, error-accounting, and symbol-floor drift. Network/date wiring, CLI/workflow
+dispatch, measurement, and the sole-writer artifact remain unimplemented. The project does not
+write a generated artifact or change the headline.

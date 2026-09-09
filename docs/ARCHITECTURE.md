@@ -389,8 +389,11 @@ adapter recomputes and checks the frozen search/gate fingerprints before returni
 boundary through an exclusive-create, pickle-free compressed archive containing ordered symbols,
 explicit UTC nanoseconds, dense float64 OHLCV values, and the stored canonical digest. Loading
 requires the exact schema and recomputes that digest from reconstructed frames, so corrupted or
-substituted source bytes fail before generation. Driver scripts, workflow dispatch, and measurement
-remain pending.
+substituted source bytes fail before generation. A local batch boundary loads only that archive,
+requires explicit unique in-range global panel indices, executes complete panels in canonical order,
+and exclusively creates one validated scratch shard; malformed seeds, identities, error accounting,
+or symbol floors fail again when the shard is loaded. Network/date wiring, CLI/workflow dispatch,
+and measurement remain pending.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

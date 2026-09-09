@@ -673,9 +673,12 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   fingerprint before expensive execution and wraps unmodified `run_search`; only tests may inject
   a stand-in. Frozen source transport uses an exclusive-create, pickle-free compressed archive with
   ordered symbols, UTC nanoseconds, dense float64 OHLCV, and the canonical digest; loading requires
-  the exact schema and recomputes the digest from reconstructed frames before generation. Network
-  source wiring, driver/workflow dispatch, and the sole-writer result remain separate unimplemented
-  boundaries.
+  the exact schema and recomputes the digest from reconstructed frames before generation. The local
+  batch boundary accepts only an explicit non-empty set of unique in-range global panel indices,
+  loads that exact archive, executes whole panels in canonical order, and exclusively writes a
+  validated scratch shard. Direct construction and load both recheck seed/index/panel identity,
+  symbol error accounting, and the effective-symbol floor. Network/date wiring, CLI/workflow
+  dispatch, and the sole-writer result remain separate unimplemented boundaries.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

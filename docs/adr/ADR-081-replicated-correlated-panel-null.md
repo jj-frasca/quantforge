@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, production-search adapter, replicate execution, and inference implemented;
+- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, production-search adapter, replicate/batch execution, and inference implemented;
   measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
@@ -183,7 +183,12 @@ successful searches, while the secondary statistic is absent if any successful r
 pair. `make_production_panel_null_search` now computes the exact search fingerprint before any
 expensive work, rejects search or gate policy drift, and returns an adapter over the unmodified
 production `run_search` with the frozen candidate/refinement/selection policy. Tests alone may
-inject a stand-in. Driver scripts, workflow dispatch, and measurement remain unimplemented.
+inject a stand-in. `run_panel_null_batch` loads the exact prepared-source archive, requires an
+explicit non-empty set of unique in-range global panel indices, executes those complete panels in
+canonical index order, and exclusively creates one validated JSON scratch shard. Direct shard
+construction and loading recheck derived seeds, unique indices/IDs, symbol error accounting, and
+the effective-symbol floor. Network/date wiring, CLI/workflow dispatch, and measurement remain
+unimplemented.
 
 ## Alternatives considered
 

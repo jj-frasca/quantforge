@@ -1,5 +1,6 @@
 """Whole-panel artifact identity, joint-row generation, and consolidation for ADR-081."""
 
+import json
 from dataclasses import replace
 from datetime import date
 from pathlib import Path
@@ -25,12 +26,15 @@ from app.research.lab.panel_null import (
     fetch_panel_null_source,
     infer_panel_null,
     joint_iid_panel_null,
+    load_panel_null_shard,
     load_prepared_panel_null_source,
     make_production_panel_null_search,
     merge_panel_null_shards,
     panel_seed,
     prepare_panel_null_source,
+    run_panel_null_batch,
     run_panel_null_replicate,
+    save_panel_null_shard,
     save_prepared_panel_null_source,
     select_panel_null_cohort,
 )
@@ -720,6 +724,126 @@ def test_run_panel_null_replicate_rejects_source_or_search_identity_drift() -> N
         )
 
 
+def test_run_panel_null_batch_executes_only_explicit_complete_indices(tmp_path: Path) -> None:
+    prepared = prepare_panel_null_source(_source_panel(), ("AAA", "BBB"), target_n_bars=5)
+    cohort = _cohort(n_replicates=4).model_copy(
+        update={
+            "symbols": prepared.symbols,
+            "source_start": prepared.source_start,
+            "source_end": prepared.source_end,
+            "source_sha256": prepared.source_sha256,
+            "target_n_bars": prepared.target_n_bars,
+            "gate_config_version": GateConfig().version_hash,
+        }
+    )
+    source_path = tmp_path / "prepared-panel.npz"
+    shard_path = tmp_path / "panel-shard.json"
+    save_prepared_panel_null_source(prepared, source_path)
+    searched: list[str] = []
+
+    def search(frame: pd.DataFrame, symbol: str) -> Experiment:
+        searched.append(symbol)
+        return _experiment(
+            symbol,
+            walk_forward=0.6,
+            walk_forward_hold=0.1,
+            purged_cv=0.4,
+            purged_cv_hold=0.2,
+            n_bars=len(frame),
+        )
+
+    shard = run_panel_null_batch(
+        cohort,
+        source_path,
+        panel_indices=(3, 1),
+        output_path=shard_path,
+        search=search,
+    )
+
+    assert tuple(replicate.panel_index for replicate in shard.replicates) == (1, 3)
+    assert searched == ["AAA", "BBB", "AAA", "BBB"]
+    assert load_panel_null_shard(shard_path) == shard
+
+
+def test_run_panel_null_batch_rejects_ambiguous_indices_and_existing_output(
+    tmp_path: Path,
+) -> None:
+    prepared = prepare_panel_null_source(_source_panel(), ("AAA", "BBB"), target_n_bars=5)
+    cohort = _cohort(n_replicates=4).model_copy(
+        update={
+            "symbols": prepared.symbols,
+            "source_start": prepared.source_start,
+            "source_end": prepared.source_end,
+            "source_sha256": prepared.source_sha256,
+            "target_n_bars": prepared.target_n_bars,
+        }
+    )
+    source_path = tmp_path / "prepared-panel.npz"
+    output_path = tmp_path / "panel-shard.json"
+    save_prepared_panel_null_source(prepared, source_path)
+    output_path.write_text("owned", encoding="utf-8")
+    called = False
+
+    def search(frame: pd.DataFrame, symbol: str) -> Experiment:
+        nonlocal called
+        called = True
+        return _experiment(symbol, walk_forward=0.6, walk_forward_hold=0.1, n_bars=len(frame))
+
+    with pytest.raises(ValueError, match="at least one explicit panel index"):
+        run_panel_null_batch(
+            cohort,
+            source_path,
+            panel_indices=(),
+            output_path=tmp_path / "empty.json",
+            search=search,
+        )
+    with pytest.raises(ValueError, match="duplicate panel index"):
+        run_panel_null_batch(
+            cohort,
+            source_path,
+            panel_indices=(1, 1),
+            output_path=tmp_path / "duplicate.json",
+            search=search,
+        )
+    with pytest.raises(ValueError, match="outside the frozen replicate range"):
+        run_panel_null_batch(
+            cohort,
+            source_path,
+            panel_indices=(4,),
+            output_path=tmp_path / "outside.json",
+            search=search,
+        )
+    with pytest.raises(FileExistsError):
+        run_panel_null_batch(
+            cohort,
+            source_path,
+            panel_indices=(0,),
+            output_path=output_path,
+            search=search,
+        )
+    assert called is False
+
+
+def test_panel_null_shard_archive_is_exclusive_and_revalidates_payload(tmp_path: Path) -> None:
+    shard = PanelNullShard(cohort=_cohort(), replicates=(_replicate(1), _replicate(3)))
+    path = tmp_path / "panel-shard.json"
+
+    save_panel_null_shard(shard, path)
+
+    assert load_panel_null_shard(path) == shard
+    with pytest.raises(FileExistsError):
+        save_panel_null_shard(shard, path)
+
+    tampered = shard.model_dump(mode="json")
+    tampered["replicates"][0]["seed"] = panel_seed(99, 1)
+    path.write_text(json.dumps(tampered), encoding="utf-8")
+    with pytest.raises(ValidationError, match="derived seed"):
+        load_panel_null_shard(path)
+
+    with pytest.raises(ValidationError, match="at least one complete panel replicate"):
+        PanelNullShard(cohort=_cohort(), replicates=())
+
+
 def test_make_production_panel_null_search_pins_and_forwards_the_frozen_policy() -> None:
     gate = GateConfig()
     strategies = ["sma"]
@@ -987,7 +1111,7 @@ def test_panel_seed_depends_only_on_base_seed_and_global_index() -> None:
     ("replicates", "message"),
     [
         ((_replicate(0), _replicate(0)), "duplicate panel index"),
-        ((_replicate(0), _replicate(2)), "complete panel indices"),
+        ((_replicate(0), _replicate(2)), "outside the frozen replicate range"),
     ],
 )
 def test_merge_rejects_duplicate_or_missing_panel_indices(

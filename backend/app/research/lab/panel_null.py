@@ -185,6 +185,11 @@ class PanelNullShard(BaseModel):
     cohort: PanelNullCohort
     replicates: tuple[PanelNullReplicate, ...]
 
+    @model_validator(mode="after")
+    def _validate_partial_measurement(self) -> "PanelNullShard":
+        _validate_shard_replicates(self.cohort, self.replicates)
+        return self
+
 
 class PanelNullCalibration(BaseModel):
     """The deterministic consolidation product for one fixed ADR-081 measurement."""
@@ -521,6 +526,19 @@ def load_prepared_panel_null_source(path: Path) -> PreparedPanelNullSource:
     )
 
 
+def save_panel_null_shard(shard: PanelNullShard, path: Path) -> None:
+    """Write one validated scratch shard without replacing an existing artifact."""
+    validated = PanelNullShard.model_validate(shard.model_dump())
+    with Path(path).open("x", encoding="utf-8") as shard_file:
+        shard_file.write(validated.model_dump_json())
+        shard_file.write("\n")
+
+
+def load_panel_null_shard(path: Path) -> PanelNullShard:
+    """Load and revalidate one scratch shard, including every complete panel unit."""
+    return PanelNullShard.model_validate_json(Path(path).read_text(encoding="utf-8"))
+
+
 def fetch_panel_null_source(
     selected: SelectedPanelNullCohort,
     fetch_frame: Callable[[str], pd.DataFrame],
@@ -723,6 +741,41 @@ def run_panel_null_replicate(
     )
 
 
+def run_panel_null_batch(
+    cohort: PanelNullCohort,
+    source_path: Path,
+    *,
+    panel_indices: Sequence[int],
+    output_path: Path,
+    search: Callable[[pd.DataFrame, str], Experiment],
+) -> PanelNullShard:
+    """Run only the explicit complete panel indices and exclusively write one scratch shard."""
+    cohort = PanelNullCohort.model_validate(cohort.model_dump())
+    indices = tuple(panel_indices)
+    if not indices:
+        raise ValueError("batch requires at least one explicit panel index")
+    if len(set(indices)) != len(indices):
+        raise ValueError("batch contains a duplicate panel index")
+    if any(index < 0 or index >= cohort.n_replicates for index in indices):
+        raise ValueError("panel index is outside the frozen replicate range")
+    if Path(output_path).exists():
+        raise FileExistsError(output_path)
+
+    prepared = load_prepared_panel_null_source(source_path)
+    replicates = tuple(
+        run_panel_null_replicate(
+            cohort,
+            prepared,
+            panel_index=panel_index,
+            search=search,
+        )
+        for panel_index in sorted(indices)
+    )
+    shard = PanelNullShard(cohort=cohort, replicates=replicates)
+    save_panel_null_shard(shard, output_path)
+    return shard
+
+
 def joint_iid_panel_null(
     source_panel: Mapping[str, pd.DataFrame],
     n_bars: int,
@@ -865,10 +918,12 @@ def infer_panel_null(calibration: PanelNullCalibration) -> PanelNullInference:
     return PanelNullInference(walk_forward=walk_forward, purged_cv=purged_cv)
 
 
-def _validate_complete_replicates(
+def _validate_shard_replicates(
     cohort: PanelNullCohort,
     replicates: Sequence[PanelNullReplicate],
 ) -> None:
+    if not replicates:
+        raise ValueError("shard must contain at least one complete panel replicate")
     if any(
         not isfinite(value.walk_forward)
         or (value.purged_cv is not None and not isfinite(value.purged_cv))
@@ -878,8 +933,8 @@ def _validate_complete_replicates(
     indices = [replicate.panel_index for replicate in replicates]
     if len(set(indices)) != len(indices):
         raise ValueError("duplicate panel index")
-    if set(indices) != set(range(cohort.n_replicates)):
-        raise ValueError("shards must contain the complete panel indices")
+    if any(index < 0 or index >= cohort.n_replicates for index in indices):
+        raise ValueError("panel index is outside the frozen replicate range")
     if any(
         replicate.seed != panel_seed(cohort.base_seed, replicate.panel_index)
         for replicate in replicates
@@ -904,6 +959,16 @@ def _validate_complete_replicates(
             raise ValueError("replicate is below the successful-symbol floor")
         if replicate.successful_symbols + len(replicate.errors) != len(cohort.symbols):
             raise ValueError("replicate must account for every cohort symbol")
+
+
+def _validate_complete_replicates(
+    cohort: PanelNullCohort,
+    replicates: Sequence[PanelNullReplicate],
+) -> None:
+    _validate_shard_replicates(cohort, replicates)
+    indices = [replicate.panel_index for replicate in replicates]
+    if set(indices) != set(range(cohort.n_replicates)):
+        raise ValueError("shards must contain the complete panel indices")
 
 
 def merge_panel_null_shards(
