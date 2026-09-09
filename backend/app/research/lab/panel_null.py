@@ -5,7 +5,7 @@ tail inference. The manual sole-writer workflow builds on these contracts withou
 reinterpret a partial symbol shard as an independent panel observation.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from datetime import date
@@ -439,6 +439,29 @@ def prepare_panel_null_source(
         source_end=retained_index[-1].date(),
         source_sha256=_digest_source_panel(retained),
         _frames=retained,
+    )
+
+
+def fetch_panel_null_source(
+    selected: SelectedPanelNullCohort,
+    fetch_frame: Callable[[str], pd.DataFrame],
+) -> PreparedPanelNullSource:
+    """Fetch every frozen symbol once, then prepare one exact complete-case panel."""
+    selected = SelectedPanelNullCohort.model_validate(selected.model_dump())
+    source_panel: dict[str, pd.DataFrame] = {}
+    failures: list[str] = []
+    for symbol in selected.symbols:
+        try:
+            source_panel[symbol] = fetch_frame(symbol)
+        except Exception as error:
+            failures.append(f"{symbol}: {error}")
+
+    if failures:
+        raise ValueError(f"source fetch failed for symbols: {'; '.join(failures)}")
+    return prepare_panel_null_source(
+        source_panel,
+        selected.symbols,
+        target_n_bars=selected.target_n_bars,
     )
 
 

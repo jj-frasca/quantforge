@@ -18,7 +18,9 @@ from app.research.lab.panel_null import (
     PanelNullReplicate,
     PanelNullShard,
     PanelSymbolExcess,
+    SelectedPanelNullCohort,
     bind_panel_null_cohort,
+    fetch_panel_null_source,
     infer_panel_null,
     joint_iid_panel_null,
     merge_panel_null_shards,
@@ -498,6 +500,58 @@ def test_bind_panel_null_cohort_rejects_source_cohort_or_history_drift() -> None
             diagnostic_version="equal-symbol-excess-v1",
             base_seed=17,
         )
+
+
+def test_fetch_panel_null_source_fetches_each_frozen_symbol_once_in_order() -> None:
+    gate = GateConfig()
+    selected = select_panel_null_cohort(
+        [
+            _experiment("AAA", walk_forward=0.4, walk_forward_hold=0.2, n_bars=5, gate_config=gate),
+            _experiment("BBB", walk_forward=0.5, walk_forward_hold=0.2, n_bars=5, gate_config=gate),
+        ],
+        target_n_bars=5,
+        history_tolerance=0.10,
+        search_config_version="search-v1",
+        gate_config_version=gate.version_hash,
+        min_symbols=2,
+    )
+    source = _source_panel()
+    fetched: list[str] = []
+
+    def fetch_frame(symbol: str) -> pd.DataFrame:
+        fetched.append(symbol)
+        return source[symbol]
+
+    prepared = fetch_panel_null_source(selected, fetch_frame)
+
+    assert fetched == ["AAA", "BBB"]
+    assert prepared.symbols == selected.symbols
+    assert prepared.target_n_bars == selected.target_n_bars
+
+
+def test_fetch_panel_null_source_reports_every_failed_symbol_without_preparing() -> None:
+    selected = SelectedPanelNullCohort(
+        symbols=("AAA", "BBB", "CCC"),
+        symbol_excesses=tuple(
+            PanelSymbolExcess(symbol=symbol, walk_forward=0.1) for symbol in ("AAA", "BBB", "CCC")
+        ),
+        target_n_bars=5,
+        history_tolerance=0.10,
+        search_config_version="search-v1",
+        gate_config_version="gate-v1",
+        min_symbols=3,
+    )
+    source = _source_panel()
+
+    def fetch_frame(symbol: str) -> pd.DataFrame:
+        if symbol == "BBB":
+            raise RuntimeError("vendor unavailable")
+        if symbol == "CCC":
+            raise ValueError("symbol unavailable")
+        return source[symbol]
+
+    with pytest.raises(ValueError, match=r"BBB.*vendor unavailable.*CCC.*symbol unavailable"):
+        fetch_panel_null_source(selected, fetch_frame)
 
 
 def test_joint_iid_panel_null_uses_one_calendar_draw_for_every_symbol() -> None:

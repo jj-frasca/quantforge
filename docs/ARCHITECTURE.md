@@ -375,8 +375,10 @@ simultaneous coverage (ADR-082); partial secondary diagnostics remain unmeasured
 now freezes the explicit ordered cohort, exact most-recent complete-case UTC calendar, and a
 canonical digest over ordered timestamps and OHLCV values before generation. Cohort
 selection now matches exact search/gate identity and the history band, resolves the persisted
-finalist, and collapses repeats to one median excess per canonically ordered symbol. Source fetching
-is still pending. The binding boundary now refuses ordered-symbol or target-history drift between
+finalist, and collapses repeats to one median excess per canonically ordered symbol. The fetch
+boundary calls an injected provider once per frozen symbol in canonical order and aborts with every
+provider failure before preparation; network-adapter/end-date wiring remains pending. The binding
+boundary now refuses ordered-symbol or target-history drift between
 that selection and the prepared panel, then freezes their exact values/digest with the two version
 identities, base seed, fixed 400 replicates, and the selected effective-symbol floor. Search
 execution, workflow dispatch, and measurement remain pending.

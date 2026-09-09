@@ -78,5 +78,7 @@ binomial uncertainty. Real cohort selection now matches exact search/gate/histor
 persisted finalist, rejects duplicate experiment IDs, and collapses repeats to one median excess per
 canonically ordered symbol. The binding boundary refuses symbol-order or target-history drift before
 freezing that selection with the prepared panel's exact source identity, 400 replicates, and the
-selected effective-symbol floor. The project does not yet fetch source data, run searches, dispatch
-a workflow, write a generated artifact, or change the headline.
+selected effective-symbol floor. A local injected fetch boundary now requests every frozen symbol
+once in canonical order and reports all provider failures before preparation; network adapter/date
+wiring remains unimplemented. The project does not yet run searches, dispatch a workflow, write a
+generated artifact, or change the headline.

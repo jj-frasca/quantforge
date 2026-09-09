@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; cohort/source selection, preparation, binding, identity, generator, and inference implemented;
+- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, and inference implemented;
   measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
@@ -161,8 +161,11 @@ reweighting a repeat. Purged-CV remains nullable per selected symbol.
 `bind_panel_null_cohort` then requires that selection and the prepared panel have the exact same
 ordered symbols and target history before it creates the final identity. It carries forward the
 measured excesses, source dates/digest, both fingerprints, and versions; fixes the pre-registered
-400 replicates; and uses the selection's effective-symbol floor for every panel. Source fetching,
-search execution, scripts, workflow dispatch, and measurement remain unimplemented.
+400 replicates; and uses the selection's effective-symbol floor for every panel.
+`fetch_panel_null_source` calls an injected frame provider exactly once for every frozen symbol in
+canonical order, collects all provider failures before aborting, and passes only a complete fetched
+mapping into source preparation. Network-adapter and end-date wiring remain in the future manual
+driver; search execution, scripts, workflow dispatch, and measurement remain unimplemented.
 
 ## Alternatives considered
 
