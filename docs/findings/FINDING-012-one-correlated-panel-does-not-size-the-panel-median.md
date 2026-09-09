@@ -83,5 +83,8 @@ once in canonical order and reports all provider failures before preparation; ne
 wiring remains unimplemented. A complete-panel runner now jointly generates all symbols, calls an
 injected search once per symbol, rejects returned experiment-identity drift, and preserves failures
 inside one panel statistic. Its production adapter rejects search/gate policy drift before returning
-a direct wrapper over unmodified `run_search`; tests alone inject a stand-in. Driver/workflow wiring
-remains unimplemented. The project does not write a generated artifact or change the headline.
+a direct wrapper over unmodified `run_search`; tests alone inject a stand-in. The prepared source
+can now be written once to an exclusive-create, pickle-free compressed archive and loaded by a
+future batch without trusting its stored digest: exact fields, UTC-nanosecond calendar, array shape,
+and canonical digest are revalidated after reconstruction. Driver/workflow wiring remains
+unimplemented. The project does not write a generated artifact or change the headline.

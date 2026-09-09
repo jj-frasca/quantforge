@@ -104,7 +104,13 @@ measurement or move a threshold.
 Use a new manual-only `panel-null-calibration.yml`, not ADR-037's scheduled independent-symbol
 matrix. A preparation job writes one immutable workflow artifact containing the aligned source
 panel and its SHA-256 digest. Batch jobs download that exact artifact and process disjoint global
-panel indices; they never split a panel across jobs. Consolidation rejects:
+panel indices; they never split a panel across jobs. The source artifact is a compressed NumPy
+archive with a version marker, ordered symbol vector, UTC nanosecond timestamp vector, one dense
+`(symbol, timestamp, OHLCV)` float64 array, and the canonical source digest. Writers use exclusive
+creation. Readers disable pickle, require the exact field set and shapes, reconstruct the canonical
+frames, and recompute the digest before returning the source. The archive therefore transports the
+already-frozen panel losslessly without making its stored digest authoritative. Consolidation
+rejects:
 
 - a missing or duplicate panel index;
 - fewer or more than 400 completed indices;
@@ -148,9 +154,10 @@ jointly incomplete rows; retains exactly the most recent `target_n_bars`; and fa
 shrinking the requested history. It records the exact retained UTC calendar range and hashes a
 versioned canonical byte stream containing the ordered symbols, UTC nanosecond timestamps, fixed
 OHLCV column order, and big-endian float64 values. Input and exported frames are defensively copied,
-so caller mutation cannot change the source identified by the digest. Fetching, real-cohort
-selection from the pool, running the unmodified search, scripts, workflow dispatch, and measurement
-remain unimplemented.
+so caller mutation cannot change the source identified by the digest. A pickle-free compressed
+archive now carries the prepared panel across the future job boundary with exact field, dtype, and
+shape checks. It uses exclusive creation and reconstructs the frames to recompute the canonical
+digest on load, detecting payload substitution rather than trusting the archive's digest field.
 
 `select_panel_null_cohort` now implements the pre-fetch real-side boundary. It accepts only
 experiments matching the exact search and gate fingerprints and ADR-064 history band, resolves the

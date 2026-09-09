@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from datetime import date
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -24,11 +25,13 @@ from app.research.lab.panel_null import (
     fetch_panel_null_source,
     infer_panel_null,
     joint_iid_panel_null,
+    load_prepared_panel_null_source,
     make_production_panel_null_search,
     merge_panel_null_shards,
     panel_seed,
     prepare_panel_null_source,
     run_panel_null_replicate,
+    save_prepared_panel_null_source,
     select_panel_null_cohort,
 )
 
@@ -415,6 +418,45 @@ def test_prepared_panel_source_direct_construction_cannot_drift_from_its_frames(
         replace(prepared, source_sha256="a" * 64)
     with pytest.raises(ValueError, match="calendar range"):
         replace(prepared, source_start=date(1999, 1, 1))
+
+
+def test_prepared_panel_null_source_archive_round_trips_losslessly(tmp_path: Path) -> None:
+    prepared = prepare_panel_null_source(_source_panel(), ("BBB", "AAA"), target_n_bars=5)
+    path = tmp_path / "prepared-panel.npz"
+
+    save_prepared_panel_null_source(prepared, path)
+    loaded = load_prepared_panel_null_source(path)
+
+    assert loaded.symbols == prepared.symbols
+    assert loaded.target_n_bars == prepared.target_n_bars
+    assert loaded.source_start == prepared.source_start
+    assert loaded.source_end == prepared.source_end
+    assert loaded.source_sha256 == prepared.source_sha256
+    for symbol in prepared.symbols:
+        pd.testing.assert_frame_equal(loaded.to_frames()[symbol], prepared.to_frames()[symbol])
+    with pytest.raises(FileExistsError):
+        save_prepared_panel_null_source(prepared, path)
+
+
+def test_prepared_panel_null_source_archive_rejects_tampering(tmp_path: Path) -> None:
+    prepared = prepare_panel_null_source(_source_panel(), ("AAA", "BBB"), target_n_bars=5)
+    path = tmp_path / "prepared-panel.npz"
+    save_prepared_panel_null_source(prepared, path)
+    with np.load(path, allow_pickle=False) as archive:
+        fields = {name: archive[name].copy() for name in archive.files}
+    fields["ohlcv"][0, -1, 3] += 1.0
+    np.savez_compressed(path, **fields)
+
+    with pytest.raises(ValueError, match="digest"):
+        load_prepared_panel_null_source(path)
+
+
+def test_prepared_panel_null_source_archive_rejects_schema_drift(tmp_path: Path) -> None:
+    path = tmp_path / "prepared-panel.npz"
+    np.savez_compressed(path, format_version=np.array("wrong"))
+
+    with pytest.raises(ValueError, match="fields"):
+        load_prepared_panel_null_source(path)
 
 
 def test_prepare_panel_null_source_fails_closed_on_cohort_or_history_mismatch() -> None:

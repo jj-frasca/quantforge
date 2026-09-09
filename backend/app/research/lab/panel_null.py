@@ -11,6 +11,7 @@ from dataclasses import field as dataclass_field
 from datetime import date
 from hashlib import sha256
 from math import isfinite
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
@@ -22,6 +23,10 @@ from app.research.lab.experiment import Experiment, selected_trial
 from app.research.lab.gate import GateConfig
 
 _OHLCV_COLUMNS = ("open", "high", "low", "close", "volume")
+_SOURCE_ARCHIVE_VERSION = "quantforge-panel-null-source-archive-v1"
+_SOURCE_ARCHIVE_FIELDS = frozenset(
+    {"format_version", "symbols", "timestamps_ns", "ohlcv", "source_sha256"}
+)
 _GENERATED_START = "2010-01-04"
 _PANEL_REPLICATES = 400
 _TAIL_THRESHOLD = 0.025
@@ -335,7 +340,7 @@ def _digest_source_panel(frames: Sequence[tuple[str, pd.DataFrame]]) -> str:
     update_length_prefixed("\0".join(_OHLCV_COLUMNS).encode())
     for symbol, frame in frames:
         update_length_prefixed(symbol.encode())
-        timestamps = np.asarray(frame.index.asi8, dtype=">i8").tobytes(order="C")
+        timestamps = np.asarray(frame.index.as_unit("ns").asi8, dtype=">i8").tobytes(order="C")
         values = np.asarray(frame.loc[:, _OHLCV_COLUMNS], dtype=">f8").tobytes(order="C")
         update_length_prefixed(timestamps)
         update_length_prefixed(values)
@@ -409,8 +414,8 @@ def prepare_panel_null_source(
         if not frame.index.is_monotonic_increasing or not frame.index.is_unique:
             raise ValueError("source panel calendar rows must be ordered and unique")
 
-        selected = frame.loc[:, _OHLCV_COLUMNS].copy(deep=True)
-        selected.index = selected.index.tz_convert("UTC")
+        selected = frame.loc[:, _OHLCV_COLUMNS].astype(np.float64).copy(deep=True)
+        selected.index = selected.index.tz_convert("UTC").as_unit("ns")
         normalized.append((symbol, selected))
         common_index = (
             selected.index
@@ -440,6 +445,79 @@ def prepare_panel_null_source(
         source_end=retained_index[-1].date(),
         source_sha256=_digest_source_panel(retained),
         _frames=retained,
+    )
+
+
+def save_prepared_panel_null_source(prepared: PreparedPanelNullSource, path: Path) -> None:
+    """Write one immutable, pickle-free source archive without replacing an existing file."""
+    prepared = _revalidate_prepared_source(prepared)
+    frames = prepared.to_frames()
+    reference_index = frames[prepared.symbols[0]].index
+    values = np.stack(
+        [
+            frames[symbol].loc[:, _OHLCV_COLUMNS].to_numpy(dtype=np.float64)
+            for symbol in prepared.symbols
+        ]
+    )
+    with Path(path).open("xb") as archive_file:
+        np.savez_compressed(
+            archive_file,
+            format_version=np.asarray(_SOURCE_ARCHIVE_VERSION),
+            symbols=np.asarray(prepared.symbols, dtype=str),
+            timestamps_ns=np.asarray(reference_index.as_unit("ns").asi8, dtype=np.int64),
+            ohlcv=values,
+            source_sha256=np.asarray(prepared.source_sha256),
+        )
+
+
+def load_prepared_panel_null_source(path: Path) -> PreparedPanelNullSource:
+    """Load and revalidate one exact prepared source archive."""
+    with np.load(Path(path), allow_pickle=False) as archive:
+        if set(archive.files) != _SOURCE_ARCHIVE_FIELDS:
+            raise ValueError("prepared source archive fields do not match the required schema")
+        format_version = archive["format_version"]
+        symbols_array = archive["symbols"]
+        timestamps_ns = archive["timestamps_ns"]
+        values = archive["ohlcv"]
+        source_digest = archive["source_sha256"]
+
+        if format_version.ndim != 0 or str(format_version.item()) != _SOURCE_ARCHIVE_VERSION:
+            raise ValueError("prepared source archive format version is unsupported")
+        if symbols_array.ndim != 1 or symbols_array.dtype.kind != "U" or len(symbols_array) == 0:
+            raise ValueError("prepared source archive symbols are invalid")
+        symbols = tuple(str(symbol) for symbol in symbols_array.tolist())
+        if any(not symbol for symbol in symbols) or len(set(symbols)) != len(symbols):
+            raise ValueError("prepared source archive symbols are invalid")
+        if timestamps_ns.ndim != 1 or timestamps_ns.dtype != np.dtype(np.int64):
+            raise ValueError("prepared source archive timestamps are invalid")
+        if len(timestamps_ns) < 2:
+            raise ValueError("prepared source archive must contain at least two timestamps")
+        if values.dtype != np.dtype(np.float64) or values.shape != (
+            len(symbols),
+            len(timestamps_ns),
+            len(_OHLCV_COLUMNS),
+        ):
+            raise ValueError("prepared source archive OHLCV array has an invalid shape or dtype")
+        if source_digest.ndim != 0 or source_digest.dtype.kind != "U":
+            raise ValueError("prepared source archive digest is invalid")
+        digest = str(source_digest.item())
+
+        index = pd.DatetimeIndex(pd.to_datetime(timestamps_ns.copy(), unit="ns", utc=True))
+        frames = tuple(
+            (
+                symbol,
+                pd.DataFrame(values[position].copy(), index=index.copy(), columns=_OHLCV_COLUMNS),
+            )
+            for position, symbol in enumerate(symbols)
+        )
+
+    return PreparedPanelNullSource(
+        symbols=symbols,
+        target_n_bars=len(index),
+        source_start=index[0].date(),
+        source_end=index[-1].date(),
+        source_sha256=digest,
+        _frames=frames,
     )
 
 
