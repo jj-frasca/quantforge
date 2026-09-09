@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 from pydantic import ValidationError
 
+from app.research.lab.calibration import calibration_search_version
 from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.gate import GateConfig
 from app.research.lab.panel_null import (
@@ -23,6 +24,7 @@ from app.research.lab.panel_null import (
     fetch_panel_null_source,
     infer_panel_null,
     joint_iid_panel_null,
+    make_production_panel_null_search,
     merge_panel_null_shards,
     panel_seed,
     prepare_panel_null_source,
@@ -674,6 +676,100 @@ def test_run_panel_null_replicate_rejects_source_or_search_identity_drift() -> N
                 search_version="wrong-search",
             ),
         )
+
+
+def test_make_production_panel_null_search_pins_and_forwards_the_frozen_policy() -> None:
+    gate = GateConfig()
+    strategies = ["sma"]
+    fingerprint = calibration_search_version(
+        strategies,
+        n_per_param=3,
+        config=gate,
+        refine=True,
+        refine_span=0.25,
+        select_by="observed",
+    )
+    cohort = _cohort(n_replicates=400).model_copy(
+        update={
+            "search_config_version": fingerprint,
+            "gate_config_version": gate.version_hash,
+        }
+    )
+    calls: list[tuple[str, list[str], dict[str, object]]] = []
+
+    def fake_run_search(
+        frame: pd.DataFrame, symbol: str, strategy_names: list[str], **kwargs: object
+    ) -> Experiment:
+        calls.append((symbol, strategy_names, kwargs))
+        return _experiment(
+            symbol,
+            walk_forward=0.6,
+            walk_forward_hold=0.1,
+            n_bars=len(frame),
+            search_version=fingerprint,
+            gate_config=gate,
+        )
+
+    search = make_production_panel_null_search(
+        cohort,
+        strategies,
+        config=gate,
+        run_search_fn=fake_run_search,
+    )
+    frame = _source_panel()["AAA"]
+
+    assert search(frame, "AAA").symbol == "AAA"
+    assert calls == [
+        (
+            "AAA",
+            ["sma"],
+            {
+                "config": gate,
+                "prior_trials": 0,
+                "n_per_param": 3,
+                "refine": True,
+                "refine_span": 0.25,
+                "select_by": "observed",
+            },
+        )
+    ]
+
+
+def test_make_production_panel_null_search_rejects_identity_drift_before_execution() -> None:
+    called = False
+
+    def fake_run_search(
+        frame: pd.DataFrame, symbol: str, strategy_names: list[str], **kwargs: object
+    ) -> Experiment:
+        nonlocal called
+        called = True
+        return _experiment(symbol, walk_forward=0.6, walk_forward_hold=0.1, n_bars=len(frame))
+
+    with pytest.raises(ValueError, match="search policy does not match"):
+        make_production_panel_null_search(
+            _cohort(n_replicates=400),
+            ["sma"],
+            config=GateConfig(),
+            run_search_fn=fake_run_search,
+        )
+    assert called is False
+
+    matching_search = calibration_search_version(
+        ["sma"],
+        n_per_param=3,
+        config=GateConfig(),
+        refine=True,
+        refine_span=0.25,
+        select_by="observed",
+    )
+    with pytest.raises(ValueError, match="gate policy does not match"):
+        make_production_panel_null_search(
+            _cohort(n_replicates=400).model_copy(update={"search_config_version": matching_search}),
+            ["sma"],
+            config=GateConfig(),
+            run_search_fn=fake_run_search,
+        )
+    assert called is False
 
 
 def test_joint_iid_panel_null_uses_one_calendar_draw_for_every_symbol() -> None:

@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, replicate execution, and inference implemented;
+- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, production-search adapter, replicate execution, and inference implemented;
   measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
@@ -173,8 +173,10 @@ seed, jointly generates every symbol, and accepts a returned experiment only whe
 search fingerprint, gate fingerprint, and paired causal diagnostic match the cohort. Search errors
 remain attributed to their symbols; the primary panel statistic is the equal-symbol median over
 successful searches, while the secondary statistic is absent if any successful result lacks its
-pair. The future driver must wire this callable directly to the unmodified production `run_search`;
-scripts, workflow dispatch, and measurement remain unimplemented.
+pair. `make_production_panel_null_search` now computes the exact search fingerprint before any
+expensive work, rejects search or gate policy drift, and returns an adapter over the unmodified
+production `run_search` with the frozen candidate/refinement/selection policy. Tests alone may
+inject a stand-in. Driver scripts, workflow dispatch, and measurement remain unimplemented.
 
 ## Alternatives considered
 

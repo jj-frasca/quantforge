@@ -383,8 +383,10 @@ that selection and the prepared panel, then freezes their exact values/digest wi
 identities, base seed, fixed 400 replicates, and the selected effective-symbol floor. Search
 execution now has one local complete-panel unit: it jointly generates the frozen cohort, calls an
 injected search once per symbol, rejects returned symbol/history/search/gate identity drift, retains
-per-symbol failures, and emits equal-symbol primary/secondary panel statistics. Production
-`run_search` wiring, scripts, workflow dispatch, and measurement remain pending.
+per-symbol failures, and emits equal-symbol primary/secondary panel statistics. Its production
+adapter recomputes and checks the frozen search/gate fingerprints before returning a direct
+`run_search` wrapper; tests alone inject a stand-in. Driver scripts, workflow dispatch, and
+measurement remain pending.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

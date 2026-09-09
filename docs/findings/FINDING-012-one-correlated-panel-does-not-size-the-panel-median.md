@@ -82,5 +82,6 @@ selected effective-symbol floor. A local injected fetch boundary now requests ev
 once in canonical order and reports all provider failures before preparation; network adapter/date
 wiring remains unimplemented. A complete-panel runner now jointly generates all symbols, calls an
 injected search once per symbol, rejects returned experiment-identity drift, and preserves failures
-inside one panel statistic. Production search wiring remains unimplemented. The project does not
-dispatch a workflow, write a generated artifact, or change the headline.
+inside one panel statistic. Its production adapter rejects search/gate policy drift before returning
+a direct wrapper over unmodified `run_search`; tests alone inject a stand-in. Driver/workflow wiring
+remains unimplemented. The project does not write a generated artifact or change the headline.

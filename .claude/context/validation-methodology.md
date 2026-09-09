@@ -669,8 +669,10 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   base seed, 400 replicates, and effective-symbol floor. One local replicate runner now revalidates
   that source/cohort identity, jointly generates the panel, calls an injected search once per
   symbol, rejects returned symbol/history/search/gate drift, and preserves symbol-attributed errors
-  plus equal-symbol panel statistics. Network source wiring, production `run_search` wiring,
-  workflow dispatch, and the sole-writer result remain separate unimplemented boundaries.
+  plus equal-symbol panel statistics. The production adapter checks the exact search/gate
+  fingerprint before expensive execution and wraps unmodified `run_search`; only tests may inject
+  a stand-in. Network source wiring, driver/workflow dispatch, and the sole-writer result remain
+  separate unimplemented boundaries.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

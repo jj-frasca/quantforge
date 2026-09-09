@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from scipy.stats import beta
 
 from app.research.lab.experiment import Experiment, selected_trial
+from app.research.lab.gate import GateConfig
 
 _OHLCV_COLUMNS = ("open", "high", "low", "close", "volume")
 _GENERATED_START = "2010-01-04"
@@ -524,6 +525,54 @@ def bind_panel_null_cohort(
         n_replicates=_PANEL_REPLICATES,
         min_successful_symbols=selected.min_symbols,
     )
+
+
+def make_production_panel_null_search(
+    cohort: PanelNullCohort,
+    strategy_names: Sequence[str],
+    *,
+    config: GateConfig,
+    n_per_param: int = 3,
+    refine: bool = True,
+    refine_span: float = 0.25,
+    select_by: Literal["observed", "walk_forward"] = "observed",
+    run_search_fn: Callable[..., Experiment] | None = None,
+) -> Callable[[pd.DataFrame, str], Experiment]:
+    """Pin production search inputs to the frozen cohort before expensive execution."""
+    from app.research.lab.calibration import calibration_search_version
+    from app.research.lab.search import run_search
+
+    cohort = PanelNullCohort.model_validate(cohort.model_dump())
+    strategies = list(strategy_names)
+    search_version = calibration_search_version(
+        strategies,
+        n_per_param=n_per_param,
+        config=config,
+        refine=refine,
+        refine_span=refine_span,
+        select_by=select_by,
+    )
+    if search_version != cohort.search_config_version:
+        raise ValueError("production search policy does not match the frozen panel cohort")
+    if config.version_hash != cohort.gate_config_version:
+        raise ValueError("production gate policy does not match the frozen panel cohort")
+
+    search_impl = run_search if run_search_fn is None else run_search_fn
+
+    def search(frame: pd.DataFrame, symbol: str) -> Experiment:
+        return search_impl(
+            frame,
+            symbol,
+            strategies,
+            config=config,
+            prior_trials=0,
+            n_per_param=n_per_param,
+            refine=refine,
+            refine_span=refine_span,
+            select_by=select_by,
+        )
+
+    return search
 
 
 def run_panel_null_replicate(
