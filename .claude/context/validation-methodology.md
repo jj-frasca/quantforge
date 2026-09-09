@@ -666,7 +666,10 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   and reports every provider failure before preparation; network adapter/end-date wiring remains
   pending. `bind_panel_null_cohort` refuses ordered-symbol or target-history drift between that
   selection and the prepared source, then freezes their exact values, source identity, versions,
-  base seed, 400 replicates, and effective-symbol floor. Network source wiring, search execution,
+  base seed, 400 replicates, and effective-symbol floor. One local replicate runner now revalidates
+  that source/cohort identity, jointly generates the panel, calls an injected search once per
+  symbol, rejects returned symbol/history/search/gate drift, and preserves symbol-attributed errors
+  plus equal-symbol panel statistics. Network source wiring, production `run_search` wiring,
   workflow dispatch, and the sole-writer result remain separate unimplemented boundaries.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.

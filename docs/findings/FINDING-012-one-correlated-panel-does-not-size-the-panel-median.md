@@ -80,5 +80,7 @@ canonically ordered symbol. The binding boundary refuses symbol-order or target-
 freezing that selection with the prepared panel's exact source identity, 400 replicates, and the
 selected effective-symbol floor. A local injected fetch boundary now requests every frozen symbol
 once in canonical order and reports all provider failures before preparation; network adapter/date
-wiring remains unimplemented. The project does not yet run searches, dispatch a workflow, write a
-generated artifact, or change the headline.
+wiring remains unimplemented. A complete-panel runner now jointly generates all symbols, calls an
+injected search once per symbol, rejects returned experiment-identity drift, and preserves failures
+inside one panel statistic. Production search wiring remains unimplemented. The project does not
+dispatch a workflow, write a generated artifact, or change the headline.

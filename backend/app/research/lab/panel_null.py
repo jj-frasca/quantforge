@@ -465,6 +465,33 @@ def fetch_panel_null_source(
     )
 
 
+def _revalidate_prepared_source(prepared: PreparedPanelNullSource) -> PreparedPanelNullSource:
+    return PreparedPanelNullSource(
+        symbols=prepared.symbols,
+        target_n_bars=prepared.target_n_bars,
+        source_start=prepared.source_start,
+        source_end=prepared.source_end,
+        source_sha256=prepared.source_sha256,
+        _frames=tuple(prepared.to_frames().items()),
+    )
+
+
+def _require_prepared_cohort_identity(
+    cohort: PanelNullCohort, prepared: PreparedPanelNullSource
+) -> None:
+    if cohort.symbols != prepared.symbols:
+        raise ValueError("prepared source ordered symbols do not match the panel cohort")
+    if cohort.target_n_bars != prepared.target_n_bars:
+        raise ValueError("prepared source target history does not match the panel cohort")
+    if (cohort.source_start, cohort.source_end) != (
+        prepared.source_start,
+        prepared.source_end,
+    ):
+        raise ValueError("prepared source calendar range does not match the panel cohort")
+    if cohort.source_sha256 != prepared.source_sha256:
+        raise ValueError("prepared source digest does not match the panel cohort")
+
+
 def bind_panel_null_cohort(
     selected: SelectedPanelNullCohort,
     prepared: PreparedPanelNullSource,
@@ -475,6 +502,7 @@ def bind_panel_null_cohort(
 ) -> PanelNullCohort:
     """Bind the frozen real estimand to its exact prepared source-panel identity."""
     selected = SelectedPanelNullCohort.model_validate(selected.model_dump())
+    prepared = _revalidate_prepared_source(prepared)
     if selected.symbols != prepared.symbols:
         raise ValueError("prepared source ordered symbols do not match the selected cohort")
     if selected.target_n_bars != prepared.target_n_bars:
@@ -495,6 +523,76 @@ def bind_panel_null_cohort(
         base_seed=base_seed,
         n_replicates=_PANEL_REPLICATES,
         min_successful_symbols=selected.min_symbols,
+    )
+
+
+def run_panel_null_replicate(
+    cohort: PanelNullCohort,
+    prepared: PreparedPanelNullSource,
+    *,
+    panel_index: int,
+    search: Callable[[pd.DataFrame, str], Experiment],
+) -> PanelNullReplicate:
+    """Generate and search one indivisible whole-panel replicate."""
+    cohort = PanelNullCohort.model_validate(cohort.model_dump())
+    prepared = _revalidate_prepared_source(prepared)
+    _require_prepared_cohort_identity(cohort, prepared)
+    if not 0 <= panel_index < cohort.n_replicates:
+        raise ValueError("panel_index is outside the frozen replicate range")
+
+    seed = panel_seed(cohort.base_seed, panel_index)
+    generated = joint_iid_panel_null(
+        prepared.to_frames(),
+        cohort.target_n_bars,
+        seed=seed,
+    )
+    walk_forward_excesses: list[float] = []
+    purged_cv_excesses: list[float] = []
+    secondary_complete = True
+    errors: list[PanelNullError] = []
+    for symbol in cohort.symbols:
+        try:
+            experiment = Experiment.model_validate(
+                search(generated[symbol].copy(deep=True), symbol)
+            )
+            if experiment.symbol != symbol:
+                raise ValueError("search result symbol does not match the generated symbol")
+            if experiment.n_bars != cohort.target_n_bars:
+                raise ValueError("search result history does not match the panel cohort")
+            if experiment.search_config_version != cohort.search_config_version:
+                raise ValueError("search result search identity does not match the panel cohort")
+            if experiment.gate_config.version_hash != cohort.gate_config_version:
+                raise ValueError("search result gate identity does not match the panel cohort")
+
+            finalist = selected_trial(experiment)
+            if (
+                finalist.walk_forward_oos_sharpe is None
+                or experiment.walk_forward_hold_sharpe is None
+            ):
+                raise ValueError("search result is missing paired walk-forward diagnostics")
+            walk_forward_excesses.append(
+                finalist.walk_forward_oos_sharpe - experiment.walk_forward_hold_sharpe
+            )
+            if finalist.purged_cv_oos_sharpe is None or experiment.purged_cv_hold_sharpe is None:
+                secondary_complete = False
+            else:
+                purged_cv_excesses.append(
+                    finalist.purged_cv_oos_sharpe - experiment.purged_cv_hold_sharpe
+                )
+        except Exception as error:
+            errors.append(PanelNullError(symbol=symbol, message=str(error) or type(error).__name__))
+
+    if not walk_forward_excesses:
+        raise ValueError("panel replicate produced no measured symbols")
+    panel_identity = sha256(f"{cohort.model_dump_json()}:{panel_index}".encode()).hexdigest()
+    return PanelNullReplicate(
+        panel_index=panel_index,
+        panel_id=panel_identity,
+        seed=seed,
+        successful_symbols=len(walk_forward_excesses),
+        errors=tuple(errors),
+        walk_forward_excess=float(np.median(walk_forward_excesses)),
+        purged_cv_excess=(float(np.median(purged_cv_excesses)) if secondary_complete else None),
     )
 
 

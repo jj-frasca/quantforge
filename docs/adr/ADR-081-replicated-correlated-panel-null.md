@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, and inference implemented;
+- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, replicate execution, and inference implemented;
   measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
@@ -165,7 +165,16 @@ measured excesses, source dates/digest, both fingerprints, and versions; fixes t
 `fetch_panel_null_source` calls an injected frame provider exactly once for every frozen symbol in
 canonical order, collects all provider failures before aborting, and passes only a complete fetched
 mapping into source preparation. Network-adapter and end-date wiring remain in the future manual
-driver; search execution, scripts, workflow dispatch, and measurement remain unimplemented.
+driver; production search wiring, scripts, workflow dispatch, and measurement remain unimplemented.
+
+`run_panel_null_replicate` implements one complete-panel execution unit behind an injected search
+callable. It revalidates the prepared source against the frozen cohort, derives the global-index
+seed, jointly generates every symbol, and accepts a returned experiment only when symbol, history,
+search fingerprint, gate fingerprint, and paired causal diagnostic match the cohort. Search errors
+remain attributed to their symbols; the primary panel statistic is the equal-symbol median over
+successful searches, while the secondary statistic is absent if any successful result lacks its
+pair. The future driver must wire this callable directly to the unmodified production `run_search`;
+scripts, workflow dispatch, and measurement remain unimplemented.
 
 ## Alternatives considered
 

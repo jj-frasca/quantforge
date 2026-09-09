@@ -26,6 +26,7 @@ from app.research.lab.panel_null import (
     merge_panel_null_shards,
     panel_seed,
     prepare_panel_null_source,
+    run_panel_null_replicate,
     select_panel_null_cohort,
 )
 
@@ -552,6 +553,127 @@ def test_fetch_panel_null_source_reports_every_failed_symbol_without_preparing()
 
     with pytest.raises(ValueError, match=r"BBB.*vendor unavailable.*CCC.*symbol unavailable"):
         fetch_panel_null_source(selected, fetch_frame)
+
+
+def test_run_panel_null_replicate_searches_one_joint_panel_and_pairs_diagnostics() -> None:
+    gate = GateConfig()
+    selected = select_panel_null_cohort(
+        [
+            _experiment("AAA", walk_forward=0.4, walk_forward_hold=0.2, n_bars=5, gate_config=gate),
+            _experiment("BBB", walk_forward=0.5, walk_forward_hold=0.2, n_bars=5, gate_config=gate),
+        ],
+        target_n_bars=5,
+        history_tolerance=0.10,
+        search_config_version="search-v1",
+        gate_config_version=gate.version_hash,
+        min_symbols=2,
+    )
+    prepared = prepare_panel_null_source(_source_panel(), selected.symbols, target_n_bars=5)
+    cohort = bind_panel_null_cohort(
+        selected,
+        prepared,
+        generator_version="joint-iid-calendar-v1",
+        diagnostic_version="equal-symbol-excess-v1",
+        base_seed=17,
+    )
+    searched: list[tuple[str, pd.DataFrame]] = []
+
+    def search(frame: pd.DataFrame, symbol: str) -> Experiment:
+        searched.append((symbol, frame))
+        offset = 0.1 if symbol == "AAA" else 0.2
+        return _experiment(
+            symbol,
+            walk_forward=0.5 + offset,
+            walk_forward_hold=0.1,
+            purged_cv=0.4 + offset,
+            purged_cv_hold=0.2,
+            n_bars=5,
+            gate_config=gate,
+        )
+
+    replicate = run_panel_null_replicate(cohort, prepared, panel_index=3, search=search)
+
+    assert [symbol for symbol, _ in searched] == ["AAA", "BBB"]
+    assert all(frame.index[0] == pd.Timestamp("2010-01-04", tz="UTC") for _, frame in searched)
+    assert replicate.panel_index == 3
+    assert replicate.seed == panel_seed(17, 3)
+    assert replicate.successful_symbols == 2
+    assert replicate.errors == ()
+    assert replicate.walk_forward_excess == pytest.approx(0.55)
+    assert replicate.purged_cv_excess == pytest.approx(0.35)
+
+
+def test_run_panel_null_replicate_retains_failures_and_refuses_partial_secondary() -> None:
+    prepared = prepare_panel_null_source(_source_panel(), ("AAA", "BBB"), target_n_bars=5)
+    cohort = _cohort(n_replicates=400, min_successful_symbols=1).model_copy(
+        update={
+            "symbols": ("AAA", "BBB"),
+            "source_start": prepared.source_start,
+            "source_end": prepared.source_end,
+            "source_sha256": prepared.source_sha256,
+            "target_n_bars": 5,
+            "search_config_version": "search-v1",
+            "gate_config_version": GateConfig().version_hash,
+        }
+    )
+
+    def search(frame: pd.DataFrame, symbol: str) -> Experiment:
+        if symbol == "BBB":
+            raise RuntimeError("search failed")
+        return _experiment(
+            symbol,
+            walk_forward=0.6,
+            walk_forward_hold=0.1,
+            purged_cv=None,
+            purged_cv_hold=None,
+            n_bars=len(frame),
+        )
+
+    replicate = run_panel_null_replicate(cohort, prepared, panel_index=0, search=search)
+
+    assert replicate.successful_symbols == 1
+    assert [(error.symbol, error.message) for error in replicate.errors] == [
+        ("BBB", "search failed")
+    ]
+    assert replicate.walk_forward_excess == pytest.approx(0.5)
+    assert replicate.purged_cv_excess is None
+
+
+def test_run_panel_null_replicate_rejects_source_or_search_identity_drift() -> None:
+    prepared = prepare_panel_null_source(_source_panel(), ("AAA", "BBB"), target_n_bars=5)
+    cohort = _cohort(n_replicates=400).model_copy(
+        update={
+            "symbols": ("AAA", "BBB"),
+            "source_start": prepared.source_start,
+            "source_end": prepared.source_end,
+            "source_sha256": prepared.source_sha256,
+            "target_n_bars": 5,
+        }
+    )
+
+    with pytest.raises(ValueError, match="source digest"):
+        run_panel_null_replicate(
+            cohort.model_copy(update={"source_sha256": "b" * 64}),
+            prepared,
+            panel_index=0,
+            search=lambda frame, symbol: _experiment(
+                symbol, walk_forward=0.6, walk_forward_hold=0.1, n_bars=len(frame)
+            ),
+        )
+
+    with pytest.raises(ValueError, match="no measured symbols"):
+        run_panel_null_replicate(
+            cohort,
+            prepared,
+            panel_index=0,
+            search=lambda frame, symbol: _experiment(
+                symbol,
+                walk_forward=0.6,
+                walk_forward_hold=0.1,
+                n_bars=len(frame),
+                search_version="wrong-search",
+            ),
+        )
 
 
 def test_joint_iid_panel_null_uses_one_calendar_draw_for_every_symbol() -> None:

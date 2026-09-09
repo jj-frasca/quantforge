@@ -381,7 +381,10 @@ provider failure before preparation; network-adapter/end-date wiring remains pen
 boundary now refuses ordered-symbol or target-history drift between
 that selection and the prepared panel, then freezes their exact values/digest with the two version
 identities, base seed, fixed 400 replicates, and the selected effective-symbol floor. Search
-execution, workflow dispatch, and measurement remain pending.
+execution now has one local complete-panel unit: it jointly generates the frozen cohort, calls an
+injected search once per symbol, rejects returned symbol/history/search/gate identity drift, retains
+per-symbol failures, and emits equal-symbol primary/secondary panel statistics. Production
+`run_search` wiring, scripts, workflow dispatch, and measurement remain pending.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more
