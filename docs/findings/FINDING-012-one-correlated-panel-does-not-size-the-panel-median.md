@@ -89,6 +89,8 @@ future batch without trusting its stored digest: exact fields, UTC-nanosecond ca
 and canonical digest are revalidated after reconstruction. The local batch boundary loads that
 archive, executes only explicit unique in-range global panel indices as complete panels, and
 exclusively creates one validated scratch shard. Direct construction and reload both reject seed,
-index, panel-identity, error-accounting, and symbol-floor drift. Network/date wiring, CLI/workflow
-dispatch, measurement, and the sole-writer artifact remain unimplemented. The project does not
-write a generated artifact or change the headline.
+index, panel-identity, error-accounting, and symbol-floor drift. The complete cohort identity now
+crosses the future preparation/batch boundary in an exclusively created JSON manifest that is
+revalidated on both write and read. Network/date wiring, CLI/workflow dispatch, measurement, and
+the sole-writer artifact remain unimplemented. The project does not write a generated artifact or
+change the headline.

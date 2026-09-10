@@ -26,6 +26,7 @@ from app.research.lab.panel_null import (
     fetch_panel_null_source,
     infer_panel_null,
     joint_iid_panel_null,
+    load_panel_null_cohort,
     load_panel_null_shard,
     load_prepared_panel_null_source,
     make_production_panel_null_search,
@@ -34,6 +35,7 @@ from app.research.lab.panel_null import (
     prepare_panel_null_source,
     run_panel_null_batch,
     run_panel_null_replicate,
+    save_panel_null_cohort,
     save_panel_null_shard,
     save_prepared_panel_null_source,
     select_panel_null_cohort,
@@ -461,6 +463,23 @@ def test_prepared_panel_null_source_archive_rejects_schema_drift(tmp_path: Path)
 
     with pytest.raises(ValueError, match="fields"):
         load_prepared_panel_null_source(path)
+
+
+def test_panel_null_cohort_manifest_is_exclusive_and_revalidates_identity(tmp_path: Path) -> None:
+    cohort = _cohort()
+    path = tmp_path / "panel-cohort.json"
+
+    save_panel_null_cohort(cohort, path)
+
+    assert load_panel_null_cohort(path) == cohort
+    with pytest.raises(FileExistsError):
+        save_panel_null_cohort(cohort, path)
+
+    tampered = cohort.model_dump(mode="json")
+    tampered["source_sha256"] = "not-a-digest"
+    path.write_text(json.dumps(tampered), encoding="utf-8")
+    with pytest.raises(ValidationError, match="source_sha256"):
+        load_panel_null_cohort(path)
 
 
 def test_prepare_panel_null_source_fails_closed_on_cohort_or_history_mismatch() -> None:

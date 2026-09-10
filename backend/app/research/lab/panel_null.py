@@ -534,6 +534,19 @@ def save_panel_null_shard(shard: PanelNullShard, path: Path) -> None:
         shard_file.write("\n")
 
 
+def save_panel_null_cohort(cohort: PanelNullCohort, path: Path) -> None:
+    """Write one immutable cohort manifest without replacing an existing artifact."""
+    validated = PanelNullCohort.model_validate(cohort.model_dump())
+    with Path(path).open("x", encoding="utf-8") as cohort_file:
+        cohort_file.write(validated.model_dump_json())
+        cohort_file.write("\n")
+
+
+def load_panel_null_cohort(path: Path) -> PanelNullCohort:
+    """Load and revalidate one immutable cohort manifest."""
+    return PanelNullCohort.model_validate_json(Path(path).read_text(encoding="utf-8"))
+
+
 def load_panel_null_shard(path: Path) -> PanelNullShard:
     """Load and revalidate one scratch shard, including every complete panel unit."""
     return PanelNullShard.model_validate_json(Path(path).read_text(encoding="utf-8"))

@@ -187,8 +187,10 @@ inject a stand-in. `run_panel_null_batch` loads the exact prepared-source archiv
 explicit non-empty set of unique in-range global panel indices, executes those complete panels in
 canonical index order, and exclusively creates one validated JSON scratch shard. Direct shard
 construction and loading recheck derived seeds, unique indices/IDs, symbol error accounting, and
-the effective-symbol floor. Network/date wiring, CLI/workflow dispatch, and measurement remain
-unimplemented.
+the effective-symbol floor. The frozen cohort crosses the preparation/batch boundary through a
+separate immutable JSON manifest: its writer validates and exclusively creates the file, and its
+reader revalidates the complete `PanelNullCohort` identity. Network/date wiring, CLI/workflow
+dispatch, and measurement remain unimplemented.
 
 ## Alternatives considered
 
