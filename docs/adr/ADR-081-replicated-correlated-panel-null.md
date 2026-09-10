@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, production-search adapter, replicate/batch execution, and inference implemented;
+- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, production-search adapter, artifact-loaded batch driver, replicate/batch execution, and inference implemented;
   measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
@@ -189,8 +189,10 @@ canonical index order, and exclusively creates one validated JSON scratch shard.
 construction and loading recheck derived seeds, unique indices/IDs, symbol error accounting, and
 the effective-symbol floor. The frozen cohort crosses the preparation/batch boundary through a
 separate immutable JSON manifest: its writer validates and exclusively creates the file, and its
-reader revalidates the complete `PanelNullCohort` identity. Network/date wiring, CLI/workflow
-dispatch, and measurement remain unimplemented.
+reader revalidates the complete `PanelNullCohort` identity. The local production-batch driver loads
+that manifest and the prepared-source archive together, verifies their shared source identity,
+then constructs the fingerprint-checked production search and executes only the requested complete
+panel indices. Network/date wiring, CLI/workflow dispatch, and measurement remain unimplemented.
 
 ## Alternatives considered
 

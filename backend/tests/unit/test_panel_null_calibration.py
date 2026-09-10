@@ -35,6 +35,7 @@ from app.research.lab.panel_null import (
     prepare_panel_null_source,
     run_panel_null_batch,
     run_panel_null_replicate,
+    run_production_panel_null_batch,
     save_panel_null_cohort,
     save_panel_null_shard,
     save_prepared_panel_null_source,
@@ -839,6 +840,107 @@ def test_run_panel_null_batch_rejects_ambiguous_indices_and_existing_output(
             panel_indices=(0,),
             output_path=output_path,
             search=search,
+        )
+    assert called is False
+
+
+def test_run_production_panel_null_batch_loads_frozen_inputs_and_executes(
+    tmp_path: Path,
+) -> None:
+    gate = GateConfig()
+    strategies = ["sma"]
+    fingerprint = calibration_search_version(
+        strategies,
+        n_per_param=3,
+        config=gate,
+        refine=True,
+        refine_span=0.25,
+        select_by="observed",
+    )
+    prepared = prepare_panel_null_source(_source_panel(), ("AAA", "BBB"), target_n_bars=5)
+    cohort = _cohort(n_replicates=4).model_copy(
+        update={
+            "symbols": prepared.symbols,
+            "source_start": prepared.source_start,
+            "source_end": prepared.source_end,
+            "source_sha256": prepared.source_sha256,
+            "target_n_bars": prepared.target_n_bars,
+            "search_config_version": fingerprint,
+            "gate_config_version": gate.version_hash,
+        }
+    )
+    cohort_path = tmp_path / "panel-cohort.json"
+    source_path = tmp_path / "prepared-panel.npz"
+    output_path = tmp_path / "panel-shard.json"
+    save_panel_null_cohort(cohort, cohort_path)
+    save_prepared_panel_null_source(prepared, source_path)
+    calls: list[str] = []
+
+    def fake_run_search(
+        frame: pd.DataFrame, symbol: str, strategy_names: list[str], **kwargs: object
+    ) -> Experiment:
+        calls.append(symbol)
+        return _experiment(
+            symbol,
+            walk_forward=0.6,
+            walk_forward_hold=0.1,
+            n_bars=len(frame),
+            search_version=fingerprint,
+            gate_config=gate,
+        )
+
+    shard = run_production_panel_null_batch(
+        cohort_path,
+        source_path,
+        strategy_names=strategies,
+        config=gate,
+        panel_indices=(2,),
+        output_path=output_path,
+        run_search_fn=fake_run_search,
+    )
+
+    assert tuple(replicate.panel_index for replicate in shard.replicates) == (2,)
+    assert calls == ["AAA", "BBB"]
+    assert load_panel_null_shard(output_path) == shard
+
+
+def test_run_production_panel_null_batch_rejects_manifest_source_drift_before_search(
+    tmp_path: Path,
+) -> None:
+    prepared = prepare_panel_null_source(_source_panel(), ("AAA", "BBB"), target_n_bars=5)
+    cohort_path = tmp_path / "panel-cohort.json"
+    source_path = tmp_path / "prepared-panel.npz"
+    save_panel_null_cohort(
+        _cohort(n_replicates=4).model_copy(
+            update={
+                "symbols": prepared.symbols,
+                "source_start": prepared.source_start,
+                "source_end": prepared.source_end,
+                "source_sha256": "b" * 64,
+                "target_n_bars": prepared.target_n_bars,
+            }
+        ),
+        cohort_path,
+    )
+    save_prepared_panel_null_source(prepared, source_path)
+    called = False
+
+    def fake_run_search(
+        frame: pd.DataFrame, symbol: str, strategy_names: list[str], **kwargs: object
+    ) -> Experiment:
+        nonlocal called
+        called = True
+        return _experiment(symbol, walk_forward=0.6, walk_forward_hold=0.1, n_bars=len(frame))
+
+    with pytest.raises(ValueError, match="source digest"):
+        run_production_panel_null_batch(
+            cohort_path,
+            source_path,
+            strategy_names=["sma"],
+            config=GateConfig(),
+            panel_indices=(0,),
+            output_path=tmp_path / "panel-shard.json",
+            run_search_fn=fake_run_search,
         )
     assert called is False
 

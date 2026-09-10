@@ -91,6 +91,8 @@ archive, executes only explicit unique in-range global panel indices as complete
 exclusively creates one validated scratch shard. Direct construction and reload both reject seed,
 index, panel-identity, error-accounting, and symbol-floor drift. The complete cohort identity now
 crosses the future preparation/batch boundary in an exclusively created JSON manifest that is
-revalidated on both write and read. Network/date wiring, CLI/workflow dispatch, measurement, and
-the sole-writer artifact remain unimplemented. The project does not write a generated artifact or
+revalidated on both write and read. The local production-batch driver loads the manifest and source
+archive as one frozen job identity before constructing the checked search adapter and executing the
+requested whole-panel indices. Network/date wiring, CLI/workflow dispatch, measurement, and the
+sole-writer artifact remain unimplemented. The project does not write a generated artifact or
 change the headline.

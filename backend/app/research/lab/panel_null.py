@@ -763,7 +763,27 @@ def run_panel_null_batch(
     search: Callable[[pd.DataFrame, str], Experiment],
 ) -> PanelNullShard:
     """Run only the explicit complete panel indices and exclusively write one scratch shard."""
+    prepared = load_prepared_panel_null_source(source_path)
+    return _run_loaded_panel_null_batch(
+        cohort,
+        prepared,
+        panel_indices=panel_indices,
+        output_path=output_path,
+        search=search,
+    )
+
+
+def _run_loaded_panel_null_batch(
+    cohort: PanelNullCohort,
+    prepared: PreparedPanelNullSource,
+    *,
+    panel_indices: Sequence[int],
+    output_path: Path,
+    search: Callable[[pd.DataFrame, str], Experiment],
+) -> PanelNullShard:
+    """Execute a batch after its prepared source has crossed the validated load boundary."""
     cohort = PanelNullCohort.model_validate(cohort.model_dump())
+    prepared = _revalidate_prepared_source(prepared)
     indices = tuple(panel_indices)
     if not indices:
         raise ValueError("batch requires at least one explicit panel index")
@@ -774,7 +794,6 @@ def run_panel_null_batch(
     if Path(output_path).exists():
         raise FileExistsError(output_path)
 
-    prepared = load_prepared_panel_null_source(source_path)
     replicates = tuple(
         run_panel_null_replicate(
             cohort,
@@ -787,6 +806,43 @@ def run_panel_null_batch(
     shard = PanelNullShard(cohort=cohort, replicates=replicates)
     save_panel_null_shard(shard, output_path)
     return shard
+
+
+def run_production_panel_null_batch(
+    cohort_path: Path,
+    source_path: Path,
+    *,
+    strategy_names: Sequence[str],
+    config: GateConfig,
+    panel_indices: Sequence[int],
+    output_path: Path,
+    n_per_param: int = 3,
+    refine: bool = True,
+    refine_span: float = 0.25,
+    select_by: Literal["observed", "walk_forward"] = "observed",
+    run_search_fn: Callable[..., Experiment] | None = None,
+) -> PanelNullShard:
+    """Load one frozen job identity before constructing and running its production batch."""
+    cohort = load_panel_null_cohort(cohort_path)
+    prepared = load_prepared_panel_null_source(source_path)
+    _require_prepared_cohort_identity(cohort, prepared)
+    search = make_production_panel_null_search(
+        cohort,
+        strategy_names,
+        config=config,
+        n_per_param=n_per_param,
+        refine=refine,
+        refine_span=refine_span,
+        select_by=select_by,
+        run_search_fn=run_search_fn,
+    )
+    return _run_loaded_panel_null_batch(
+        cohort,
+        prepared,
+        panel_indices=panel_indices,
+        output_path=output_path,
+        search=search,
+    )
 
 
 def joint_iid_panel_null(
