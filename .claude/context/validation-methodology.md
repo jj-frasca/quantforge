@@ -689,8 +689,10 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   writes only the source archive and cohort manifest to non-`data/` scratch paths. The production
   batch CLI resolves exactly one explicit unique index set or half-open global-index range, rejects
   existing and repository-`data/` outputs before expensive execution, and delegates the immutable
-  input pair plus current production policy to the whole-panel driver. Workflow dispatch and
-  measurement remain separate unimplemented boundaries.
+  input pair plus current production policy to the whole-panel driver. The manual-only workflow
+  transports one prepared input artifact through 40 disjoint complete-panel batches covering the
+  exact 400-index set, then permits only full validated consolidation to write and commit the
+  generated result. It has not been dispatched, so the measurement remains pending.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

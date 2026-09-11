@@ -1,0 +1,154 @@
+name: Replicated correlated panel-null calibration
+
+# Manual-only implementation of ADR-081/082. One preparation job freezes the real cohort and its
+# complete-case source panel at an explicit UTC cutoff. Every batch downloads those exact bytes and
+# owns disjoint GLOBAL panel indices; a panel is never split across jobs. Consolidation refuses any
+# missing/duplicate index or identity drift before it becomes the sole writer under ADR-030.
+#
+# This spends the pre-registered 400-replicate measurement. Do not rerun after seeing its result
+# unless a reviewed identity change or a new ADR authorizes another look.
+on:
+  workflow_dispatch:
+    inputs:
+      asof_utc:
+        description: "Explicit zero-offset UTC source cutoff (for example 2026-09-10T20:00:00Z)"
+        required: true
+        type: string
+      base_seed:
+        description: "Frozen base seed recorded in the cohort manifest"
+        required: true
+        default: "0"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: panel-null-calibration
+  cancel-in-progress: false
+
+env:
+  PANELS_PER_SHARD: "10"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ASOF_UTC: ${{ inputs.asof_utc }}
+      BASE_SEED: ${{ inputs.base_seed }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Freeze the cohort and complete-case source panel
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. uv run python scripts/prepare_panel_null.py \
+            "$ASOF_UTC" \
+            "$RUNNER_TEMP/panel-source.npz" \
+            "$RUNNER_TEMP/panel-cohort.json" \
+            --base-seed "$BASE_SEED"
+      - name: Upload the immutable input pair
+        uses: actions/upload-artifact@v4
+        with:
+          name: panel-null-frozen-inputs-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/panel-source.npz
+            ${{ runner.temp }}/panel-cohort.json
+          if-no-files-found: error
+          retention-days: 7
+
+  batch:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Download the immutable input pair
+        uses: actions/download-artifact@v4
+        with:
+          name: panel-null-frozen-inputs-${{ github.run_id }}
+          path: ${{ runner.temp }}/frozen
+      - name: Run complete panels ${{ matrix.shard }}
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          START=$(( ${{ matrix.shard }} * PANELS_PER_SHARD ))
+          STOP=$(( START + PANELS_PER_SHARD ))
+          PYTHONPATH=. uv run python scripts/run_panel_null_batch.py \
+            "$RUNNER_TEMP/frozen/panel-cohort.json" \
+            "$RUNNER_TEMP/frozen/panel-source.npz" \
+            "$RUNNER_TEMP/panel-null-shard-${{ matrix.shard }}.json" \
+            --range "$START" "$STOP"
+      - name: Upload the complete-panel shard
+        uses: actions/upload-artifact@v4
+        with:
+          name: panel-null-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/panel-null-shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 7
+
+  consolidate:
+    needs: batch
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Download every complete-panel shard
+        uses: actions/download-artifact@v4
+        with:
+          pattern: panel-null-shard-*
+          path: shards
+          merge-multiple: true
+      - name: Consolidate the fixed 400-panel measurement
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. uv run python scripts/consolidate_panel_null.py \
+            "$GITHUB_WORKSPACE/shards" \
+            "$GITHUB_WORKSPACE/data/panel_null_calibration/replicated_correlated_panel_null.json" \
+            | tee "$GITHUB_WORKSPACE/panel-null-report.txt"
+      - name: Upload the measurement and inference report
+        uses: actions/upload-artifact@v4
+        with:
+          name: panel-null-measurement-${{ github.run_id }}
+          path: |
+            data/panel_null_calibration/replicated_correlated_panel_null.json
+            panel-null-report.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Commit the measurement
+        run: |
+          set -euo pipefail
+          git add data/panel_null_calibration/replicated_correlated_panel_null.json
+          git config user.name "quantforge-calibration-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "chore(calibration): replicated correlated panel null $(date +%F)"
+          for attempt in 1 2 3; do
+            if git pull --rebase origin master && git push origin HEAD:master; then
+              exit 0
+            fi
+            echo "push attempt $attempt failed; retrying"
+            sleep 5
+          done
+          exit 1

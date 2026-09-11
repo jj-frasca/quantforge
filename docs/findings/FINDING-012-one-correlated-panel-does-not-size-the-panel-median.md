@@ -101,6 +101,8 @@ across the frozen cohort, uses the shared cloud retry policy, and writes only im
 source/manifest inputs while refusing repository `data/` paths. The production batch CLI accepts
 exactly one explicit unique index set or half-open global-index range, refuses existing or
 repository-`data/` shard paths before expensive execution, and delegates the frozen inputs plus
-current production policy to the checked whole-panel driver. Workflow dispatch and measurement
-remain unimplemented. No generated artifact has been written and the
+current production policy to the checked whole-panel driver. The manual-only workflow now carries
+one prepared input pair through 40 disjoint complete-panel batches and permits only full validated
+consolidation to write the generated result. It has not been dispatched, so no measurement exists.
+No generated artifact has been written and the
 headline is unchanged.

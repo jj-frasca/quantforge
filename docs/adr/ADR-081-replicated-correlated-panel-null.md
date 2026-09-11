@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; cohort/source selection, production fetch/date preparation entry point, preparation, binding, identity, generator, production-search adapter, artifact-loaded batch driver and entry point, replicate/batch execution, consolidation, and inference implemented;
+- **Status:** Accepted; cohort/source selection, production fetch/date preparation entry point, preparation, binding, identity, generator, production-search adapter, artifact-loaded batch driver and entry point, replicate/batch execution, manual workflow, consolidation, and inference implemented;
   measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
@@ -207,7 +207,10 @@ a second generated-data writer. `scripts/run_panel_null_batch.py` exposes the pr
 driver with exactly one explicit unique index set or half-open global-index range. It rejects
 negative/duplicate/empty selections and existing or repository-`data/` output paths before the
 expensive driver, then uses the current catalog and default gate to exclusively create one scratch
-shard. Manual workflow dispatch and measurement remain unimplemented.
+shard. The dispatch-only `panel-null-calibration.yml` prepares one shared immutable input artifact,
+partitions all 400 global indices into 40 disjoint ten-panel shards with bounded concurrency, and
+allows only successful full consolidation to write and commit the generated measurement. The
+workflow has not been dispatched and the measurement remains pending.
 
 ## Alternatives considered
 
