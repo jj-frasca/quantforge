@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, production-search adapter, artifact-loaded batch driver, replicate/batch execution, and inference implemented;
+- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, production-search adapter, artifact-loaded batch driver, replicate/batch execution, consolidation, and inference implemented;
   measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
@@ -192,7 +192,11 @@ separate immutable JSON manifest: its writer validates and exclusively creates t
 reader revalidates the complete `PanelNullCohort` identity. The local production-batch driver loads
 that manifest and the prepared-source archive together, verifies their shared source identity,
 then constructs the fingerprint-checked production search and executes only the requested complete
-panel indices. Network/date wiring, CLI/workflow dispatch, and measurement remain unimplemented.
+panel indices. `scripts/consolidate_panel_null.py` loads every validated scratch shard, requires the
+complete frozen global-index set through `merge_panel_null_shards`, prints the pre-registered
+ADR-081/082 inference, and is the only command permitted to write the final generated artifact.
+Network/date wiring, preparation/batch CLI entry points, workflow dispatch, and measurement remain
+unimplemented.
 
 ## Alternatives considered
 

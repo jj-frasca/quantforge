@@ -396,8 +396,10 @@ or symbol floors fail again when the shard is loaded. A separate immutable JSON 
 the complete cohort identity across preparation and batch jobs through an exclusive writer and a
 validating reader. A local production-batch driver loads that manifest together with the exact
 source archive, verifies their shared identity, then builds the fingerprint-checked production
-search and executes only explicit whole-panel indices. Network/date wiring, CLI/workflow dispatch,
-and measurement remain pending.
+search and executes only explicit whole-panel indices. A sole-writer consolidation CLI revalidates
+all scratch shards, requires the complete frozen panel-index set, prints the fixed ADR-081/082
+inference, and optionally writes the final artifact. Network/date wiring, preparation/batch CLI
+entry points, workflow dispatch, and measurement remain pending.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

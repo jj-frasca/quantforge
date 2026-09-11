@@ -681,8 +681,10 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   carries the complete cohort identity across preparation and batch jobs; it is exclusively created
   after validation and fully revalidated when loaded. The local production-batch driver loads that
   manifest with the prepared-source archive, verifies the pair before constructing the checked
-  production search, and executes only explicit whole-panel indices. Network/date wiring,
-  CLI/workflow dispatch, and the sole-writer result remain separate unimplemented boundaries.
+  production search, and executes only explicit whole-panel indices. The consolidation CLI
+  revalidates every scratch shard, requires the full frozen index set, prints the fixed inference,
+  and is the sole writer of an optional final artifact. Network/date wiring, preparation/batch CLI
+  entry points, workflow dispatch, and measurement remain separate unimplemented boundaries.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

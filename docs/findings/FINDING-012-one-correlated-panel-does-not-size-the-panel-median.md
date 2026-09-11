@@ -93,6 +93,8 @@ index, panel-identity, error-accounting, and symbol-floor drift. The complete co
 crosses the future preparation/batch boundary in an exclusively created JSON manifest that is
 revalidated on both write and read. The local production-batch driver loads the manifest and source
 archive as one frozen job identity before constructing the checked search adapter and executing the
-requested whole-panel indices. Network/date wiring, CLI/workflow dispatch, measurement, and the
-sole-writer artifact remain unimplemented. The project does not write a generated artifact or
-change the headline.
+requested whole-panel indices. The consolidation CLI loads and revalidates every scratch shard,
+requires all frozen global indices, prints the fixed ADR-081/082 inference, and is the sole writer
+of the optional final artifact. Network/date wiring, preparation/batch CLI entry points, workflow
+dispatch, and measurement remain unimplemented. No generated artifact has been written and the
+headline is unchanged.
