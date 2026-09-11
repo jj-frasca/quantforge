@@ -80,7 +80,8 @@ canonically ordered symbol. The binding boundary refuses symbol-order or target-
 freezing that selection with the prepared panel's exact source identity, 400 replicates, and the
 selected effective-symbol floor. A local injected fetch boundary now requests every frozen symbol
 once in canonical order and reports all provider failures before preparation; network adapter/date
-wiring remains unimplemented. A complete-panel runner now jointly generates all symbols, calls an
+wiring is supplied by the production preparation command described below. A complete-panel runner
+now jointly generates all symbols, calls an
 injected search once per symbol, rejects returned experiment-identity drift, and preserves failures
 inside one panel statistic. Its production adapter rejects search/gate policy drift before returning
 a direct wrapper over unmodified `run_search`; tests alone inject a stand-in. The prepared source
@@ -95,6 +96,8 @@ revalidated on both write and read. The local production-batch driver loads the 
 archive as one frozen job identity before constructing the checked search adapter and executing the
 requested whole-panel indices. The consolidation CLI loads and revalidates every scratch shard,
 requires all frozen global indices, prints the fixed ADR-081/082 inference, and is the sole writer
-of the optional final artifact. Network/date wiring, preparation/batch CLI entry points, workflow
-dispatch, and measurement remain unimplemented. No generated artifact has been written and the
+of the optional final artifact. The production preparation CLI now pins one explicit UTC cutoff
+across the frozen cohort, uses the shared cloud retry policy, and writes only immutable scratch
+source/manifest inputs while refusing repository `data/` paths. The batch CLI, workflow dispatch,
+and measurement remain unimplemented. No generated artifact has been written and the
 headline is unchanged.

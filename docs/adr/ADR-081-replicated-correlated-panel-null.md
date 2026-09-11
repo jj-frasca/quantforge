@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; cohort/source selection, fetch orchestration, preparation, binding, identity, generator, production-search adapter, artifact-loaded batch driver, replicate/batch execution, consolidation, and inference implemented;
+- **Status:** Accepted; cohort/source selection, production fetch/date preparation entry point, preparation, binding, identity, generator, production-search adapter, artifact-loaded batch driver, replicate/batch execution, consolidation, and inference implemented;
   measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
@@ -172,7 +172,8 @@ measured excesses, source dates/digest, both fingerprints, and versions; fixes t
 `fetch_panel_null_source` calls an injected frame provider exactly once for every frozen symbol in
 canonical order, collects all provider failures before aborting, and passes only a complete fetched
 mapping into source preparation. Network-adapter and end-date wiring remain in the future manual
-driver; production search wiring, scripts, workflow dispatch, and measurement remain unimplemented.
+driver at this layer; the production adapters and commands described below compose it without
+changing this injected boundary.
 
 `run_panel_null_replicate` implements one complete-panel execution unit behind an injected search
 callable. It revalidates the prepared source against the frozen cohort, derives the global-index
@@ -195,8 +196,15 @@ then constructs the fingerprint-checked production search and executes only the 
 panel indices. `scripts/consolidate_panel_null.py` loads every validated scratch shard, requires the
 complete frozen global-index set through `merge_panel_null_shards`, prints the pre-registered
 ADR-081/082 inference, and is the only command permitted to write the final generated artifact.
-Network/date wiring, preparation/batch CLI entry points, workflow dispatch, and measurement remain
-unimplemented.
+`scripts/prepare_panel_null.py` now supplies the production preparation boundary. It requires one
+explicit zero-offset UTC cutoff, constructs one `YFinanceAdapter(retry=CLOUD)`, and closes every
+symbol fetch over `SEARCH_HISTORY_START` to that exact instant. The cutoff day's still-forming bar
+is removed before complete-case preparation. The command derives the current catalog search and
+default gate fingerprints, selects the matching real cohort, and exclusively writes only the
+prepared-source archive plus its bound cohort manifest. Existing outputs or paths under the
+repository's generated `data/` tree fail before adapter construction, so preparation cannot become
+a second generated-data writer. The batch CLI entry point, manual workflow dispatch, and
+measurement remain unimplemented.
 
 ## Alternatives considered
 

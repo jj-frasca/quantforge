@@ -683,8 +683,11 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   manifest with the prepared-source archive, verifies the pair before constructing the checked
   production search, and executes only explicit whole-panel indices. The consolidation CLI
   revalidates every scratch shard, requires the full frozen index set, prints the fixed inference,
-  and is the sole writer of an optional final artifact. Network/date wiring, preparation/batch CLI
-  entry points, workflow dispatch, and measurement remain separate unimplemented boundaries.
+  and is the sole writer of an optional final artifact. The preparation CLI pins one explicit UTC
+  cutoff across every yfinance request, uses the shared `CLOUD` retry policy, removes the cutoff
+  day's still-forming bar, binds the current production search/gate identity, and exclusively
+  writes only the source archive and cohort manifest to non-`data/` scratch paths. The batch CLI,
+  workflow dispatch, and measurement remain separate unimplemented boundaries.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

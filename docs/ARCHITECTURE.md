@@ -398,8 +398,11 @@ validating reader. A local production-batch driver loads that manifest together 
 source archive, verifies their shared identity, then builds the fingerprint-checked production
 search and executes only explicit whole-panel indices. A sole-writer consolidation CLI revalidates
 all scratch shards, requires the complete frozen panel-index set, prints the fixed ADR-081/082
-inference, and optionally writes the final artifact. Network/date wiring, preparation/batch CLI
-entry points, workflow dispatch, and measurement remain pending.
+inference, and optionally writes the final artifact. The production preparation command requires
+one explicit UTC cutoff, uses `YFinanceAdapter(retry=CLOUD)` for the whole frozen cohort, drops the
+cutoff date's still-forming bar, derives the current search/gate identity, and exclusively writes
+only the source archive and cohort manifest to scratch paths; repository `data/` paths are refused
+before any fetch. The batch CLI entry point, workflow dispatch, and measurement remain pending.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more
