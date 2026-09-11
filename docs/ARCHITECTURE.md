@@ -402,7 +402,10 @@ inference, and optionally writes the final artifact. The production preparation 
 one explicit UTC cutoff, uses `YFinanceAdapter(retry=CLOUD)` for the whole frozen cohort, drops the
 cutoff date's still-forming bar, derives the current search/gate identity, and exclusively writes
 only the source archive and cohort manifest to scratch paths; repository `data/` paths are refused
-before any fetch. The batch CLI entry point, workflow dispatch, and measurement remain pending.
+before any fetch. The batch command accepts exactly one explicit unique index set or half-open
+global-index range, refuses existing and repository-`data/` outputs before production execution,
+and exclusively creates one scratch shard through the checked driver. Workflow dispatch and
+measurement remain pending.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

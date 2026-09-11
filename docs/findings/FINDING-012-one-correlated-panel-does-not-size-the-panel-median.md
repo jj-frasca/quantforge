@@ -98,6 +98,9 @@ requested whole-panel indices. The consolidation CLI loads and revalidates every
 requires all frozen global indices, prints the fixed ADR-081/082 inference, and is the sole writer
 of the optional final artifact. The production preparation CLI now pins one explicit UTC cutoff
 across the frozen cohort, uses the shared cloud retry policy, and writes only immutable scratch
-source/manifest inputs while refusing repository `data/` paths. The batch CLI, workflow dispatch,
-and measurement remain unimplemented. No generated artifact has been written and the
+source/manifest inputs while refusing repository `data/` paths. The production batch CLI accepts
+exactly one explicit unique index set or half-open global-index range, refuses existing or
+repository-`data/` shard paths before expensive execution, and delegates the frozen inputs plus
+current production policy to the checked whole-panel driver. Workflow dispatch and measurement
+remain unimplemented. No generated artifact has been written and the
 headline is unchanged.

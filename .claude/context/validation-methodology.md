@@ -686,8 +686,11 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   and is the sole writer of an optional final artifact. The preparation CLI pins one explicit UTC
   cutoff across every yfinance request, uses the shared `CLOUD` retry policy, removes the cutoff
   day's still-forming bar, binds the current production search/gate identity, and exclusively
-  writes only the source archive and cohort manifest to non-`data/` scratch paths. The batch CLI,
-  workflow dispatch, and measurement remain separate unimplemented boundaries.
+  writes only the source archive and cohort manifest to non-`data/` scratch paths. The production
+  batch CLI resolves exactly one explicit unique index set or half-open global-index range, rejects
+  existing and repository-`data/` outputs before expensive execution, and delegates the immutable
+  input pair plus current production policy to the whole-panel driver. Workflow dispatch and
+  measurement remain separate unimplemented boundaries.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

@@ -1,6 +1,6 @@
 # ADR-081: Measure the excess statistic with replicated correlated null panels
 
-- **Status:** Accepted; cohort/source selection, production fetch/date preparation entry point, preparation, binding, identity, generator, production-search adapter, artifact-loaded batch driver, replicate/batch execution, consolidation, and inference implemented;
+- **Status:** Accepted; cohort/source selection, production fetch/date preparation entry point, preparation, binding, identity, generator, production-search adapter, artifact-loaded batch driver and entry point, replicate/batch execution, consolidation, and inference implemented;
   measurement pending
 - **Date:** 2026-09-01
 - **Deciders:** Codex adversarial validator under `.claude/CODEX_CHARTER.md`
@@ -203,8 +203,11 @@ is removed before complete-case preparation. The command derives the current cat
 default gate fingerprints, selects the matching real cohort, and exclusively writes only the
 prepared-source archive plus its bound cohort manifest. Existing outputs or paths under the
 repository's generated `data/` tree fail before adapter construction, so preparation cannot become
-a second generated-data writer. The batch CLI entry point, manual workflow dispatch, and
-measurement remain unimplemented.
+a second generated-data writer. `scripts/run_panel_null_batch.py` exposes the production batch
+driver with exactly one explicit unique index set or half-open global-index range. It rejects
+negative/duplicate/empty selections and existing or repository-`data/` output paths before the
+expensive driver, then uses the current catalog and default gate to exclusively create one scratch
+shard. Manual workflow dispatch and measurement remain unimplemented.
 
 ## Alternatives considered
 
