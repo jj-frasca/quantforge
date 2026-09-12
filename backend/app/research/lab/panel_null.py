@@ -33,7 +33,7 @@ _TAIL_THRESHOLD = 0.025
 _TAIL_INTERVAL_CONFIDENCE = 0.975
 _SIMULTANEOUS_CONFIDENCE = 0.95
 PANEL_NULL_GENERATOR_VERSION = "joint-iid-calendar-v1"
-PANEL_NULL_DIAGNOSTIC_VERSION = "equal-symbol-excess-v1"
+PANEL_NULL_DIAGNOSTIC_VERSION = "equal-symbol-source-matched-excess-v2"
 
 
 @dataclass(frozen=True)
@@ -642,7 +642,7 @@ def bind_panel_null_cohort(
 
 
 def make_production_panel_null_search(
-    cohort: PanelNullCohort,
+    cohort: SelectedPanelNullCohort | PanelNullCohort,
     strategy_names: Sequence[str],
     *,
     config: GateConfig,
@@ -656,7 +656,7 @@ def make_production_panel_null_search(
     from app.research.lab.calibration import calibration_search_version
     from app.research.lab.search import run_search
 
-    cohort = PanelNullCohort.model_validate(cohort.model_dump())
+    cohort = type(cohort).model_validate(cohort.model_dump())
     strategies = list(strategy_names)
     search_version = calibration_search_version(
         strategies,
@@ -689,6 +689,74 @@ def make_production_panel_null_search(
     return search
 
 
+def _panel_search_excess(
+    experiment: Experiment,
+    *,
+    symbol: str,
+    target_n_bars: int,
+    search_config_version: str,
+    gate_config_version: str,
+) -> PanelSymbolExcess:
+    if experiment.symbol != symbol:
+        raise ValueError("search result symbol does not match the panel symbol")
+    if experiment.n_bars != target_n_bars:
+        raise ValueError("search result history does not match the panel cohort")
+    if experiment.search_config_version != search_config_version:
+        raise ValueError("search result search identity does not match the panel cohort")
+    if experiment.gate_config.version_hash != gate_config_version:
+        raise ValueError("search result gate identity does not match the panel cohort")
+
+    finalist = selected_trial(experiment)
+    if finalist.walk_forward_oos_sharpe is None or experiment.walk_forward_hold_sharpe is None:
+        raise ValueError("search result is missing paired walk-forward diagnostics")
+    purged_cv_excess = (
+        finalist.purged_cv_oos_sharpe - experiment.purged_cv_hold_sharpe
+        if finalist.purged_cv_oos_sharpe is not None
+        and experiment.purged_cv_hold_sharpe is not None
+        else None
+    )
+    return PanelSymbolExcess(
+        symbol=symbol,
+        walk_forward=finalist.walk_forward_oos_sharpe - experiment.walk_forward_hold_sharpe,
+        purged_cv=purged_cv_excess,
+    )
+
+
+def measure_observed_panel_excesses(
+    selected: SelectedPanelNullCohort,
+    prepared: PreparedPanelNullSource,
+    *,
+    search: Callable[[pd.DataFrame, str], Experiment],
+) -> tuple[PanelSymbolExcess, ...]:
+    """Apply the null arm's one-search statistic to the exact observed source panel."""
+    selected = SelectedPanelNullCohort.model_validate(selected.model_dump())
+    prepared = _revalidate_prepared_source(prepared)
+    if selected.symbols != prepared.symbols:
+        raise ValueError("prepared source ordered symbols do not match the selected cohort")
+    if selected.target_n_bars != prepared.target_n_bars:
+        raise ValueError("prepared source target history does not match the selected cohort")
+
+    frames = prepared.to_frames()
+    measured: list[PanelSymbolExcess] = []
+    for symbol in selected.symbols:
+        try:
+            experiment = Experiment.model_validate(search(frames[symbol].copy(deep=True), symbol))
+            measured.append(
+                _panel_search_excess(
+                    experiment,
+                    symbol=symbol,
+                    target_n_bars=selected.target_n_bars,
+                    search_config_version=selected.search_config_version,
+                    gate_config_version=selected.gate_config_version,
+                )
+            )
+        except Exception as error:
+            raise ValueError(
+                f"observed panel search failed for {symbol}: {error or type(error).__name__}"
+            ) from error
+    return tuple(measured)
+
+
 def run_panel_null_replicate(
     cohort: PanelNullCohort,
     prepared: PreparedPanelNullSource,
@@ -718,30 +786,18 @@ def run_panel_null_replicate(
             experiment = Experiment.model_validate(
                 search(generated[symbol].copy(deep=True), symbol)
             )
-            if experiment.symbol != symbol:
-                raise ValueError("search result symbol does not match the generated symbol")
-            if experiment.n_bars != cohort.target_n_bars:
-                raise ValueError("search result history does not match the panel cohort")
-            if experiment.search_config_version != cohort.search_config_version:
-                raise ValueError("search result search identity does not match the panel cohort")
-            if experiment.gate_config.version_hash != cohort.gate_config_version:
-                raise ValueError("search result gate identity does not match the panel cohort")
-
-            finalist = selected_trial(experiment)
-            if (
-                finalist.walk_forward_oos_sharpe is None
-                or experiment.walk_forward_hold_sharpe is None
-            ):
-                raise ValueError("search result is missing paired walk-forward diagnostics")
-            walk_forward_excesses.append(
-                finalist.walk_forward_oos_sharpe - experiment.walk_forward_hold_sharpe
+            excess = _panel_search_excess(
+                experiment,
+                symbol=symbol,
+                target_n_bars=cohort.target_n_bars,
+                search_config_version=cohort.search_config_version,
+                gate_config_version=cohort.gate_config_version,
             )
-            if finalist.purged_cv_oos_sharpe is None or experiment.purged_cv_hold_sharpe is None:
+            walk_forward_excesses.append(excess.walk_forward)
+            if excess.purged_cv is None:
                 secondary_complete = False
             else:
-                purged_cv_excesses.append(
-                    finalist.purged_cv_oos_sharpe - experiment.purged_cv_hold_sharpe
-                )
+                purged_cv_excesses.append(excess.purged_cv)
         except Exception as error:
             errors.append(PanelNullError(symbol=symbol, message=str(error) or type(error).__name__))
 

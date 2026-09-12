@@ -35,10 +35,15 @@ Type-I calibration of the gate and are neither overwritten nor reinterpreted.
 
 ### 1. Freeze one equal-symbol estimand
 
-For a diagnostic `d`, define each real symbol's value as the median of that symbol's matched
-experiment excesses, then define the panel statistic as the median across symbols:
+For a diagnostic `d`, the original decision defined each real symbol's value as the median of that
+symbol's matched experiment excesses, then defined the panel statistic as the median across symbols:
 
 `T_d = median_symbol(median_repeat(d_oos - d_hold))`.
+
+**ADR-085 supersedes the inner `median_repeat`.** The pool selects the eligible symbol set only.
+After the exact prepared source is frozen, the observed statistic runs the production search once
+per symbol on that common source and uses `T_d = median_symbol(d_oos - d_hold)`, exactly matching
+the one-search-per-symbol function applied to every resampled null panel.
 
 Every symbol therefore has weight one. The primary pre-registered diagnostic is causal
 walk-forward excess. Purged-CV excess is stored and reported as a secondary diagnostic; it cannot
@@ -163,9 +168,11 @@ digest on load, detecting payload substitution rather than trusting the archive'
 `select_panel_null_cohort` now implements the pre-fetch real-side boundary. It accepts only
 experiments matching the exact search and gate fingerprints and ADR-064 history band, resolves the
 persisted production finalist under ADR-079, collapses repeat searches to one median excess per
-symbol, and sorts the full measured cohort canonically. Missing primary pairs are excluded before
-the fixed 30-symbol floor; duplicate experiment identity fails closed rather than silently
-reweighting a repeat. Purged-CV remains nullable per selected symbol.
+symbol for eligibility, and sorts the full measured cohort canonically. Missing primary pairs are
+excluded before the fixed 30-symbol floor; duplicate experiment identity fails closed rather than
+silently reweighting a repeat. Purged-CV remains nullable per selected symbol. Under ADR-085 those
+pool-derived excesses do not enter inference: `measure_observed_panel_excesses` runs one checked
+search on each exact prepared-source column and replaces them before final cohort binding.
 `bind_panel_null_cohort` then requires that selection and the prepared panel have the exact same
 ordered symbols and target history before it creates the final identity. It carries forward the
 measured excesses, source dates/digest, both fingerprints, and versions; fixes the pre-registered
@@ -202,9 +209,10 @@ explicit zero-offset UTC cutoff, constructs one `YFinanceAdapter(retry=CLOUD)`, 
 symbol fetch over `SEARCH_HISTORY_START` to that exact instant. The cutoff day's still-forming bar
 is removed before complete-case preparation. The command derives the current catalog search and
 default gate fingerprints, selects the matching real cohort, and exclusively writes only the
-prepared-source archive plus its bound cohort manifest. Existing outputs or paths under the
-repository's generated `data/` tree fail before adapter construction, so preparation cannot become
-a second generated-data writer. `scripts/run_panel_null_batch.py` exposes the production batch
+prepared-source archive plus its bound cohort manifest after one source-matched observed search per
+symbol. Existing outputs or paths under the repository's generated `data/` tree fail before adapter
+construction, so preparation cannot become a second generated-data writer.
+`scripts/run_panel_null_batch.py` exposes the production batch
 driver with exactly one explicit unique index set or half-open global-index range. It rejects
 negative/duplicate/empty selections and existing or repository-`data/` output paths before the
 expensive driver, then uses the current catalog and default gate to exclusively create one scratch

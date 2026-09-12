@@ -378,7 +378,10 @@ selection now matches exact search/gate identity and the history band, resolves 
 finalist, and collapses repeats to one median excess per canonically ordered symbol. ADR-084 also
 requires every admitted experiment to state at least the exact target history before aggregation;
 the former symmetric lower tolerance selected 50 symbols that could not supply the 7,400-row panel
-and made preparation predictably fail. The fetch
+and made preparation predictably fail. **ADR-085 prevents those pool medians from becoming the
+observed test statistic:** after freezing the common source, preparation applies the same production
+search once to each observed 7,400-row column that every null panel receives, then binds those
+source-matched excesses into the cohort. The pool determines eligibility only. The fetch
 boundary calls an injected provider once per frozen symbol in canonical order and aborts with every
 provider failure before preparation; network-adapter/end-date wiring remains pending. The binding
 boundary now refuses ordered-symbol or target-history drift between

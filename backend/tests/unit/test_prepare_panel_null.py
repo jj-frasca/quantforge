@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from scripts import prepare_panel_null as prepare_module
 from scripts.prepare_panel_null import (
@@ -14,6 +15,8 @@ from scripts.prepare_panel_null import (
 
 from app.data.models import PriceBar
 from app.data.sources.retry import CLOUD, RetryPolicy
+from app.research.lab.experiment import Experiment, Trial
+from app.research.lab.gate import GateConfig
 from app.research.lab.panel_null import (
     PanelNullCohort,
     PanelSymbolExcess,
@@ -35,7 +38,7 @@ def _selected() -> SelectedPanelNullCohort:
         target_n_bars=4,
         history_tolerance=0.10,
         search_config_version="search-v1",
-        gate_config_version="gate-v1",
+        gate_config_version=GateConfig().version_hash,
         min_symbols=2,
     )
 
@@ -56,6 +59,33 @@ def _bars(symbol: str) -> list[PriceBar]:
         )
         for offset in range(6)
     ]
+
+
+def _observed_search(frame: pd.DataFrame, symbol: str) -> Experiment:
+    assert len(frame) == 4
+    walk_forward = 0.7 if symbol == "AAA" else 0.5
+    trial = Trial(
+        strategy_name="selected",
+        parameters={},
+        observed_sharpe=0.0,
+        deflated_sharpe=0.0,
+        pbo=0.1,
+        parameter_stability_score=0.8,
+        walk_forward_oos_sharpe=walk_forward,
+        purged_cv_oos_sharpe=None,
+    )
+    return Experiment(
+        symbol=symbol,
+        strategy_names=["selected"],
+        gate_config=GateConfig(),
+        trials=[trial],
+        lifetime_trials=1,
+        best_strategy_name="selected",
+        selected_trial_index=0,
+        search_config_version="search-v1",
+        n_bars=4,
+        walk_forward_hold_sharpe=0.2,
+    )
 
 
 def test_parse_utc_instant_requires_an_explicit_utc_offset() -> None:
@@ -96,6 +126,7 @@ def test_preparation_reuses_one_cutoff_and_cloud_retry_then_writes_immutable_inp
         base_seed=17,
         code_revision="1" * 40,
         adapter_factory=adapter_factory,
+        search=_observed_search,
     )
 
     assert policies == [CLOUD]
@@ -107,7 +138,8 @@ def test_preparation_reuses_one_cutoff_and_cloud_retry_then_writes_immutable_inp
     assert cohort.source_sha256 == prepared.source_sha256
     assert cohort.base_seed == 17
     assert cohort.generator_version == "joint-iid-calendar-v1"
-    assert cohort.diagnostic_version == "equal-symbol-excess-v1"
+    assert cohort.diagnostic_version == "equal-symbol-source-matched-excess-v2"
+    assert [value.walk_forward for value in cohort.symbol_excesses] == pytest.approx([0.5, 0.3])
 
     with pytest.raises(FileExistsError):
         prepare_panel_null_source_files(
@@ -118,6 +150,7 @@ def test_preparation_reuses_one_cutoff_and_cloud_retry_then_writes_immutable_inp
             base_seed=17,
             code_revision="1" * 40,
             adapter_factory=adapter_factory,
+            search=_observed_search,
         )
     assert len(calls) == 2, "existing outputs must fail before any vendor call"
 

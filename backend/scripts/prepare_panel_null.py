@@ -12,7 +12,7 @@ separate consolidator may write the eventual final artifact there (ADR-030/081).
 """
 
 import argparse
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Protocol
@@ -24,7 +24,7 @@ from app.data.sources.retry import CLOUD, RetryPolicy
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
 from app.research.lab.calibration import calibration_search_version, drop_incomplete_bars
-from app.research.lab.experiment import PartitionedExperimentStore
+from app.research.lab.experiment import Experiment, PartitionedExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.history import CALIBRATION_N_BARS, SEARCH_HISTORY_START
 from app.research.lab.panel_null import (
@@ -34,6 +34,8 @@ from app.research.lab.panel_null import (
     SelectedPanelNullCohort,
     bind_panel_null_cohort,
     fetch_panel_null_source,
+    make_production_panel_null_search,
+    measure_observed_panel_excesses,
     save_panel_null_cohort,
     save_prepared_panel_null_source,
     select_panel_null_cohort,
@@ -85,8 +87,9 @@ def prepare_panel_null_source_files(
     base_seed: int,
     code_revision: str,
     adapter_factory: _AdapterFactory = YFinanceAdapter,
+    search: Callable[[pd.DataFrame, str], Experiment] | None = None,
 ) -> PanelNullCohort:
-    """Fetch one cutoff-consistent source panel and exclusively write its two frozen inputs."""
+    """Fetch one source panel, remeasure its observed statistic, and freeze both inputs."""
     asof = parse_utc_instant(asof.isoformat())
     source_path = Path(source_path)
     manifest_path = Path(manifest_path)
@@ -104,6 +107,18 @@ def prepare_panel_null_source_files(
         return drop_incomplete_bars(bars_to_frame(bars), asof=asof)
 
     prepared = fetch_panel_null_source(selected, fetch_frame)
+    if search is None:
+        search = make_production_panel_null_search(
+            selected,
+            [entry.name for entry in STRATEGY_CATALOG],
+            config=GateConfig(),
+            n_per_param=3,
+            refine=True,
+            refine_span=0.25,
+            select_by="observed",
+        )
+    observed = measure_observed_panel_excesses(selected, prepared, search=search)
+    selected = selected.model_copy(update={"symbol_excesses": observed})
     cohort = bind_panel_null_cohort(
         selected,
         prepared,

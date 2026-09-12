@@ -30,6 +30,7 @@ from app.research.lab.panel_null import (
     load_panel_null_shard,
     load_prepared_panel_null_source,
     make_production_panel_null_search,
+    measure_observed_panel_excesses,
     merge_panel_null_shards,
     panel_seed,
     prepare_panel_null_source,
@@ -611,6 +612,88 @@ def test_fetch_panel_null_source_fetches_each_frozen_symbol_once_in_order() -> N
     assert prepared.target_n_bars == selected.target_n_bars
 
 
+def test_observed_panel_excess_is_remeasured_once_on_the_exact_prepared_source() -> None:
+    gate = GateConfig()
+    selected = select_panel_null_cohort(
+        [
+            _experiment("AAA", walk_forward=9.0, walk_forward_hold=0.0, n_bars=5, gate_config=gate),
+            _experiment("BBB", walk_forward=8.0, walk_forward_hold=0.0, n_bars=5, gate_config=gate),
+        ],
+        target_n_bars=5,
+        history_tolerance=0.10,
+        search_config_version="search-v1",
+        gate_config_version=gate.version_hash,
+        min_symbols=2,
+    )
+    prepared = prepare_panel_null_source(_source_panel(), selected.symbols, target_n_bars=5)
+    searched: list[str] = []
+
+    def search(frame: pd.DataFrame, symbol: str) -> Experiment:
+        searched.append(symbol)
+        pd.testing.assert_frame_equal(frame, prepared.to_frames()[symbol])
+        return _experiment(
+            symbol,
+            walk_forward=0.6 if symbol == "AAA" else 0.4,
+            walk_forward_hold=0.2,
+            purged_cv=0.5 if symbol == "AAA" else None,
+            purged_cv_hold=0.1 if symbol == "AAA" else None,
+            n_bars=5,
+            search_version="search-v1",
+            gate_config=gate,
+        )
+
+    measured = measure_observed_panel_excesses(selected, prepared, search=search)
+
+    assert searched == ["AAA", "BBB"]
+    assert [value.walk_forward for value in measured] == pytest.approx([0.4, 0.2])
+    assert [value.purged_cv for value in measured] == [pytest.approx(0.4), None]
+    assert measured != selected.symbol_excesses
+
+
+def test_observed_panel_excess_fails_closed_on_missing_or_drifted_search_results() -> None:
+    gate = GateConfig()
+    selected = select_panel_null_cohort(
+        [
+            _experiment("AAA", walk_forward=0.3, walk_forward_hold=0.1, n_bars=5, gate_config=gate),
+            _experiment("BBB", walk_forward=0.3, walk_forward_hold=0.1, n_bars=5, gate_config=gate),
+        ],
+        target_n_bars=5,
+        history_tolerance=0.10,
+        search_config_version="search-v1",
+        gate_config_version=gate.version_hash,
+        min_symbols=2,
+    )
+    prepared = prepare_panel_null_source(_source_panel(), selected.symbols, target_n_bars=5)
+
+    def missing_primary(frame: pd.DataFrame, symbol: str) -> Experiment:
+        del frame
+        return _experiment(
+            symbol,
+            walk_forward=None,
+            walk_forward_hold=None,
+            n_bars=5,
+            search_version="search-v1",
+            gate_config=gate,
+        )
+
+    with pytest.raises(ValueError, match=r"AAA.*missing paired walk-forward"):
+        measure_observed_panel_excesses(selected, prepared, search=missing_primary)
+
+    def wrong_history(frame: pd.DataFrame, symbol: str) -> Experiment:
+        del frame
+        return _experiment(
+            symbol,
+            walk_forward=0.3,
+            walk_forward_hold=0.1,
+            n_bars=4,
+            search_version="search-v1",
+            gate_config=gate,
+        )
+
+    with pytest.raises(ValueError, match=r"AAA.*history"):
+        measure_observed_panel_excesses(selected, prepared, search=wrong_history)
+
+
 def test_fetch_panel_null_source_reports_every_failed_symbol_without_preparing() -> None:
     selected = SelectedPanelNullCohort(
         symbols=("AAA", "BBB", "CCC"),
@@ -1031,11 +1114,17 @@ def test_make_production_panel_null_search_pins_and_forwards_the_frozen_policy()
         refine_span=0.25,
         select_by="observed",
     )
-    cohort = _cohort(n_replicates=400).model_copy(
-        update={
-            "search_config_version": fingerprint,
-            "gate_config_version": gate.version_hash,
-        }
+    selected = SelectedPanelNullCohort(
+        symbols=("AAA", "BBB"),
+        symbol_excesses=(
+            PanelSymbolExcess(symbol="AAA", walk_forward=0.1),
+            PanelSymbolExcess(symbol="BBB", walk_forward=0.2),
+        ),
+        target_n_bars=5,
+        history_tolerance=0.10,
+        search_config_version=fingerprint,
+        gate_config_version=gate.version_hash,
+        min_symbols=2,
     )
     calls: list[tuple[str, list[str], dict[str, object]]] = []
 
@@ -1053,7 +1142,7 @@ def test_make_production_panel_null_search_pins_and_forwards_the_frozen_policy()
         )
 
     search = make_production_panel_null_search(
-        cohort,
+        selected,
         strategies,
         config=gate,
         run_search_fn=fake_run_search,

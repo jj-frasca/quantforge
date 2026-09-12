@@ -76,7 +76,9 @@ the most recent exact complete-case calendar, and a canonical digest before gene
 freezes and implements pure tail inference over a complete artifact, including simultaneous exact
 binomial uncertainty. Real cohort selection now matches exact search/gate/history identity, uses the
 persisted finalist, rejects duplicate experiment IDs, and collapses repeats to one median excess per
-canonically ordered symbol. The binding boundary refuses symbol-order or target-history drift before
+canonically ordered symbol for eligibility. ADR-085 then applies the same checked production search
+once to each exact observed prepared-source column and replaces those pool-derived values before
+inference. The binding boundary refuses symbol-order or target-history drift before
 freezing that selection with the prepared panel's exact source identity, 400 replicates, and the
 selected effective-symbol floor. A local injected fetch boundary now requests every frozen symbol
 once in canonical order and reports all provider failures before preparation; network adapter/date

@@ -662,7 +662,10 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   missing/unexpected symbols or insufficient common history fail closed. Real cohort selection now
   matches exact search/gate/history identity, resolves ADR-079's persisted finalist, rejects
   duplicate experiment IDs, and median-collapses repeats to one value per canonically ordered
-  symbol. ADR-084 applies a one-sided source-history floor before aggregation: an experiment must
+  symbol for eligibility. **ADR-085 then remeasures the observed statistic on the frozen source:**
+  one checked production search per exact common 7,400-row symbol column, matching the function
+  applied to each null panel. The pool-derived repeat medians no longer enter inference. ADR-084
+  applies a one-sided source-history floor before aggregation: an experiment must
   state at least the exact target bars while remaining inside the existing upper tolerance. This
   prevents a below-target symbol from entering a frozen panel it cannot physically supply; the
   fetched complete-case calendar remains the final authority. The injected fetch boundary calls
