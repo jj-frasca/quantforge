@@ -272,10 +272,10 @@ def test_select_panel_null_cohort_matches_identity_and_weights_each_symbol_once(
             gate_config=gate,
         ),
         _experiment(
-            "WRONG-HISTORY",
+            "BELOW-TARGET-HISTORY",
             walk_forward=1.0,
             walk_forward_hold=0.0,
-            n_bars=6500,
+            n_bars=7000,
             gate_config=gate,
         ),
         _experiment(

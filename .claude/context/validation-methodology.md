@@ -662,7 +662,11 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   missing/unexpected symbols or insufficient common history fail closed. Real cohort selection now
   matches exact search/gate/history identity, resolves ADR-079's persisted finalist, rejects
   duplicate experiment IDs, and median-collapses repeats to one value per canonically ordered
-  symbol. The injected fetch boundary calls the provider once per frozen symbol in canonical order
+  symbol. ADR-084 applies a one-sided source-history floor before aggregation: an experiment must
+  state at least the exact target bars while remaining inside the existing upper tolerance. This
+  prevents a below-target symbol from entering a frozen panel it cannot physically supply; the
+  fetched complete-case calendar remains the final authority. The injected fetch boundary calls
+  the provider once per frozen symbol in canonical order
   and reports every provider failure before preparation; network adapter/end-date wiring remains
   pending. `bind_panel_null_cohort` refuses ordered-symbol or target-history drift between that
   selection and the prepared source, then freezes their exact values, source identity, versions,

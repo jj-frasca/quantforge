@@ -289,7 +289,7 @@ def select_panel_null_cohort(
         experiment
         for experiment in experiments
         if experiment.n_bars is not None
-        and abs(experiment.n_bars - target_n_bars) <= history_tolerance * target_n_bars
+        and target_n_bars <= experiment.n_bars <= target_n_bars * (1.0 + history_tolerance)
         and experiment.search_config_version == search_config_version
         and experiment.gate_config.version_hash == gate_config_version
     ]
