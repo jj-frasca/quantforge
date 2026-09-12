@@ -52,7 +52,8 @@ jobs:
             "$ASOF_UTC" \
             "$RUNNER_TEMP/panel-source.npz" \
             "$RUNNER_TEMP/panel-cohort.json" \
-            --base-seed "$BASE_SEED"
+            --base-seed "$BASE_SEED" \
+            --code-revision "$GITHUB_SHA"
       - name: Upload the immutable input pair
         uses: actions/upload-artifact@v4
         with:
@@ -94,6 +95,7 @@ jobs:
             "$RUNNER_TEMP/frozen/panel-cohort.json" \
             "$RUNNER_TEMP/frozen/panel-source.npz" \
             "$RUNNER_TEMP/panel-null-shard-${{ matrix.shard }}.json" \
+            --code-revision "$GITHUB_SHA" \
             --range "$START" "$STOP"
       - name: Upload the complete-panel shard
         uses: actions/upload-artifact@v4

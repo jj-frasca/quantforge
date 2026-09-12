@@ -46,12 +46,14 @@ def test_panel_null_workflow_shares_one_frozen_input_pair_and_only_consolidation
     consolidate = workflow.split("  consolidate:\n", 1)[1]
 
     assert "scripts/prepare_panel_null.py" in prepare
+    assert '--code-revision "$GITHUB_SHA"' in prepare
     assert "panel-source.npz" in prepare
     assert "panel-cohort.json" in prepare
     assert "actions/upload-artifact@v4" in prepare
     assert "needs: prepare" in batch
     assert "actions/download-artifact@v4" in batch
     assert "scripts/run_panel_null_batch.py" in batch
+    assert '--code-revision "$GITHUB_SHA"' in batch
     assert "panel-source.npz" in batch
     assert "panel-cohort.json" in batch
     assert "data/panel_null_calibration" not in prepare

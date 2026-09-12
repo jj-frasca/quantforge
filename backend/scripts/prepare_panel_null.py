@@ -2,7 +2,7 @@
 
 Usage:
     PYTHONPATH=. uv run python scripts/prepare_panel_null.py ASOF_UTC SOURCE_NPZ COHORT_JSON \
-        --base-seed SEED [--pool-dir PATH] [--target-n-bars N]
+        --base-seed SEED --code-revision SHA [--pool-dir PATH] [--target-n-bars N]
 
 ``ASOF_UTC`` is required and must carry a zero UTC offset. The exact same instant bounds every
 yfinance request and removes its still-forming UTC-date bar. This command reads the committed
@@ -83,6 +83,7 @@ def prepare_panel_null_source_files(
     source_path: Path,
     manifest_path: Path,
     base_seed: int,
+    code_revision: str,
     adapter_factory: _AdapterFactory = YFinanceAdapter,
 ) -> PanelNullCohort:
     """Fetch one cutoff-consistent source panel and exclusively write its two frozen inputs."""
@@ -109,6 +110,7 @@ def prepare_panel_null_source_files(
         generator_version=PANEL_NULL_GENERATOR_VERSION,
         diagnostic_version=PANEL_NULL_DIAGNOSTIC_VERSION,
         base_seed=base_seed,
+        code_revision=code_revision,
     )
     save_prepared_panel_null_source(prepared, source_path)
     save_panel_null_cohort(cohort, manifest_path)
@@ -121,6 +123,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("source_npz", type=Path)
     parser.add_argument("cohort_json", type=Path)
     parser.add_argument("--base-seed", type=int, required=True)
+    parser.add_argument("--code-revision", required=True)
     parser.add_argument("--pool-dir", type=Path, default=DEFAULT_POOL)
     parser.add_argument("--target-n-bars", type=int, default=CALIBRATION_N_BARS)
     return parser
@@ -153,12 +156,14 @@ def main(argv: Sequence[str] | None = None) -> None:
         source_path=args.source_npz,
         manifest_path=args.cohort_json,
         base_seed=args.base_seed,
+        code_revision=args.code_revision,
     )
     print(f"frozen symbols        : {len(cohort.symbols)}")
     print(f"completed source range: {cohort.source_start} -> {cohort.source_end}")
     print(f"source digest         : {cohort.source_sha256}")
     print(f"search config version : {cohort.search_config_version}")
     print(f"gate config version   : {cohort.gate_config_version}")
+    print(f"executed code revision: {cohort.code_revision}")
     print(f"wrote source archive  : {args.source_npz}")
     print(f"wrote cohort manifest : {args.cohort_json}")
 

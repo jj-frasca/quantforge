@@ -62,12 +62,22 @@ def _cohort(
         history_tolerance=0.10,
         search_config_version="search-v1",
         gate_config_version="gate-v1",
+        code_revision="1" * 40,
         generator_version="joint-iid-calendar-v1",
         diagnostic_version="equal-symbol-excess-v1",
         base_seed=17,
         n_replicates=n_replicates,
         min_successful_symbols=min_successful_symbols,
     )
+
+
+def test_panel_null_cohort_requires_an_exact_git_revision() -> None:
+    cohort = _cohort()
+
+    assert cohort.model_dump()["code_revision"] == "1" * 40
+    for invalid in ("", "1" * 39, "1" * 41, "G" * 40, "A" * 40):
+        with pytest.raises(ValidationError, match="code_revision"):
+            PanelNullCohort.model_validate({**cohort.model_dump(), "code_revision": invalid})
 
 
 def _replicate(index: int, *, successful_symbols: int = 2) -> PanelNullReplicate:
@@ -519,6 +529,7 @@ def test_bind_panel_null_cohort_freezes_selection_and_prepared_source_identity()
         generator_version="joint-iid-calendar-v1",
         diagnostic_version="equal-symbol-excess-v1",
         base_seed=17,
+        code_revision="1" * 40,
     )
 
     assert cohort.symbols == selected.symbols
@@ -558,6 +569,7 @@ def test_bind_panel_null_cohort_rejects_source_cohort_or_history_drift() -> None
             generator_version="joint-iid-calendar-v1",
             diagnostic_version="equal-symbol-excess-v1",
             base_seed=17,
+            code_revision="1" * 40,
         )
 
     wrong_history = prepare_panel_null_source(_source_panel(), selected.symbols, target_n_bars=4)
@@ -568,6 +580,7 @@ def test_bind_panel_null_cohort_rejects_source_cohort_or_history_drift() -> None
             generator_version="joint-iid-calendar-v1",
             diagnostic_version="equal-symbol-excess-v1",
             base_seed=17,
+            code_revision="1" * 40,
         )
 
 
@@ -643,6 +656,7 @@ def test_run_panel_null_replicate_searches_one_joint_panel_and_pairs_diagnostics
         generator_version="joint-iid-calendar-v1",
         diagnostic_version="equal-symbol-excess-v1",
         base_seed=17,
+        code_revision="1" * 40,
     )
     searched: list[tuple[str, pd.DataFrame]] = []
 
@@ -892,6 +906,7 @@ def test_run_production_panel_null_batch_loads_frozen_inputs_and_executes(
     shard = run_production_panel_null_batch(
         cohort_path,
         source_path,
+        code_revision="1" * 40,
         strategy_names=strategies,
         config=gate,
         panel_indices=(2,),
@@ -936,6 +951,46 @@ def test_run_production_panel_null_batch_rejects_manifest_source_drift_before_se
         run_production_panel_null_batch(
             cohort_path,
             source_path,
+            code_revision="1" * 40,
+            strategy_names=["sma"],
+            config=GateConfig(),
+            panel_indices=(0,),
+            output_path=tmp_path / "panel-shard.json",
+            run_search_fn=fake_run_search,
+        )
+    assert called is False
+
+
+def test_run_production_panel_null_batch_rejects_code_revision_drift_before_search(
+    tmp_path: Path,
+) -> None:
+    prepared = prepare_panel_null_source(_source_panel(), ("AAA", "BBB"), target_n_bars=5)
+    cohort = _cohort(n_replicates=4).model_copy(
+        update={
+            "symbols": prepared.symbols,
+            "source_start": prepared.source_start,
+            "source_end": prepared.source_end,
+            "source_sha256": prepared.source_sha256,
+            "target_n_bars": prepared.target_n_bars,
+        }
+    )
+    cohort_path = tmp_path / "panel-cohort.json"
+    source_path = tmp_path / "prepared-panel.npz"
+    save_panel_null_cohort(cohort, cohort_path)
+    save_prepared_panel_null_source(prepared, source_path)
+    called = False
+
+    def fake_run_search(*args: object, **kwargs: object) -> Experiment:
+        del args, kwargs
+        nonlocal called
+        called = True
+        raise AssertionError("revision drift must fail before search")
+
+    with pytest.raises(ValueError, match="code revision"):
+        run_production_panel_null_batch(
+            cohort_path,
+            source_path,
+            code_revision="2" * 40,
             strategy_names=["sma"],
             config=GateConfig(),
             panel_indices=(0,),

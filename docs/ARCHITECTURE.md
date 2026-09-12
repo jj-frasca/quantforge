@@ -396,7 +396,10 @@ or symbol floors fail again when the shard is loaded. A separate immutable JSON 
 the complete cohort identity across preparation and batch jobs through an exclusive writer and a
 validating reader. A local production-batch driver loads that manifest together with the exact
 source archive, verifies their shared identity, then builds the fingerprint-checked production
-search and executes only explicit whole-panel indices. A sole-writer consolidation CLI revalidates
+search and executes only explicit whole-panel indices. The manifest also freezes the 40-character
+workflow-dispatch git revision, and every batch rejects a different declared revision before search,
+so a later rebase of the generated commit cannot obscure the code that ran (ADR-083). A sole-writer
+consolidation CLI revalidates
 all scratch shards, requires the complete frozen panel-index set, prints the fixed ADR-081/082
 inference, and optionally writes the final artifact. The production preparation command requires
 one explicit UTC cutoff, uses `YFinanceAdapter(retry=CLOUD)` for the whole frozen cohort, drops the

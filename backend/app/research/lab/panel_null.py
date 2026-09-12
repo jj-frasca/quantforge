@@ -121,6 +121,7 @@ class PanelNullCohort(BaseModel):
     history_tolerance: float = Field(ge=0.0, lt=1.0)
     search_config_version: str = Field(min_length=1)
     gate_config_version: str = Field(min_length=1)
+    code_revision: str = Field(pattern=r"^[0-9a-f]{40}$")
     generator_version: str = Field(min_length=1)
     diagnostic_version: str = Field(min_length=1)
     base_seed: int = Field(ge=0)
@@ -611,6 +612,7 @@ def bind_panel_null_cohort(
     generator_version: str,
     diagnostic_version: str,
     base_seed: int,
+    code_revision: str,
 ) -> PanelNullCohort:
     """Bind the frozen real estimand to its exact prepared source-panel identity."""
     selected = SelectedPanelNullCohort.model_validate(selected.model_dump())
@@ -630,6 +632,7 @@ def bind_panel_null_cohort(
         history_tolerance=selected.history_tolerance,
         search_config_version=selected.search_config_version,
         gate_config_version=selected.gate_config_version,
+        code_revision=code_revision,
         generator_version=generator_version,
         diagnostic_version=diagnostic_version,
         base_seed=base_seed,
@@ -814,6 +817,7 @@ def run_production_panel_null_batch(
     cohort_path: Path,
     source_path: Path,
     *,
+    code_revision: str,
     strategy_names: Sequence[str],
     config: GateConfig,
     panel_indices: Sequence[int],
@@ -828,6 +832,8 @@ def run_production_panel_null_batch(
     cohort = load_panel_null_cohort(cohort_path)
     prepared = load_prepared_panel_null_source(source_path)
     _require_prepared_cohort_identity(cohort, prepared)
+    if code_revision != cohort.code_revision:
+        raise ValueError("production batch code revision does not match the frozen panel cohort")
     search = make_production_panel_null_search(
         cohort,
         strategy_names,

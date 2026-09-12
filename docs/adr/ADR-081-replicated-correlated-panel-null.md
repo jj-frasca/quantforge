@@ -128,7 +128,8 @@ No workflow is dispatched by this ADR. Local tests use tiny deterministic panels
 `app/research/lab/panel_null.py` now defines the frozen cohort, per-symbol real values, complete
 panel replicate, shard, and consolidated artifact contracts. The cohort identity includes the base
 seed, fixed replicate count, effective-symbol floor, ordered symbols and their exact real values,
-source digest/dates, history rule, both fingerprints, and generator/diagnostic versions.
+source digest/dates, history rule, both fingerprints, the 40-character executed git revision, and
+generator/diagnostic versions.
 `merge_panel_null_shards` derives the expected global index set and symbol floor from that identity,
 sorts complete panels deterministically, and rejects identity drift, missing/duplicate indices,
 duplicate panel IDs, non-derived seeds, unknown/duplicate error symbols, and any panel that does not
@@ -210,7 +211,10 @@ expensive driver, then uses the current catalog and default gate to exclusively 
 shard. The dispatch-only `panel-null-calibration.yml` prepares one shared immutable input artifact,
 partitions all 400 global indices into 40 disjoint ten-panel shards with bounded concurrency, and
 allows only successful full consolidation to write and commit the generated measurement. The
-workflow has not been dispatched and the measurement remains pending.
+workflow passes its dispatch SHA into preparation and every batch; a batch refuses revision drift
+before constructing the production search, so rebasing the eventual sole-writer commit cannot hide
+which code executed the measurement (ADR-083). The workflow has not been dispatched and the
+measurement remains pending.
 
 ## Alternatives considered
 

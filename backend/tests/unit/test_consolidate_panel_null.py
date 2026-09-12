@@ -31,6 +31,7 @@ def _cohort() -> PanelNullCohort:
         history_tolerance=0.10,
         search_config_version="search-v1",
         gate_config_version="gate-v1",
+        code_revision="1" * 40,
         generator_version="joint-iid-calendar-v1",
         diagnostic_version="equal-symbol-excess-v1",
         base_seed=17,

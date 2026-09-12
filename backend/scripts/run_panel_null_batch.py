@@ -2,9 +2,9 @@
 
 Usage:
     PYTHONPATH=. uv run python scripts/run_panel_null_batch.py \
-        COHORT_JSON SOURCE_NPZ OUT_JSON --indices INDEX [INDEX ...]
+        COHORT_JSON SOURCE_NPZ OUT_JSON --code-revision SHA --indices INDEX [INDEX ...]
     PYTHONPATH=. uv run python scripts/run_panel_null_batch.py \
-        COHORT_JSON SOURCE_NPZ OUT_JSON --range START STOP
+        COHORT_JSON SOURCE_NPZ OUT_JSON --code-revision SHA --range START STOP
 
 Exactly one panel selection is required. ``--range START STOP`` is half-open, so STOP is not
 executed. The frozen manifest and prepared-source archive determine the job identity; this command
@@ -65,6 +65,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("cohort_json", type=Path)
     parser.add_argument("source_npz", type=Path)
     parser.add_argument("out_json", type=Path)
+    parser.add_argument("--code-revision", required=True)
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--indices", type=int, nargs="+")
     selection.add_argument("--range", dest="panel_range", type=int, nargs=2)
@@ -83,6 +84,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     run_production_panel_null_batch(
         args.cohort_json,
         args.source_npz,
+        code_revision=args.code_revision,
         strategy_names=[entry.name for entry in STRATEGY_CATALOG],
         config=GateConfig(),
         panel_indices=panel_indices,

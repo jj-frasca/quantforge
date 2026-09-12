@@ -94,6 +94,7 @@ def test_preparation_reuses_one_cutoff_and_cloud_retry_then_writes_immutable_inp
         source_path=source_path,
         manifest_path=manifest_path,
         base_seed=17,
+        code_revision="1" * 40,
         adapter_factory=adapter_factory,
     )
 
@@ -115,6 +116,7 @@ def test_preparation_reuses_one_cutoff_and_cloud_retry_then_writes_immutable_inp
             source_path=source_path,
             manifest_path=tmp_path / "other.json",
             base_seed=17,
+            code_revision="1" * 40,
             adapter_factory=adapter_factory,
         )
     assert len(calls) == 2, "existing outputs must fail before any vendor call"
@@ -140,6 +142,7 @@ def test_preparation_refuses_generated_data_paths_before_fetching() -> None:
             source_path=DATA_ROOT / "panel_null_calibration" / "source.npz",
             manifest_path=DATA_ROOT / "panel_null_calibration" / "cohort.json",
             base_seed=17,
+            code_revision="1" * 40,
             adapter_factory=adapter_factory,
         )
     assert not called
@@ -180,6 +183,7 @@ def test_cli_freezes_current_identity_and_forwards_the_explicit_cutoff(
             generator_version="joint-iid-calendar-v1",
             diagnostic_version="equal-symbol-excess-v1",
             base_seed=17,
+            code_revision="1" * 40,
         )
 
     monkeypatch.setattr(prepare_module, "PartitionedExperimentStore", FakeStore)
@@ -194,6 +198,8 @@ def test_cli_freezes_current_identity_and_forwards_the_explicit_cutoff(
             str(tmp_path / "cohort.json"),
             "--base-seed",
             "17",
+            "--code-revision",
+            "1" * 40,
             "--pool-dir",
             str(pool),
             "--target-n-bars",
@@ -212,3 +218,4 @@ def test_cli_freezes_current_identity_and_forwards_the_explicit_cutoff(
     assert isinstance(preparation, dict)
     assert preparation["asof"] == datetime(2026, 9, 10, 20, 0, tzinfo=UTC)
     assert preparation["base_seed"] == 17
+    assert preparation["code_revision"] == "1" * 40

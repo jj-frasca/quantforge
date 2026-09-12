@@ -679,7 +679,9 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   validated scratch shard. Direct construction and load both recheck seed/index/panel identity,
   symbol error accounting, and the effective-symbol floor. A separate immutable JSON manifest
   carries the complete cohort identity across preparation and batch jobs; it is exclusively created
-  after validation and fully revalidated when loaded. The local production-batch driver loads that
+  after validation and fully revalidated when loaded. ADR-083 adds the exact 40-character
+  workflow-dispatch git revision to that identity; preparation records it and every batch rejects
+  revision drift before constructing a production search. The local production-batch driver loads that
   manifest with the prepared-source archive, verifies the pair before constructing the checked
   production search, and executes only explicit whole-panel indices. The consolidation CLI
   revalidates every scratch shard, requires the full frozen index set, prints the fixed inference,

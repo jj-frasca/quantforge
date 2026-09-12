@@ -55,7 +55,17 @@ def test_cli_refuses_generated_data_outputs_before_running(
     monkeypatch.setattr(batch_module, "run_production_panel_null_batch", run)
 
     with pytest.raises(ValueError, match="scratch-only"):
-        batch_module.main(["cohort.json", "source.npz", str(output_path), "--indices", "0"])
+        batch_module.main(
+            [
+                "cohort.json",
+                "source.npz",
+                str(output_path),
+                "--code-revision",
+                "1" * 40,
+                "--indices",
+                "0",
+            ]
+        )
     assert not called
 
 
@@ -74,7 +84,18 @@ def test_cli_refuses_an_existing_output_before_running(
     monkeypatch.setattr(batch_module, "run_production_panel_null_batch", run)
 
     with pytest.raises(FileExistsError):
-        batch_module.main(["cohort.json", "source.npz", str(output_path), "--range", "0", "2"])
+        batch_module.main(
+            [
+                "cohort.json",
+                "source.npz",
+                str(output_path),
+                "--code-revision",
+                "1" * 40,
+                "--range",
+                "0",
+                "2",
+            ]
+        )
     assert not called
 
 
@@ -101,12 +122,22 @@ def test_cli_runs_current_production_policy_with_only_the_requested_complete_pan
     monkeypatch.setattr(batch_module, "run_production_panel_null_batch", run)
     output_path = tmp_path / "new" / "shard.json"
 
-    batch_module.main(["cohort.json", "source.npz", str(output_path), *selection])
+    batch_module.main(
+        [
+            "cohort.json",
+            "source.npz",
+            str(output_path),
+            "--code-revision",
+            "1" * 40,
+            *selection,
+        ]
+    )
 
     assert captured["cohort_path"] == Path("cohort.json")
     assert captured["source_path"] == Path("source.npz")
     assert captured["panel_indices"] == expected
     assert captured["output_path"] == output_path
+    assert captured["code_revision"] == "1" * 40
     assert captured["strategy_names"] == [entry.name for entry in batch_module.STRATEGY_CATALOG]
     config = captured["config"]
     assert isinstance(config, batch_module.GateConfig)
