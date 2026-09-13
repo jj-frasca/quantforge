@@ -418,7 +418,10 @@ freezes one input pair, covers the exact 400-index set with 100 disjoint four-pa
 permits only successful full consolidation to commit the generated result. It has not been
 dispatched; measurement remains pending. ADR-086 bounds each batch at 156 serial symbol searches
 and gives ADR-085's observed-panel preparation 120 minutes; topology changes no panel seed,
-statistic, or inference input.
+statistic, or inference input. ADR-087 closes the rerun ambiguity before dispatch: failures before
+consolidation require a full-job rerun, while a failed push after the 30-day final artifact exists
+uses a mutually exclusive publish-only workflow mode that validates and commits those exact bytes
+without another search or inference look.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

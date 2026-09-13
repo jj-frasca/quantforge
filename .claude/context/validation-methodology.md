@@ -703,7 +703,10 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   exact 400-index set, then permits only full validated consolidation to write and commit the
   generated result. ADR-086 bounds each batch at 156 serial symbol searches and gives preparation
   120 minutes for ADR-085's observed-panel searches without changing seeds or inference. It has not
-  been dispatched, so the measurement remains pending.
+  been dispatched, so the measurement remains pending. ADR-087 makes recovery stage-aware: a
+  pre-consolidation failure requires a full-job rerun, never a partial artifact merge; after the
+  final artifact has been uploaded, publish-only recovery downloads and validates those exact bytes
+  by source run ID and commits them without recomputing the fixed look.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

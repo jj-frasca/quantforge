@@ -224,7 +224,11 @@ before constructing the production search, so rebasing the eventual sole-writer 
 which code executed the measurement (ADR-083). The workflow has not been dispatched and the
 measurement remains pending. ADR-086 gives the preparation job 120 minutes for ADR-085's observed
 searches and bounds every batch at 156 serial symbol searches without changing any panel seed or
-inference input.
+inference input. ADR-087 adds a mutually exclusive publish-only recovery mode for the case where
+the final measurement artifact exists but its git push failed: the workflow downloads that exact
+30-day artifact by source run ID, validates it, and commits the same bytes without preparation,
+batching, consolidation, or another look. Before consolidation, recovery is a full-job rerun; a
+failed-job or single-job rerun is not a valid artifact-merge procedure.
 
 ## Alternatives considered
 

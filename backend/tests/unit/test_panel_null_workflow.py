@@ -75,3 +75,20 @@ def test_panel_null_workflow_shares_one_frozen_input_pair_and_only_consolidation
     assert (
         "git add data/panel_null_calibration/replicated_correlated_panel_null.json" in consolidate
     )
+
+
+def test_panel_null_workflow_recovers_only_a_completed_artifact_without_remeasurement() -> None:
+    workflow = _workflow()
+
+    assert "recovery_run_id:" in workflow
+    assert "actions: read" in workflow
+    assert "  recover:\n" in workflow
+    recover = workflow.split("  recover:\n", 1)[1]
+    assert "panel-null-measurement-${{ inputs.recovery_run_id }}" in recover
+    assert "run-id: ${{ inputs.recovery_run_id }}" in recover
+    assert "scripts/recover_panel_null.py" in recover
+    assert "scripts/prepare_panel_null.py" not in recover
+    assert "scripts/run_panel_null_batch.py" not in recover
+    assert "scripts/consolidate_panel_null.py" not in recover
+    assert "if: inputs.recovery_run_id == ''" in workflow
+    assert "if: inputs.recovery_run_id != ''" in recover

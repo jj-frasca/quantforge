@@ -7,20 +7,28 @@ name: Replicated correlated panel-null calibration
 #
 # This spends the pre-registered 400-replicate measurement. Do not rerun after seeing its result
 # unless a reviewed identity change or a new ADR authorizes another look.
+# Recovery rule (ADR-087): before consolidation, re-run ALL jobs; never re-run only failed jobs.
+# After the final artifact exists, use recovery_run_id to publish those exact bytes without compute.
 on:
   workflow_dispatch:
     inputs:
       asof_utc:
-        description: "Explicit zero-offset UTC source cutoff (for example 2026-09-10T20:00:00Z)"
-        required: true
+        description: "Normal mode: explicit UTC cutoff (for example 2026-09-10T20:00:00Z)"
+        required: false
         type: string
       base_seed:
         description: "Frozen base seed recorded in the cohort manifest"
         required: true
         default: "0"
         type: string
+      recovery_run_id:
+        description: "Recovery mode only: prior run whose completed artifact must be published"
+        required: false
+        default: ""
+        type: string
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -32,6 +40,7 @@ env:
 
 jobs:
   prepare:
+    if: inputs.recovery_run_id == ''
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -65,6 +74,7 @@ jobs:
           retention-days: 7
 
   batch:
+    if: inputs.recovery_run_id == ''
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 360
@@ -106,6 +116,7 @@ jobs:
           retention-days: 7
 
   consolidate:
+    if: inputs.recovery_run_id == ''
     needs: batch
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -146,6 +157,47 @@ jobs:
           git config user.name "quantforge-calibration-bot"
           git config user.email "actions@users.noreply.github.com"
           git commit -m "chore(calibration): replicated correlated panel null $(date +%F)"
+          for attempt in 1 2 3; do
+            if git pull --rebase origin master && git push origin HEAD:master; then
+              exit 0
+            fi
+            echo "push attempt $attempt failed; retrying"
+            sleep 5
+          done
+          exit 1
+
+  recover:
+    if: inputs.recovery_run_id != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Download the already completed measurement
+        uses: actions/download-artifact@v4
+        with:
+          name: panel-null-measurement-${{ inputs.recovery_run_id }}
+          path: recovered
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.recovery_run_id }}
+      - name: Validate and publish the exact completed artifact
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. uv run python scripts/recover_panel_null.py \
+            "$GITHUB_WORKSPACE/recovered/data/panel_null_calibration/replicated_correlated_panel_null.json" \
+            "$GITHUB_WORKSPACE/data/panel_null_calibration/replicated_correlated_panel_null.json"
+      - name: Commit the recovered measurement
+        run: |
+          set -euo pipefail
+          git add data/panel_null_calibration/replicated_correlated_panel_null.json
+          git config user.name "quantforge-calibration-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "chore(calibration): recover replicated correlated panel null"
           for attempt in 1 2 3; do
             if git pull --rebase origin master && git push origin HEAD:master; then
               exit 0
