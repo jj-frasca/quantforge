@@ -217,12 +217,14 @@ driver with exactly one explicit unique index set or half-open global-index rang
 negative/duplicate/empty selections and existing or repository-`data/` output paths before the
 expensive driver, then uses the current catalog and default gate to exclusively create one scratch
 shard. The dispatch-only `panel-null-calibration.yml` prepares one shared immutable input artifact,
-partitions all 400 global indices into 40 disjoint ten-panel shards with bounded concurrency, and
+partitions all 400 global indices into 100 disjoint four-panel shards with bounded concurrency, and
 allows only successful full consolidation to write and commit the generated measurement. The
 workflow passes its dispatch SHA into preparation and every batch; a batch refuses revision drift
 before constructing the production search, so rebasing the eventual sole-writer commit cannot hide
 which code executed the measurement (ADR-083). The workflow has not been dispatched and the
-measurement remains pending.
+measurement remains pending. ADR-086 gives the preparation job 120 minutes for ADR-085's observed
+searches and bounds every batch at 156 serial symbol searches without changing any panel seed or
+inference input.
 
 ## Alternatives considered
 

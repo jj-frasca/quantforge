@@ -104,7 +104,7 @@ source/manifest inputs while refusing repository `data/` paths. The production b
 exactly one explicit unique index set or half-open global-index range, refuses existing or
 repository-`data/` shard paths before expensive execution, and delegates the frozen inputs plus
 current production policy to the checked whole-panel driver. The manual-only workflow now carries
-one prepared input pair through 40 disjoint complete-panel batches and permits only full validated
+one prepared input pair through 100 disjoint four-panel batches and permits only full validated
 consolidation to write the generated result. It has not been dispatched, so no measurement exists.
 No generated artifact has been written and the
 headline is unchanged.

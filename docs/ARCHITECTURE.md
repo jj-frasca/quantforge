@@ -414,9 +414,11 @@ only the source archive and cohort manifest to scratch paths; repository `data/`
 before any fetch. The batch command accepts exactly one explicit unique index set or half-open
 global-index range, refuses existing and repository-`data/` outputs before production execution,
 and exclusively creates one scratch shard through the checked driver. A dispatch-only workflow
-freezes one input pair, covers the exact 400-index set with 40 disjoint complete-panel batches, and
+freezes one input pair, covers the exact 400-index set with 100 disjoint four-panel batches, and
 permits only successful full consolidation to commit the generated result. It has not been
-dispatched; measurement remains pending.
+dispatched; measurement remains pending. ADR-086 bounds each batch at 156 serial symbol searches
+and gives ADR-085's observed-panel preparation 120 minutes; topology changes no panel seed,
+statistic, or inference input.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

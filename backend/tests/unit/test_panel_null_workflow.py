@@ -37,6 +37,17 @@ def test_panel_null_workflow_partitions_exactly_the_frozen_global_index_set() ->
     assert '--range "$START" "$STOP"' in workflow
 
 
+def test_panel_null_workflow_bounds_serial_searches_per_job() -> None:
+    workflow = _workflow()
+    prepare = workflow.split("  prepare:\n", 1)[1].split("\n  batch:\n", 1)[0]
+    batch = workflow.split("  batch:\n", 1)[1].split("\n  consolidate:\n", 1)[0]
+
+    assert 'PANELS_PER_SHARD: "4"' in workflow
+    assert "timeout-minutes: 120" in prepare
+    assert "timeout-minutes: 360" in batch
+    assert "shard: [" + ", ".join(str(index) for index in range(100)) + "]" in batch
+
+
 def test_panel_null_workflow_shares_one_frozen_input_pair_and_only_consolidation_writes_data() -> (
     None
 ):
