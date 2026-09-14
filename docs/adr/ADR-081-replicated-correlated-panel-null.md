@@ -233,6 +233,8 @@ recovery to the authoritative GitHub source-run repository, ID, workflow, manual
 state, and head SHA before the sole-writer destination is touched. ADR-089 also qualifies the final
 artifact name and recovery request with `run_attempt`, validates the attempt-addressed run record,
 and rejects partial run/attempt inputs before any other job starts.
+ADR-090 applies that same attempt identity to the frozen-input pair and every scratch shard, so a
+full rerun cannot select or wildcard-merge intermediate artifacts from an earlier attempt.
 
 ## Alternatives considered
 

@@ -52,6 +52,8 @@ exists; ADR-087's stage-aware one-look rule remains unchanged.
 - Recovery invocations and artifact names identify the exact producing attempt in logs and UI.
 - Old unqualified artifacts do not exist because the measurement remains unspent; no migration or
   compatibility branch is needed.
+- ADR-090 separately applies the same attempt identity to frozen inputs and scratch shards used
+  before consolidation.
 - No seed, statistic, inference input, validation threshold, generated artifact, or measurement
   changes.
 

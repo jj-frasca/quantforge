@@ -112,6 +112,24 @@ def test_panel_null_workflow_names_the_measurement_for_its_exact_run_attempt() -
     assert "panel-null-measurement-${{ github.run_id }}-${{ github.run_attempt }}" in consolidate
 
 
+def test_panel_null_workflow_scopes_every_scratch_artifact_to_the_current_attempt() -> None:
+    workflow = _workflow()
+    prepare = workflow.split("  prepare:\n", 1)[1].split("\n  batch:\n", 1)[0]
+    batch = workflow.split("  batch:\n", 1)[1].split("\n  consolidate:\n", 1)[0]
+    consolidate = workflow.split("  consolidate:\n", 1)[1].split("\n  recover:\n", 1)[0]
+
+    frozen_name = "panel-null-frozen-inputs-${{ github.run_id }}-${{ github.run_attempt }}"
+    shard_name = (
+        "panel-null-shard-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}"
+    )
+    shard_pattern = "panel-null-shard-${{ github.run_id }}-${{ github.run_attempt }}-*"
+
+    assert frozen_name in prepare
+    assert frozen_name in batch
+    assert shard_name in batch
+    assert shard_pattern in consolidate
+
+
 def test_panel_null_workflow_rejects_partial_recovery_identity_before_other_jobs() -> None:
     workflow = _workflow()
     validation = workflow.split("  validate-inputs:\n", 1)[1].split("\n  prepare:\n", 1)[0]

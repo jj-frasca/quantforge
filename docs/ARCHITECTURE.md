@@ -426,6 +426,8 @@ authoritative source-run record: repository, run ID, workflow path, manual event
 and executed head SHA must match before the generated destination is touched. ADR-089 makes the
 producing run attempt explicit in the final artifact name, recovery inputs, and attempt-addressed
 metadata check; same-named artifacts from later reruns cannot silently replace the requested bytes.
+ADR-090 attempt-qualifies the frozen-input pair and every scratch shard as well, so a full rerun's
+consolidation cannot select or merge intermediate artifacts from an earlier attempt.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

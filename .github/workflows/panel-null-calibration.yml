@@ -89,7 +89,7 @@ jobs:
       - name: Upload the immutable input pair
         uses: actions/upload-artifact@v4
         with:
-          name: panel-null-frozen-inputs-${{ github.run_id }}
+          name: panel-null-frozen-inputs-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/panel-source.npz
             ${{ runner.temp }}/panel-cohort.json
@@ -116,7 +116,7 @@ jobs:
       - name: Download the immutable input pair
         uses: actions/download-artifact@v4
         with:
-          name: panel-null-frozen-inputs-${{ github.run_id }}
+          name: panel-null-frozen-inputs-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/frozen
       - name: Run complete panels ${{ matrix.shard }}
         working-directory: backend
@@ -133,7 +133,7 @@ jobs:
       - name: Upload the complete-panel shard
         uses: actions/upload-artifact@v4
         with:
-          name: panel-null-shard-${{ matrix.shard }}
+          name: panel-null-shard-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}
           path: ${{ runner.temp }}/panel-null-shard-${{ matrix.shard }}.json
           if-no-files-found: error
           retention-days: 7
@@ -153,7 +153,7 @@ jobs:
       - name: Download every complete-panel shard
         uses: actions/download-artifact@v4
         with:
-          pattern: panel-null-shard-*
+          pattern: panel-null-shard-${{ github.run_id }}-${{ github.run_attempt }}-*
           path: shards
           merge-multiple: true
       - name: Consolidate the fixed 400-panel measurement

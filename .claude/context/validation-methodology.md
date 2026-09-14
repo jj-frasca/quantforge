@@ -713,6 +713,8 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   generated destination mutation. ADR-089 adds the missing rerun-attempt dimension: final artifact
   names and recovery inputs contain the exact attempt, metadata comes from the attempt-addressed
   API endpoint, and a partial or mismatched run/attempt identity fails before publication.
+  ADR-090 extends that attempt identity to the frozen-input pair and every complete-panel scratch
+  shard, preventing a full rerun from selecting or wildcard-merging prior-attempt intermediates.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the
