@@ -230,7 +230,9 @@ the final measurement artifact exists but its git push failed: the workflow down
 batching, consolidation, or another look. Before consolidation, recovery is a full-job rerun; a
 failed-job or single-job rerun is not a valid artifact-merge procedure. ADR-088 binds publish-only
 recovery to the authoritative GitHub source-run repository, ID, workflow, manual event, completion
-state, and head SHA before the sole-writer destination is touched.
+state, and head SHA before the sole-writer destination is touched. ADR-089 also qualifies the final
+artifact name and recovery request with `run_attempt`, validates the attempt-addressed run record,
+and rejects partial run/attempt inputs before any other job starts.
 
 ## Alternatives considered
 

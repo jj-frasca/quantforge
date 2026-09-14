@@ -34,9 +34,11 @@ uploaded final artifact and logs, so another calculation is an unpriced look.
 
 ## Decision
 
-Choose option 3 for post-consolidation failures. Add a mutually exclusive `recovery_run_id` input
+Choose option 3 for post-consolidation failures. Add mutually exclusive `recovery_run_id` and
+`recovery_run_attempt` inputs
 to the existing manual workflow. In recovery mode, skip preparation, every batch, and consolidation;
-download `panel-null-measurement-<recovery_run_id>` from that workflow run with read-only Actions
+download `panel-null-measurement-<recovery_run_id>-<recovery_run_attempt>` from that exact workflow
+run attempt with read-only Actions
 permission; validate the contained final artifact through the production Pydantic boundary; write
 its canonical JSON to the ADR-030 path; and use the existing rebase/push retry discipline. Recovery
 also requires the source bytes to equal that canonical serialization, so ignored unknown fields or
@@ -44,6 +46,8 @@ alternate encodings cannot be carried into the generated record outside the vali
 ADR-088 further requires the selected run's authoritative GitHub metadata to match the current
 repository, requested run ID, panel-null workflow path, manual event, completed state, and the
 artifact cohort's code revision before the destination is touched.
+ADR-089 makes the producing attempt part of the artifact name and recovery identity, so a rerun
+cannot redirect the same request to a newer same-named artifact.
 
 For a failure before the final measurement artifact exists, recovery means **Re-run all jobs**, not
 failed jobs or a single matrix job. The original dispatch SHA and inputs are retained, and no

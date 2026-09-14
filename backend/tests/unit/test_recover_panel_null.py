@@ -52,6 +52,7 @@ def _calibration() -> PanelNullCalibration:
 def _metadata() -> dict[str, object]:
     return {
         "id": 123456,
+        "run_attempt": 2,
         "path": ".github/workflows/panel-null-calibration.yml@refs/heads/master",
         "event": "workflow_dispatch",
         "status": "completed",
@@ -78,6 +79,7 @@ def test_recovery_validates_then_preserves_the_completed_artifact_bytes(tmp_path
         run_metadata_path=_write_metadata(tmp_path),
         expected_repository="jj-frasca/quantforge",
         expected_run_id=123456,
+        expected_run_attempt=2,
     )
 
     assert recovered == _calibration()
@@ -97,6 +99,7 @@ def test_recovery_rejects_invalid_payload_before_replacing_the_destination(tmp_p
             run_metadata_path=_write_metadata(tmp_path),
             expected_repository="jj-frasca/quantforge",
             expected_run_id=123456,
+            expected_run_attempt=2,
         )
 
     assert output.read_text(encoding="utf-8") == "previous measurement\n"
@@ -119,6 +122,7 @@ def test_recovery_rejects_noncanonical_extra_fields_before_replacing_destination
             run_metadata_path=_write_metadata(tmp_path),
             expected_repository="jj-frasca/quantforge",
             expected_run_id=123456,
+            expected_run_attempt=2,
         )
 
     assert output.read_text(encoding="utf-8") == "previous measurement\n"
@@ -137,6 +141,7 @@ def test_recovery_binds_artifact_to_authoritative_source_run_metadata(tmp_path: 
         run_metadata_path=metadata,
         expected_repository="jj-frasca/quantforge",
         expected_run_id=123456,
+        expected_run_attempt=2,
     )
 
     assert recovered == _calibration()
@@ -147,6 +152,7 @@ def test_recovery_binds_artifact_to_authoritative_source_run_metadata(tmp_path: 
     ("field", "value", "message"),
     [
         ("id", 654321, "run ID"),
+        ("run_attempt", 3, "run attempt"),
         ("repository", {"full_name": "someone/else"}, "repository"),
         ("path", ".github/workflows/ci.yml@refs/heads/master", "panel-null workflow"),
         ("event", "push", "manually dispatched"),
@@ -176,6 +182,7 @@ def test_recovery_rejects_source_run_identity_drift_before_destination_mutation(
             run_metadata_path=metadata,
             expected_repository="jj-frasca/quantforge",
             expected_run_id=123456,
+            expected_run_attempt=2,
         )
 
     assert output.read_text(encoding="utf-8") == "previous measurement\n"

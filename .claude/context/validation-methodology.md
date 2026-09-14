@@ -710,7 +710,9 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   provenance boundary rather than an artifact naming convention: recovery checks GitHub's
   authoritative repository, run ID, workflow path, manual event, completed state, and head SHA,
   requiring the executed SHA to equal the artifact cohort's recorded code revision before any
-  generated destination mutation.
+  generated destination mutation. ADR-089 adds the missing rerun-attempt dimension: final artifact
+  names and recovery inputs contain the exact attempt, metadata comes from the attempt-addressed
+  API endpoint, and a partial or mismatched run/attempt identity fails before publication.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

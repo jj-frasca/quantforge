@@ -81,17 +81,44 @@ def test_panel_null_workflow_recovers_only_a_completed_artifact_without_remeasur
     workflow = _workflow()
 
     assert "recovery_run_id:" in workflow
+    assert "recovery_run_attempt:" in workflow
     assert "actions: read" in workflow
     assert "  recover:\n" in workflow
     recover = workflow.split("  recover:\n", 1)[1]
-    assert "panel-null-measurement-${{ inputs.recovery_run_id }}" in recover
+    assert (
+        "panel-null-measurement-${{ inputs.recovery_run_id }}-"
+        "${{ inputs.recovery_run_attempt }}" in recover
+    )
     assert "run-id: ${{ inputs.recovery_run_id }}" in recover
-    assert '"repos/$GITHUB_REPOSITORY/actions/runs/$RECOVERY_RUN_ID"' in recover
+    assert (
+        '"repos/$GITHUB_REPOSITORY/actions/runs/$RECOVERY_RUN_ID/'
+        'attempts/$RECOVERY_RUN_ATTEMPT"' in recover
+    )
     assert '"$RUNNER_TEMP/recovery-run.json"' in recover
     assert '"$GITHUB_REPOSITORY"' in recover
+    assert '"${{ inputs.recovery_run_attempt }}"' in recover
     assert "scripts/recover_panel_null.py" in recover
     assert "scripts/prepare_panel_null.py" not in recover
     assert "scripts/run_panel_null_batch.py" not in recover
     assert "scripts/consolidate_panel_null.py" not in recover
     assert "if: inputs.recovery_run_id == ''" in workflow
     assert "if: inputs.recovery_run_id != ''" in recover
+
+
+def test_panel_null_workflow_names_the_measurement_for_its_exact_run_attempt() -> None:
+    workflow = _workflow()
+    consolidate = workflow.split("  consolidate:\n", 1)[1].split("\n  recover:\n", 1)[0]
+
+    assert "panel-null-measurement-${{ github.run_id }}-${{ github.run_attempt }}" in consolidate
+
+
+def test_panel_null_workflow_rejects_partial_recovery_identity_before_other_jobs() -> None:
+    workflow = _workflow()
+    validation = workflow.split("  validate-inputs:\n", 1)[1].split("\n  prepare:\n", 1)[0]
+    prepare = workflow.split("  prepare:\n", 1)[1].split("\n  batch:\n", 1)[0]
+    recover = workflow.split("  recover:\n", 1)[1]
+
+    assert '[[ -n "$RECOVERY_RUN_ID" && -z "$RECOVERY_RUN_ATTEMPT" ]]' in validation
+    assert '[[ -z "$RECOVERY_RUN_ID" && -n "$RECOVERY_RUN_ATTEMPT" ]]' in validation
+    assert "needs: validate-inputs" in prepare
+    assert "needs: validate-inputs" in recover

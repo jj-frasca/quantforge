@@ -8,7 +8,8 @@ name: Replicated correlated panel-null calibration
 # This spends the pre-registered 400-replicate measurement. Do not rerun after seeing its result
 # unless a reviewed identity change or a new ADR authorizes another look.
 # Recovery rule (ADR-087): before consolidation, re-run ALL jobs; never re-run only failed jobs.
-# After the final artifact exists, use recovery_run_id to publish those exact bytes without compute.
+# After the final artifact exists, use its run ID and attempt to publish those exact bytes without
+# compute. Artifact names are attempt-qualified because reruns share one run ID (ADR-089).
 on:
   workflow_dispatch:
     inputs:
@@ -26,6 +27,11 @@ on:
         required: false
         default: ""
         type: string
+      recovery_run_attempt:
+        description: "Recovery mode only: exact attempt that uploaded the completed artifact"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   actions: read
@@ -39,8 +45,25 @@ env:
   PANELS_PER_SHARD: "4"
 
 jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RECOVERY_RUN_ID: ${{ inputs.recovery_run_id }}
+      RECOVERY_RUN_ATTEMPT: ${{ inputs.recovery_run_attempt }}
+    steps:
+      - name: Require a complete recovery identity or normal-mode inputs
+        run: |
+          set -euo pipefail
+          if [[ -n "$RECOVERY_RUN_ID" && -z "$RECOVERY_RUN_ATTEMPT" ]] || \
+             [[ -z "$RECOVERY_RUN_ID" && -n "$RECOVERY_RUN_ATTEMPT" ]]; then
+            echo "recovery run ID and attempt must be supplied together" >&2
+            exit 2
+          fi
+
   prepare:
     if: inputs.recovery_run_id == ''
+    needs: validate-inputs
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -144,7 +167,7 @@ jobs:
       - name: Upload the measurement and inference report
         uses: actions/upload-artifact@v4
         with:
-          name: panel-null-measurement-${{ github.run_id }}
+          name: panel-null-measurement-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             data/panel_null_calibration/replicated_correlated_panel_null.json
             panel-null-report.txt
@@ -168,6 +191,7 @@ jobs:
 
   recover:
     if: inputs.recovery_run_id != ''
+    needs: validate-inputs
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -181,15 +205,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RECOVERY_RUN_ID: ${{ inputs.recovery_run_id }}
+          RECOVERY_RUN_ATTEMPT: ${{ inputs.recovery_run_attempt }}
         run: |
           set -euo pipefail
+          if [[ ! "$RECOVERY_RUN_ID" =~ ^[1-9][0-9]*$ ]] || \
+             [[ ! "$RECOVERY_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]; then
+            echo "recovery run ID and attempt must both be positive integers" >&2
+            exit 2
+          fi
           gh api \
-            "repos/$GITHUB_REPOSITORY/actions/runs/$RECOVERY_RUN_ID" \
+            "repos/$GITHUB_REPOSITORY/actions/runs/$RECOVERY_RUN_ID/attempts/$RECOVERY_RUN_ATTEMPT" \
             > "$RUNNER_TEMP/recovery-run.json"
       - name: Download the already completed measurement
         uses: actions/download-artifact@v4
         with:
-          name: panel-null-measurement-${{ inputs.recovery_run_id }}
+          name: panel-null-measurement-${{ inputs.recovery_run_id }}-${{ inputs.recovery_run_attempt }}
           path: recovered
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.recovery_run_id }}
@@ -202,6 +232,7 @@ jobs:
             "$RUNNER_TEMP/recovery-run.json" \
             "$GITHUB_REPOSITORY" \
             "${{ inputs.recovery_run_id }}" \
+            "${{ inputs.recovery_run_attempt }}" \
             "$GITHUB_WORKSPACE/data/panel_null_calibration/replicated_correlated_panel_null.json"
       - name: Commit the recovered measurement
         run: |

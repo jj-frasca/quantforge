@@ -1,7 +1,7 @@
 """Publish one already completed panel-null artifact without remeasurement (ADR-087).
 
 Usage: PYTHONPATH=. uv run python scripts/recover_panel_null.py \\
-  SOURCE_JSON RUN_METADATA_JSON EXPECTED_REPOSITORY EXPECTED_RUN_ID OUT_JSON
+  SOURCE_JSON RUN_METADATA_JSON EXPECTED_REPOSITORY EXPECTED_RUN_ID EXPECTED_RUN_ATTEMPT OUT_JSON
 
 The source must deserialize as a complete ``PanelNullCalibration``. Validation finishes before the
 destination is touched, including binding its code revision to the authoritative GitHub source-run
@@ -31,6 +31,7 @@ class _WorkflowRunMetadata(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     id: int = Field(gt=0)
+    run_attempt: int = Field(gt=0)
     path: str = Field(min_length=1)
     event: str = Field(min_length=1)
     status: str = Field(min_length=1)
@@ -44,9 +45,14 @@ def _validate_source_run(
     *,
     expected_repository: str,
     expected_run_id: int,
+    expected_run_attempt: int,
 ) -> None:
     if metadata.id != expected_run_id:
         raise ValueError("source workflow run ID does not match the requested recovery run")
+    if metadata.run_attempt != expected_run_attempt:
+        raise ValueError(
+            "source workflow run attempt does not match the requested recovery attempt"
+        )
     if metadata.repository.full_name != expected_repository:
         raise ValueError("source workflow run repository does not match the recovery repository")
     if metadata.path.split("@", maxsplit=1)[0] != _PANEL_NULL_WORKFLOW:
@@ -66,6 +72,7 @@ def recover_panel_null_measurement(
     run_metadata_path: Path,
     expected_repository: str,
     expected_run_id: int,
+    expected_run_attempt: int,
 ) -> PanelNullCalibration:
     """Validate and atomically publish the exact completed artifact bytes."""
     source = Path(source_path)
@@ -81,6 +88,7 @@ def recover_panel_null_measurement(
         metadata,
         expected_repository=expected_repository,
         expected_run_id=expected_run_id,
+        expected_run_attempt=expected_run_attempt,
     )
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -99,14 +107,15 @@ def recover_panel_null_measurement(
 
 
 def main() -> None:
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 7:
         raise SystemExit(__doc__)
     calibration = recover_panel_null_measurement(
         Path(sys.argv[1]),
-        Path(sys.argv[5]),
+        Path(sys.argv[6]),
         run_metadata_path=Path(sys.argv[2]),
         expected_repository=sys.argv[3],
         expected_run_id=int(sys.argv[4]),
+        expected_run_attempt=int(sys.argv[5]),
     )
     print(
         "recovered complete panel-null measurement: "

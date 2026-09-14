@@ -423,7 +423,9 @@ consolidation require a full-job rerun, while a failed push after the 30-day fin
 uses a mutually exclusive publish-only workflow mode that validates and commits those exact bytes
 without another search or inference look. ADR-088 additionally binds recovery to GitHub's
 authoritative source-run record: repository, run ID, workflow path, manual event, completed state,
-and executed head SHA must match before the generated destination is touched.
+and executed head SHA must match before the generated destination is touched. ADR-089 makes the
+producing run attempt explicit in the final artifact name, recovery inputs, and attempt-addressed
+metadata check; same-named artifacts from later reruns cannot silently replace the requested bytes.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

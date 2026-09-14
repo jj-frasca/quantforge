@@ -42,6 +42,7 @@ repository, and the requested numeric run ID into `recover_panel_null.py`.
 Before creating a parent directory or temporary destination, the recovery command requires:
 
 - metadata `id` equals the requested run ID;
+- under ADR-089, metadata `run_attempt` equals the requested producing attempt;
 - `repository.full_name` equals the current `$GITHUB_REPOSITORY`;
 - `path` identifies `.github/workflows/panel-null-calibration.yml` (allowing GitHub's appended ref);
 - `event == "workflow_dispatch"`;
@@ -59,6 +60,8 @@ another repository.
   not a self-reported payload field.
 - An artifact from another workflow, repository, run ID, event, or incomplete run fails before the
   sole-writer destination is touched.
+- ADR-089 separately prevents a later attempt of the same run from becoming an implicit
+  latest-by-name replacement.
 - Recovery gains one read-only API request and no compute-heavy work.
 - The panel-null measurement remains unspent; no seed, statistic, inference input, validation
   threshold, or generated artifact changes.
