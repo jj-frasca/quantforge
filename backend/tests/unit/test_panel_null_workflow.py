@@ -86,6 +86,9 @@ def test_panel_null_workflow_recovers_only_a_completed_artifact_without_remeasur
     recover = workflow.split("  recover:\n", 1)[1]
     assert "panel-null-measurement-${{ inputs.recovery_run_id }}" in recover
     assert "run-id: ${{ inputs.recovery_run_id }}" in recover
+    assert '"repos/$GITHUB_REPOSITORY/actions/runs/$RECOVERY_RUN_ID"' in recover
+    assert '"$RUNNER_TEMP/recovery-run.json"' in recover
+    assert '"$GITHUB_REPOSITORY"' in recover
     assert "scripts/recover_panel_null.py" in recover
     assert "scripts/prepare_panel_null.py" not in recover
     assert "scripts/run_panel_null_batch.py" not in recover

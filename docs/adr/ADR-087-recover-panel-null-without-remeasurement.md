@@ -41,6 +41,9 @@ permission; validate the contained final artifact through the production Pydanti
 its canonical JSON to the ADR-030 path; and use the existing rebase/push retry discipline. Recovery
 also requires the source bytes to equal that canonical serialization, so ignored unknown fields or
 alternate encodings cannot be carried into the generated record outside the validated model.
+ADR-088 further requires the selected run's authoritative GitHub metadata to match the current
+repository, requested run ID, panel-null workflow path, manual event, completed state, and the
+artifact cohort's code revision before the destination is touched.
 
 For a failure before the final measurement artifact exists, recovery means **Re-run all jobs**, not
 failed jobs or a single matrix job. The original dispatch SHA and inputs are retained, and no
@@ -53,6 +56,7 @@ that window would consume more repository storage without improving ordinary exe
 - Recovery remains inside the same manual, cloud sole-writer workflow; local sessions still never
   edit or commit `data/*.json`.
 - The recovery command must reject malformed/incomplete artifacts before touching the destination.
+- It must also reject source-run identity or executed-revision drift before that mutation.
 - Operators must distinguish pre-consolidation failure (full rerun) from post-upload failure
   (publish-only recovery). A failed-job or single-job rerun is never a valid recovery procedure.
 - The measurement remains unspent; this ADR adds no dispatch and changes no seed, statistic,

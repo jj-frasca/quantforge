@@ -49,13 +49,36 @@ def _calibration() -> PanelNullCalibration:
     )
 
 
+def _metadata() -> dict[str, object]:
+    return {
+        "id": 123456,
+        "path": ".github/workflows/panel-null-calibration.yml@refs/heads/master",
+        "event": "workflow_dispatch",
+        "status": "completed",
+        "head_sha": "1" * 40,
+        "repository": {"full_name": "jj-frasca/quantforge"},
+    }
+
+
+def _write_metadata(tmp_path: Path) -> Path:
+    path = tmp_path / "source-run.json"
+    path.write_text(json.dumps(_metadata()), encoding="utf-8")
+    return path
+
+
 def test_recovery_validates_then_preserves_the_completed_artifact_bytes(tmp_path: Path) -> None:
     source = tmp_path / "completed.json"
     output = tmp_path / "published.json"
     payload = _calibration().model_dump_json(indent=2) + "\n"
     source.write_text(payload, encoding="utf-8")
 
-    recovered = recover_panel_null_measurement(source, output)
+    recovered = recover_panel_null_measurement(
+        source,
+        output,
+        run_metadata_path=_write_metadata(tmp_path),
+        expected_repository="jj-frasca/quantforge",
+        expected_run_id=123456,
+    )
 
     assert recovered == _calibration()
     assert output.read_bytes() == source.read_bytes()
@@ -68,7 +91,13 @@ def test_recovery_rejects_invalid_payload_before_replacing_the_destination(tmp_p
     output.write_text("previous measurement\n", encoding="utf-8")
 
     with pytest.raises(ValidationError):
-        recover_panel_null_measurement(source, output)
+        recover_panel_null_measurement(
+            source,
+            output,
+            run_metadata_path=_write_metadata(tmp_path),
+            expected_repository="jj-frasca/quantforge",
+            expected_run_id=123456,
+        )
 
     assert output.read_text(encoding="utf-8") == "previous measurement\n"
 
@@ -84,6 +113,69 @@ def test_recovery_rejects_noncanonical_extra_fields_before_replacing_destination
     output.write_text("previous measurement\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="canonical panel-null calibration"):
-        recover_panel_null_measurement(source, output)
+        recover_panel_null_measurement(
+            source,
+            output,
+            run_metadata_path=_write_metadata(tmp_path),
+            expected_repository="jj-frasca/quantforge",
+            expected_run_id=123456,
+        )
+
+    assert output.read_text(encoding="utf-8") == "previous measurement\n"
+
+
+def test_recovery_binds_artifact_to_authoritative_source_run_metadata(tmp_path: Path) -> None:
+    source = tmp_path / "completed.json"
+    metadata = tmp_path / "source-run.json"
+    output = tmp_path / "published.json"
+    source.write_text(_calibration().model_dump_json(indent=2) + "\n", encoding="utf-8")
+    metadata.write_text(json.dumps(_metadata()), encoding="utf-8")
+
+    recovered = recover_panel_null_measurement(
+        source,
+        output,
+        run_metadata_path=metadata,
+        expected_repository="jj-frasca/quantforge",
+        expected_run_id=123456,
+    )
+
+    assert recovered == _calibration()
+    assert output.read_bytes() == source.read_bytes()
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("id", 654321, "run ID"),
+        ("repository", {"full_name": "someone/else"}, "repository"),
+        ("path", ".github/workflows/ci.yml@refs/heads/master", "panel-null workflow"),
+        ("event", "push", "manually dispatched"),
+        ("status", "in_progress", "not complete"),
+        ("head_sha", "2" * 40, "revision"),
+    ],
+)
+def test_recovery_rejects_source_run_identity_drift_before_destination_mutation(
+    tmp_path: Path,
+    field: str,
+    value: object,
+    message: str,
+) -> None:
+    source = tmp_path / "completed.json"
+    metadata = tmp_path / "source-run.json"
+    output = tmp_path / "published.json"
+    source.write_text(_calibration().model_dump_json(indent=2) + "\n", encoding="utf-8")
+    run_metadata = _metadata()
+    run_metadata[field] = value
+    metadata.write_text(json.dumps(run_metadata), encoding="utf-8")
+    output.write_text("previous measurement\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        recover_panel_null_measurement(
+            source,
+            output,
+            run_metadata_path=metadata,
+            expected_repository="jj-frasca/quantforge",
+            expected_run_id=123456,
+        )
 
     assert output.read_text(encoding="utf-8") == "previous measurement\n"

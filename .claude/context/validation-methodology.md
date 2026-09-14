@@ -706,7 +706,11 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   been dispatched, so the measurement remains pending. ADR-087 makes recovery stage-aware: a
   pre-consolidation failure requires a full-job rerun, never a partial artifact merge; after the
   final artifact has been uploaded, publish-only recovery downloads and validates those exact bytes
-  by source run ID and commits them without recomputing the fixed look.
+  by source run ID and commits them without recomputing the fixed look. ADR-088 makes that run ID a
+  provenance boundary rather than an artifact naming convention: recovery checks GitHub's
+  authoritative repository, run ID, workflow path, manual event, completed state, and head SHA,
+  requiring the executed SHA to equal the artifact cohort's recorded code revision before any
+  generated destination mutation.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

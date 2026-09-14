@@ -228,7 +228,9 @@ inference input. ADR-087 adds a mutually exclusive publish-only recovery mode fo
 the final measurement artifact exists but its git push failed: the workflow downloads that exact
 30-day artifact by source run ID, validates it, and commits the same bytes without preparation,
 batching, consolidation, or another look. Before consolidation, recovery is a full-job rerun; a
-failed-job or single-job rerun is not a valid artifact-merge procedure.
+failed-job or single-job rerun is not a valid artifact-merge procedure. ADR-088 binds publish-only
+recovery to the authoritative GitHub source-run repository, ID, workflow, manual event, completion
+state, and head SHA before the sole-writer destination is touched.
 
 ## Alternatives considered
 

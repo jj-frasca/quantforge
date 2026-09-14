@@ -177,6 +177,15 @@ jobs:
       - name: Sync dependencies
         working-directory: backend
         run: uv sync
+      - name: Verify the source workflow run identity
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RECOVERY_RUN_ID: ${{ inputs.recovery_run_id }}
+        run: |
+          set -euo pipefail
+          gh api \
+            "repos/$GITHUB_REPOSITORY/actions/runs/$RECOVERY_RUN_ID" \
+            > "$RUNNER_TEMP/recovery-run.json"
       - name: Download the already completed measurement
         uses: actions/download-artifact@v4
         with:
@@ -190,6 +199,9 @@ jobs:
           set -euo pipefail
           PYTHONPATH=. uv run python scripts/recover_panel_null.py \
             "$GITHUB_WORKSPACE/recovered/data/panel_null_calibration/replicated_correlated_panel_null.json" \
+            "$RUNNER_TEMP/recovery-run.json" \
+            "$GITHUB_REPOSITORY" \
+            "${{ inputs.recovery_run_id }}" \
             "$GITHUB_WORKSPACE/data/panel_null_calibration/replicated_correlated_panel_null.json"
       - name: Commit the recovered measurement
         run: |

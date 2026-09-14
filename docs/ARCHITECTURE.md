@@ -421,7 +421,9 @@ and gives ADR-085's observed-panel preparation 120 minutes; topology changes no 
 statistic, or inference input. ADR-087 closes the rerun ambiguity before dispatch: failures before
 consolidation require a full-job rerun, while a failed push after the 30-day final artifact exists
 uses a mutually exclusive publish-only workflow mode that validates and commits those exact bytes
-without another search or inference look.
+without another search or inference look. ADR-088 additionally binds recovery to GitHub's
+authoritative source-run record: repository, run ID, workflow path, manual event, completed state,
+and executed head SHA must match before the generated destination is touched.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more
