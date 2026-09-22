@@ -4,6 +4,19 @@ Formal specs for the validation engine (Phase 4) — the layer that makes QuantF
 Read when working on `backend/app/validation/`. Citations + summaries in research-papers.md.
 Each component encodes a mathematical invariant as a Hypothesis property test.
 
+**Staleness note (added 2026-09-22, session #95):** this file's narrative sections (§7.6 onward,
+particularly §7.8's window-experiment table) stop at roughly ADR-075/ADR-076-in-progress and were
+never updated as later ADRs landed. **`docs/ARCHITECTURE.md` §0.6.1 is the current authority** for
+anything past that point — it is updated same-day as each finding, this file is not. Known-stale
+spots as of this note: §7.8 quotes ADR-074's original n=45 look (`−0.074 [−0.157, +0.030]`); ADR-076
+scaled that to n=200 and read it at the Pocock boundary (`−0.008 [−0.055, +0.022]`, criterion did
+not fire, ADR-063's window stayed — see ARCHITECTURE.md around ADR-076). §7.7's panel-null paragraph
+describes the ADR-081/082 design as unmeasured infrastructure; ADR-083 through ADR-092 hardened it
+further (still undispatched as of this note — see ARCHITECTURE.md for the current state before
+touching it, it is the project's highest-stakes single-look measurement). Neither section is
+rewritten here to avoid transcribing errors under time pressure; read ARCHITECTURE.md §0.6.1
+alongside this file rather than trusting this file's numbers past ADR-075.
+
 ---
 
 ## 1. Deflated Sharpe Ratio (DSR) — value form
