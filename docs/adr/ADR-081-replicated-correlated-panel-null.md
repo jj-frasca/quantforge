@@ -238,6 +238,9 @@ full rerun cannot select or wildcard-merge intermediate artifacts from an earlie
 ADR-091 persists the positive producing run ID and attempt inside the cohort itself, so the
 committed calibration retains its one-look execution identity after GitHub artifacts expire and
 recovery can compare that identity with both its request and authoritative run metadata.
+ADR-092 closes the remaining estimand mismatch between observed and null panels: the eligibility
+floor no longer permits partial null medians. Every replicate must search the complete frozen symbol
+cohort successfully or fail before it can enter a shard.
 
 ## Alternatives considered
 

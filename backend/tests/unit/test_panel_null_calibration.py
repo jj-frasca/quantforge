@@ -93,6 +93,11 @@ def test_panel_null_cohort_freezes_a_positive_workflow_run_attempt_identity() ->
             PanelNullCohort.model_validate({**cohort.model_dump(), field: 0})
 
 
+def test_panel_null_cohort_requires_the_complete_frozen_symbol_count() -> None:
+    with pytest.raises(ValidationError, match="complete frozen cohort"):
+        PanelNullCohort.model_validate({**_cohort().model_dump(), "min_successful_symbols": 1})
+
+
 def _replicate(index: int, *, successful_symbols: int = 2) -> PanelNullReplicate:
     return PanelNullReplicate(
         panel_index=index,
@@ -532,7 +537,7 @@ def test_bind_panel_null_cohort_freezes_selection_and_prepared_source_identity()
         history_tolerance=0.10,
         search_config_version="search-v1",
         gate_config_version=gate.version_hash,
-        min_symbols=2,
+        min_symbols=1,
     )
     prepared = prepare_panel_null_source(_source_panel(), selected.symbols, target_n_bars=5)
 
@@ -557,7 +562,7 @@ def test_bind_panel_null_cohort_freezes_selection_and_prepared_source_identity()
     assert cohort.source_end == prepared.source_end
     assert cohort.source_sha256 == prepared.source_sha256
     assert cohort.n_replicates == 400
-    assert cohort.min_successful_symbols == selected.min_symbols
+    assert cohort.min_successful_symbols == len(selected.symbols)
 
 
 def test_bind_panel_null_cohort_rejects_source_cohort_or_history_drift() -> None:
@@ -788,9 +793,9 @@ def test_run_panel_null_replicate_searches_one_joint_panel_and_pairs_diagnostics
     assert replicate.purged_cv_excess == pytest.approx(0.35)
 
 
-def test_run_panel_null_replicate_retains_failures_and_refuses_partial_secondary() -> None:
+def test_run_panel_null_replicate_rejects_a_data_dependent_symbol_subset() -> None:
     prepared = prepare_panel_null_source(_source_panel(), ("AAA", "BBB"), target_n_bars=5)
-    cohort = _cohort(n_replicates=400, min_successful_symbols=1).model_copy(
+    cohort = _cohort(n_replicates=400).model_copy(
         update={
             "symbols": ("AAA", "BBB"),
             "source_start": prepared.source_start,
@@ -814,14 +819,8 @@ def test_run_panel_null_replicate_retains_failures_and_refuses_partial_secondary
             n_bars=len(frame),
         )
 
-    replicate = run_panel_null_replicate(cohort, prepared, panel_index=0, search=search)
-
-    assert replicate.successful_symbols == 1
-    assert [(error.symbol, error.message) for error in replicate.errors] == [
-        ("BBB", "search failed")
-    ]
-    assert replicate.walk_forward_excess == pytest.approx(0.5)
-    assert replicate.purged_cv_excess is None
+    with pytest.raises(ValueError, match=r"requires every frozen symbol.*BBB: search failed"):
+        run_panel_null_replicate(cohort, prepared, panel_index=0, search=search)
 
 
 def test_run_panel_null_replicate_rejects_source_or_search_identity_drift() -> None:
@@ -846,7 +845,7 @@ def test_run_panel_null_replicate_rejects_source_or_search_identity_drift() -> N
             ),
         )
 
-    with pytest.raises(ValueError, match="no measured symbols"):
+    with pytest.raises(ValueError, match="requires every frozen symbol"):
         run_panel_null_replicate(
             cohort,
             prepared,
@@ -1431,33 +1430,34 @@ def test_merge_rejects_partial_panels_and_duplicate_panel_ids() -> None:
 
 
 def test_merge_requires_each_replicate_to_account_for_the_frozen_cohort() -> None:
-    missing_without_error = _replicate(0, successful_symbols=1)
+    overcounted = _replicate(0).model_copy(
+        update={"errors": (PanelNullError(symbol="AAA", message="unexpected extra error"),)}
+    )
     with pytest.raises(ValueError, match="account for every cohort symbol"):
         merge_panel_null_shards(
             (
                 PanelNullShard(
-                    cohort=_cohort(n_replicates=1, min_successful_symbols=1),
-                    replicates=(missing_without_error,),
+                    cohort=_cohort(n_replicates=1),
+                    replicates=(overcounted,),
                 ),
             ),
         )
 
-    unknown_error = missing_without_error.model_copy(
+    unknown_error = _replicate(0).model_copy(
         update={"errors": (PanelNullError(symbol="ZZZ", message="unsearchable"),)}
     )
     with pytest.raises(ValueError, match="error symbol"):
         merge_panel_null_shards(
             (
                 PanelNullShard(
-                    cohort=_cohort(n_replicates=1, min_successful_symbols=1),
+                    cohort=_cohort(n_replicates=1),
                     replicates=(unknown_error,),
                 ),
             ),
         )
 
-    duplicate_errors = missing_without_error.model_copy(
+    duplicate_errors = _replicate(0, successful_symbols=0).model_copy(
         update={
-            "successful_symbols": 0,
             "errors": (
                 PanelNullError(symbol="AAA", message="first"),
                 PanelNullError(symbol="AAA", message="second"),
@@ -1468,7 +1468,7 @@ def test_merge_requires_each_replicate_to_account_for_the_frozen_cohort() -> Non
         merge_panel_null_shards(
             (
                 PanelNullShard(
-                    cohort=_cohort(n_replicates=1, min_successful_symbols=1),
+                    cohort=_cohort(n_replicates=1),
                     replicates=(duplicate_errors,),
                 ),
             ),

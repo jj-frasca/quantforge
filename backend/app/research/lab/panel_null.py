@@ -152,8 +152,8 @@ class PanelNullCohort(BaseModel):
             for value in self.symbol_excesses
         ):
             raise ValueError("symbol excess statistics must be finite")
-        if self.min_successful_symbols > len(self.symbols):
-            raise ValueError("min_successful_symbols cannot exceed the frozen cohort size")
+        if self.min_successful_symbols != len(self.symbols):
+            raise ValueError("min_successful_symbols must equal the complete frozen cohort size")
         if self.source_end < self.source_start:
             raise ValueError("source_end must not precede source_start")
         return self
@@ -643,7 +643,7 @@ def bind_panel_null_cohort(
         diagnostic_version=diagnostic_version,
         base_seed=base_seed,
         n_replicates=_PANEL_REPLICATES,
-        min_successful_symbols=selected.min_symbols,
+        min_successful_symbols=len(selected.symbols),
     )
 
 
@@ -807,6 +807,9 @@ def run_panel_null_replicate(
         except Exception as error:
             errors.append(PanelNullError(symbol=symbol, message=str(error) or type(error).__name__))
 
+    if errors:
+        details = "; ".join(f"{error.symbol}: {error.message}" for error in errors)
+        raise ValueError(f"panel replicate requires every frozen symbol to succeed; {details}")
     if not walk_forward_excesses:
         raise ValueError("panel replicate produced no measured symbols")
     panel_identity = sha256(f"{cohort.model_dump_json()}:{panel_index}".encode()).hexdigest()

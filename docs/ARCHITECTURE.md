@@ -432,6 +432,9 @@ ADR-091 also stores the positive producing run ID and attempt inside the frozen 
 every shard and the committed calibration. The durable generated record therefore retains its
 one-look execution identity after Actions artifacts expire, and recovery requires exact agreement
 among the payload, request, and authoritative run metadata.
+ADR-092 requires every null replicate to search the complete frozen symbol cohort, matching the
+observed panel's fail-closed statistic. The 30-symbol reporting floor can no longer turn a search
+failure into a data-dependent partial-panel median.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more
