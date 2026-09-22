@@ -383,7 +383,10 @@ observed test statistic:** after freezing the common source, preparation applies
 search once to each observed 7,400-row column that every null panel receives, then binds those
 source-matched excesses into the cohort. The pool determines eligibility only. The fetch
 boundary calls an injected provider once per frozen symbol in canonical order and aborts with every
-provider failure before preparation; network-adapter/end-date wiring remains pending. The binding
+provider failure before preparation; **this sentence originally flagged the network-adapter/end-date
+wiring as pending, which ADR-085's production preparation command (described two sentences below,
+and confirmed still current by session #95, 2026-09-22) closed — that clause was stale prose left
+over from an earlier draft of this paragraph, not a live gap.** The binding
 boundary now refuses ordered-symbol or target-history drift between
 that selection and the prepared panel, then freezes their exact values/digest with the two version
 identities, base seed, fixed 400 replicates, and the selected effective-symbol floor. Search
