@@ -58,6 +58,8 @@ def test_panel_null_workflow_shares_one_frozen_input_pair_and_only_consolidation
 
     assert "scripts/prepare_panel_null.py" in prepare
     assert '--code-revision "$GITHUB_SHA"' in prepare
+    assert '--workflow-run-id "$GITHUB_RUN_ID"' in prepare
+    assert '--workflow-run-attempt "$GITHUB_RUN_ATTEMPT"' in prepare
     assert "panel-source.npz" in prepare
     assert "panel-cohort.json" in prepare
     assert "actions/upload-artifact@v4" in prepare

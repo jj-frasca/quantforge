@@ -133,8 +133,8 @@ No workflow is dispatched by this ADR. Local tests use tiny deterministic panels
 `app/research/lab/panel_null.py` now defines the frozen cohort, per-symbol real values, complete
 panel replicate, shard, and consolidated artifact contracts. The cohort identity includes the base
 seed, fixed replicate count, effective-symbol floor, ordered symbols and their exact real values,
-source digest/dates, history rule, both fingerprints, the 40-character executed git revision, and
-generator/diagnostic versions.
+source digest/dates, history rule, both fingerprints, the 40-character executed git revision,
+positive producing workflow run ID and attempt, and generator/diagnostic versions.
 `merge_panel_null_shards` derives the expected global index set and symbol floor from that identity,
 sorts complete panels deterministically, and rejects identity drift, missing/duplicate indices,
 duplicate panel IDs, non-derived seeds, unknown/duplicate error symbols, and any panel that does not
@@ -235,6 +235,9 @@ artifact name and recovery request with `run_attempt`, validates the attempt-add
 and rejects partial run/attempt inputs before any other job starts.
 ADR-090 applies that same attempt identity to the frozen-input pair and every scratch shard, so a
 full rerun cannot select or wildcard-merge intermediate artifacts from an earlier attempt.
+ADR-091 persists the positive producing run ID and attempt inside the cohort itself, so the
+committed calibration retains its one-look execution identity after GitHub artifacts expire and
+recovery can compare that identity with both its request and authoritative run metadata.
 
 ## Alternatives considered
 

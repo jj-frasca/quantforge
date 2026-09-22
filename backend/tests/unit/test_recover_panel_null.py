@@ -29,6 +29,8 @@ def _calibration() -> PanelNullCalibration:
         search_config_version="search-v1",
         gate_config_version="gate-v1",
         code_revision="1" * 40,
+        workflow_run_id=123456,
+        workflow_run_attempt=2,
         generator_version="joint-iid-calendar-v1",
         diagnostic_version="equal-symbol-source-matched-excess-v2",
         base_seed=17,
@@ -146,6 +148,36 @@ def test_recovery_binds_artifact_to_authoritative_source_run_metadata(tmp_path: 
 
     assert recovered == _calibration()
     assert output.read_bytes() == source.read_bytes()
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("workflow_run_id", 654321), ("workflow_run_attempt", 3)],
+)
+def test_recovery_rejects_payload_run_identity_drift_before_destination_mutation(
+    tmp_path: Path, field: str, value: int
+) -> None:
+    source = tmp_path / "completed.json"
+    output = tmp_path / "published.json"
+    calibration = _calibration()
+    cohort = calibration.cohort.model_copy(update={field: value})
+    source.write_text(
+        calibration.model_copy(update={"cohort": cohort}).model_dump_json(indent=2) + "\n",
+        encoding="utf-8",
+    )
+    output.write_text("previous measurement\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="artifact workflow run"):
+        recover_panel_null_measurement(
+            source,
+            output,
+            run_metadata_path=_write_metadata(tmp_path),
+            expected_repository="jj-frasca/quantforge",
+            expected_run_id=123456,
+            expected_run_attempt=2,
+        )
+
+    assert output.read_text(encoding="utf-8") == "previous measurement\n"
 
 
 @pytest.mark.parametrize(

@@ -428,6 +428,10 @@ producing run attempt explicit in the final artifact name, recovery inputs, and 
 metadata check; same-named artifacts from later reruns cannot silently replace the requested bytes.
 ADR-090 attempt-qualifies the frozen-input pair and every scratch shard as well, so a full rerun's
 consolidation cannot select or merge intermediate artifacts from an earlier attempt.
+ADR-091 also stores the positive producing run ID and attempt inside the frozen cohort inherited by
+every shard and the committed calibration. The durable generated record therefore retains its
+one-look execution identity after Actions artifacts expire, and recovery requires exact agreement
+among the payload, request, and authoritative run metadata.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

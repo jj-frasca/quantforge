@@ -125,6 +125,8 @@ def test_preparation_reuses_one_cutoff_and_cloud_retry_then_writes_immutable_inp
         manifest_path=manifest_path,
         base_seed=17,
         code_revision="1" * 40,
+        workflow_run_id=123456,
+        workflow_run_attempt=2,
         adapter_factory=adapter_factory,
         search=_observed_search,
     )
@@ -137,6 +139,8 @@ def test_preparation_reuses_one_cutoff_and_cloud_retry_then_writes_immutable_inp
     assert prepared.source_end.isoformat() == "2026-01-05"
     assert cohort.source_sha256 == prepared.source_sha256
     assert cohort.base_seed == 17
+    assert cohort.workflow_run_id == 123456
+    assert cohort.workflow_run_attempt == 2
     assert cohort.generator_version == "joint-iid-calendar-v1"
     assert cohort.diagnostic_version == "equal-symbol-source-matched-excess-v2"
     assert [value.walk_forward for value in cohort.symbol_excesses] == pytest.approx([0.5, 0.3])
@@ -149,6 +153,8 @@ def test_preparation_reuses_one_cutoff_and_cloud_retry_then_writes_immutable_inp
             manifest_path=tmp_path / "other.json",
             base_seed=17,
             code_revision="1" * 40,
+            workflow_run_id=123456,
+            workflow_run_attempt=2,
             adapter_factory=adapter_factory,
             search=_observed_search,
         )
@@ -176,6 +182,8 @@ def test_preparation_refuses_generated_data_paths_before_fetching() -> None:
             manifest_path=DATA_ROOT / "panel_null_calibration" / "cohort.json",
             base_seed=17,
             code_revision="1" * 40,
+            workflow_run_id=123456,
+            workflow_run_attempt=2,
             adapter_factory=adapter_factory,
         )
     assert not called
@@ -217,6 +225,8 @@ def test_cli_freezes_current_identity_and_forwards_the_explicit_cutoff(
             diagnostic_version="equal-symbol-excess-v1",
             base_seed=17,
             code_revision="1" * 40,
+            workflow_run_id=123456,
+            workflow_run_attempt=2,
         )
 
     monkeypatch.setattr(prepare_module, "PartitionedExperimentStore", FakeStore)
@@ -233,6 +243,10 @@ def test_cli_freezes_current_identity_and_forwards_the_explicit_cutoff(
             "17",
             "--code-revision",
             "1" * 40,
+            "--workflow-run-id",
+            "123456",
+            "--workflow-run-attempt",
+            "2",
             "--pool-dir",
             str(pool),
             "--target-n-bars",
@@ -252,3 +266,5 @@ def test_cli_freezes_current_identity_and_forwards_the_explicit_cutoff(
     assert preparation["asof"] == datetime(2026, 9, 10, 20, 0, tzinfo=UTC)
     assert preparation["base_seed"] == 17
     assert preparation["code_revision"] == "1" * 40
+    assert preparation["workflow_run_id"] == 123456
+    assert preparation["workflow_run_attempt"] == 2

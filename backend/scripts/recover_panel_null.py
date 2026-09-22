@@ -53,6 +53,12 @@ def _validate_source_run(
         raise ValueError(
             "source workflow run attempt does not match the requested recovery attempt"
         )
+    if calibration.cohort.workflow_run_id != expected_run_id:
+        raise ValueError("artifact workflow run ID does not match the requested recovery run")
+    if calibration.cohort.workflow_run_attempt != expected_run_attempt:
+        raise ValueError(
+            "artifact workflow run attempt does not match the requested recovery attempt"
+        )
     if metadata.repository.full_name != expected_repository:
         raise ValueError("source workflow run repository does not match the recovery repository")
     if metadata.path.split("@", maxsplit=1)[0] != _PANEL_NULL_WORKFLOW:

@@ -50,6 +50,8 @@ ADR-089 makes the producing attempt part of the artifact name and recovery ident
 cannot redirect the same request to a newer same-named artifact.
 ADR-090 also attempt-qualifies the normal path's frozen-input and shard artifacts, preserving the
 full-rerun boundary before consolidation rather than relying on ambiguous run-only scratch names.
+ADR-091 additionally requires the validated calibration itself to embed that producing run ID and
+attempt and makes recovery compare them with the request and authoritative metadata.
 
 For a failure before the final measurement artifact exists, recovery means **Re-run all jobs**, not
 failed jobs or a single matrix job. The original dispatch SHA and inputs are retained, and no

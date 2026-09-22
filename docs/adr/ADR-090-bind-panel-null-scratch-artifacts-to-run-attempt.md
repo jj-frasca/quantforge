@@ -42,6 +42,7 @@ jobs before consolidation.
 - Wildcard consolidation cannot merge colliding shard paths across attempts.
 - Artifact UI names become longer but state the complete production identity.
 - No seed, panel, statistic, threshold, generated artifact, or measurement changes.
+- ADR-091 independently retains the same run-attempt identity inside the cohort and final JSON.
 
 ## Reversal
 

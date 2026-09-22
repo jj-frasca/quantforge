@@ -54,6 +54,8 @@ exists; ADR-087's stage-aware one-look rule remains unchanged.
   compatibility branch is needed.
 - ADR-090 separately applies the same attempt identity to frozen inputs and scratch shards used
   before consolidation.
+- ADR-091 persists the producing run and attempt inside the durable calibration rather than leaving
+  them only in ephemeral artifact names and recovery inputs.
 - No seed, statistic, inference input, validation threshold, generated artifact, or measurement
   changes.
 

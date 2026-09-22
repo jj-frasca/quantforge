@@ -32,6 +32,8 @@ def _cohort() -> PanelNullCohort:
         search_config_version="search-v1",
         gate_config_version="gate-v1",
         code_revision="1" * 40,
+        workflow_run_id=123456,
+        workflow_run_attempt=2,
         generator_version="joint-iid-calendar-v1",
         diagnostic_version="equal-symbol-excess-v1",
         base_seed=17,

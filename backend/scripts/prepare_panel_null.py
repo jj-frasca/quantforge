@@ -2,7 +2,8 @@
 
 Usage:
     PYTHONPATH=. uv run python scripts/prepare_panel_null.py ASOF_UTC SOURCE_NPZ COHORT_JSON \
-        --base-seed SEED --code-revision SHA [--pool-dir PATH] [--target-n-bars N]
+        --base-seed SEED --code-revision SHA --workflow-run-id ID \
+        --workflow-run-attempt ATTEMPT [--pool-dir PATH] [--target-n-bars N]
 
 ``ASOF_UTC`` is required and must carry a zero UTC offset. The exact same instant bounds every
 yfinance request and removes its still-forming UTC-date bar. This command reads the committed
@@ -86,6 +87,8 @@ def prepare_panel_null_source_files(
     manifest_path: Path,
     base_seed: int,
     code_revision: str,
+    workflow_run_id: int,
+    workflow_run_attempt: int,
     adapter_factory: _AdapterFactory = YFinanceAdapter,
     search: Callable[[pd.DataFrame, str], Experiment] | None = None,
 ) -> PanelNullCohort:
@@ -126,6 +129,8 @@ def prepare_panel_null_source_files(
         diagnostic_version=PANEL_NULL_DIAGNOSTIC_VERSION,
         base_seed=base_seed,
         code_revision=code_revision,
+        workflow_run_id=workflow_run_id,
+        workflow_run_attempt=workflow_run_attempt,
     )
     save_prepared_panel_null_source(prepared, source_path)
     save_panel_null_cohort(cohort, manifest_path)
@@ -139,6 +144,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("cohort_json", type=Path)
     parser.add_argument("--base-seed", type=int, required=True)
     parser.add_argument("--code-revision", required=True)
+    parser.add_argument("--workflow-run-id", type=int, required=True)
+    parser.add_argument("--workflow-run-attempt", type=int, required=True)
     parser.add_argument("--pool-dir", type=Path, default=DEFAULT_POOL)
     parser.add_argument("--target-n-bars", type=int, default=CALIBRATION_N_BARS)
     return parser
@@ -172,6 +179,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         manifest_path=args.cohort_json,
         base_seed=args.base_seed,
         code_revision=args.code_revision,
+        workflow_run_id=args.workflow_run_id,
+        workflow_run_attempt=args.workflow_run_attempt,
     )
     print(f"frozen symbols        : {len(cohort.symbols)}")
     print(f"completed source range: {cohort.source_start} -> {cohort.source_end}")
@@ -179,6 +188,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     print(f"search config version : {cohort.search_config_version}")
     print(f"gate config version   : {cohort.gate_config_version}")
     print(f"executed code revision: {cohort.code_revision}")
+    print(f"workflow run identity : {cohort.workflow_run_id}/{cohort.workflow_run_attempt}")
     print(f"wrote source archive  : {args.source_npz}")
     print(f"wrote cohort manifest : {args.cohort_json}")
 

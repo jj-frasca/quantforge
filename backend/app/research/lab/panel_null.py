@@ -122,6 +122,8 @@ class PanelNullCohort(BaseModel):
     search_config_version: str = Field(min_length=1)
     gate_config_version: str = Field(min_length=1)
     code_revision: str = Field(pattern=r"^[0-9a-f]{40}$")
+    workflow_run_id: int = Field(gt=0)
+    workflow_run_attempt: int = Field(gt=0)
     generator_version: str = Field(min_length=1)
     diagnostic_version: str = Field(min_length=1)
     base_seed: int = Field(ge=0)
@@ -613,6 +615,8 @@ def bind_panel_null_cohort(
     diagnostic_version: str,
     base_seed: int,
     code_revision: str,
+    workflow_run_id: int,
+    workflow_run_attempt: int,
 ) -> PanelNullCohort:
     """Bind the frozen real estimand to its exact prepared source-panel identity."""
     selected = SelectedPanelNullCohort.model_validate(selected.model_dump())
@@ -633,6 +637,8 @@ def bind_panel_null_cohort(
         search_config_version=selected.search_config_version,
         gate_config_version=selected.gate_config_version,
         code_revision=code_revision,
+        workflow_run_id=workflow_run_id,
+        workflow_run_attempt=workflow_run_attempt,
         generator_version=generator_version,
         diagnostic_version=diagnostic_version,
         base_seed=base_seed,

@@ -715,6 +715,9 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   API endpoint, and a partial or mismatched run/attempt identity fails before publication.
   ADR-090 extends that attempt identity to the frozen-input pair and every complete-panel scratch
   shard, preventing a full rerun from selecting or wildcard-merging prior-attempt intermediates.
+  ADR-091 persists the same positive run ID and attempt in the frozen cohort and final calibration,
+  so the committed one-look record remains attributable after artifact retention expires and
+  recovery must match payload, request, and authoritative metadata.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

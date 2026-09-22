@@ -64,6 +64,8 @@ def _cohort(
         search_config_version="search-v1",
         gate_config_version="gate-v1",
         code_revision="1" * 40,
+        workflow_run_id=123456,
+        workflow_run_attempt=2,
         generator_version="joint-iid-calendar-v1",
         diagnostic_version="equal-symbol-excess-v1",
         base_seed=17,
@@ -79,6 +81,16 @@ def test_panel_null_cohort_requires_an_exact_git_revision() -> None:
     for invalid in ("", "1" * 39, "1" * 41, "G" * 40, "A" * 40):
         with pytest.raises(ValidationError, match="code_revision"):
             PanelNullCohort.model_validate({**cohort.model_dump(), "code_revision": invalid})
+
+
+def test_panel_null_cohort_freezes_a_positive_workflow_run_attempt_identity() -> None:
+    cohort = _cohort()
+
+    assert cohort.workflow_run_id == 123456
+    assert cohort.workflow_run_attempt == 2
+    for field in ("workflow_run_id", "workflow_run_attempt"):
+        with pytest.raises(ValidationError, match=field):
+            PanelNullCohort.model_validate({**cohort.model_dump(), field: 0})
 
 
 def _replicate(index: int, *, successful_symbols: int = 2) -> PanelNullReplicate:
@@ -531,6 +543,8 @@ def test_bind_panel_null_cohort_freezes_selection_and_prepared_source_identity()
         diagnostic_version="equal-symbol-excess-v1",
         base_seed=17,
         code_revision="1" * 40,
+        workflow_run_id=123456,
+        workflow_run_attempt=2,
     )
 
     assert cohort.symbols == selected.symbols
@@ -571,6 +585,8 @@ def test_bind_panel_null_cohort_rejects_source_cohort_or_history_drift() -> None
             diagnostic_version="equal-symbol-excess-v1",
             base_seed=17,
             code_revision="1" * 40,
+            workflow_run_id=123456,
+            workflow_run_attempt=2,
         )
 
     wrong_history = prepare_panel_null_source(_source_panel(), selected.symbols, target_n_bars=4)
@@ -582,6 +598,8 @@ def test_bind_panel_null_cohort_rejects_source_cohort_or_history_drift() -> None
             diagnostic_version="equal-symbol-excess-v1",
             base_seed=17,
             code_revision="1" * 40,
+            workflow_run_id=123456,
+            workflow_run_attempt=2,
         )
 
 
@@ -740,6 +758,8 @@ def test_run_panel_null_replicate_searches_one_joint_panel_and_pairs_diagnostics
         diagnostic_version="equal-symbol-excess-v1",
         base_seed=17,
         code_revision="1" * 40,
+        workflow_run_id=123456,
+        workflow_run_attempt=2,
     )
     searched: list[tuple[str, pd.DataFrame]] = []
 
