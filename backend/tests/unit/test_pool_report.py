@@ -16,6 +16,7 @@ from app.research.lab.pool_report import (
     POCOCK_TWO_LOOK_ALPHA,
     compare_search_windows,
     compare_with_null,
+    history_coverage,
     summarize_pool,
     window_experiment_symbols,
     window_experiment_workload,
@@ -1510,3 +1511,91 @@ def test_the_two_excess_rows_do_not_borrow_each_others_control() -> None:
     assert next(r for r in rows if r.statistic == "purged-CV excess").real_median == (
         pytest.approx(0.8)
     )
+
+
+# --- ADR-093: does each null artifact still match a sample, and what is it missing? ---
+
+
+def _at_bars(symbol: str, n_bars: int) -> Experiment:
+    return _exp_with_diagnostics(
+        symbol, walk_forward=0.5, purged_cv=0.5, graduated=False
+    ).model_copy(update={"n_bars": n_bars})
+
+
+def test_reports_how_many_symbols_each_artifact_actually_matches() -> None:
+    pool = [_at_bars(f"IN{i}", 7400) for i in range(4)] + [
+        _at_bars(f"OUT{i}", 9233) for i in range(9)
+    ]
+
+    coverage = history_coverage(
+        pool, [_null("iid_normal", walk_forward=[0.4], purged_cv=[0.4], n_bars=7400)]
+    )
+
+    assert [(c.null_mode, c.null_n_bars, c.matched_symbols) for c in coverage.artifacts] == [
+        ("iid_normal", 7400, 4)
+    ]
+
+
+def test_names_the_largest_mass_of_symbols_no_artifact_can_reach() -> None:
+    """The finding this exists to surface: 40% of the universe saturates ADR-063's window at one
+    identical length, and a null generated at the MEDIAN sits in the valley beside it."""
+    pool = [_at_bars(f"IN{i}", 7400) for i in range(4)] + [
+        _at_bars(f"OUT{i}", 9233) for i in range(9)
+    ]
+
+    coverage = history_coverage(
+        pool, [_null("iid_normal", walk_forward=[0.4], purged_cv=[0.4], n_bars=7400)]
+    )
+
+    assert coverage.unmatched_symbols == 9
+    assert coverage.largest_unmatched_n_bars == 9233
+
+
+def test_a_length_that_is_already_covered_is_not_reported_as_missing() -> None:
+    pool = [_at_bars(f"IN{i}", 7400) for i in range(4)] + [
+        _at_bars(f"OUT{i}", 9233) for i in range(9)
+    ]
+    calibrations = [
+        _null("iid_normal", walk_forward=[0.4], purged_cv=[0.4], n_bars=7400),
+        _null("bootstrap:SPY", walk_forward=[0.4], purged_cv=[0.4], n_bars=9233),
+    ]
+
+    coverage = history_coverage(pool, calibrations)
+
+    assert coverage.unmatched_symbols == 0
+    assert coverage.largest_unmatched_n_bars is None
+
+
+def test_a_symbol_counts_once_however_many_experiments_it_has() -> None:
+    """The comparison clusters by symbol (ADR-075), so a symbol searched five times is one unit of
+    sample, not five. Counting experiments here would overstate what a dispatch would buy."""
+    pool = [_at_bars("AAA", 9233) for _ in range(5)] + [_at_bars("BBB", 9233)]
+
+    coverage = history_coverage(
+        pool, [_null("iid_normal", walk_forward=[0.4], purged_cv=[0.4], n_bars=7400)]
+    )
+
+    assert coverage.unmatched_symbols == 2
+
+
+def test_experiments_with_no_recorded_history_are_not_counted_as_unmatched() -> None:
+    """ADR-052: `n_bars` is None on rows written before the field. Absent is not a length."""
+    pool = [
+        _at_bars("AAA", 9233),
+        _exp_with_diagnostics("BBB", walk_forward=0.5, purged_cv=0.5, graduated=False),
+    ]
+
+    coverage = history_coverage(
+        pool, [_null("iid_normal", walk_forward=[0.4], purged_cv=[0.4], n_bars=7400)]
+    )
+
+    assert coverage.unmatched_symbols == 1
+
+
+def test_no_artifacts_means_every_symbol_is_unmatched() -> None:
+    pool = [_at_bars("AAA", 9233), _at_bars("BBB", 7400)]
+
+    coverage = history_coverage(pool, [])
+
+    assert coverage.unmatched_symbols == 2
+    assert coverage.artifacts == []

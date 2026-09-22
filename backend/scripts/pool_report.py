@@ -17,10 +17,12 @@ from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.pool_report import (
     EXCESS_STATISTIC,
     EXCESS_STATISTICS,
+    HISTORY_TOLERANCE,
     PURGED_EXCESS_STATISTIC,
     DiagnosticSummary,
     compare_search_windows,
     compare_with_null,
+    history_coverage,
     summarize_pool,
 )
 
@@ -195,6 +197,27 @@ def main() -> None:
             "no comparison below is formally valid.\n      It resolves itself after the next "
             "discovery run writes rows that carry the fingerprint."
         )
+    # ADR-093: before the rows, whether the artifacts still describe the pool at all. A comparison
+    # can be perfectly valid and still be reading 89 symbols while 276 match nothing.
+    coverage = history_coverage(experiments, calibrations)
+    if coverage.artifacts or coverage.unmatched_symbols:
+        print("\nnull artifact coverage (ADR-093 — is the calibration length still the pool's?):")
+        for artifact in coverage.artifacts:
+            print(
+                f"  {artifact.null_mode:<14} @ {artifact.null_n_bars} bars "
+                f"-- matches {artifact.matched_symbols} symbols within "
+                f"{int(HISTORY_TOLERANCE * 100)}%"
+            )
+        if coverage.largest_unmatched_n_bars is None:
+            print("  every searched symbol falls in some artifact's band")
+        else:
+            print(
+                f"  {coverage.unmatched_symbols} symbols match NO artifact; the largest shared "
+                f"length among them is {coverage.largest_unmatched_n_bars} bars -- dispatch "
+                f"null-calibration.yml with n_bars={coverage.largest_unmatched_n_bars} to use them "
+                f"(additive, ADR-065 names artifacts by length)"
+            )
+
     if rows:
         print("\nvs the null (finalist window on both sides):")
         for row in rows:

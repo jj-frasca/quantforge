@@ -487,6 +487,33 @@ out-of-sample penalty is an artifact of the two windows spanning different marke
 something the search does**; the finalist still changes on 258 of 368 symbols. |δ|/SE ≈ 0.45 against
 a boundary of 2.178, so this is a measured null rather than a failure to resolve.
 
+**ADR-093: the null artifacts stopped describing the pool, and nothing was measuring that.**
+`history.py` has told every reader since ADR-063 to *"bump `CALIBRATION_N_BARS` deliberately as
+history accumulates"*. Nobody did, because nothing measured whether it was due — this was written
+as WIP on 2026-08-31, sat stashed and un-landed for three weeks while the pool kept growing under
+ADR-064/065's since-added second calibration length, and is measured fresh here rather than
+requoting the stale 2026-08-31 figures.
+
+Measured today (`scripts/pool_report.py` — data/research_pool/ has 3,275 experiments over 607
+symbols; `data/null_calibration/` carries four artifacts, `{bootstrap:SPY, iid_normal} x {5400,
+7400}` bars): the 5,400-bar artifacts match **63 symbols** and the 7,400-bar artifacts match **91**,
+within `HISTORY_TOLERANCE`. **452 of 607 symbols — 74% of the pool — match NO artifact at all**, and
+the largest shared length among them is **9,247 bars**, the saturation length of ADR-063's window
+(every symbol listed before 1990 gets the whole window minus its holdout, so that mass keeps
+growing by one bar per trading day and was never going to intersect a fixed 5,400/7,400 artifact).
+Dispatching `null-calibration.yml` at `n_bars=9247` would put the calibration back in reach of most
+of the pool with no re-search needed — a large sample available for free, and the tightening this
+project's headline interval most needs (ADR-078's "buys precision" logic below).
+
+`CALIBRATION_N_BARS` deliberately does NOT move (that would redirect the monthly run away from the
+cohort the published numbers were measured on); the saturation length is dispatched explicitly and
+ADR-065 lets both coexist. The durable half is `history_coverage`, printed above the null comparison
+in every future `pool_report.py` run: per artifact, the symbols its band reaches, and beside it the
+largest mass it misses — so the next time this drifts, the report says so instead of waiting for
+someone to notice by hand, which is what let this sit unmeasured for three weeks. **It does not
+repair FINDING-012** — more clusters do not make symbols independent, so the interval stays a lower
+bound on its own width and every ADR-075 qualification stands. This buys precision, not validity.
+
 **ADR-078 finishes the audit ADR-076 implied, and finds exactly one uncontrolled headline.**
 ADR-076 showed that on the SAME 200 symbols a raw statistic excluded zero (−0.037 [−0.061, −0.008])
 while its drift-controlled version covered it (−0.008 [−0.055, +0.022]) — so every published number

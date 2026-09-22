@@ -340,6 +340,83 @@ def compare_with_null(
     return rows
 
 
+class ArtifactCoverage(BaseModel):
+    """How much of the pool one null artifact's tolerance band can actually reach (ADR-093)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    null_mode: str
+    null_n_bars: int
+    matched_symbols: int
+
+
+class HistoryCoverage(BaseModel):
+    """Whether the null artifacts still describe the pool's history, and what they are missing.
+
+    Notes:
+        ADR-051 makes a calibration informative only at the length the hunt actually searches, and
+        `history.py` tells whoever reads it to bump `CALIBRATION_N_BARS` as history accumulates.
+        Nothing measured whether that was due, so it was not done: the 7,400-bar artifact matched
+        89 symbols while 276 sat at ADR-063's saturation length matching nothing. This reports it,
+        so the next drift announces itself instead of waiting to be thought of.
+
+        Counted by SYMBOL, not by experiment — the comparison clusters by symbol (ADR-075), so a
+        symbol searched five times is one unit of sample and counting rows would overstate what a
+        dispatch would buy.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    artifacts: list[ArtifactCoverage]
+    unmatched_symbols: int
+    largest_unmatched_n_bars: int | None
+
+
+def history_coverage(
+    experiments: Sequence[Experiment], calibrations: Sequence[NullCalibration]
+) -> HistoryCoverage:
+    """Per artifact, the symbols its band reaches; overall, the biggest mass it does not (ADR-093)."""
+    longest: dict[str, int] = {}
+    for experiment in experiments:
+        if experiment.n_bars is None:
+            continue
+        longest[experiment.symbol] = max(longest.get(experiment.symbol, 0), experiment.n_bars)
+
+    artifacts: list[ArtifactCoverage] = []
+    covered: set[str] = set()
+    for calibration in calibrations:
+        if not calibration.n_bars:
+            continue
+        null_bars = int(np.median(calibration.n_bars))
+        matched = {
+            symbol
+            for symbol, bars in longest.items()
+            if abs(bars - null_bars) <= HISTORY_TOLERANCE * null_bars
+        }
+        covered |= matched
+        artifacts.append(
+            ArtifactCoverage(
+                null_mode=calibration.null_mode,
+                null_n_bars=null_bars,
+                matched_symbols=len(matched),
+            )
+        )
+
+    unmatched = [bars for symbol, bars in longest.items() if symbol not in covered]
+    # The length worth dispatching is the one the most unmatched symbols share, not their median:
+    # the distribution is bimodal because every symbol older than the window saturates at the same
+    # `n_bars`, and a median lands in the valley between the two masses (ADR-093).
+    modal: int | None = None
+    if unmatched:
+        counts: dict[int, int] = defaultdict(int)
+        for bars in unmatched:
+            counts[bars] += 1
+        modal = max(sorted(counts), key=lambda bars: counts[bars])
+    return HistoryCoverage(
+        artifacts=artifacts, unmatched_symbols=len(unmatched), largest_unmatched_n_bars=modal
+    )
+
+
 EXCESS_STATISTIC = "walk-forward excess"
 PURGED_EXCESS_STATISTIC = "purged-CV excess"
 # Both drift-controlled rows: zero means the same thing on each side, so both are read two-sided
