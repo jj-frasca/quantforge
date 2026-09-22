@@ -514,6 +514,34 @@ someone to notice by hand, which is what let this sit unmeasured for three weeks
 repair FINDING-012** — more clusters do not make symbols independent, so the interval stays a lower
 bound on its own width and every ADR-075 qualification stands. This buys precision, not validity.
 
+**The `n_bars=9247` dispatch landed same-day and answers ADR-078's open question — with a caveat
+about what it actually compares.** `null-calibration.yml` run `35691739293` committed
+`{bootstrap:SPY, iid_normal}_9247.json` within the hour; re-running `pool_report.py` shows coverage
+at 9,247 bars jumping to **276 matched symbols** (largest single cohort yet; 176 of 607 remain
+unmatched, next shared length 6,075 bars — dispatching that is the natural follow-up, not done here).
+
+ADR-078 asked *"whether purged CV's excess band collapses the way walk-forward's did"* on a larger
+sample. On this new, much larger cohort (n=1,395 experiments, 276 symbol clusters — 3x ADR-078's
+88-symbol reading): **purged-CV excess is a clustered difference of medians of
+`+0.000 [+0.000, +0.000]` against both nulls** — indistinguishable from exactly zero at three-decimal
+resolution, consistent with (and now measured on a far larger sample than) ADR-078's original
+`−0.000`/`+0.000 [−0.048, +0.002]` reading. **Walk-forward excess at 9,247 bars is `−0.047 [−0.077,
+−0.014]` vs bootstrap and `−0.050 [−0.078, −0.014]` vs iid-normal — still excludes zero**, same
+qualitative read as the 7,400-bar cohort's `−0.122`/`−0.133`, but the point estimate is roughly a
+third the size.
+
+**That shrinkage is not "the same sample got bigger and the effect weakened" — it must not be read
+that way.** The 7,400-bar and 9,247-bar cohorts are, by construction, two different, non-overlapping
+populations (ADR-063's saturation split: 9,247 bars is the exact ceiling for every symbol listed
+before 1990; 7,400-bar names are the younger, re-searched cohort that has not yet hit it), the same
+distinction ADR-064 already forced onto the null-comparison rows. So the honest reading is: *walk-
+forward's excess is real and excludes zero in BOTH the younger and the saturated-window cohorts, but
+its magnitude differs by cohort* — `−0.05` in the long-history population vs `−0.12`/`−0.13` in the
+shorter one. Purged CV's excess reads as zero in both. Whether that magnitude gap is itself
+attributable to history length, or to whatever distinguishes companies old enough to predate 1990
+from those that are not, is an open question this run does not resolve and no session should
+overclaim an answer to from two cohort-level points.
+
 **ADR-078 finishes the audit ADR-076 implied, and finds exactly one uncontrolled headline.**
 ADR-076 showed that on the SAME 200 symbols a raw statistic excluded zero (−0.037 [−0.061, −0.008])
 while its drift-controlled version covered it (−0.008 [−0.055, +0.022]) — so every published number
