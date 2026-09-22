@@ -741,6 +741,11 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   ADR-100 makes that recovery publication-idempotent: the recovery job checks out current master,
   identical bytes return without rewrite or commit, and a different durable measurement fails
   before destination mutation.
+  ADR-101 closes the power-side capture gap left by ADR-096: every planted-edge power result now
+  preserves the exact selected finalist's nullable probability-form DSR, index-aligned with its
+  existing finalist fields. Future ordinary null and power runs can support matched Type-I/power
+  curves for the candidate statistic; no gate or threshold changes, and legacy artifacts remain
+  explicitly unmeasured through the empty-list default.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

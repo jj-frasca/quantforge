@@ -281,7 +281,11 @@ user-facing claim now calls the stored value a selection-adjusted Sharpe *margin
 trial records both. What remains is the threshold question — whether the gate should switch to the
 probability — which needs a fresh Type-I error and power curve for the new statistic and its own
 ADR. `PoolReport.statistic_agreement` measures the two statistics' disagreement so that case can be
-made with numbers.
+made with numbers. ADR-096 preserves the selected finalist's probability for every null symbol;
+ADR-101 preserves the same selected-finalist statistic for every planted-edge power symbol. Future
+ordinary calibration runs can therefore support matched Type-I and power curves without changing
+the gate or choosing a probability threshold in advance. Historical artifacts remain explicitly
+unmeasured through empty/nullable additive fields.
 
 **The detectable-edge frontier (ADR-043) factors those two numbers.** `app/research/lab/frontier.py`
 solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0

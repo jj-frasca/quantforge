@@ -390,6 +390,10 @@ class PowerCalibration(BaseModel):
     # this list on graduation would select lucky captures and inflate the reported ratio.
     # Defaulted so power artifacts written before ADR-045 remain readable and report no capture.
     finalist_observed_sharpes: list[float] = []
+    # ADR-101: the same selected finalists' probability-form DSR, enabling the planted-edge power
+    # curve that ADR-054 requires beside ADR-096's null Type-I curve. Individual values may be None
+    # when ADR-054 could not measure that finalist; an empty list means a pre-ADR-101 artifact.
+    finalist_deflated_sharpe_probabilities: list[float | None] = []
     # ADR-057: the winner's identity for each of those finalists, aligned index-for-index.
     # Capture's numerator is an in-sample maximum over the searched grid, so it rises when the
     # catalog grows even if the addition never wins; without the name a capture delta between two
@@ -809,6 +813,7 @@ def measure_power(
     net_oracles: list[float] = []
     achievable_oracles: list[float] = []
     finalist_observed_sharpes: list[float] = []
+    finalist_deflated_sharpe_probabilities: list[float | None] = []
     finalist_strategy_names: list[str] = []
     finalist_sharpes_by_category: defaultdict[str, list[float]] = defaultdict(list)
     errors: dict[str, str] = {}
@@ -839,6 +844,7 @@ def measure_power(
             achievable_oracles.append(achievable_oracle_sharpes[symbol])
         finalist = _finalist(experiment, select_by)
         finalist_observed_sharpes.append(finalist.observed_sharpe)
+        finalist_deflated_sharpe_probabilities.append(finalist.deflated_sharpe_probability)
         finalist_strategy_names.append(finalist.strategy_name)
         for category, best in _best_by_category(experiment).items():
             finalist_sharpes_by_category[category].append(best)
@@ -868,6 +874,7 @@ def measure_power(
         net_oracle_sharpes=net_oracles,
         achievable_oracle_sharpes=achievable_oracles,
         finalist_observed_sharpes=finalist_observed_sharpes,
+        finalist_deflated_sharpe_probabilities=finalist_deflated_sharpe_probabilities,
         finalist_strategy_names=finalist_strategy_names,
         finalist_sharpes_by_category=dict(finalist_sharpes_by_category),
         n_bars=n_bars,

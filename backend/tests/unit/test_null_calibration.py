@@ -611,6 +611,34 @@ def test_legacy_power_artifact_has_no_capture_measurement() -> None:
     assert legacy.refine is False and legacy.refine_span == pytest.approx(0.25)
 
 
+def test_power_captures_each_finalists_probability_form_dsr() -> None:
+    """ADR-101: power must preserve the same candidate statistic ADR-096 preserves under the
+    null, or a future threshold has Type-I evidence but no matched detection curve."""
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(2)}
+
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+
+    assert len(result.finalist_deflated_sharpe_probabilities) == result.n_symbols
+    assert all(
+        probability is None or 0.0 <= probability <= 1.0
+        for probability in result.finalist_deflated_sharpe_probabilities
+    )
+
+
+def test_legacy_power_artifact_has_no_probability_form_dsr_measurement() -> None:
+    result = measure_power(
+        {"EDGE0": autocorrelated_edge(900, seed=0, phi=-0.3)},
+        ["sma", "momentum"],
+        phi=-0.3,
+    )
+
+    legacy = PowerCalibration.model_validate(
+        result.model_dump(exclude={"finalist_deflated_sharpe_probabilities"})
+    )
+
+    assert legacy.finalist_deflated_sharpe_probabilities == []
+
+
 def test_legacy_null_artifact_is_labelled_coarse_only() -> None:
     current = calibrate_gate({"NULL": iid_normal_null(760, seed=3)}, ["sma"], n_per_param=2)
     legacy = NullCalibration.model_validate(current.model_dump(exclude={"refine", "refine_span"}))
@@ -1693,6 +1721,9 @@ def test_walk_forward_power_attribution_describes_the_family_sent_to_the_gate() 
 
     assert calibration.finalist_strategy_names == [selected.strategy_name]
     assert calibration.finalist_observed_sharpes == [selected.observed_sharpe]
+    assert calibration.finalist_deflated_sharpe_probabilities == [
+        selected.deflated_sharpe_probability
+    ]
 
 
 def test_a_power_sweep_records_which_rule_selected_its_finalists() -> None:
