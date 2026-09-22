@@ -444,6 +444,9 @@ the complete frozen cohort and global panel index.
 ADR-098 makes final inference a validation boundary of its own: the complete calibration is
 reconstructed and revalidated before either diagnostic is computed, preventing an unvalidated
 in-process model copy from producing a partial or identity-drifted tail result.
+ADR-099 enforces ADR-087's one-look stage rule before compute: normal-mode workflow execution
+refuses to start once current master contains the fixed generated measurement, so a post-publication
+rerun cannot expose a second inference before eventually losing a push race.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

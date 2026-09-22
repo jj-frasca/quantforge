@@ -52,6 +52,7 @@ jobs:
       RECOVERY_RUN_ID: ${{ inputs.recovery_run_id }}
       RECOVERY_RUN_ATTEMPT: ${{ inputs.recovery_run_attempt }}
     steps:
+      - uses: actions/checkout@v4
       - name: Require a complete recovery identity or normal-mode inputs
         run: |
           set -euo pipefail
@@ -59,6 +60,18 @@ jobs:
              [[ -z "$RECOVERY_RUN_ID" && -n "$RECOVERY_RUN_ATTEMPT" ]]; then
             echo "recovery run ID and attempt must be supplied together" >&2
             exit 2
+          fi
+      - name: Refuse normal remeasurement after publication
+        run: |
+          set -euo pipefail
+          if [[ -z "$RECOVERY_RUN_ID" ]]; then
+            git fetch --no-tags origin master:refs/remotes/origin/master
+            if git cat-file -e \
+              "origin/master:data/panel_null_calibration/replicated_correlated_panel_null.json" \
+              2>/dev/null; then
+              echo "panel-null measurement already exists; use ADR-087 publish-only recovery" >&2
+              exit 2
+            fi
           fi
 
   prepare:

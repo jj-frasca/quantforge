@@ -738,6 +738,8 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   shard and final-artifact validation, matching the identity emitted by execution.
   ADR-098 reconstructs and revalidates the complete final calibration before inference, so a
   partial or identity-drifted Pydantic model copy cannot bypass the artifact invariants.
+  ADR-099 checks current master before normal-mode preparation and refuses to rerun after the fixed
+  generated measurement is published; post-publication operation is exact-byte recovery only.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

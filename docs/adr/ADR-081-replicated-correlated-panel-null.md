@@ -246,6 +246,9 @@ cohort and global index during shard and final-artifact validation, not merely c
 uniqueness.
 ADR-098 revalidates the complete final artifact again at the inference boundary, so an unvalidated
 in-process model copy cannot bypass the fixed replicate, ordering, seed, or identity contracts.
+ADR-099 enforces the one-look publication boundary in workflow code: normal mode refuses to start
+once current master contains the fixed generated measurement, leaving exact-byte recovery as the
+only post-publication path.
 
 ## Alternatives considered
 

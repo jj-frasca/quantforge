@@ -142,3 +142,16 @@ def test_panel_null_workflow_rejects_partial_recovery_identity_before_other_jobs
     assert '[[ -z "$RECOVERY_RUN_ID" && -n "$RECOVERY_RUN_ATTEMPT" ]]' in validation
     assert "needs: validate-inputs" in prepare
     assert "needs: validate-inputs" in recover
+
+
+def test_panel_null_workflow_refuses_normal_remeasurement_after_publication() -> None:
+    workflow = _workflow()
+    validation = workflow.split("  validate-inputs:\n", 1)[1].split("\n  prepare:\n", 1)[0]
+
+    assert "actions/checkout@v4" in validation
+    assert "refs/remotes/origin/master" in validation
+    assert "origin/master:data/panel_null_calibration/replicated_correlated_panel_null.json" in (
+        validation
+    )
+    assert 'if [[ -z "$RECOVERY_RUN_ID" ]]' in validation
+    assert "use ADR-087 publish-only recovery" in validation

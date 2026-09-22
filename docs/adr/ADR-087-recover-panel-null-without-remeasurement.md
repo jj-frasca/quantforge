@@ -52,6 +52,9 @@ ADR-090 also attempt-qualifies the normal path's frozen-input and shard artifact
 full-rerun boundary before consolidation rather than relying on ambiguous run-only scratch names.
 ADR-091 additionally requires the validated calibration itself to embed that producing run ID and
 attempt and makes recovery compare them with the request and authoritative metadata.
+ADR-099 makes the stage rule executable: before any normal-mode preparation, current master is
+checked for the fixed generated measurement path and the workflow fails if publication already
+occurred. A push conflict is not a substitute because inference would already have been observed.
 
 For a failure before the final measurement artifact exists, recovery means **Re-run all jobs**, not
 failed jobs or a single matrix job. The original dispatch SHA and inputs are retained, and no
