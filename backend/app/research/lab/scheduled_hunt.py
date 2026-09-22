@@ -6,6 +6,7 @@ from typing import Protocol
 import pandas as pd
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
+from app.research.fundamentals.distress import DistressProvider
 from app.research.lab.experiment import ExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.paper import ExitPolicy, PaperPosition
@@ -40,6 +41,7 @@ def hunt_and_promote(
     fundamentals_provider: FundamentalsProvider | None = None,
     config: GateConfig | None = None,
     fundamental_criteria: FundamentalCriteria | None = None,
+    distress_provider: DistressProvider | None = None,
     value_provider: ValueProvider | None = None,
     value_config: ValueGateConfig | None = None,
     quality_provider: QualityProvider | None = None,
@@ -60,7 +62,10 @@ def hunt_and_promote(
         cut name is not re-added). Pure over its providers/stores → unit-testable without network.
         A `value_provider` (ADR-023, WP-J) records a cited `UndervaluationScore` on each hunted
         name; a `value_config` additionally pre-screens out names below min_score — both forwarded
-        straight to the hunt (record-first: recording on, the hard gate opt-in).
+        straight to the hunt (record-first: recording on, the hard gate opt-in). A `distress_provider`
+        (ADR-029 4c) is forwarded the same way: it is not record-first, since the hard-distress veto
+        blocks graduation directly (no separate config) — a distressed name simply never becomes a
+        `Graduate` and so can never reach `manage_portfolio` below.
     """
     hunt = run_universe_hunt(
         symbols,
@@ -69,6 +74,7 @@ def hunt_and_promote(
         fundamentals_provider=fundamentals_provider,
         config=config,
         fundamental_criteria=fundamental_criteria,
+        distress_provider=distress_provider,
         value_provider=value_provider,
         value_config=value_config,
         quality_provider=quality_provider,

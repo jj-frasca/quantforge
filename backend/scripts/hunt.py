@@ -25,6 +25,7 @@ from app.data.sources.edgar import SecEdgarFundamentalsSource
 from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.frames import bars_to_frame
+from app.research.fundamentals.distress import make_distress_provider
 from app.research.fundamentals.record import load_fundamentals_pool
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.gate import GateConfig
@@ -88,6 +89,9 @@ def main() -> None:
     # ADR-029 4b: quality scores come from the weekly EDGAR sweep's pool, not a per-symbol fetch.
     # The screen only bites when --quality-screen is given; a missing pool leaves it inert.
     quality_provider = make_quality_provider(load_fundamentals_pool(FUNDAMENTALS_POOL))
+    # ADR-029 4c: hard financial-distress veto — always on, no config (an unscorable name never
+    # vetoes; only extreme, multi-signal distress blocks graduation). The last unwired safety rail.
+    distress_provider = make_distress_provider(edgar.fetch_history)
     notes = []
     if value_config is not None:
         notes.append(f"value gate min_score={value_config.min_score}")
@@ -107,6 +111,7 @@ def main() -> None:
         fundamentals_provider=fundamentals_provider,
         config=GateConfig(),
         fundamental_criteria=FundamentalCriteria(),
+        distress_provider=distress_provider,
         value_provider=value_provider,
         value_config=value_config,
         quality_provider=quality_provider,

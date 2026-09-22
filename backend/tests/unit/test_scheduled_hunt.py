@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 import numpy as np
 import pandas as pd
 
+from app.research.fundamentals.distress import DistressScreen
 from app.research.fundamentals.record import FundamentalRecord
 from app.research.lab.experiment import (
     Experiment,
@@ -258,3 +259,31 @@ def test_hunt_and_promote_forwards_the_quality_screen_to_the_hunt() -> None:
 
     assert {e.symbol for e in result.hunt.experiments} == {"GOOD"}
     assert "WEAK" in result.hunt.filtered
+
+
+def test_hunt_and_promote_forwards_distress_provider_and_vetoes_promotion() -> None:
+    # ADR-029 4(c): a distress_provider is forwarded straight to the hunt (same shape as value/
+    # quality). A distressed name must never reach the paper book even if its technicals graduate.
+    pool = InMemoryExperimentStore()
+    portfolio = _FakePortfolio()
+    screens = {
+        "SICK": DistressScreen(distressed=True, reasons=["negative net income"]),
+        "HEALTHY": DistressScreen(distressed=False, reasons=[]),
+    }
+
+    result = hunt_and_promote(
+        ["SICK", "HEALTHY"],
+        ["sma"],
+        _long_provider,
+        pool=pool,
+        portfolio=portfolio,
+        now=_NOW,
+        refine=False,
+        distress_provider=lambda s: screens[s],
+    )
+
+    by_symbol = {e.symbol: e for e in result.hunt.experiments}
+    assert by_symbol["SICK"].distress_screen is not None
+    assert by_symbol["SICK"].distress_screen.distressed is True
+    assert by_symbol["SICK"].graduate is None  # vetoed despite passing technicals
+    assert "SICK" not in {p.symbol for p in result.promoted}
