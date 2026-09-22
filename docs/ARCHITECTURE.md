@@ -542,6 +542,32 @@ attributable to history length, or to whatever distinguishes companies old enoug
 from those that are not, is an open question this run does not resolve and no session should
 overclaim an answer to from two cohort-level points.
 
+**A third cohort (same day, `n_bars=6075`, run `35692337888`) changes the picture again: walk-
+forward's excess does not reliably exclude zero either.** `history_coverage` named 6,075 bars as the
+next-largest shared length among the still-unmatched (129 of 607 after the 9,247 dispatch); its
+artifacts match 71 symbols, `n=355` experiments. Here **walk-forward excess's clustered interval
+SPANS zero**: `−0.018 [−0.067, +0.008]` vs bootstrap, `−0.023 [−0.070, +0.009]` vs iid-normal — the
+first of the three cohorts where it does not separate. Purged-CV excess again reads at zero
+(`+0.000 [−0.001, +0.000]` / `−0.005 [−0.037, +0.000]`).
+
+Lining up all three now-measured cohorts (bars / n / clusters / walk-forward excess CI):
+
+| bars | n | clusters | walk-forward excess (vs bootstrap) | excludes zero? |
+|---|---|---|---|---|
+| 6,075 | 355 | 71 | −0.018 [−0.067, +0.008] | no |
+| 7,400 | 448 | 91 | −0.122 [−0.185, −0.073] | **yes** |
+| 9,247 | 1,395 | 276 | −0.047 [−0.077, −0.014] | **yes** |
+
+**The magnitude is not monotonic in history length** — 7,400 bars shows the largest excess,
+sandwiched between two smaller ones at both shorter and longer history — which rules out the
+simplest story ("more history, smaller apparent edge") and makes cohort *composition* rather than
+length the more likely driver, exactly the open question flagged above. Purged-CV's excess is zero
+in all three, which is now the more robust half of this comparison. **This is recorded as measured
+and unresolved, not analyzed further this session** — three cohort-level point estimates is enough
+to say the relationship is not simple monotonic shrinkage, not enough to say what it actually is; that
+needs either a within-symbol design or a stated hypothesis about what distinguishes the cohorts,
+neither of which should be reached for just to close this paragraph out.
+
 **ADR-078 finishes the audit ADR-076 implied, and finds exactly one uncontrolled headline.**
 ADR-076 showed that on the SAME 200 symbols a raw statistic excluded zero (−0.037 [−0.061, −0.008])
 while its drift-controlled version covered it (−0.008 [−0.055, +0.022]) — so every published number
