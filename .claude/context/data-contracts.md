@@ -12,9 +12,12 @@ ingestion), ADR-005 (DataSourceAdapter), ADR-006 (quality gate).
 ## 1. `source` enum
 
 ```
-Source = Literal["yfinance", "polygon"]
+Source = Literal["yfinance", "polygon", "alpaca"]
 ```
 yfinance is primary (no key). Polygon is added in Phase 3 (enables vendor cross-validation).
+Alpaca (`app/data/sources/alpaca.py`, ADR-019) is a third adapter added for cloud reliability —
+yfinance is flaky from GitHub-runner IPs; Alpaca's free tier is built for programmatic access.
+Bars are requested pre-adjusted (`adjustment=all`); `close == adj_close` by construction.
 
 ---
 
@@ -33,7 +36,7 @@ timestamp from one source. Already split/dividend-adjusted at ingestion (ADR-004
 | `close` | `Decimal` | finite, > 0 |
 | `volume` | `int` | >= 0 |
 | `adj_factor` | `Decimal` | finite, > 0. Cumulative split/dividend factor **already applied** to OHLC |
-| `source` | `Source` | `"yfinance" \| "polygon"` |
+| `source` | `Source` | `"yfinance" \| "polygon" \| "alpaca"` |
 | `quality_flags` | `dict \| None` | `None` means clean (no issues). Populated by the quality gate |
 
 **Decimal precision**: stored as `NUMERIC(18,6)` (price), `NUMERIC(10,6)` (adj_factor). Use
