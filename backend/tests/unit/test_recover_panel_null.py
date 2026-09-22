@@ -89,6 +89,54 @@ def test_recovery_validates_then_preserves_the_completed_artifact_bytes(tmp_path
     assert output.read_bytes() == source.read_bytes()
 
 
+def test_recovery_is_a_noop_when_identical_measurement_is_already_published(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "completed.json"
+    output = tmp_path / "published.json"
+    payload = (_calibration().model_dump_json(indent=2) + "\n").encode()
+    source.write_bytes(payload)
+    output.write_bytes(payload)
+
+    def fail_replace(source_path: Path, destination_path: Path) -> None:
+        raise AssertionError(f"unexpected replacement: {source_path} -> {destination_path}")
+
+    monkeypatch.setattr("scripts.recover_panel_null.os.replace", fail_replace)
+
+    recovered = recover_panel_null_measurement(
+        source,
+        output,
+        run_metadata_path=_write_metadata(tmp_path),
+        expected_repository="jj-frasca/quantforge",
+        expected_run_id=123456,
+        expected_run_attempt=2,
+    )
+
+    assert recovered == _calibration()
+    assert output.read_bytes() == payload
+
+
+def test_recovery_rejects_a_different_published_measurement_before_mutation(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "completed.json"
+    output = tmp_path / "published.json"
+    source.write_text(_calibration().model_dump_json(indent=2) + "\n", encoding="utf-8")
+    output.write_text("different published measurement\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="different panel-null measurement"):
+        recover_panel_null_measurement(
+            source,
+            output,
+            run_metadata_path=_write_metadata(tmp_path),
+            expected_repository="jj-frasca/quantforge",
+            expected_run_id=123456,
+            expected_run_attempt=2,
+        )
+
+    assert output.read_text(encoding="utf-8") == "different published measurement\n"
+
+
 def test_recovery_rejects_invalid_payload_before_replacing_the_destination(tmp_path: Path) -> None:
     source = tmp_path / "invalid.json"
     output = tmp_path / "published.json"

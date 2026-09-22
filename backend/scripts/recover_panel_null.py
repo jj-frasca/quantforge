@@ -5,8 +5,9 @@ Usage: PYTHONPATH=. uv run python scripts/recover_panel_null.py \\
 
 The source must deserialize as a complete ``PanelNullCalibration``. Validation finishes before the
 destination is touched, including binding its code revision to the authoritative GitHub source-run
-metadata, then the exact source bytes replace the generated-data path atomically. Only the manual
-panel-null workflow may invoke this against ``data/`` under ADR-030.
+metadata. An absent destination receives the exact bytes atomically, an identical destination is a
+no-op, and a different destination is rejected. Only the manual panel-null workflow may invoke this
+against ``data/`` under ADR-030.
 """
 
 import os
@@ -80,7 +81,7 @@ def recover_panel_null_measurement(
     expected_run_id: int,
     expected_run_attempt: int,
 ) -> PanelNullCalibration:
-    """Validate and atomically publish the exact completed artifact bytes."""
+    """Validate and idempotently publish the exact completed artifact bytes."""
     source = Path(source_path)
     output = Path(output_path)
     payload = source.read_bytes()
@@ -96,6 +97,11 @@ def recover_panel_null_measurement(
         expected_run_id=expected_run_id,
         expected_run_attempt=expected_run_attempt,
     )
+
+    if output.exists():
+        if output.read_bytes() == payload:
+            return calibration
+        raise ValueError("a different panel-null measurement is already published")
 
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary_path: Path | None = None

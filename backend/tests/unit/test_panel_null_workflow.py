@@ -105,6 +105,10 @@ def test_panel_null_workflow_recovers_only_a_completed_artifact_without_remeasur
     assert "scripts/consolidate_panel_null.py" not in recover
     assert "if: inputs.recovery_run_id == ''" in workflow
     assert "if: inputs.recovery_run_id != ''" in recover
+    assert "ref: master" in recover
+    assert "git diff --cached --quiet" in recover
+    assert "panel-null measurement is already published byte-for-byte" in recover
+    assert recover.index("git diff --cached --quiet") < recover.index("git commit -m")
 
 
 def test_panel_null_workflow_names_the_measurement_for_its_exact_run_attempt() -> None:

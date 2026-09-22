@@ -447,6 +447,10 @@ in-process model copy from producing a partial or identity-drifted tail result.
 ADR-099 enforces ADR-087's one-look stage rule before compute: normal-mode workflow execution
 refuses to start once current master contains the fixed generated measurement, so a post-publication
 rerun cannot expose a second inference before eventually losing a push race.
+ADR-100 makes the remaining publish-only path idempotent. Recovery checks out current master after
+validating the exact source run, refuses to replace a different durable measurement, treats an
+identical destination as a byte-preserving no-op, and skips the generated commit when nothing
+changed. Git conflict behavior is no longer the publication invariant.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

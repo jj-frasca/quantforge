@@ -738,6 +738,9 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   partial or identity-drifted Pydantic model copy cannot bypass the artifact invariants.
   ADR-099 checks current master before normal-mode preparation and refuses to rerun after the fixed
   generated measurement is published; post-publication operation is exact-byte recovery only.
+  ADR-100 makes that recovery publication-idempotent: the recovery job checks out current master,
+  identical bytes return without rewrite or commit, and a different durable measurement fails
+  before destination mutation.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the
