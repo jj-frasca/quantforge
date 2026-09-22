@@ -126,5 +126,38 @@ direction.
 
 ## Measured
 
-Pending — see `RUNNING_STATE.md` for whether the frozen sample has been searched and reported in
-this session or a later one.
+Run 2026-09-22, same session: all 100 frozen symbols searched (0 errors, 100% yield, truncated to
+7,400 bars, ~14 minutes local wall-clock). `scripts/history_length_experiment.py report`
+(`split_bars=8000`, natural side measured at a median 9,245 bars — 2 bars short of the 9,247 the
+ARCHITECTURE prose names, an artifact of "today's" search date moving between the original
+calibration write-up and this run):
+
+```
+drift-controlled excess delta (natural minus truncated), single look at 95%
+    +0.000 [-0.028, +0.011]
+surrogate (raw OOS) delta, confounded by drift
+    +0.024 [+0.001, +0.063]
+finalist strategy changed on 52 of 100
+```
+
+**The answer is cohort composition, not history length.** If truncating these symbols to 7,400 bars
+reproduced the naturally-7,400-bar cohort's larger-magnitude excess (raw cross-cohort gap
+`-0.047 - (-0.122) = +0.075`, the "length effect" prediction), the drift-controlled delta would sit
+near `+0.075`. It does not — it is `+0.000` with a tight interval that excludes both `+0.075` and
+any effect of comparable size. Holding the symbol fixed and giving the search less history did not
+move its own drift-controlled excess. The 7,400-vs-9,247 magnitude gap in the raw cross-cohort
+comparison therefore reflects **which symbols happen to populate each cohort** — something about
+being old enough to predate 1990 (survivorship, sector mix, size — none measured here) — not a
+property of how much history the search sees. This closes the "is it length?" branch of the
+question the calibration write-ups left open; it does not identify what the composition difference
+actually is, which remains open for a future session with access to per-symbol
+sector/size/listing-date metadata this project does not currently store.
+
+Two things this result does NOT say, stated explicitly per this project's own discipline about not
+overclaiming a single look: it is a single unsized look (decision 4 above), so a true effect
+smaller than roughly the CI's half-width (~0.02) would not have been ruled out — but the specific
+~0.075 length-effect prediction this experiment was designed to test IS excluded, cleanly. And the
+raw (non-drift-controlled) OOS delta does exclude zero (`+0.024 [+0.001, +0.063]`) — truncated
+searches score very slightly lower in raw terms, consistent with a shorter window's walk-forward
+folds reaching less of SPY's later, higher-drift years — which is exactly the drift confound
+ADR-068 exists to strip out, and is why the excess row (not the raw row) is the one this ADR reads.

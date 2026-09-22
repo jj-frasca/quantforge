@@ -568,6 +568,24 @@ to say the relationship is not simple monotonic shrinkage, not enough to say wha
 needs either a within-symbol design or a stated hypothesis about what distinguishes the cohorts,
 neither of which should be reached for just to close this paragraph out.
 
+**ADR-094 supplies the within-symbol design, same day, and answers the length-vs-composition
+question directly: it is composition, not length.** 100 symbols from the 9,247-bar cohort were
+frozen and re-searched on nothing but their own most recent 7,400 bars, pairing each symbol's
+natural excess against its truncated one. If length itself drove the gap, truncating an old
+symbol should push its excess toward the 7,400 cohort's larger magnitude — the paired delta should
+read near the raw cross-cohort gap of `-0.047 - (-0.122) = +0.075`. Measured: **drift-controlled
+excess delta (natural minus truncated) `+0.000 [-0.028, +0.011]`** — tightly centered on zero,
+excluding +0.075 by a wide margin. Holding the symbol fixed and handing the search less history left
+its own excess unchanged, even though the finalist strategy itself changed on 52 of the 100 pairs.
+The 7,400-vs-9,247 gap is therefore a fact about **which symbols populate each cohort** — plausibly
+survivorship, sector mix, or size, none of which this project currently stores per symbol — not a
+fact about how much history the search sees. (The raw, drift-confounded OOS delta does exclude zero,
+`+0.024 [+0.001, +0.063]`, consistent with a shorter window's walk-forward folds missing SPY's later
+higher-drift years — exactly the confound ADR-068's excess statistic exists to strip out, which is
+why the excess row and not the raw row is the one read here.) Single unsized look (ADR-094 decision
+4): rules out an effect of the ~0.075 size this design was built to detect, does not rule out
+something much smaller. What actually distinguishes the cohorts remains open.
+
 **ADR-078 finishes the audit ADR-076 implied, and finds exactly one uncontrolled headline.**
 ADR-076 showed that on the SAME 200 symbols a raw statistic excluded zero (−0.037 [−0.061, −0.008])
 while its drift-controlled version covered it (−0.008 [−0.055, +0.022]) — so every published number
