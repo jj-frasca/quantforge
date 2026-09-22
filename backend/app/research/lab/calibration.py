@@ -54,6 +54,11 @@ class NullSymbolDiagnostics(BaseModel):
     walk_forward_hold_sharpe: float | None = None
     purged_cv_oos_sharpe: float | None = None
     purged_cv_hold_sharpe: float | None = None
+    # ADR-096: the finalist's paper-form DSR (ADR-054), a probability in [0, 1] — captured so a
+    # future Type-I-error measurement for that statistic has data to read. None on artifacts
+    # committed before this field (the search still ran, the number was just discarded), and on any
+    # future run where the finalist's own moments made it unmeasurable.
+    deflated_sharpe_probability: float | None = None
 
 
 class NullCalibration(BaseModel):
@@ -981,6 +986,9 @@ def calibrate_gate(
             walk_forward_hold_sharpe=experiment.walk_forward_hold_sharpe,
             purged_cv_oos_sharpe=_finalist(experiment, select_by).purged_cv_oos_sharpe,
             purged_cv_hold_sharpe=experiment.purged_cv_hold_sharpe,
+            deflated_sharpe_probability=_finalist(
+                experiment, select_by
+            ).deflated_sharpe_probability,
         )
         for experiment, bars, years in zip(experiments, n_bars, holdout_years, strict=True)
     ]

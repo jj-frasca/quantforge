@@ -414,6 +414,18 @@ def test_calibration_pairs_every_null_diagnostic_with_its_symbol() -> None:
     )
 
 
+def test_calibration_captures_the_finalists_probability_form_dsr() -> None:
+    """ADR-096: the finalist trial already computes deflated_sharpe_probability (ADR-054); this
+    persists it per symbol so a future Type-I-error measurement for that statistic has data to read,
+    without it the field was silently discarded after every run."""
+    frames = {f"NULL{i}": iid_normal_null(900, seed=i) for i in range(3)}
+    result = calibrate_gate(frames, ["sma", "momentum"], null_mode="iid_normal")
+
+    assert len(result.symbol_diagnostics) == 3
+    assert all(d.deflated_sharpe_probability is not None for d in result.symbol_diagnostics)
+    assert all(0.0 <= d.deflated_sharpe_probability <= 1.0 for d in result.symbol_diagnostics)
+
+
 def test_paired_artifact_rejects_a_drifting_list_projection() -> None:
     result = calibrate_gate(
         {"NULL0": iid_normal_null(900, seed=0)},
