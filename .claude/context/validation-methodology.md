@@ -4,18 +4,16 @@ Formal specs for the validation engine (Phase 4) — the layer that makes QuantF
 Read when working on `backend/app/validation/`. Citations + summaries in research-papers.md.
 Each component encodes a mathematical invariant as a Hypothesis property test.
 
-**Staleness note (added 2026-09-22, session #95):** this file's narrative sections (§7.6 onward,
-particularly §7.8's window-experiment table) stop at roughly ADR-075/ADR-076-in-progress and were
-never updated as later ADRs landed. **`docs/ARCHITECTURE.md` §0.6.1 is the current authority** for
-anything past that point — it is updated same-day as each finding, this file is not. Known-stale
-spots as of this note: §7.8 quotes ADR-074's original n=45 look (`−0.074 [−0.157, +0.030]`); ADR-076
-scaled that to n=200 and read it at the Pocock boundary (`−0.008 [−0.055, +0.022]`, criterion did
-not fire, ADR-063's window stayed — see ARCHITECTURE.md around ADR-076). §7.7's panel-null paragraph
-describes the ADR-081/082 design as unmeasured infrastructure; ADR-083 through ADR-092 hardened it
-further (still undispatched as of this note — see ARCHITECTURE.md for the current state before
-touching it, it is the project's highest-stakes single-look measurement). Neither section is
-rewritten here to avoid transcribing errors under time pressure; read ARCHITECTURE.md §0.6.1
-alongside this file rather than trusting this file's numbers past ADR-075.
+**Staleness note (added 2026-09-22 session #95, §7.8 backfilled 2026-09-22 session #96):** §7.8 was
+found frozen at ADR-074's original underpowered n=45 look; it now carries ADR-076's closing n=200
+result and the Pocock-boundary reasoning in full (transcribed from `docs/ARCHITECTURE.md` §0.6.1,
+which remains the current authority for anything not yet folded back into this file — it updates
+same-day, this file does not). §7.7's panel-null paragraph is a live exception to that lag: the
+project's convention has each panel-null ADR commit append its own 2–4 line summary directly here
+(see the ADR-097/098/099 sentences at the end of that paragraph), so §7.7 has stayed current on its
+own without needing a periodic backfill. **`docs/ARCHITECTURE.md` §0.6.1 is still the tie-breaker**
+if this file and it ever disagree — read it before citing a number here that isn't corroborated
+there, since this note itself could go stale the same way the original one did.
 
 ---
 
@@ -767,14 +765,37 @@ the load-bearing part:
 |---|---|---|---|
 | finalist walk-forward OOS — **surrogate**, each side carries its own window's drift | 368 symbols | −0.038 | [−0.060, −0.009] |
 | finalist in-sample observed | 368 symbols | +0.012 | [−0.005, +0.034] |
-| **drift-controlled excess — the criterion** | 45 symbols | **−0.074** | **[−0.157, +0.030]** |
+| **drift-controlled excess — look 1 (ADR-074), UNDERPOWERED BY CHOICE** | 45 symbols | −0.074 | [−0.157, +0.030] |
 
-The longer window changes which strategy the search picks on **257 of 368** symbols.
+The longer window changes which strategy the search picks on **257 of 368** symbols (later refreshed
+to 296 of 422 as the pool grew — see ARCHITECTURE.md's live `/api/v1/window-comparison` row, a
+descriptive report line, not a re-spend of this closed test sequence).
 `scripts/window_experiment.py N` supplies the criterion's short side by re-searching a deterministic
 sample at `PRE_ADR063_SEARCH_START` (pinned in `history.py`, never a literal in a driver) and
-writing to its own file — the pool is read as the ADR-062 prior only. **The interval includes zero,
-so ADR-074's pre-stated criterion does not fire and ADR-063's window stays.** Two things it did
-settle: removing the drift confound made the effect *larger* (−0.074 vs −0.038), so the confound is
-not what produced the surrogate; and the same 45 deltas give a **mean** of −0.086 against SE 0.032,
+writing to its own file — the pool is read as the ADR-062 prior only. Look 1's interval includes
+zero, so ADR-074's pre-stated criterion did not fire on its own — but two things it did settle:
+removing the drift confound made the effect *larger* (−0.074 vs −0.038), so the confound is not
+what produced the surrogate; and the same 45 deltas gave a **mean** of −0.086 against SE 0.032,
 which would have fired a criterion stated on the mean. **Pre-state the ESTIMATOR, not only the
-threshold** — a bootstrap median is robust but costs ≈1.6× the sample of a mean. Rerun at n ≈ 75.
+threshold** — a bootstrap median is robust but costs ≈1.6× the sample of a mean.
+
+**ADR-076 spent the second, pre-stated look and closed the sequence.** n=45 was underpowered *by
+choice*, not necessity — the candidate set held 368 symbols all along and 45 was a command-line
+argument (FINDING-013). ADR-076 froze an independent 200-symbol sample
+(`data/window_experiment/adr076_sample.json`, committed before any of it was searched), sized n from
+look 1's own dispersion (≈87% power), and pre-registered a **Pocock two-look boundary, nominal
+two-sided α = 0.0294**, so the two looks together still spend the standard 0.05. All 200 were
+searched 2026-08-31:
+
+| paired delta (long − short), n=200 | median | 95% CI | reads as |
+|---|---|---|---|
+| finalist walk-forward OOS — raw, drift-confounded | −0.037 | [−0.061, −0.008] | excludes zero |
+| **drift-controlled excess — the criterion** | **−0.008** | **[−0.055, +0.022]** | **covers zero — criterion does not fire** |
+
+**|δ|/SE ≈ 0.45 against the Pocock boundary of 2.178 — a measured null, not a failure to resolve.**
+Look 1's n=45 point estimate (−0.074) collapsed toward zero at n=200, the opposite of what an effect
+that merely needed more power would do; that contrast is itself evidence the true drift-controlled
+effect is near zero, not merely undetected. **ADR-063's window stays and the two-look sequence is
+now closed** — do not re-derive a third drift-controlled number from the grown pool (ADR-077's
+separate `/api/v1/window-comparison` endpoint exists precisely so a descriptive report line never
+gets mistaken for a third spend of this test).
