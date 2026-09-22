@@ -293,7 +293,9 @@ a switch requires zero composite false graduates on both null modes, no loss in 
 direction, and a one-sided paired McNemar improvement across those two cells. Passing only
 authorizes a later gate-change ADR and recalibration. Historical artifacts remain explicitly
 unmeasured through empty/nullable additive fields, and no calibration was dispatched for this
-capture change.
+capture change. `compare_probability_dsr_gate` makes the pre-registration executable: it refuses
+the wrong null modes, identity/history drift, incomplete legacy records, undersized samples, and a
+missing strong-edge direction before computing the fixed per-cell counts and exact paired test.
 
 **The detectable-edge frontier (ADR-043) factors those two numbers.** `app/research/lab/frontier.py`
 solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0

@@ -752,7 +752,9 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   DSR and re-judge the unchanged conjunction plus ADR-018 survival. The only candidate rule is
   strictly `P > 0.95`; the pre-registered decision requires zero composite false graduates in both
   null modes, no loss in either `phi=+/-0.30` cell, and an exact one-sided paired McNemar improvement
-  across those strong-edge cells. No qualifying artifact has been read or dispatched yet.
+  across those strong-edge cells. `compare_probability_dsr_gate` is the pure executable boundary:
+  it rejects wrong modes, identity/history drift, incomplete legacy records, undersized samples,
+  and missing strong-edge cells. No qualifying artifact has been read or dispatched yet.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

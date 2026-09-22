@@ -63,6 +63,12 @@ Switching the production DSR component requires all of the following on the same
 If any condition fails or is unmeasured, the margin gate stays. Passing these conditions authorizes
 only a later gate-change ADR and matched recalibration; this ADR does not change a threshold.
 
+`compare_probability_dsr_gate` implements this boundary without loading files itself. It refuses
+the wrong null modes, gate/search/history drift, missing joint verdicts, fewer than 200 successful
+symbols per null, fewer than 50 per strong-edge cell, or either missing strong-edge direction. Its
+output preserves the per-cell incumbent/candidate counts, discordant paired counts, exact p-value,
+and final conjunction so the first qualifying read cannot reinterpret the rule.
+
 ### No measurement in this unit
 
 Do not dispatch calibration merely to populate the additive records, do not infer historical
