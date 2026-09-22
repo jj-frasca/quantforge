@@ -754,7 +754,9 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   null modes, no loss in either `phi=+/-0.30` cell, and an exact one-sided paired McNemar improvement
   across those strong-edge cells. `compare_probability_dsr_gate` is the pure executable boundary:
   it rejects wrong modes, identity/history drift, incomplete legacy records, undersized samples,
-  and missing strong-edge cells. No qualifying artifact has been read or dispatched yet.
+  and missing strong-edge cells. ADR-103 extends that refusal through every nested power cell and
+  embedded gate verdict and rejects duplicate strong-edge cells, so a wrapper cannot mislabel the
+  records actually counted. No qualifying artifact has been read or dispatched yet.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

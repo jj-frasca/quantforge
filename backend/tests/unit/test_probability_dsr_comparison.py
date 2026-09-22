@@ -177,3 +177,43 @@ def test_probability_gate_refuses_mismatched_measurement_identity() -> None:
 
     with pytest.raises(ValueError, match="search_config_version"):
         compare_probability_dsr_gate([_null("iid_normal"), bootstrap], _sweep())
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("edge", "band_reversion", "edge"),
+        ("gate_config_version", "other-gate", "gate_config_version"),
+        ("search_config_version", "other-search", "search_config_version"),
+        ("n_bars", [N_BARS - 1] * 50, "n_bars"),
+    ],
+)
+def test_probability_gate_binds_power_cells_to_their_sweep(
+    field: str, value: object, message: str
+) -> None:
+    sweep = _sweep()
+    cells = [sweep.cells[0].model_copy(update={field: value}), sweep.cells[1]]
+    mismatched = sweep.model_copy(update={"cells": cells})
+
+    with pytest.raises(ValueError, match=message):
+        compare_probability_dsr_gate([_null("iid_normal"), _null("bootstrap:SPY")], mismatched)
+
+
+def test_probability_gate_binds_embedded_verdict_to_its_calibration_gate() -> None:
+    iid = _null("iid_normal")
+    payload = iid.model_dump()
+    payload["symbol_diagnostics"][0]["calibration_verdict"]["gate_result"][
+        "gate_config_version"
+    ] = "other-gate"
+    mismatched = NullCalibration.model_validate(payload)
+
+    with pytest.raises(ValueError, match="embedded gate_config_version"):
+        compare_probability_dsr_gate([mismatched, _null("bootstrap:SPY")], _sweep())
+
+
+def test_probability_gate_refuses_duplicate_strong_edge_cells() -> None:
+    sweep = _sweep()
+    duplicate = sweep.model_copy(update={"cells": [*sweep.cells, _cell(-0.30)]})
+
+    with pytest.raises(ValueError, match="duplicate"):
+        compare_probability_dsr_gate([_null("iid_normal"), _null("bootstrap:SPY")], duplicate)

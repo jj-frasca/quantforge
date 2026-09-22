@@ -69,6 +69,9 @@ symbols per null, fewer than 50 per strong-edge cell, or either missing strong-e
 output preserves the per-cell incumbent/candidate counts, discordant paired counts, exact p-value,
 and final conjunction so the first qualifying read cannot reinterpret the rule.
 
+ADR-103 closes FINDING-035 by binding the nested cells and verdicts counted here to their advertised
+container identity and by refusing duplicate strong-edge cells.
+
 ### No measurement in this unit
 
 Do not dispatch calibration merely to populate the additive records, do not infer historical

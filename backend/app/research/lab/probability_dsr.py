@@ -57,12 +57,17 @@ class ProbabilityDsrGateComparison(BaseModel):
 
 
 def _joint_verdicts(
-    verdicts: Sequence[CalibrationSymbolVerdict], expected_n: int, label: str
+    verdicts: Sequence[CalibrationSymbolVerdict],
+    expected_n: int,
+    label: str,
+    gate_config_version: str,
 ) -> list[CalibrationSymbolVerdict]:
     if len(verdicts) != expected_n:
         raise ValueError(f"{label} has no complete joint verdict for every searched symbol")
     if any(verdict.passes_preregistered_probability_gate is None for verdict in verdicts):
         raise ValueError(f"{label} has an unmeasured probability in its joint verdict")
+    if any(verdict.gate_result.gate_config_version != gate_config_version for verdict in verdicts):
+        raise ValueError(f"{label} has an embedded gate_config_version mismatch")
     return list(verdicts)
 
 
@@ -96,6 +101,15 @@ def _validate_identity(nulls: Sequence[NullCalibration], power: PowerSweep) -> N
     for calibration in nulls:
         if set(calibration.n_bars) != {power.n_bars}:
             raise ValueError("n_bars differs across probability-DSR evidence")
+    for cell in power.cells:
+        if cell.edge != power.edge:
+            raise ValueError("power cell edge differs from its sweep")
+        if cell.gate_config_version != power.gate_config_version:
+            raise ValueError("power cell gate_config_version differs from its sweep")
+        if cell.search_config_version != power.search_config_version:
+            raise ValueError("power cell search_config_version differs from its sweep")
+        if len(cell.n_bars) != cell.n_symbols or set(cell.n_bars) != {power.n_bars}:
+            raise ValueError("power cell n_bars differs from its sweep")
 
 
 def _compare_cell(cell: PowerCalibration) -> ProbabilityDsrCellComparison:
@@ -103,7 +117,12 @@ def _compare_cell(cell: PowerCalibration) -> ProbabilityDsrCellComparison:
         raise ValueError(f"phi={cell.phi} is not an ADR-102 strong-edge cell")
     if cell.n_symbols < _MIN_POWER_SYMBOLS:
         raise ValueError(f"phi={cell.phi} needs at least {_MIN_POWER_SYMBOLS} symbols")
-    verdicts = _joint_verdicts(cell.symbol_verdicts, cell.n_symbols, f"phi={cell.phi}")
+    verdicts = _joint_verdicts(
+        cell.symbol_verdicts,
+        cell.n_symbols,
+        f"phi={cell.phi}",
+        cell.gate_config_version,
+    )
     incumbent = [verdict.gate_result.passed for verdict in verdicts]
     candidate = [_candidate_passes(verdict) for verdict in verdicts]
     return ProbabilityDsrCellComparison(
@@ -141,6 +160,7 @@ def compare_probability_dsr_gate(
             ],
             calibration.n_symbols,
             calibration.null_mode,
+            calibration.gate_config_version,
         )
         null_graduates[calibration.null_mode] = sum(_candidate_passes(v) for v in verdicts)
         null_survivors[calibration.null_mode] = sum(
@@ -149,7 +169,10 @@ def compare_probability_dsr_gate(
 
     if power.edge != "ar1":
         raise ValueError("ADR-102 requires the AR(1) power sweep")
-    cells_by_phi = {cell.phi: cell for cell in power.cells if cell.phi is not None}
+    strong_cells = [cell for cell in power.cells if cell.phi in _STRONG_EDGE_PHIS]
+    if len({cell.phi for cell in strong_cells}) != len(strong_cells):
+        raise ValueError("power sweep contains a duplicate ADR-102 strong-edge cell")
+    cells_by_phi = {cell.phi: cell for cell in strong_cells}
     if any(phi not in cells_by_phi for phi in _STRONG_EDGE_PHIS):
         raise ValueError("power sweep is missing an ADR-102 strong-edge cell")
     comparisons = [_compare_cell(cells_by_phi[phi]) for phi in _STRONG_EDGE_PHIS]
