@@ -441,6 +441,9 @@ failure into a data-dependent partial-panel median.
 ADR-097 makes the persisted per-panel identity executable rather than descriptive: execution,
 scratch-shard loading, and final calibration validation all require the same SHA-256 derived from
 the complete frozen cohort and global panel index.
+ADR-098 makes final inference a validation boundary of its own: the complete calibration is
+reconstructed and revalidated before either diagnostic is computed, preventing an unvalidated
+in-process model copy from producing a partial or identity-drifted tail result.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

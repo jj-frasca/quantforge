@@ -1046,6 +1046,7 @@ def _infer_diagnostic(
 
 def infer_panel_null(calibration: PanelNullCalibration) -> PanelNullInference:
     """Apply the fixed ADR-081/082 interpretation to a complete panel measurement."""
+    calibration = PanelNullCalibration.model_validate(calibration.model_dump())
     walk_forward = _infer_diagnostic(
         "walk_forward",
         [value.walk_forward for value in calibration.cohort.symbol_excesses],

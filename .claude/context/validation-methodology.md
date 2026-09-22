@@ -736,6 +736,8 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   median over a data-dependent subset.
   ADR-097 re-derives every persisted panel ID from the complete cohort and global panel index at
   shard and final-artifact validation, matching the identity emitted by execution.
+  ADR-098 reconstructs and revalidates the complete final calibration before inference, so a
+  partial or identity-drifted Pydantic model copy cannot bypass the artifact invariants.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

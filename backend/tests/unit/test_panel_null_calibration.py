@@ -180,6 +180,14 @@ def test_panel_null_inference_calls_both_well_inside_tails_not_separated() -> No
     assert result.resolution == "not_separated"
 
 
+def test_panel_null_inference_revalidates_the_complete_artifact_boundary() -> None:
+    calibration = _calibration_with_walk_forward([-1.0, 1.0, -1.0, 1.0])
+    partial = calibration.model_copy(update={"replicates": calibration.replicates[:-1]})
+
+    with pytest.raises(ValidationError, match="complete panel indices"):
+        infer_panel_null(partial)
+
+
 def test_panel_null_inference_does_not_filter_partial_secondary_diagnostics() -> None:
     calibration = _calibration_with_walk_forward([-1.0, 1.0, -1.0, 1.0])
     assert infer_panel_null(calibration).purged_cv is not None
@@ -194,7 +202,16 @@ def test_panel_null_inference_does_not_filter_partial_secondary_diagnostics() ->
     )
     assert infer_panel_null(incomplete).purged_cv is None
 
-    missing_real = calibration.model_copy(update={"cohort": _cohort(n_replicates=4)})
+    missing_real_cohort = _cohort(n_replicates=4)
+    missing_real = PanelNullCalibration(
+        cohort=missing_real_cohort,
+        replicates=tuple(
+            replicate.model_copy(
+                update={"panel_id": panel_identity(missing_real_cohort, replicate.panel_index)}
+            )
+            for replicate in calibration.replicates
+        ),
+    )
     assert infer_panel_null(missing_real).purged_cv is None
 
 

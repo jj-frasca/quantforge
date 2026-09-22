@@ -244,6 +244,8 @@ cohort successfully or fail before it can enter a shard.
 ADR-097 closes a persisted-identity validation gap: each panel ID is re-derived from the exact
 cohort and global index during shard and final-artifact validation, not merely checked for
 uniqueness.
+ADR-098 revalidates the complete final artifact again at the inference boundary, so an unvalidated
+in-process model copy cannot bypass the fixed replicate, ordering, seed, or identity contracts.
 
 ## Alternatives considered
 
