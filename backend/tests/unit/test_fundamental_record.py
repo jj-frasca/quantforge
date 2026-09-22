@@ -103,6 +103,17 @@ def test_compute_empty_history_is_all_none_but_records_identity() -> None:
     assert "no fundamentals history" in rec.flags
 
 
+def test_compute_defaults_sic_description_to_none() -> None:
+    hist = _history("AAA", 1, _year(2023))
+    assert compute_fundamental_record(hist).sic_description is None
+
+
+def test_compute_attaches_the_given_sic_description() -> None:
+    hist = _history("AAA", 1, _year(2023))
+    rec = compute_fundamental_record(hist, sic_description="Electronic Computers")
+    assert rec.sic_description == "Electronic Computers"
+
+
 # ---- merge_fundamental_records -------------------------------------------------------------------
 
 

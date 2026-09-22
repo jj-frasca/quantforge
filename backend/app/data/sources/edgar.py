@@ -12,6 +12,7 @@ JsonFetcher = Callable[[str], dict[str, Any]]
 
 _TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 _COMPANY_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
+_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 
 
 class SecEdgarFundamentalsSource:
@@ -39,6 +40,14 @@ class SecEdgarFundamentalsSource:
         cik = self._cik_for(symbol)
         facts = self._fetch_json(_COMPANY_FACTS_URL.format(cik=cik))
         return parse_company_facts_history(facts, symbol.upper())
+
+    def fetch_sic(self, symbol: str) -> str | None:
+        """The company's SEC SIC industry classification description (ADR-095), or None when the
+        submissions record omits it (some shell/ETF filers do)."""
+        cik = self._cik_for(symbol)
+        submission = self._fetch_json(_SUBMISSIONS_URL.format(cik=cik))
+        description = submission.get("sicDescription")
+        return str(description) if description else None
 
     def all_tickers(self) -> list[str]:
         """Every ticker in SEC's company_tickers map — the CIK universe the fundamental discovery

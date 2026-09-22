@@ -40,6 +40,15 @@ def _latest_price(adapter: YFinanceAdapter, symbol: str, now: datetime) -> float
     return float(bars[-1].close) if bars else None
 
 
+def _sic_description(edgar: SecEdgarFundamentalsSource, symbol: str) -> str | None:
+    """Best-effort SIC classification (ADR-095). Any failure -> None, same degrade-not-crash shape
+    as `_latest_price` — a missing classification is not worth losing the whole record over."""
+    try:
+        return edgar.fetch_sic(symbol)
+    except (ValueError, OSError, KeyError):
+        return None
+
+
 def main() -> None:
     shard_index = int(sys.argv[1])
     n_shards = int(sys.argv[2])
@@ -66,7 +75,11 @@ def main() -> None:
         if not history.years:
             continue  # no annual fundamentals (ETF/index) -> nothing to score
         price = _latest_price(adapter, symbol, now)
-        records.append(compute_fundamental_record(history, price))
+        try:
+            sic = _sic_description(edgar, symbol)
+        finally:
+            time.sleep(_EDGAR_MIN_INTERVAL_S)  # a second EDGAR call per symbol (ADR-095)
+        records.append(compute_fundamental_record(history, price, sic))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"fundamentals_shard_{shard_index}.json"

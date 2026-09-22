@@ -37,21 +37,32 @@ def _facts() -> dict[str, Any]:
     }
 
 
-def _fake_fetcher(calls: list[str]):
+def _submission(sic_description: str | None = "Electronic Computers") -> dict[str, Any]:
+    payload: dict[str, Any] = {"cik": "0000320193", "sic": "3571", "name": "Apple Inc."}
+    if sic_description is not None:
+        payload["sicDescription"] = sic_description
+    return payload
+
+
+def _fake_fetcher(calls: list[str], submission: dict[str, Any] | None = None):
     def fetch(url: str) -> dict[str, Any]:
         calls.append(url)
         if "company_tickers" in url:
             return _TICKERS
         if "companyfacts" in url:
             return _facts()
+        if "submissions" in url:
+            return submission if submission is not None else _submission()
         raise AssertionError(f"unexpected url {url}")
 
     return fetch
 
 
-def _source(calls: list[str]) -> SecEdgarFundamentalsSource:
+def _source(
+    calls: list[str], submission: dict[str, Any] | None = None
+) -> SecEdgarFundamentalsSource:
     return SecEdgarFundamentalsSource(
-        user_agent="QuantForge test test@example.com", fetcher=_fake_fetcher(calls)
+        user_agent="QuantForge test test@example.com", fetcher=_fake_fetcher(calls, submission)
     )
 
 
@@ -103,6 +114,34 @@ def test_fetch_history_resolves_cik_and_returns_multi_year_history() -> None:
     assert [y.fiscal_year for y in hist.years] == [2023, 2024]
     assert hist.years[-1].revenue == 400_000
     assert any("CIK0000320193.json" in url for url in calls)
+
+
+# ---- ADR-095: SIC classification, a separate endpoint from companyfacts ---------------------
+
+
+def test_fetch_sic_resolves_cik_and_returns_the_description() -> None:
+    calls: list[str] = []
+    assert _source(calls).fetch_sic("AAPL") == "Electronic Computers"
+    assert any("submissions/CIK0000320193.json" in url for url in calls)
+
+
+def test_fetch_sic_is_case_insensitive_on_ticker() -> None:
+    assert _source([]).fetch_sic("aapl") == "Electronic Computers"
+
+
+def test_fetch_sic_unknown_ticker_raises() -> None:
+    with pytest.raises(ValueError, match="CIK"):
+        _source([]).fetch_sic("NOPE")
+
+
+def test_fetch_sic_returns_none_when_the_response_omits_it() -> None:
+    assert _source([], submission=_submission(sic_description=None)).fetch_sic("AAPL") is None
+
+
+@pytest.mark.live
+def test_live_edgar_fetch_sic_for_a_real_symbol() -> None:
+    source = SecEdgarFundamentalsSource(user_agent="QuantForge research jjfrasca10@gmail.com")
+    assert source.fetch_sic("AAPL") == "Electronic Computers"
 
 
 @pytest.mark.live
