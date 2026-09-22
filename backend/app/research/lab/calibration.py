@@ -14,7 +14,7 @@ from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.lab.candidate_budget import allocate_catalog_candidate_budget
 from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.frontier import sharpe_standard_error
-from app.research.lab.gate import GateConfig
+from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.holdout import split_holdout
 from app.research.lab.search import SelectBy, _select_index, run_search
 from app.research.lab.universe import expected_max_sharpe_under_null
@@ -23,6 +23,7 @@ from app.research.strategies.catalog import CATEGORY_OF
 _TRADING_DAYS = 252
 _COLUMNS = ["open", "high", "low", "close", "volume"]
 _START = "2010-01-04"
+PROBABILITY_DSR_THRESHOLD = 0.95
 
 
 class NullGraduate(BaseModel):
@@ -42,6 +43,43 @@ class NullGraduate(BaseModel):
     deflated_sharpe: float
 
 
+class CalibrationSymbolVerdict(BaseModel):
+    """One finalist's candidate DSR and unchanged gate inputs, paired by symbol (ADR-102)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    deflated_sharpe_probability: float | None = Field(
+        default=None, ge=0.0, le=1.0, allow_inf_nan=False
+    )
+    gate_result: GateResult
+    holdout_sharpe: float = Field(allow_inf_nan=False)
+    holdout_n_bars: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def _validate_holdout_projection(self) -> "CalibrationSymbolVerdict":
+        if self.gate_result.holdout_sharpe != self.holdout_sharpe:
+            raise ValueError("holdout_sharpe does not match gate_result")
+        if self.gate_result.holdout_n_bars != self.holdout_n_bars:
+            raise ValueError("holdout_n_bars does not match gate_result")
+        return self
+
+    @property
+    def passes_preregistered_probability_gate(self) -> bool | None:
+        """Counterfactual composite verdict at ADR-102's fixed probability > 0.95 rule."""
+        if self.deflated_sharpe_probability is None:
+            return None
+        result = self.gate_result
+        return (
+            self.deflated_sharpe_probability > PROBABILITY_DSR_THRESHOLD
+            and result.pbo_ok
+            and result.stability_ok
+            and result.mintrl_ok
+            and result.holdout_ok
+            and result.beats_buy_and_hold_ok
+        )
+
+
 class NullSymbolDiagnostics(BaseModel):
     """All nullable null diagnostics tied to the searched symbol that produced them (ADR-080)."""
 
@@ -59,6 +97,9 @@ class NullSymbolDiagnostics(BaseModel):
     # committed before this field (the search still ran, the number was just discarded), and on any
     # future run where the finalist's own moments made it unmeasurable.
     deflated_sharpe_probability: float | None = None
+    # ADR-102: canonical joint identity for the counterfactual composite gate. None means a legacy
+    # artifact; a marginal probability alone must never be presented as whole-gate evidence.
+    calibration_verdict: CalibrationSymbolVerdict | None = None
 
 
 class NullCalibration(BaseModel):
@@ -128,6 +169,19 @@ class NullCalibration(BaseModel):
         symbols = [d.symbol for d in self.symbol_diagnostics]
         if len(set(symbols)) != len(symbols):
             raise ValueError("symbol_diagnostics contains a duplicate null symbol")
+        verdict_presence = [d.calibration_verdict is not None for d in self.symbol_diagnostics]
+        if any(verdict_presence) and not all(verdict_presence):
+            raise ValueError("symbol_diagnostics mixes joint-verdict and probability-only rows")
+        for diagnostic in self.symbol_diagnostics:
+            verdict = diagnostic.calibration_verdict
+            if verdict is None:
+                continue
+            if verdict.symbol != diagnostic.symbol:
+                raise ValueError("calibration_verdict symbol does not match symbol_diagnostics")
+            if verdict.deflated_sharpe_probability != diagnostic.deflated_sharpe_probability:
+                raise ValueError(
+                    "calibration_verdict probability does not match symbol_diagnostics"
+                )
 
         expected: dict[str, list[float] | list[int]] = {
             "holdout_years": [d.holdout_years for d in self.symbol_diagnostics],
@@ -394,6 +448,9 @@ class PowerCalibration(BaseModel):
     # curve that ADR-054 requires beside ADR-096's null Type-I curve. Individual values may be None
     # when ADR-054 could not measure that finalist; an empty list means a pre-ADR-101 artifact.
     finalist_deflated_sharpe_probabilities: list[float | None] = []
+    # ADR-102: canonical per-symbol joint record. The probability list above remains a compatibility
+    # projection and is validated against this record whenever the new schema is present.
+    symbol_verdicts: list[CalibrationSymbolVerdict] = []
     # ADR-057: the winner's identity for each of those finalists, aligned index-for-index.
     # Capture's numerator is an in-sample maximum over the searched grid, so it rises when the
     # catalog grows even if the addition never wins; without the name a capture delta between two
@@ -417,6 +474,22 @@ class PowerCalibration(BaseModel):
     search_config_version: str = "legacy-unspecified"
     refine: bool = False
     refine_span: float = 0.25
+
+    @model_validator(mode="after")
+    def _validate_symbol_verdicts(self) -> "PowerCalibration":
+        if not self.symbol_verdicts:
+            return self
+        if len(self.symbol_verdicts) != self.n_symbols:
+            raise ValueError("symbol_verdicts must carry one record per searched symbol")
+        symbols = [verdict.symbol for verdict in self.symbol_verdicts]
+        if len(set(symbols)) != len(symbols):
+            raise ValueError("symbol_verdicts contains a duplicate symbol")
+        projection = [verdict.deflated_sharpe_probability for verdict in self.symbol_verdicts]
+        if projection != self.finalist_deflated_sharpe_probabilities:
+            raise ValueError(
+                "finalist_deflated_sharpe_probabilities does not match symbol_verdicts"
+            )
+        return self
 
     @property
     def oracle_sharpe_percentiles(self) -> tuple[float, float, float] | None:
@@ -814,6 +887,7 @@ def measure_power(
     achievable_oracles: list[float] = []
     finalist_observed_sharpes: list[float] = []
     finalist_deflated_sharpe_probabilities: list[float | None] = []
+    symbol_verdicts: list[CalibrationSymbolVerdict] = []
     finalist_strategy_names: list[str] = []
     finalist_sharpes_by_category: defaultdict[str, list[float]] = defaultdict(list)
     errors: dict[str, str] = {}
@@ -845,6 +919,7 @@ def measure_power(
         finalist = _finalist(experiment, select_by)
         finalist_observed_sharpes.append(finalist.observed_sharpe)
         finalist_deflated_sharpe_probabilities.append(finalist.deflated_sharpe_probability)
+        symbol_verdicts.append(_calibration_symbol_verdict(experiment, select_by))
         finalist_strategy_names.append(finalist.strategy_name)
         for category, best in _best_by_category(experiment).items():
             finalist_sharpes_by_category[category].append(best)
@@ -875,6 +950,7 @@ def measure_power(
         achievable_oracle_sharpes=achievable_oracles,
         finalist_observed_sharpes=finalist_observed_sharpes,
         finalist_deflated_sharpe_probabilities=finalist_deflated_sharpe_probabilities,
+        symbol_verdicts=symbol_verdicts,
         finalist_strategy_names=finalist_strategy_names,
         finalist_sharpes_by_category=dict(finalist_sharpes_by_category),
         n_bars=n_bars,
@@ -931,6 +1007,24 @@ def _best_by_category(experiment: Experiment) -> dict[str, float]:
 def _finalist(experiment: Experiment, select_by: SelectBy) -> Trial:
     """The trial selected by the same rule ``run_search`` sent to the gate (ADR-071)."""
     return experiment.trials[_select_index(experiment.trials, select_by)]
+
+
+def _calibration_symbol_verdict(
+    experiment: Experiment, select_by: SelectBy
+) -> CalibrationSymbolVerdict:
+    """Bind a candidate probability to the exact unchanged composite-gate inputs (ADR-102)."""
+    gate_result = experiment.best_gate_result
+    if gate_result is None:
+        raise ValueError(f"experiment {experiment.symbol} has no gate result")
+    if gate_result.holdout_sharpe is None or gate_result.holdout_n_bars is None:
+        raise ValueError(f"experiment {experiment.symbol} has no structured holdout result")
+    return CalibrationSymbolVerdict(
+        symbol=experiment.symbol,
+        deflated_sharpe_probability=_finalist(experiment, select_by).deflated_sharpe_probability,
+        gate_result=gate_result,
+        holdout_sharpe=gate_result.holdout_sharpe,
+        holdout_n_bars=gate_result.holdout_n_bars,
+    )
 
 
 def calibrate_gate(
@@ -996,6 +1090,7 @@ def calibrate_gate(
             deflated_sharpe_probability=_finalist(
                 experiment, select_by
             ).deflated_sharpe_probability,
+            calibration_verdict=_calibration_symbol_verdict(experiment, select_by),
         )
         for experiment, bars, years in zip(experiments, n_bars, holdout_years, strict=True)
     ]
@@ -1270,6 +1365,13 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
     paired = [bool(s.symbol_diagnostics) for s in shards]
     if any(paired) and not all(paired):
         raise ValueError("cannot merge paired and legacy null-diagnostic shards")
+    joint_verdicts = [
+        bool(s.symbol_diagnostics)
+        and all(d.calibration_verdict is not None for d in s.symbol_diagnostics)
+        for s in shards
+    ]
+    if any(joint_verdicts) and not all(joint_verdicts):
+        raise ValueError("cannot merge joint-verdict and probability-only null shards")
     symbol_diagnostics = [d for s in shards for d in s.symbol_diagnostics]
     symbols = [d.symbol for d in symbol_diagnostics]
     if len(set(symbols)) != len(symbols):

@@ -76,6 +76,8 @@ def test_a_strong_candidate_with_enough_history_graduates() -> None:
     assert isinstance(result, GateResult)
     assert result.passed is True
     assert result.reasons == []
+    assert result.holdout_sharpe == pytest.approx(0.8)
+    assert result.holdout_n_bars == 252
 
 
 def test_high_pbo_fails_with_a_reason() -> None:

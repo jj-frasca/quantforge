@@ -19,6 +19,7 @@ import pytest
 from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.lab import calibration as calibration_module
 from app.research.lab.calibration import (
+    CalibrationSymbolVerdict,
     NullCalibration,
     NullGraduate,
     NullSymbolDiagnostics,
@@ -40,7 +41,7 @@ from app.research.lab.calibration import (
     oracle_sharpe_of,
 )
 from app.research.lab.experiment import Experiment, Trial
-from app.research.lab.gate import GateConfig
+from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.search import run_search
 from app.research.lab.universe import expected_max_sharpe_under_null
 
@@ -426,6 +427,89 @@ def test_calibration_captures_the_finalists_probability_form_dsr() -> None:
     assert all(0.0 <= d.deflated_sharpe_probability <= 1.0 for d in result.symbol_diagnostics)
 
 
+def test_null_probability_is_paired_with_the_complete_gate_verdict() -> None:
+    """ADR-102: a probability without the same symbol's other gate verdicts cannot reproduce the
+    counterfactual composite gate or its ADR-018 survivors."""
+    result = calibrate_gate(
+        {"NULL0": iid_normal_null(900, seed=0)},
+        ["sma", "momentum"],
+        null_mode="iid_normal",
+    )
+
+    diagnostic = result.symbol_diagnostics[0]
+    verdict = diagnostic.calibration_verdict
+    assert verdict is not None
+    assert verdict.symbol == diagnostic.symbol
+    assert verdict.deflated_sharpe_probability == diagnostic.deflated_sharpe_probability
+    assert verdict.gate_result.holdout_sharpe == verdict.holdout_sharpe
+    assert verdict.gate_result.holdout_n_bars == verdict.holdout_n_bars
+    assert verdict.passes_preregistered_probability_gate is not None
+
+
+def test_null_probability_verdict_identity_cannot_drift() -> None:
+    result = calibrate_gate(
+        {"NULL0": iid_normal_null(900, seed=0)},
+        ["sma", "momentum"],
+        null_mode="iid_normal",
+    )
+    payload = result.model_dump()
+    payload["symbol_diagnostics"][0]["calibration_verdict"]["symbol"] = "OTHER"
+
+    with pytest.raises(ValueError, match="calibration_verdict"):
+        NullCalibration.model_validate(payload)
+
+
+def test_null_merge_rejects_mixed_joint_verdict_generations() -> None:
+    current = calibrate_gate(
+        {"NULL0": iid_normal_null(900, seed=0)},
+        ["sma", "momentum"],
+        null_mode="iid_normal",
+    )
+    legacy = calibrate_gate(
+        {"NULL1": iid_normal_null(900, seed=1)},
+        ["sma", "momentum"],
+        null_mode="iid_normal",
+    )
+    payload = legacy.model_dump()
+    payload["symbol_diagnostics"][0].pop("calibration_verdict")
+    legacy = NullCalibration.model_validate(payload)
+
+    with pytest.raises(ValueError, match="joint-verdict"):
+        merge_calibrations([current, legacy])
+
+
+def test_probability_gate_uses_the_preregistered_strict_cutoff_and_all_other_components() -> None:
+    gate_result = GateResult(
+        passed=False,
+        dsr_ok=False,
+        pbo_ok=True,
+        stability_ok=True,
+        mintrl_ok=True,
+        holdout_ok=True,
+        beats_buy_and_hold_ok=True,
+        required_track_record_years=1.0,
+        gate_config_version="gate-v1",
+        holdout_sharpe=1.0,
+        holdout_n_bars=252,
+    )
+
+    boundary = CalibrationSymbolVerdict(
+        symbol="NULL0",
+        deflated_sharpe_probability=0.95,
+        gate_result=gate_result,
+        holdout_sharpe=1.0,
+        holdout_n_bars=252,
+    )
+    passing = boundary.model_copy(update={"deflated_sharpe_probability": 0.950001})
+    vetoed = passing.model_copy(
+        update={"gate_result": gate_result.model_copy(update={"pbo_ok": False})}
+    )
+
+    assert boundary.passes_preregistered_probability_gate is False
+    assert passing.passes_preregistered_probability_gate is True
+    assert vetoed.passes_preregistered_probability_gate is False
+
+
 def test_paired_artifact_rejects_a_drifting_list_projection() -> None:
     result = calibrate_gate(
         {"NULL0": iid_normal_null(900, seed=0)},
@@ -625,6 +709,38 @@ def test_power_captures_each_finalists_probability_form_dsr() -> None:
     )
 
 
+def test_power_probability_is_paired_with_each_symbols_complete_gate_verdict() -> None:
+    frames = {f"EDGE{i}": autocorrelated_edge(900, seed=i, phi=-0.3) for i in range(2)}
+
+    result = measure_power(frames, ["sma", "momentum"], phi=-0.3)
+
+    assert [verdict.symbol for verdict in result.symbol_verdicts] == list(frames)
+    assert [verdict.deflated_sharpe_probability for verdict in result.symbol_verdicts] == (
+        result.finalist_deflated_sharpe_probabilities
+    )
+    assert all(
+        verdict.gate_result.holdout_sharpe == verdict.holdout_sharpe
+        for verdict in result.symbol_verdicts
+    )
+    assert all(
+        verdict.gate_result.holdout_n_bars == verdict.holdout_n_bars
+        for verdict in result.symbol_verdicts
+    )
+
+
+def test_power_probability_projection_cannot_drift_from_symbol_verdicts() -> None:
+    result = measure_power(
+        {"EDGE0": autocorrelated_edge(900, seed=0, phi=-0.3)},
+        ["sma", "momentum"],
+        phi=-0.3,
+    )
+    payload = result.model_dump()
+    payload["finalist_deflated_sharpe_probabilities"] = [None]
+
+    with pytest.raises(ValueError, match="finalist_deflated_sharpe_probabilities"):
+        PowerCalibration.model_validate(payload)
+
+
 def test_legacy_power_artifact_has_no_probability_form_dsr_measurement() -> None:
     result = measure_power(
         {"EDGE0": autocorrelated_edge(900, seed=0, phi=-0.3)},
@@ -633,10 +749,11 @@ def test_legacy_power_artifact_has_no_probability_form_dsr_measurement() -> None
     )
 
     legacy = PowerCalibration.model_validate(
-        result.model_dump(exclude={"finalist_deflated_sharpe_probabilities"})
+        result.model_dump(exclude={"finalist_deflated_sharpe_probabilities", "symbol_verdicts"})
     )
 
     assert legacy.finalist_deflated_sharpe_probabilities == []
+    assert legacy.symbol_verdicts == []
 
 
 def test_legacy_null_artifact_is_labelled_coarse_only() -> None:

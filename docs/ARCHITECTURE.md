@@ -284,8 +284,16 @@ ADR. `PoolReport.statistic_agreement` measures the two statistics' disagreement 
 made with numbers. ADR-096 preserves the selected finalist's probability for every null symbol;
 ADR-101 preserves the same selected-finalist statistic for every planted-edge power symbol. Future
 ordinary calibration runs can therefore support matched Type-I and power curves without changing
-the gate or choosing a probability threshold in advance. Historical artifacts remain explicitly
-unmeasured through empty/nullable additive fields.
+the gate. **ADR-102 closes the joint-verdict gap before those values are read:** a probability alone
+cannot reconstruct a conjunction with PBO, stability, MinTRL, holdout, and beat-buy-and-hold, and
+aggregate component counts cannot identify the intersection. Future null and power artifacts now
+carry one symbol-addressed record containing the probability, complete incumbent gate result, and
+structured locked-holdout Sharpe/length. The candidate is pre-registered as strictly `P > 0.95`;
+a switch requires zero composite false graduates on both null modes, no loss in either strong AR(1)
+direction, and a one-sided paired McNemar improvement across those two cells. Passing only
+authorizes a later gate-change ADR and recalibration. Historical artifacts remain explicitly
+unmeasured through empty/nullable additive fields, and no calibration was dispatched for this
+capture change.
 
 **The detectable-edge frontier (ADR-043) factors those two numbers.** `app/research/lab/frontier.py`
 solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0

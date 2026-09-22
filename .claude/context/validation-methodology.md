@@ -746,6 +746,13 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   existing finalist fields. Future ordinary null and power runs can support matched Type-I/power
   curves for the candidate statistic; no gate or threshold changes, and legacy artifacts remain
   explicitly unmeasured through the empty-list default.
+  ADR-102 prevents those marginal probabilities from being mistaken for whole-gate evidence. Every
+  future null and power symbol now pairs its probability with the complete incumbent gate verdict
+  and structured locked-holdout Sharpe/length, which is the minimum record that can replace only
+  DSR and re-judge the unchanged conjunction plus ADR-018 survival. The only candidate rule is
+  strictly `P > 0.95`; the pre-registered decision requires zero composite false graduates in both
+  null modes, no loss in either `phi=+/-0.30` cell, and an exact one-sided paired McNemar improvement
+  across those strong-edge cells. No qualifying artifact has been read or dispatched yet.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

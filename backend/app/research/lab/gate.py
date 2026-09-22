@@ -63,6 +63,11 @@ class GateResult(BaseModel):
     required_track_record_years: float
     gate_config_version: str
     reasons: list[str] = Field(default_factory=list)
+    # ADR-102: rejected candidates need the same structured locked-holdout inputs graduates carry.
+    # Without them calibration cannot re-judge ADR-018 survival under a counterfactual DSR rule.
+    # Defaults preserve the historical experiment pool, whose reason strings are not a safe schema.
+    holdout_sharpe: float | None = Field(default=None, allow_inf_nan=False)
+    holdout_n_bars: int | None = Field(default=None, ge=1)
 
 
 class GraduationGate:
@@ -141,4 +146,6 @@ class GraduationGate:
             required_track_record_years=required,
             gate_config_version=config.version_hash,
             reasons=reasons,
+            holdout_sharpe=holdout.sharpe,
+            holdout_n_bars=holdout.n_bars,
         )
