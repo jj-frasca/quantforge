@@ -74,6 +74,45 @@ def alpha19_signal(
     return -np.sign(change) * (1.0 + cs_rank(1.0 + long_sum))
 
 
+def ts_rank(df: pd.DataFrame, window: int) -> pd.DataFrame:
+    """Rolling time-series percentile rank: for each cell, the fraction of its own trailing `window`
+    that is <= the current value. Backward-only -- causal; the first window-1 rows are NaN."""
+    return df.rolling(window).apply(lambda s: float((s <= s[-1]).mean()), raw=True)
+
+
+def alpha4_signal(prices: pd.DataFrame, window: int = 9) -> pd.DataFrame:
+    """WorldQuant Alpha#4 (Kakushadze 2016), close-only: -ts_rank(close, window). A name sitting LOW
+    in its own recent price range scores high -> long; near its recent high -> short. Short-horizon
+    in-range reversal. Trailing rank -- no look-ahead."""
+    return -ts_rank(prices, window)
+
+
+def _decay_linear(df: pd.DataFrame, window: int) -> pd.DataFrame:
+    """Linear-decay weighted moving average (weights 1..window normalized, newest heaviest),
+    trailing -- the WorldQuant decay_linear operator (Kakushadze 2016)."""
+    weights = np.arange(1, window + 1, dtype=float)
+    weights /= weights.sum()
+    return df.rolling(window).apply(lambda s: float(np.dot(s, weights)), raw=True)
+
+
+def decay_reversal_signal(prices: pd.DataFrame, window: int = 5) -> pd.DataFrame:
+    """Alpha101-style decay-weighted short-term reversal (Kakushadze 2016 decay_linear operator): the
+    NEGATED linear-decay-weighted mean of the 1-bar return over `window`, so recent movers are faded.
+    Trailing -- no look-ahead; first window rows NaN."""
+    returns = prices.pct_change()
+    return -_decay_linear(returns, window)
+
+
+def alpha9_signal(prices: pd.DataFrame, window: int = 5) -> pd.DataFrame:
+    """WorldQuant Alpha#9 (Kakushadze 2016), close-only: conditional trend-continue-or-reverse on the
+    1-bar change d = close - close.shift(1). If the trailing `window`-bar MIN of d > 0 (confirmed
+    uptrend) or MAX of d < 0 (confirmed downtrend), keep d; else reverse to -d (fade chop). Trailing
+    min/max + shift -- no look-ahead."""
+    d = prices - prices.shift(1)
+    keep_trend = (d.rolling(window).min() > 0.0) | (d.rolling(window).max() < 0.0)
+    return d.where(keep_trend, -d)
+
+
 def momentum_signal(prices: pd.DataFrame, lookback: int, skip: int = 0) -> pd.DataFrame:
     """Cross-sectional momentum (Jegadeesh & Titman 1993): trailing return over ``lookback`` bars
     ending ``skip`` bars ago. ``skip`` (typically ~1 month) sidesteps the short-term reversal that

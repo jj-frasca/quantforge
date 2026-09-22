@@ -4,9 +4,12 @@ from dataclasses import dataclass
 import pandas as pd
 
 from app.research.cross_sectional.strategies import (
+    alpha4_signal,
+    alpha9_signal,
     alpha19_signal,
     alpha34_signal,
     composite_signal,
+    decay_reversal_signal,
     high_proximity_signal,
     low_volatility_signal,
     momentum_signal,
@@ -107,6 +110,21 @@ def default_strategies(
             name="xs_alpha19",
             build=lambda p: lambda prices: alpha19_signal(prices, int(p["change_lag"])),
             param_grid=tuple({"change_lag": cl} for cl in (7, 14, 21)),
+        ),
+        "xs_alpha4": CrossSectionalStrategy(
+            name="xs_alpha4",
+            build=lambda p: lambda prices: alpha4_signal(prices, int(p["window"])),
+            param_grid=tuple({"window": w} for w in (5, 9, 21)),
+        ),
+        "xs_decay_reversal": CrossSectionalStrategy(
+            name="xs_decay_reversal",
+            build=lambda p: lambda prices: decay_reversal_signal(prices, int(p["window"])),
+            param_grid=tuple({"window": w} for w in (3, 5, 10)),
+        ),
+        "xs_alpha9": CrossSectionalStrategy(
+            name="xs_alpha9",
+            build=lambda p: lambda prices: alpha9_signal(prices, int(p["window"])),
+            param_grid=tuple({"window": w} for w in (3, 5, 10)),
         ),
     }
     if value_scores is not None:

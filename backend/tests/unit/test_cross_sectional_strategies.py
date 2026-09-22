@@ -12,11 +12,14 @@ from app.research.cross_sectional.registry import (
     default_strategies,
 )
 from app.research.cross_sectional.strategies import (
+    alpha4_signal,
+    alpha9_signal,
     alpha19_signal,
     alpha34_signal,
     composite_signal,
     cs_rank,
     cs_zscore,
+    decay_reversal_signal,
     high_proximity_signal,
     low_volatility_signal,
     momentum_signal,
@@ -259,9 +262,34 @@ def test_default_strategies_are_price_only_without_scores() -> None:
     assert {"xs_momentum", "xs_reversal", "xs_low_volatility"} <= set(strategies)
     assert {"xs_residual_momentum", "xs_risk_adjusted_momentum", "xs_composite"} <= set(strategies)
     assert {"xs_alpha34", "xs_alpha19"} <= set(strategies)
+    assert {"xs_alpha4", "xs_decay_reversal", "xs_alpha9"} <= set(strategies)
     assert "xs_value" not in strategies
     assert all(isinstance(s, CrossSectionalStrategy) for s in strategies.values())
     assert all(len(s.param_grid) >= 1 for s in strategies.values())
+
+
+def test_alpha4_negates_time_series_rank_and_no_lookahead() -> None:
+    prices = _prices(n_dates=60, n_symbols=5)
+    full = alpha4_signal(prices, window=9)
+    assert full.shape == prices.shape
+    truncated = alpha4_signal(prices.iloc[:45], window=9)
+    pd.testing.assert_frame_equal(full.iloc[:45], truncated)
+
+
+def test_decay_reversal_shape_and_no_lookahead() -> None:
+    prices = _prices(n_dates=60, n_symbols=5)
+    full = decay_reversal_signal(prices, window=5)
+    assert full.shape == prices.shape
+    truncated = decay_reversal_signal(prices.iloc[:45], window=5)
+    pd.testing.assert_frame_equal(full.iloc[:45], truncated)
+
+
+def test_alpha9_keeps_trend_reverses_chop_and_no_lookahead() -> None:
+    prices = _prices(n_dates=60, n_symbols=5)
+    full = alpha9_signal(prices, window=5)
+    assert full.shape == prices.shape
+    truncated = alpha9_signal(prices.iloc[:45], window=5)
+    pd.testing.assert_frame_equal(full.iloc[:45], truncated)
 
 
 def test_new_momentum_factors_registered_with_multi_config_grids() -> None:

@@ -113,6 +113,21 @@ def test_alpha19_strategy_is_searched_by_name() -> None:
     assert exp.best_gate_result is not None
 
 
+def test_alpha4_strategy_is_searched_by_name() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_alpha4"])
+    assert [t.strategy_name for t in exp.trials] == ["xs_alpha4"]
+
+
+def test_decay_reversal_strategy_is_searched_by_name() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_decay_reversal"])
+    assert [t.strategy_name for t in exp.trials] == ["xs_decay_reversal"]
+
+
+def test_alpha9_strategy_is_searched_by_name() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_alpha9"])
+    assert [t.strategy_name for t in exp.trials] == ["xs_alpha9"]
+
+
 def test_value_strategy_is_searched_when_scores_are_supplied() -> None:
     scores = {f"S{i}": float(i) / 6.0 for i in range(6)}
     exp = run_cross_sectional_search(
