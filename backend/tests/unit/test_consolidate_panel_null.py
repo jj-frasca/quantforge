@@ -13,6 +13,7 @@ from app.research.lab.panel_null import (
     PanelNullReplicate,
     PanelNullShard,
     PanelSymbolExcess,
+    panel_identity,
     panel_seed,
 )
 
@@ -42,10 +43,10 @@ def _cohort() -> PanelNullCohort:
     )
 
 
-def _replicate(index: int, value: float) -> PanelNullReplicate:
+def _replicate(cohort: PanelNullCohort, index: int, value: float) -> PanelNullReplicate:
     return PanelNullReplicate(
         panel_index=index,
-        panel_id=f"panel-{index}",
+        panel_id=panel_identity(cohort, index),
         seed=panel_seed(17, index),
         successful_symbols=2,
         walk_forward_excess=value,
@@ -60,10 +61,10 @@ def test_consolidator_writes_one_validated_complete_artifact(
     shard_dir.mkdir()
     cohort = _cohort()
     (shard_dir / "later.json").write_text(
-        PanelNullShard(cohort=cohort, replicates=(_replicate(1, 0.2),)).model_dump_json()
+        PanelNullShard(cohort=cohort, replicates=(_replicate(cohort, 1, 0.2),)).model_dump_json()
     )
     (shard_dir / "earlier.json").write_text(
-        PanelNullShard(cohort=cohort, replicates=(_replicate(0, -0.3),)).model_dump_json()
+        PanelNullShard(cohort=cohort, replicates=(_replicate(cohort, 0, -0.3),)).model_dump_json()
     )
     output = tmp_path / "panel-null.json"
     monkeypatch.setattr(sys, "argv", ["consolidate_panel_null.py", str(shard_dir), str(output)])

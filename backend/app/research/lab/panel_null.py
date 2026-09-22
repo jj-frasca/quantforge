@@ -268,6 +268,14 @@ def panel_seed(base_seed: int, panel_index: int) -> int:
     return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
 
 
+def panel_identity(cohort: PanelNullCohort, panel_index: int) -> str:
+    """Derive the immutable identity for one cohort-bound global panel index."""
+    cohort = PanelNullCohort.model_validate(cohort.model_dump())
+    if not 0 <= panel_index < cohort.n_replicates:
+        raise ValueError("panel_index is outside the frozen replicate range")
+    return sha256(f"{cohort.model_dump_json()}:{panel_index}".encode()).hexdigest()
+
+
 def select_panel_null_cohort(
     experiments: Sequence[Experiment],
     *,
@@ -812,10 +820,9 @@ def run_panel_null_replicate(
         raise ValueError(f"panel replicate requires every frozen symbol to succeed; {details}")
     if not walk_forward_excesses:
         raise ValueError("panel replicate produced no measured symbols")
-    panel_identity = sha256(f"{cohort.model_dump_json()}:{panel_index}".encode()).hexdigest()
     return PanelNullReplicate(
         panel_index=panel_index,
-        panel_id=panel_identity,
+        panel_id=panel_identity(cohort, panel_index),
         seed=seed,
         successful_symbols=len(walk_forward_excesses),
         errors=tuple(errors),
@@ -1086,6 +1093,11 @@ def _validate_shard_replicates(
     panel_ids = [replicate.panel_id for replicate in replicates]
     if len(set(panel_ids)) != len(panel_ids):
         raise ValueError("duplicate panel id")
+    if any(
+        replicate.panel_id != panel_identity(cohort, replicate.panel_index)
+        for replicate in replicates
+    ):
+        raise ValueError("replicate panel id does not match the derived panel identity")
     cohort_symbols = set(cohort.symbols)
     for replicate in replicates:
         if not isfinite(replicate.walk_forward_excess) or (

@@ -13,6 +13,7 @@ from app.research.lab.panel_null import (
     PanelNullCohort,
     PanelNullReplicate,
     PanelSymbolExcess,
+    panel_identity,
     panel_seed,
 )
 
@@ -42,7 +43,7 @@ def _calibration() -> PanelNullCalibration:
         replicates=(
             PanelNullReplicate(
                 panel_index=0,
-                panel_id="panel-000",
+                panel_id=panel_identity(cohort, 0),
                 seed=panel_seed(17, 0),
                 successful_symbols=1,
                 walk_forward_excess=0.2,
@@ -161,8 +162,12 @@ def test_recovery_rejects_payload_run_identity_drift_before_destination_mutation
     output = tmp_path / "published.json"
     calibration = _calibration()
     cohort = calibration.cohort.model_copy(update={field: value})
+    replicate = calibration.replicates[0].model_copy(update={"panel_id": panel_identity(cohort, 0)})
     source.write_text(
-        calibration.model_copy(update={"cohort": cohort}).model_dump_json(indent=2) + "\n",
+        calibration.model_copy(
+            update={"cohort": cohort, "replicates": (replicate,)}
+        ).model_dump_json(indent=2)
+        + "\n",
         encoding="utf-8",
     )
     output.write_text("previous measurement\n", encoding="utf-8")

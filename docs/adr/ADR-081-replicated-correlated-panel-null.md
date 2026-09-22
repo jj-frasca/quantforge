@@ -241,6 +241,9 @@ recovery can compare that identity with both its request and authoritative run m
 ADR-092 closes the remaining estimand mismatch between observed and null panels: the eligibility
 floor no longer permits partial null medians. Every replicate must search the complete frozen symbol
 cohort successfully or fail before it can enter a shard.
+ADR-097 closes a persisted-identity validation gap: each panel ID is re-derived from the exact
+cohort and global index during shard and final-artifact validation, not merely checked for
+uniqueness.
 
 ## Alternatives considered
 

@@ -438,6 +438,9 @@ among the payload, request, and authoritative run metadata.
 ADR-092 requires every null replicate to search the complete frozen symbol cohort, matching the
 observed panel's fail-closed statistic. The 30-symbol reporting floor can no longer turn a search
 failure into a data-dependent partial-panel median.
+ADR-097 makes the persisted per-panel identity executable rather than descriptive: execution,
+scratch-shard loading, and final calibration validation all require the same SHA-256 derived from
+the complete frozen cohort and global panel index.
 
 **Refreshed 2026-08-31 (session #18) as the 7,400-bar cohort grew, and the effect held.** The
 standing watch item on this row was what it would do as the re-searched cohort matured. It has more

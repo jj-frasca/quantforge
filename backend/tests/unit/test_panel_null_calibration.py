@@ -32,6 +32,7 @@ from app.research.lab.panel_null import (
     make_production_panel_null_search,
     measure_observed_panel_excesses,
     merge_panel_null_shards,
+    panel_identity,
     panel_seed,
     prepare_panel_null_source,
     run_panel_null_batch,
@@ -98,11 +99,17 @@ def test_panel_null_cohort_requires_the_complete_frozen_symbol_count() -> None:
         PanelNullCohort.model_validate({**_cohort().model_dump(), "min_successful_symbols": 1})
 
 
-def _replicate(index: int, *, successful_symbols: int = 2) -> PanelNullReplicate:
+def _replicate(
+    index: int,
+    *,
+    cohort: PanelNullCohort | None = None,
+    successful_symbols: int = 2,
+) -> PanelNullReplicate:
+    bound_cohort = cohort or _cohort()
     return PanelNullReplicate(
         panel_index=index,
-        panel_id=f"panel-{index:03d}",
-        seed=panel_seed(17, index),
+        panel_id=panel_identity(bound_cohort, index),
+        seed=panel_seed(bound_cohort.base_seed, index),
         successful_symbols=successful_symbols,
         errors=(),
         walk_forward_excess=-0.01 + index / 1000,
@@ -121,7 +128,7 @@ def _calibration_with_walk_forward(values: list[float]) -> PanelNullCalibration:
         }
     )
     replicates = tuple(
-        _replicate(index).model_copy(update={"walk_forward_excess": value})
+        _replicate(index, cohort=cohort).model_copy(update={"walk_forward_excess": value})
         for index, value in enumerate(values)
     )
     return PanelNullCalibration(cohort=cohort, replicates=replicates)
@@ -1338,24 +1345,37 @@ def test_panel_artifacts_reject_non_finite_statistics(value: float) -> None:
 @pytest.mark.parametrize(
     ("replicates", "message"),
     [
-        ((_replicate(0),), "complete panel indices"),
-        ((_replicate(1), _replicate(0)), "ordered by panel index"),
+        ((_replicate(0, cohort=_cohort(n_replicates=2)),), "complete panel indices"),
         (
             (
-                _replicate(0),
-                _replicate(1).model_copy(update={"seed": panel_seed(18, 1)}),
+                _replicate(1, cohort=_cohort(n_replicates=2)),
+                _replicate(0, cohort=_cohort(n_replicates=2)),
+            ),
+            "ordered by panel index",
+        ),
+        (
+            (
+                _replicate(0, cohort=_cohort(n_replicates=2)),
+                _replicate(1, cohort=_cohort(n_replicates=2)).model_copy(
+                    update={"seed": panel_seed(18, 1)}
+                ),
             ),
             "derived seed",
         ),
         (
             (
-                _replicate(0),
-                _replicate(1).model_copy(update={"panel_id": "panel-000"}),
+                _replicate(0, cohort=_cohort(n_replicates=2)),
+                _replicate(1, cohort=_cohort(n_replicates=2)).model_copy(
+                    update={"panel_id": panel_identity(_cohort(n_replicates=2), 0)}
+                ),
             ),
             "duplicate panel id",
         ),
         (
-            (_replicate(0), _replicate(1, successful_symbols=1)),
+            (
+                _replicate(0, cohort=_cohort(n_replicates=2)),
+                _replicate(1, cohort=_cohort(n_replicates=2), successful_symbols=1),
+            ),
             "successful-symbol floor",
         ),
     ],
@@ -1363,8 +1383,9 @@ def test_panel_artifacts_reject_non_finite_statistics(value: float) -> None:
 def test_direct_calibration_construction_cannot_bypass_merge_invariants(
     replicates: tuple[PanelNullReplicate, ...], message: str
 ) -> None:
+    cohort = _cohort(n_replicates=2)
     with pytest.raises(ValidationError, match=message):
-        PanelNullCalibration(cohort=_cohort(n_replicates=2), replicates=replicates)
+        PanelNullCalibration(cohort=cohort, replicates=replicates)
 
 
 def test_merge_sorts_complete_panel_units_by_global_index() -> None:
@@ -1384,11 +1405,18 @@ def test_panel_seed_depends_only_on_base_seed_and_global_index() -> None:
     assert len({panel_seed(17, index) for index in range(4)}) == 4
     assert panel_seed(18, 2) != panel_seed(17, 2)
 
-    wrong_seed = _replicate(0).model_copy(update={"seed": panel_seed(18, 0)})
+    cohort = _cohort(n_replicates=1)
+    wrong_seed = _replicate(0, cohort=cohort).model_copy(update={"seed": panel_seed(18, 0)})
     with pytest.raises(ValueError, match="derived seed"):
-        merge_panel_null_shards(
-            (PanelNullShard(cohort=_cohort(n_replicates=1), replicates=(wrong_seed,)),)
-        )
+        merge_panel_null_shards((PanelNullShard(cohort=cohort, replicates=(wrong_seed,)),))
+
+
+def test_direct_calibration_rejects_an_invented_unique_panel_identity() -> None:
+    cohort = _cohort(n_replicates=2)
+    invented = _replicate(1, cohort=cohort).model_copy(update={"panel_id": "invented-but-unique"})
+
+    with pytest.raises(ValidationError, match="derived panel identity"):
+        PanelNullCalibration(cohort=cohort, replicates=(_replicate(0, cohort=cohort), invented))
 
 
 @pytest.mark.parametrize(
@@ -1408,55 +1436,59 @@ def test_merge_rejects_duplicate_or_missing_panel_indices(
 
 
 def test_merge_rejects_identity_drift_between_shards() -> None:
+    first = _cohort()
+    second = _cohort(source_digest="b" * 64)
     with pytest.raises(ValueError, match="cohort identity"):
         merge_panel_null_shards(
             (
-                PanelNullShard(cohort=_cohort(), replicates=(_replicate(0),)),
-                PanelNullShard(cohort=_cohort(source_digest="b" * 64), replicates=(_replicate(1),)),
+                PanelNullShard(cohort=first, replicates=(_replicate(0, cohort=first),)),
+                PanelNullShard(cohort=second, replicates=(_replicate(1, cohort=second),)),
             ),
         )
 
 
 def test_merge_rejects_partial_panels_and_duplicate_panel_ids() -> None:
+    cohort = _cohort(n_replicates=1)
     with pytest.raises(ValueError, match="successful-symbol floor"):
         merge_panel_null_shards(
             (
                 PanelNullShard(
-                    cohort=_cohort(n_replicates=1),
-                    replicates=(_replicate(0, successful_symbols=1),),
+                    cohort=cohort,
+                    replicates=(_replicate(0, cohort=cohort, successful_symbols=1),),
                 ),
             ),
         )
 
 
 def test_merge_requires_each_replicate_to_account_for_the_frozen_cohort() -> None:
-    overcounted = _replicate(0).model_copy(
+    single_panel_cohort = _cohort(n_replicates=1)
+    overcounted = _replicate(0, cohort=single_panel_cohort).model_copy(
         update={"errors": (PanelNullError(symbol="AAA", message="unexpected extra error"),)}
     )
     with pytest.raises(ValueError, match="account for every cohort symbol"):
         merge_panel_null_shards(
             (
                 PanelNullShard(
-                    cohort=_cohort(n_replicates=1),
+                    cohort=single_panel_cohort,
                     replicates=(overcounted,),
                 ),
             ),
         )
 
-    unknown_error = _replicate(0).model_copy(
+    unknown_error = _replicate(0, cohort=single_panel_cohort).model_copy(
         update={"errors": (PanelNullError(symbol="ZZZ", message="unsearchable"),)}
     )
     with pytest.raises(ValueError, match="error symbol"):
         merge_panel_null_shards(
             (
                 PanelNullShard(
-                    cohort=_cohort(n_replicates=1),
+                    cohort=single_panel_cohort,
                     replicates=(unknown_error,),
                 ),
             ),
         )
 
-    duplicate_errors = _replicate(0, successful_symbols=0).model_copy(
+    duplicate_errors = _replicate(0, cohort=single_panel_cohort, successful_symbols=0).model_copy(
         update={
             "errors": (
                 PanelNullError(symbol="AAA", message="first"),
@@ -1468,19 +1500,22 @@ def test_merge_requires_each_replicate_to_account_for_the_frozen_cohort() -> Non
         merge_panel_null_shards(
             (
                 PanelNullShard(
-                    cohort=_cohort(n_replicates=1),
+                    cohort=single_panel_cohort,
                     replicates=(duplicate_errors,),
                 ),
             ),
         )
 
-    duplicate_id = _replicate(1).model_copy(update={"panel_id": "panel-000"})
+    two_panel_cohort = _cohort(n_replicates=2)
+    duplicate_id = _replicate(1, cohort=two_panel_cohort).model_copy(
+        update={"panel_id": panel_identity(two_panel_cohort, 0)}
+    )
     with pytest.raises(ValueError, match="duplicate panel id"):
         merge_panel_null_shards(
             (
                 PanelNullShard(
-                    cohort=_cohort(n_replicates=2),
-                    replicates=(_replicate(0), duplicate_id),
+                    cohort=two_panel_cohort,
+                    replicates=(_replicate(0, cohort=two_panel_cohort), duplicate_id),
                 ),
             ),
         )
