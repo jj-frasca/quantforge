@@ -17,6 +17,7 @@ from app.research.lab.pool_report import (
     compare_search_windows,
     compare_with_null,
     history_coverage,
+    history_length_experiment_symbols,
     summarize_pool,
     window_experiment_symbols,
     window_experiment_workload,
@@ -1224,6 +1225,58 @@ def test_the_sample_is_deterministic_and_capped() -> None:
     first = window_experiment_symbols(pool, 8)
     assert len(first) == 8
     assert first == window_experiment_symbols(pool, 8)
+    assert set(first) <= {f"S{i:02d}" for i in range(40)}
+
+
+# --- ADR-094: history length, paired within symbol at a custom split (not the ADR-063 window) ---
+
+
+def test_compare_search_windows_takes_a_custom_split_bars() -> None:
+    """ADR-094 pairs a truncated re-search (~7400 bars) against the same symbol's natural full
+    search (~9200+ bars) — both already >= WINDOW_SPLIT_BARS=6000, so the default split would put
+    them in the same bucket and never pair them. A `split_bars` override reuses the same pairing,
+    finalist-change, and drift-controlled-excess logic at a threshold that actually separates them."""
+    pool = [
+        _windowed("AAA", n_bars=7400, walk_forward=0.5, hold=0.4),
+        _windowed("AAA", n_bars=9200, walk_forward=0.3, hold=0.35),
+    ]
+
+    assert compare_search_windows(pool) is None  # both sides land on WINDOW_SPLIT_BARS' "long" side
+
+    comparison = compare_search_windows(pool, split_bars=8000)
+
+    assert comparison is not None
+    assert comparison.n_symbols == 1
+    assert comparison.short_n_bars == 7400
+    assert comparison.long_n_bars == 9200
+    assert comparison.oos_delta_median == pytest.approx(-0.2)
+
+
+def test_history_length_experiment_symbols_requires_the_min_history_and_a_benchmark() -> None:
+    pool = [
+        _windowed("OLD_ENOUGH", n_bars=9200, walk_forward=0.5, hold=0.6),
+        _windowed("TOO_YOUNG", n_bars=7000, walk_forward=0.5, hold=0.6),
+        _windowed("NO_BENCHMARK", n_bars=9200, walk_forward=0.5),
+    ]
+
+    assert history_length_experiment_symbols(pool, 8500, 10) == ["OLD_ENOUGH"]
+
+
+def test_history_length_experiment_symbols_takes_the_longest_recorded_search_per_symbol() -> None:
+    pool = [
+        _windowed("AAA", n_bars=7000, walk_forward=0.5, hold=0.6),
+        _windowed("AAA", n_bars=9200, walk_forward=0.4, hold=0.6),
+    ]
+
+    assert history_length_experiment_symbols(pool, 8500, 10) == ["AAA"]
+
+
+def test_history_length_experiment_symbols_is_deterministic_and_capped() -> None:
+    pool = [_windowed(f"S{i:02d}", n_bars=9200, walk_forward=0.5, hold=0.6) for i in range(40)]
+
+    first = history_length_experiment_symbols(pool, 8500, 8)
+    assert len(first) == 8
+    assert first == history_length_experiment_symbols(pool, 8500, 8)
     assert set(first) <= {f"S{i:02d}" for i in range(40)}
 
 

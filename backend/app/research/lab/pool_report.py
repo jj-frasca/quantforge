@@ -849,14 +849,19 @@ def window_experiment_workload(
 
 
 def compare_search_windows(
-    experiments: Sequence[Experiment], alpha: float = 0.05
+    experiments: Sequence[Experiment], alpha: float = 0.05, split_bars: int = WINDOW_SPLIT_BARS
 ) -> WindowComparison | None:
-    """Difference each symbol's finalist across the ADR-063 window change, or None when no symbol
-    was searched under one family at both windows.
+    """Difference each symbol's finalist across a history-length split, paired within symbol, or
+    None when no symbol was searched under one family on both sides of `split_bars`.
 
     `alpha` is the two-sided level of every interval returned. It stays at 0.05 for the pool
     report, which is a single look; ADR-076 passes `POCOCK_TWO_LOOK_ALPHA` for the second look at
     its pre-registered sample, so two looks together still spend 0.05.
+
+    `split_bars` defaults to the ADR-063 window change's own threshold. ADR-094 passes a different
+    value: its two sides (a truncated re-search and the symbol's natural full search) both already
+    sit at or above `WINDOW_SPLIT_BARS`, so the default split would bucket them together and never
+    pair them.
     """
     by_key: dict[tuple[str, str], list[Experiment]] = defaultdict(list)
     for experiment in experiments:
@@ -870,8 +875,8 @@ def compare_search_windows(
     long_bars: list[int] = []
     changed = 0
     for group in by_key.values():
-        short = [e for e in group if e.n_bars is not None and e.n_bars < WINDOW_SPLIT_BARS]
-        long_ = [e for e in group if e.n_bars is not None and e.n_bars >= WINDOW_SPLIT_BARS]
+        short = [e for e in group if e.n_bars is not None and e.n_bars < split_bars]
+        long_ = [e for e in group if e.n_bars is not None and e.n_bars >= split_bars]
         if not short or not long_:
             continue
         short_finalists = [selected_trial(e) for e in short]
@@ -955,6 +960,34 @@ def window_experiment_symbols(experiments: Sequence[Experiment], n: int) -> list
         target = has_long if experiment.n_bars >= WINDOW_SPLIT_BARS else has_short
         target.add(experiment.symbol)
     candidates = sorted(has_long - has_short)
+    rng = np.random.default_rng(_BOOTSTRAP_SEED)
+    rng.shuffle(candidates)
+    return sorted(candidates[:n])
+
+
+def history_length_experiment_symbols(
+    experiments: Sequence[Experiment], min_n_bars: int, n: int
+) -> list[str]:
+    """The sample for ADR-094's pre-registered truncated re-search.
+
+    A symbol qualifies when its longest recorded search already reaches `min_n_bars` (old enough to
+    supply a natural "full" side well clear of the truncated ~7,400-bar target — ADR-094 picks
+    `min_n_bars` with headroom so `compare_search_windows`' `split_bars` cleanly separates the two)
+    and carries ADR-068's benchmark, so the truncated re-search's excess can be paired against it.
+    Deterministic (sorted, then a seeded shuffle) for the same reason as `window_experiment_symbols`:
+    a sample that moves between runs would let the criterion be re-rolled (ADR-070).
+    """
+    longest: dict[str, int] = {}
+    has_benchmark: set[str] = set()
+    for experiment in experiments:
+        if experiment.n_bars is None:
+            continue
+        longest[experiment.symbol] = max(longest.get(experiment.symbol, 0), experiment.n_bars)
+        if experiment.walk_forward_hold_sharpe is not None:
+            has_benchmark.add(experiment.symbol)
+    candidates = sorted(
+        symbol for symbol, bars in longest.items() if bars >= min_n_bars and symbol in has_benchmark
+    )
     rng = np.random.default_rng(_BOOTSTRAP_SEED)
     rng.shuffle(candidates)
     return sorted(candidates[:n])
