@@ -110,6 +110,69 @@ test('clicking Run comparison fans out N POSTs with each row params and renders 
   expect(slowsSeen).toEqual([50, 100])
 })
 
+test('editing symbol, dates, capital, and cost updates the submitted request', async () => {
+  const seen: BacktestRequest[] = []
+  server.use(
+    http.post('/api/v1/backtest', async ({ request }) => {
+      seen.push((await request.json()) as BacktestRequest)
+      return HttpResponse.json(responseFor(0.5, 0.1))
+    }),
+  )
+
+  renderWithClient(<CompareConfigsPage />)
+  await screen.findByRole('group', { name: /^config A$/i })
+
+  await userEvent.clear(screen.getByLabelText(/^symbol$/i))
+  await userEvent.type(screen.getByLabelText(/^symbol$/i), 'msft')
+
+  const startInput = screen.getByLabelText(/^start date$/i)
+  await userEvent.clear(startInput)
+  await userEvent.type(startInput, '2021-06-01')
+
+  const endInput = screen.getByLabelText(/^end date$/i)
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2022-06-01')
+
+  const capitalInput = screen.getByLabelText(/initial capital/i)
+  await userEvent.clear(capitalInput)
+  await userEvent.type(capitalInput, '50000')
+
+  const costInput = screen.getByLabelText(/cost \(bps\)/i)
+  await userEvent.clear(costInput)
+  await userEvent.type(costInput, '25')
+
+  await userEvent.click(screen.getByRole('button', { name: /run comparison/i }))
+  await waitFor(() => expect(seen).toHaveLength(2))
+
+  for (const request of seen) {
+    expect(request.symbol).toBe('MSFT')
+    expect(request.start_date).toBe('2021-06-01T00:00:00Z')
+    expect(request.end_date).toBe('2022-06-01T00:00:00Z')
+    expect(request.initial_capital).toBe(50000)
+    expect(request.cost_rate).toBeCloseTo(25 / 10_000)
+  }
+})
+
+test('switching strategy reseeds rows with the new strategy\'s own parameters', async () => {
+  renderWithClient(<CompareConfigsPage />)
+  await screen.findByRole('group', { name: /^config A$/i })
+
+  // Default strategy is the catalog's first entry (sma: fast/slow).
+  expect(screen.getAllByLabelText(/fast window/i)).toHaveLength(2)
+
+  await userEvent.selectOptions(
+    screen.getByRole('combobox', { name: /strategy/i }),
+    'momentum',
+  )
+
+  // Old sma params are gone; momentum's own params (lookback/skip) render instead,
+  // reseeded to that strategy's defaults on both existing rows.
+  expect(screen.queryByLabelText(/fast window/i)).not.toBeInTheDocument()
+  const lookbackInputs = screen.getAllByLabelText(/lookback window/i) as HTMLInputElement[]
+  expect(lookbackInputs).toHaveLength(2)
+  for (const input of lookbackInputs) expect(input.value).toBe('60')
+})
+
 test('a per-row failure surfaces only on that row — others still render metrics', async () => {
   // Row 0 fails, row 1 succeeds. The page's per-row error handling is the whole
   // point of ADR-011 §Decision — one bad config does not blank the comparison.
