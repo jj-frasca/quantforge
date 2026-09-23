@@ -704,6 +704,11 @@ ingestion adapter's declared source. Duplicate calendar rows and mixed/mislabele
 structurally, so production upsert semantics cannot silently choose different evidence than the
 in-memory repository and ordinary ingestion cannot create multi-vendor rows at one instant.
 
+**Ingested bars belong to the exact requested range (ADR-119).** The pipeline supplies its
+half-open `[start, end)` request to the same structural preflight. Any returned timestamp before
+`start` or at/after `end` fails as `range_mismatch` before heuristics and storage, so vendor
+overfetch, inclusive-end, pagination, or timezone-boundary defects cannot pollute the shared cache.
+
 **Daily shards carry the lifetime denominator forward (ADR-062), and reports count it once
 (ADR-066).** Each shard writes only its own artifact but reads the committed partitioned pool as a
 prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experiment's

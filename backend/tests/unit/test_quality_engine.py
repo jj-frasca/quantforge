@@ -1,7 +1,9 @@
 """DataQualityEngine: clean series passes (survivorship info only), empty fails, and missing-bars / price-anomaly / stale / split-jump heuristics each flag without blocking."""
 
+from datetime import UTC, datetime
 from decimal import Decimal
 
+import pytest
 from tests.fixtures.synthetic import builders
 
 from app.data.quality.engine import DataQualityEngine, QualityConfig
@@ -86,6 +88,33 @@ def test_homogeneous_source_must_match_expected_adapter_source() -> None:
         "expected_source": "alpaca",
         "bar_sources": ["yfinance"],
     }
+
+
+def test_out_of_range_timestamps_fail_before_pairwise_checks() -> None:
+    start = datetime(2024, 1, 2, tzinfo=UTC)
+    end = datetime(2024, 3, 1, tzinfo=UTC)
+    series = builders.clean_series(symbol="AAPL")
+    series[0] = series[0].model_copy(update={"timestamp_utc": datetime(2024, 1, 1, tzinfo=UTC)})
+    series[-1] = series[-1].model_copy(update={"timestamp_utc": end})
+
+    report = DataQualityEngine().check(series, "AAPL", expected_start=start, expected_end=end)
+
+    assert report.passed is False
+    assert _issue_checks(report) == {"range_mismatch"}
+    assert report.issues[0].context == {
+        "expected_start": start.isoformat(),
+        "expected_end": end.isoformat(),
+        "timestamps": [datetime(2024, 1, 1, tzinfo=UTC).isoformat(), end.isoformat()],
+    }
+
+
+def test_expected_range_bounds_must_be_supplied_together() -> None:
+    with pytest.raises(ValueError, match="together"):
+        DataQualityEngine().check(
+            builders.clean_series(symbol="AAPL"),
+            "AAPL",
+            expected_start=datetime(2024, 1, 1, tzinfo=UTC),
+        )
 
 
 def test_missing_bars_are_flagged_as_warning_without_failing() -> None:

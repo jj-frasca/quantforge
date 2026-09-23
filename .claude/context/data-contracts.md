@@ -131,6 +131,11 @@ rows, or mixed/mislabeled sources emit structural errors and are not compared pa
 the ingestion pipeline. Direct quality-engine callers that have no adapter identity may omit the
 expected source, but a mixed-source list still fails.
 
+The ingestion pipeline also binds the adapter result to its requested half-open `[start, end)`
+range (ADR-119). Any pre-start or end-inclusive/later timestamp emits `range_mismatch`, returns
+before pairwise heuristics, and blocks the entire list from storage. Direct quality-engine callers
+without an acquisition request may omit both expected bounds; supplying only one bound is invalid.
+
 ---
 
 ## 6. TimescaleDB storage (DDL)
@@ -193,5 +198,7 @@ ORDER BY timestamp_utc;                     -- ASC for backtests
 ```
 
 - Ranges are half-open `[start, end)` to compose without double-counting boundaries.
+- Ingestion verifies every returned bar belongs to the same half-open request before storage
+  (ADR-119); repository filtering is not a substitute for adapter provenance validation.
 - Bind parameters always (no string interpolation — injection + plan-cache).
 - For "latest bar", still bound the range (e.g. last 7 days) then `ORDER BY ... DESC LIMIT 1`.

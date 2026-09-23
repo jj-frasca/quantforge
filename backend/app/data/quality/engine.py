@@ -40,8 +40,17 @@ class DataQualityEngine:
         self._config = config or QualityConfig()
 
     def check(
-        self, bars: list[PriceBar], symbol: str, *, expected_source: Source | None = None
+        self,
+        bars: list[PriceBar],
+        symbol: str,
+        *,
+        expected_source: Source | None = None,
+        expected_start: datetime | None = None,
+        expected_end: datetime | None = None,
     ) -> DataQualityReport:
+        if (expected_start is None) != (expected_end is None):
+            raise ValueError("expected_start and expected_end must be supplied together")
+
         ordered = sorted(bars, key=lambda b: b.timestamp_utc)
         issues: list[DataQualityIssue] = []
         normalized_symbol = symbol.strip().upper()
@@ -99,6 +108,31 @@ class DataQualityEngine:
                         },
                     )
                 )
+
+            if expected_start is not None and expected_end is not None:
+                out_of_range = sorted(
+                    {
+                        bar.timestamp_utc
+                        for bar in ordered
+                        if not expected_start <= bar.timestamp_utc < expected_end
+                    }
+                )
+                if out_of_range:
+                    issues.append(
+                        DataQualityIssue(
+                            check="range_mismatch",
+                            severity="error",
+                            message=(
+                                "flags potential unusable series: bar timestamps fall outside "
+                                "the requested half-open range"
+                            ),
+                            context={
+                                "expected_start": expected_start.isoformat(),
+                                "expected_end": expected_end.isoformat(),
+                                "timestamps": [timestamp.isoformat() for timestamp in out_of_range],
+                            },
+                        )
+                    )
 
         if issues:
             return DataQualityReport(

@@ -31,7 +31,11 @@ class _FakeAdapter(DataSourceAdapter):
         self._n = n
 
     def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
-        return builders.clean_series(symbol=symbol, n=self._n)
+        return [
+            bar
+            for bar in builders.clean_series(symbol=symbol, n=self._n, start=start)
+            if bar.timestamp_utc < end
+        ]
 
 
 def _client(adapter: DataSourceAdapter, repo: PriceBarRepository) -> TestClient:
@@ -393,7 +397,11 @@ class _SparseBenchmarkAdapter(DataSourceAdapter):
 
     def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
         n = 5 if symbol == "SPY" else 300
-        return builders.clean_series(symbol=symbol, n=n)
+        return [
+            bar
+            for bar in builders.clean_series(symbol=symbol, n=n, start=start)
+            if bar.timestamp_utc < end
+        ]
 
 
 def test_backtest_endpoint_benchmark_null_when_spy_data_insufficient() -> None:
@@ -422,7 +430,11 @@ class _RaisingBenchmarkAdapter(DataSourceAdapter):
     def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
         if symbol == "SPY":
             raise RuntimeError("benchmark vendor unavailable")
-        return builders.clean_series(symbol=symbol, n=300)
+        return [
+            bar
+            for bar in builders.clean_series(symbol=symbol, n=300, start=start)
+            if bar.timestamp_utc < end
+        ]
 
 
 def test_backtest_endpoint_benchmark_null_when_spy_fetch_raises() -> None:

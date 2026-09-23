@@ -49,7 +49,11 @@ class _FakeAdapter(DataSourceAdapter):
         self._n = n
 
     def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
-        return builders.clean_series(symbol=symbol, n=self._n)
+        return [
+            bar
+            for bar in builders.clean_series(symbol=symbol, n=self._n, start=start)
+            if bar.timestamp_utc < end
+        ]
 
 
 def _client(adapter: DataSourceAdapter, repo: PriceBarRepository) -> TestClient:

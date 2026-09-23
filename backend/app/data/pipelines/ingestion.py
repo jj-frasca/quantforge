@@ -36,7 +36,13 @@ class DataIngestionPipeline:
 
     def ingest(self, symbol: str, start: datetime, end: datetime) -> IngestionResult:
         bars = self._adapter.fetch_price_bars(symbol, start, end)
-        report = self._quality.check(bars, symbol, expected_source=self._adapter.source)
+        report = self._quality.check(
+            bars,
+            symbol,
+            expected_source=self._adapter.source,
+            expected_start=start,
+            expected_end=end,
+        )
         self._repository.save_quality_report(report)
 
         stored = report.passed

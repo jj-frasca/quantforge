@@ -91,3 +91,18 @@ def test_pipeline_blocks_bars_from_a_different_source_than_adapter() -> None:
     assert {issue.check for issue in result.quality_report.issues} == {"source_mismatch"}
     assert repo.get_bars("AAPL", _START, _END) == []
     assert len(repo.quality_reports) == 1
+
+
+def test_pipeline_blocks_bars_outside_requested_half_open_range() -> None:
+    bars = builders.clean_series(symbol="AAPL")
+    bars[0] = bars[0].model_copy(update={"timestamp_utc": datetime(2023, 12, 31, tzinfo=UTC)})
+    bars[-1] = bars[-1].model_copy(update={"timestamp_utc": _END})
+    repo = InMemoryPriceBarRepository()
+    pipeline = DataIngestionPipeline(_SeriesAdapter(bars), repo)
+
+    result = pipeline.ingest("AAPL", _START, _END)
+
+    assert result.stored is False
+    assert {issue.check for issue in result.quality_report.issues} == {"range_mismatch"}
+    assert repo.get_bars("AAPL", datetime(2023, 1, 1, tzinfo=UTC), _END) == []
+    assert len(repo.quality_reports) == 1
