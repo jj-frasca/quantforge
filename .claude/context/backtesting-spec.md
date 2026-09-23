@@ -68,7 +68,7 @@ whose whole signal is methodological rigor. Revisit only if sweeps hit 10^5–10
 
 ```
 returns      = prices.pct_change().fillna(0)
-position     = signals.clip(-1, 1)
+position     = signals.reindex(prices.index).clip(-1, 1).fillna(0)
 # trade on the NEXT bar -> no look-ahead: yesterday's position earns today's return
 gross        = position.shift(1).fillna(0) * returns
 turnover     = position.diff().abs().fillna(position.abs())   # |Δposition| each bar
@@ -78,7 +78,9 @@ equity_curve = (1 + net).cumprod() * initial_capital
 ```
 
 `BacktestResult` (frozen): `equity_curve` (Series), `returns` (net Series), `metrics`
-(`BacktestMetrics`), `n_trades` (count of nonzero turnover bars), `cost_rate`.
+(`BacktestMetrics`), `n_trades` (count of nonzero turnover bars), `cost_rate`, `position`
+(the clipped/filled position Series — exposed so API callers, e.g. `/backtest`'s
+`trade_markers`, can derive signal-change events without re-running the strategy).
 
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.

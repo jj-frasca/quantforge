@@ -290,6 +290,10 @@ for the chosen strategy through `ValidationEngine`, and returns the report.
   - `interpretations` are backend-authored plain-English readings per metric, with a
     `verdict` of `good` / `warning` / `bad`. Thresholds: PBO ≥ 0.5 bad / 0.3–0.5 warning /
     < 0.3 good; DSR ≤ 0 bad / > 0 good; stability ≤ 0.4 bad / 0.4–0.7 warning / > 0.7 good.
+  - The example omits three response fields that exist but are diagnostic-only (nothing
+    gates on them): nullable `walk_forward` (ADR-038) and `purged_cv` (ADR-039) objects, and
+    `regime_breakdown` (ADR-012, keyed by regime name, missing key means zero bars in that
+    regime). Their full field-by-field semantics live in validation-methodology.md, not here.
 - `422` → invalid `strategy` (not in the enum), or insufficient data (< 30 bars) even after
   the cache-miss ingest (e.g., the quality gate rejected the fetched bars).
 
