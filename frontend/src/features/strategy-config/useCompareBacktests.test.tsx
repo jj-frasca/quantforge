@@ -30,6 +30,7 @@ const baseResponse = {
     total_return: 0.15,
     annualized_return: 0.05,
     annualized_vol: 0.06,
+    sortino: 1.4,
   },
   equity_curve: [{ timestamp_utc: '2024-01-01T00:00:00Z', equity: 100_000 }],
   buy_and_hold_curve: [{ timestamp_utc: '2024-01-01T00:00:00Z', equity: 100_000 }],

@@ -37,6 +37,14 @@ export function BacktestResultView({ result }: Props) {
           </small>
         </div>
         <div>
+          <dt>Sortino</dt>
+          <dd>{asRatio(result.metrics.sortino)}</dd>
+          <small className="metric-hint">
+            Like Sharpe, but only counts downside swings against you — upside spikes don't
+            count as "risk".
+          </small>
+        </div>
+        <div>
           <dt>Annualized return</dt>
           <dd>{asPercent(result.metrics.annualized_return)}</dd>
           <small className="metric-hint">

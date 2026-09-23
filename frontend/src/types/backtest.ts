@@ -75,6 +75,9 @@ export const backtestMetricsSchema = z.object({
   total_return: z.number(),
   annualized_return: z.number(),
   annualized_vol: z.number(),
+  // Downside-only risk-adjusted return (ADR-107): descriptive alongside Sharpe, not a
+  // gate input. See backtesting-spec.md §4.
+  sortino: z.number(),
 })
 
 export type BacktestMetricsView = z.infer<typeof backtestMetricsSchema>

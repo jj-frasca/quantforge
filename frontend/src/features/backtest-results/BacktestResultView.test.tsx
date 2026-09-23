@@ -17,6 +17,7 @@ const winning: BacktestResponse = {
     total_return: 0.42,
     annualized_return: 0.18,
     annualized_vol: 0.12,
+    sortino: 2.3,
   },
   equity_curve: [
     { timestamp_utc: '2024-01-01T00:00:00Z', equity: 100_000 },
@@ -71,6 +72,7 @@ test('renders the heading, the metrics, and the equity curve summary', () => {
   render(<BacktestResultView result={winning} />)
   expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/sma_crossover/i)
   expect(screen.getByText('1.50')).toBeInTheDocument() // sharpe
+  expect(screen.getByText('2.30')).toBeInTheDocument() // sortino
   expect(screen.getByText('18.0%')).toBeInTheDocument() // annualized_return
   // The view now renders a second role=status verdict (the benchmark panel), so scope
   // to the total-return line by its text rather than the ambiguous role.

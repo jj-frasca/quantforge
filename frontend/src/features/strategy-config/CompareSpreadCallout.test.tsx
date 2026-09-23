@@ -23,6 +23,7 @@ const successWithSharpe = (sharpe: number): CompareRow => ({
       total_return: 0.1,
       annualized_return: 0.05,
       annualized_vol: 0.08,
+      sortino: 1.9,
     },
     equity_curve: [],
     buy_and_hold_curve: [],

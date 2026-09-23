@@ -14,6 +14,7 @@ const validResponse = {
     total_return: 0.42,
     annualized_return: 0.18,
     annualized_vol: 0.12,
+    sortino: 2.1,
   },
   equity_curve: [
     { timestamp_utc: '2024-01-01T00:00:00Z', equity: 100_000 },
@@ -73,6 +74,14 @@ test('backtestResponseSchema rejects a negative n_trades', () => {
 test('backtestResponseSchema rejects missing metrics', () => {
   const bad: Record<string, unknown> = { ...validResponse }
   delete bad.metrics
+  expect(() => backtestResponseSchema.parse(bad)).toThrow()
+})
+
+test('backtestResponseSchema rejects metrics missing sortino', () => {
+  // ADR-107: sortino is a required field alongside sharpe, not an optional add-on.
+  const metricsWithoutSortino: Record<string, unknown> = { ...validResponse.metrics }
+  delete metricsWithoutSortino.sortino
+  const bad = { ...validResponse, metrics: metricsWithoutSortino }
   expect(() => backtestResponseSchema.parse(bad)).toThrow()
 })
 
