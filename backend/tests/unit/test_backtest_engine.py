@@ -5,7 +5,7 @@ from itertools import pairwise
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given, settings
+from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 from tests.fixtures.synthetic import builders
 
@@ -125,3 +125,59 @@ def test_long_only_equity_is_finite_and_positive(
     assert np.isfinite(eq).all()
     assert (eq > 0).all()
     assert -1.0 <= result.metrics.max_drawdown <= 0.0
+
+
+@settings(deadline=None)
+@given(
+    returns=st.lists(
+        st.floats(min_value=-1.0, max_value=1.0, allow_nan=False, allow_infinity=False),
+        min_size=2,
+        max_size=100,
+    )
+)
+def test_sharpe_ratio_is_finite_for_non_constant_series(returns: list[float]) -> None:
+    # §8 invariant #2: Sharpe is finite for a non-constant return series.
+    assume(len(set(returns)) > 1)
+    result = sharpe_ratio(pd.Series(returns))
+    assert np.isfinite(result)
+
+
+@settings(deadline=None)
+@given(
+    bar_returns=st.lists(
+        st.floats(min_value=-0.2, max_value=0.2, allow_nan=False, allow_infinity=False),
+        min_size=3,
+        max_size=40,
+    ),
+    raw_signals=st.lists(
+        st.floats(min_value=-1.0, max_value=1.0, allow_nan=False, allow_infinity=False),
+        min_size=3,
+        max_size=40,
+    ),
+    cost_rates=st.lists(
+        st.floats(min_value=0.0, max_value=0.02, allow_nan=False, allow_infinity=False),
+        min_size=2,
+        max_size=5,
+        unique=True,
+    ),
+)
+def test_transaction_costs_never_increase_total_return(
+    bar_returns: list[float], raw_signals: list[float], cost_rates: list[float]
+) -> None:
+    # §8 invariant #7: transaction costs always reduce (never increase) net returns. Bounds on
+    # bar_returns/cost_rates keep every per-bar net factor (1 + net) strictly positive, which is
+    # what makes cumulative equity monotone in cost_rate an exact property, not just a trend.
+    n = min(len(bar_returns), len(raw_signals))
+    price = 100.0
+    closes = []
+    for r in bar_returns[:n]:
+        price *= 1 + r
+        closes.append(price)
+    prices = _prices(closes)
+    signals = pd.Series(raw_signals[:n], index=prices.index)
+    returns_by_cost = [
+        BacktestEngine(cost_rate=c).run(prices, signals).metrics.total_return
+        for c in sorted(cost_rates)
+    ]
+    for earlier, later in pairwise(returns_by_cost):
+        assert earlier >= later - 1e-9
