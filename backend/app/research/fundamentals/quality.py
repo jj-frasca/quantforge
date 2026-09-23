@@ -87,18 +87,23 @@ def piotroski_f_score(history: FundamentalsHistory) -> FScore:
             delta_asset_turnover_positive=False,
         )
     t, p = years[-1], years[-2]
+    # A gap in the filer's annual history (fiscal-year-end change, a restated filing that drops
+    # a year) means years[-2] is not necessarily t's immediately preceding fiscal year. Trend
+    # signals require a true year-over-year comparison; a non-adjacent p is treated the same as
+    # a missing prior year (conservative: never award a point on an unverifiable comparison).
+    p_adjacent = p.fiscal_year == t.fiscal_year - 1
 
     roa_t = _ratio(t.net_income, t.total_assets)
-    roa_p = _ratio(p.net_income, p.total_assets)
+    roa_p = _ratio(p.net_income, p.total_assets) if p_adjacent else None
     cfo_over_assets_t = _ratio(t.operating_cash_flow, t.total_assets)
     lev_t = _ratio(t.long_term_debt, t.total_assets)
-    lev_p = _ratio(p.long_term_debt, p.total_assets)
+    lev_p = _ratio(p.long_term_debt, p.total_assets) if p_adjacent else None
     cr_t = _ratio(t.total_current_assets, t.total_current_liabilities)
-    cr_p = _ratio(p.total_current_assets, p.total_current_liabilities)
+    cr_p = _ratio(p.total_current_assets, p.total_current_liabilities) if p_adjacent else None
     gm_t = _ratio(t.gross_profit, t.revenue)
-    gm_p = _ratio(p.gross_profit, p.revenue)
+    gm_p = _ratio(p.gross_profit, p.revenue) if p_adjacent else None
     at_t = _ratio(t.revenue, t.total_assets)
-    at_p = _ratio(p.revenue, p.total_assets)
+    at_p = _ratio(p.revenue, p.total_assets) if p_adjacent else None
 
     roa_positive = roa_t is not None and roa_t > 0
     cfo_positive = t.operating_cash_flow is not None and t.operating_cash_flow > 0
@@ -109,7 +114,8 @@ def piotroski_f_score(history: FundamentalsHistory) -> FScore:
     delta_leverage_negative = lev_t is not None and lev_p is not None and lev_t < lev_p
     delta_current_ratio_positive = cr_t is not None and cr_p is not None and cr_t > cr_p
     no_dilution = (
-        t.shares_diluted is not None
+        p_adjacent
+        and t.shares_diluted is not None
         and p.shares_diluted is not None
         and t.shares_diluted <= p.shares_diluted
     )

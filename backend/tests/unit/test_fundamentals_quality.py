@@ -103,6 +103,29 @@ def test_single_year_history_scores_zero() -> None:
     assert not f.delta_roa_positive  # no prior year to compare
 
 
+def test_non_adjacent_prior_year_scores_only_level_signals() -> None:
+    # FY2023 is absent (gap in the filer's annual history) -> years[-2] is FY2022, two years
+    # back. The trend (delta_*) signals must not compare across a non-adjacent gap, only the
+    # level signals (roa_positive, cfo_positive, accruals_quality) that need just the latest year.
+    prior = _year(
+        2022,
+        net_income=-50.0,  # would make delta_roa_positive True if wrongly compared
+        long_term_debt=800.0,  # would make delta_leverage_negative True if wrongly compared
+        gross_profit=100.0,  # would make delta_gross_margin_positive True if wrongly compared
+        shares_diluted=80.0,  # would make no_dilution True if wrongly compared
+    )
+    latest = _year(2024)  # net_income=100, positive ROA and CFO on their own
+    f = piotroski_f_score(_history(prior, latest))
+    assert f.roa_positive
+    assert f.cfo_positive
+    assert not f.delta_roa_positive
+    assert not f.delta_leverage_negative
+    assert not f.delta_current_ratio_positive
+    assert not f.no_dilution
+    assert not f.delta_gross_margin_positive
+    assert not f.delta_asset_turnover_positive
+
+
 def test_missing_inputs_never_award_a_point() -> None:
     prior = _year(2023)
     latest = _year(
