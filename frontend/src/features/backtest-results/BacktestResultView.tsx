@@ -45,6 +45,14 @@ export function BacktestResultView({ result }: Props) {
           </small>
         </div>
         <div>
+          <dt>Calmar</dt>
+          <dd>{asRatio(result.metrics.calmar)}</dd>
+          <small className="metric-hint">
+            Annualized return divided by the worst drawdown. How much return you got for
+            the deepest hole you'd have had to climb out of.
+          </small>
+        </div>
+        <div>
           <dt>Annualized return</dt>
           <dd>{asPercent(result.metrics.annualized_return)}</dd>
           <small className="metric-hint">

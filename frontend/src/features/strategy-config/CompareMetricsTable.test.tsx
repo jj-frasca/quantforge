@@ -32,6 +32,7 @@ const success = (sharpe: number): CompareRow => ({
       annualized_return: 0.05,
       annualized_vol: 0.08,
       sortino: 1.9,
+      calmar: 1.0,
     },
     equity_curve: [],
     buy_and_hold_curve: [],
@@ -82,6 +83,21 @@ test('renders the Sortino column alongside Sharpe (ADR-107)', () => {
   )
   expect(screen.getByRole('columnheader', { name: 'Sortino' })).toBeInTheDocument()
   expect(screen.getByText('1.90')).toBeInTheDocument()
+})
+
+test('renders the Calmar column alongside Sharpe/Sortino (ADR-108)', () => {
+  render(
+    <CompareMetricsTable
+      symbol="AAPL"
+      strategy="sma"
+      startDate="2020-01-01"
+      endDate="2024-01-01"
+      rows={[{ label: 'Config A', values: { fast: 10, slow: 50 } }]}
+      results={[success(0.9)]}
+    />,
+  )
+  expect(screen.getByRole('columnheader', { name: 'Calmar' })).toBeInTheDocument()
+  expect(screen.getByText('1.00')).toBeInTheDocument()
 })
 
 test('does NOT render a Validate button on failed rows — no config to validate', () => {

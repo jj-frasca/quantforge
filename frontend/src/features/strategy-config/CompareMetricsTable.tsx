@@ -41,6 +41,7 @@ export function CompareMetricsTable({
           <th>Params</th>
           <th>Sharpe</th>
           <th>Sortino</th>
+          <th>Calmar</th>
           <th>Annualized return</th>
           <th>Max drawdown</th>
           <th>Total return</th>
@@ -72,6 +73,7 @@ export function CompareMetricsTable({
               <td>{paramSummary}</td>
               <td>{fmtNum(m.sharpe)}</td>
               <td>{fmtNum(m.sortino)}</td>
+              <td>{fmtNum(m.calmar)}</td>
               <td>{fmtPct(m.annualized_return)}</td>
               <td>{fmtPct(m.max_drawdown)}</td>
               <td>{fmtPct(m.total_return)}</td>

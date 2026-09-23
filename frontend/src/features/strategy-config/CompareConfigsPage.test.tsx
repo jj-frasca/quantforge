@@ -23,6 +23,7 @@ const responseFor = (sharpe: number, totalReturn: number): BacktestResponse => (
     annualized_return: totalReturn / 5,
     annualized_vol: 0.08,
     sortino: 1.9,
+    calmar: 1.0,
   },
   equity_curve: [
     { timestamp_utc: '2020-01-01T00:00:00Z', equity: 100_000 },

@@ -15,6 +15,7 @@ const validResponse = {
     annualized_return: 0.18,
     annualized_vol: 0.12,
     sortino: 2.1,
+    calmar: 1.0,
   },
   equity_curve: [
     { timestamp_utc: '2024-01-01T00:00:00Z', equity: 100_000 },
@@ -82,6 +83,14 @@ test('backtestResponseSchema rejects metrics missing sortino', () => {
   const metricsWithoutSortino: Record<string, unknown> = { ...validResponse.metrics }
   delete metricsWithoutSortino.sortino
   const bad = { ...validResponse, metrics: metricsWithoutSortino }
+  expect(() => backtestResponseSchema.parse(bad)).toThrow()
+})
+
+test('backtestResponseSchema rejects metrics missing calmar', () => {
+  // ADR-108: calmar is a required field alongside sharpe/sortino, not an optional add-on.
+  const metricsWithoutCalmar: Record<string, unknown> = { ...validResponse.metrics }
+  delete metricsWithoutCalmar.calmar
+  const bad = { ...validResponse, metrics: metricsWithoutCalmar }
   expect(() => backtestResponseSchema.parse(bad)).toThrow()
 })
 

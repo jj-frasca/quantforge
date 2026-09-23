@@ -78,6 +78,8 @@ export const backtestMetricsSchema = z.object({
   // Downside-only risk-adjusted return (ADR-107): descriptive alongside Sharpe, not a
   // gate input. See backtesting-spec.md §4.
   sortino: z.number(),
+  // Annualized return over |max_drawdown| (ADR-108): descriptive, not a gate input.
+  calmar: z.number(),
 })
 
 export type BacktestMetricsView = z.infer<typeof backtestMetricsSchema>
