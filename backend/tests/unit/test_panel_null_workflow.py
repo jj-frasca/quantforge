@@ -152,7 +152,7 @@ def test_panel_null_workflow_refuses_normal_remeasurement_after_publication() ->
     workflow = _workflow()
     validation = workflow.split("  validate-inputs:\n", 1)[1].split("\n  prepare:\n", 1)[0]
 
-    assert "actions/checkout@v4" in validation
+    assert "actions/checkout@v5" in validation
     assert "refs/remotes/origin/master" in validation
     assert "origin/master:data/panel_null_calibration/replicated_correlated_panel_null.json" in (
         validation
