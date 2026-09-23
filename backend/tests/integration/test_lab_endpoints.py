@@ -325,6 +325,25 @@ def test_null_comparison_endpoint_is_empty_when_nothing_has_been_measured(tmp_pa
     assert response.json() == []
 
 
+def test_null_comparison_endpoint_is_empty_when_pool_has_no_experiments(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Calibration IS measured but the pool is empty — a distinct early-return from the
+    calibration-missing case above; both must degrade to [], never a 500."""
+    calibrations = tmp_path / "null_calibration"
+    calibrations.mkdir()
+    (calibrations / "iid_normal_5400.json").write_text(_calibration_json("iid_normal", 0, 5400))
+    app.dependency_overrides[get_pool_path] = lambda: tmp_path / "empty_pool"
+    app.dependency_overrides[get_portfolio_path] = lambda: tmp_path / "absent.json"
+    app.dependency_overrides[get_calibration_path] = lambda: calibrations
+
+    try:
+        response = TestClient(app).get("/api/v1/null-comparison")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 # ---- GET /window-comparison (ADR-074: what the longer search window did to the finalist) --------
 
 
