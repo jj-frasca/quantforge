@@ -68,6 +68,35 @@ test('submitting fires /ingest + /bars and renders both result + chart', async (
   expect(wireBody.end_date).toMatch(dateRe)
 })
 
+test('editing symbol and date fields propagates to the ingest request', async () => {
+  let ingestBody: { symbol?: string; start_date?: string; end_date?: string } | undefined
+  server.use(
+    http.post('/api/v1/ingest', async ({ request }) => {
+      ingestBody = (await request.json()) as typeof ingestBody
+      return HttpResponse.json(successIngest)
+    }),
+    http.get('/api/v1/bars', () => HttpResponse.json(successBars)),
+  )
+
+  renderWithClient(<DataExplorerPage />)
+  await userEvent.clear(screen.getByLabelText(/symbol/i))
+  await userEvent.type(screen.getByLabelText(/symbol/i), 'msft')
+
+  const startInput = screen.getByLabelText(/start date/i)
+  await userEvent.clear(startInput)
+  await userEvent.type(startInput, '2022-01-15')
+  const endInput = screen.getByLabelText(/end date/i)
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2023-02-20')
+
+  await userEvent.click(screen.getByRole('button', { name: /ingest data/i }))
+  await screen.findByRole('status')
+
+  expect(ingestBody?.symbol).toBe('MSFT')
+  expect(ingestBody?.start_date).toBe('2022-01-15T00:00:00Z')
+  expect(ingestBody?.end_date).toBe('2023-02-20T00:00:00Z')
+})
+
 test('surfaces the backend detail when ingestion fails', async () => {
   server.use(
     http.post('/api/v1/ingest', () =>
