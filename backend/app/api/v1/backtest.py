@@ -49,6 +49,7 @@ class BacktestMetricsView(BaseModel):
     total_return: float
     annualized_return: float
     annualized_vol: float
+    sortino: float
 
 
 class DrawdownPoint(BaseModel):
@@ -300,6 +301,7 @@ def _to_response(
             total_return=result.metrics.total_return,
             annualized_return=result.metrics.annualized_return,
             annualized_vol=result.metrics.annualized_vol,
+            sortino=result.metrics.sortino,
         ),
         equity_curve=_series_to_curve(result.equity_curve),
         buy_and_hold_curve=_series_to_curve(bh_equity),

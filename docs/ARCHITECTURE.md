@@ -1477,6 +1477,7 @@ test_ohlcv_normalizer_given_negative_price_raises_validation_error
 8. GBM Monte Carlo paths: always positive
 9. Normalizer: idempotent
 10. ExperimentManifest: round-trips JSON with all fields preserved
+11. Sortino: finite whenever a return falls below target (ADR-107)
 ```
 
 ### Backtest Correctness Oracle Tests (required before any validation runs)

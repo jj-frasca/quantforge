@@ -95,6 +95,11 @@ flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 - `max_drawdown`: `min(equity/equity.cummax() - 1)` — **in [-1.0, 0.0]**. Positive = bug.
 - `total_return`: `equity[-1]/equity[0] - 1`.
 - `annualized_return`, `annualized_vol`: standard sqrt(252) scaling.
+- `sortino` (ADR-107): `sqrt(252) * mean(net) / downside_semi_std(net)` — same sqrt(252)
+  convention as Sharpe, but the denominator only squares shortfall below target 0.0 (upside
+  dispersion never penalizes) and divides by the full sample size. 0.0 if no return falls below
+  target, mirroring Sharpe's degenerate-series convention rather than +inf. **Descriptive only —
+  not read by the gate, PBO, DSR, or any threshold** (charter §4).
 
 ---
 

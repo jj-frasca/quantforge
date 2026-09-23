@@ -161,7 +161,7 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
     "cost_rate": 0.001,
     "metrics": {
       "sharpe": 1.5, "max_drawdown": -0.18, "total_return": 0.42,
-      "annualized_return": 0.18, "annualized_vol": 0.12
+      "annualized_return": 0.18, "annualized_vol": 0.12, "sortino": 2.1
     },
     "equity_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."],
     "buy_and_hold_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."],

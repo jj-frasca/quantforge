@@ -16,6 +16,27 @@ def sharpe_ratio(returns: pd.Series) -> float:
     return float(np.sqrt(TRADING_DAYS) * returns.mean() / std)
 
 
+def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float:
+    """Annualized Sortino ratio (Sortino & van der Meer 1991), ADR-107.
+
+    Notes:
+        Divides excess return over `target` by downside semi-deviation instead of total
+        standard deviation, so upside dispersion is never charged against the strategy.
+        The semi-deviation squares only the shortfall below `target` (returns at or above
+        it contribute zero, not a negative penalty) and divides by the FULL sample size,
+        not just the count of shortfalls — the original definition. 0.0 when there are
+        fewer than two returns or no observation falls below `target` (downside deviation
+        0), mirroring `sharpe_ratio`'s degenerate-series convention rather than +inf.
+    """
+    if len(returns) < 2:
+        return 0.0
+    shortfall = np.minimum(returns.to_numpy(dtype=np.float64) - target, 0.0)
+    semi_std = float(np.sqrt(np.mean(shortfall**2)))
+    if semi_std == 0.0 or not np.isfinite(semi_std):
+        return 0.0
+    return float(np.sqrt(TRADING_DAYS) * (returns.mean() - target) / semi_std)
+
+
 @dataclass(frozen=True)
 class ReturnMoments:
     """Per-period sample moments of a return series, in the convention the PSR is written in.
@@ -74,6 +95,7 @@ class BacktestMetrics:
     total_return: float
     annualized_return: float
     annualized_vol: float
+    sortino: float
 
     @classmethod
     def from_series(cls, net_returns: pd.Series, equity: pd.Series) -> "BacktestMetrics":
@@ -85,4 +107,5 @@ class BacktestMetrics:
             total_return=total_return(equity),
             annualized_return=ann_return,
             annualized_vol=ann_vol,
+            sortino=sortino_ratio(net_returns),
         )

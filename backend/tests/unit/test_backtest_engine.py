@@ -10,7 +10,12 @@ from hypothesis import strategies as st
 from tests.fixtures.synthetic import builders
 
 from app.research.backtesting.engine import BacktestEngine
-from app.research.backtesting.metrics import max_drawdown, sharpe_ratio, total_return
+from app.research.backtesting.metrics import (
+    max_drawdown,
+    sharpe_ratio,
+    sortino_ratio,
+    total_return,
+)
 from app.research.frames import bars_to_frame
 from app.research.strategies.sma import SMAStrategy
 
@@ -93,6 +98,42 @@ def test_metrics_handle_empty_series() -> None:
     assert sharpe_ratio(empty) == 0.0
     assert max_drawdown(empty) == 0.0
     assert total_return(empty) == 0.0
+    assert sortino_ratio(empty) == 0.0
+
+
+def test_sortino_ratio_zero_for_single_observation() -> None:
+    assert sortino_ratio(pd.Series([0.01])) == 0.0
+
+
+def test_sortino_ratio_zero_when_no_return_falls_below_target() -> None:
+    # Every return is >= target (0.0 by default): downside deviation is 0, so ADR-107's
+    # convention returns 0.0 rather than +inf (mirrors sharpe_ratio's degenerate case).
+    assert sortino_ratio(pd.Series([0.0, 0.01, 0.02, 0.0])) == 0.0
+
+
+def test_sortino_ratio_downside_deviation_ignores_upside_dispersion() -> None:
+    # Two series with identical downside returns but very different upside swings must have the
+    # same downside semi-deviation — only shortfall below target enters it (ADR-107). Replicates
+    # the public formula (same one test_sortino_ratio_matches_hand_computed_value checks) rather
+    # than asserting on the full ratio, whose numerator DOES move with the upside mean.
+    target = 0.0
+
+    def semi_std(returns: pd.Series) -> float:
+        shortfall = np.minimum(returns.to_numpy() - target, 0.0)
+        return float(np.sqrt(np.mean(shortfall**2)))
+
+    steady_upside = pd.Series([-0.01, 0.01, -0.02, 0.01, -0.01, 0.01])
+    volatile_upside = pd.Series([-0.01, 0.10, -0.02, 0.15, -0.01, 0.20])
+    assert semi_std(steady_upside) == pytest.approx(semi_std(volatile_upside))
+
+
+def test_sortino_ratio_matches_hand_computed_value() -> None:
+    returns = pd.Series([0.02, -0.01, 0.03, -0.02, 0.01])
+    target = 0.0
+    shortfall = np.minimum(returns.to_numpy() - target, 0.0)
+    semi_std = float(np.sqrt(np.mean(shortfall**2)))
+    expected = float(np.sqrt(252) * (returns.mean() - target) / semi_std)
+    assert sortino_ratio(returns) == pytest.approx(expected)
 
 
 # --- Hypothesis invariants ---
@@ -139,6 +180,24 @@ def test_sharpe_ratio_is_finite_for_non_constant_series(returns: list[float]) ->
     # §8 invariant #2: Sharpe is finite for a non-constant return series.
     assume(len(set(returns)) > 1)
     result = sharpe_ratio(pd.Series(returns))
+    assert np.isfinite(result)
+
+
+@settings(deadline=None)
+@given(
+    returns=st.lists(
+        st.floats(min_value=-1.0, max_value=1.0, allow_nan=False, allow_infinity=False),
+        min_size=2,
+        max_size=100,
+    )
+)
+def test_sortino_ratio_is_finite_when_a_return_falls_below_target(
+    returns: list[float],
+) -> None:
+    # §8 invariant #11: Sortino is finite whenever at least one return falls below the target
+    # (0.0 by default), i.e. downside deviation is strictly positive.
+    assume(any(r < 0.0 for r in returns))
+    result = sortino_ratio(pd.Series(returns))
     assert np.isfinite(result)
 
 
