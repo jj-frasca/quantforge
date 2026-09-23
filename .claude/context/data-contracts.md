@@ -105,8 +105,8 @@ shown. Checks FLAG potential issues — they do not guarantee correctness.
 
 > **Build status:** implemented today = #1 survivorship (info), #2 split/dividend, #3
 > corporate_action (ADR-113/114), #4 missing_bars, #5 price_anomaly, #6 stale_data (warnings),
-> plus `insufficient_data` and `symbol_mismatch` (ADR-115) structural errors; #7 timezone is
-> enforced at the PriceBar boundary.
+> plus `insufficient_data`, `symbol_mismatch` (ADR-115), `duplicate_timestamp`, and
+> `source_mismatch` (ADR-118) structural errors; #7 timezone is enforced at the PriceBar boundary.
 > **NOT yet implemented:** #8 vendor_cross_validation (needs the Polygon adapter, Phase 3+).
 > See ARCHITECTURE.md §0.6.
 
@@ -125,8 +125,11 @@ Check 7 is enforced at the PriceBar boundary (§2), so by the time the engine ru
 are already UTC; the engine's role for tz is to confirm/record, not to coerce.
 
 Before the time-series heuristics run, every non-empty list must contain exactly the normalized
-symbol named by its `DataQualityReport` (ADR-115). Mixed or mislabeled bars emit the structural
-`symbol_mismatch` error and are not compared pairwise or stored by the ingestion pipeline.
+symbol named by its `DataQualityReport` (ADR-115), exactly one bar per UTC timestamp, and exactly
+one source matching the ingestion adapter (ADR-118). Mixed/mislabeled symbols, duplicate calendar
+rows, or mixed/mislabeled sources emit structural errors and are not compared pairwise or stored by
+the ingestion pipeline. Direct quality-engine callers that have no adapter identity may omit the
+expected source, but a mixed-source list still fails.
 
 ---
 

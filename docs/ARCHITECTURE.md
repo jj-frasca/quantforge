@@ -698,6 +698,12 @@ the normalized symbol named by the report. Mixed or mislabeled series fail with 
 `symbol_mismatch` error before pairwise heuristics, so the ingestion pipeline persists the failed
 audit record but cannot store bars under a passing report for different evidence.
 
+**Quality series have one calendar row and one adapter source (ADR-118).** Before any pairwise
+heuristic, non-empty input must also have unique UTC timestamps and one bar source equal to the
+ingestion adapter's declared source. Duplicate calendar rows and mixed/mislabeled sources fail
+structurally, so production upsert semantics cannot silently choose different evidence than the
+in-memory repository and ordinary ingestion cannot create multi-vendor rows at one instant.
+
 **Daily shards carry the lifetime denominator forward (ADR-062), and reports count it once
 (ADR-066).** Each shard writes only its own artifact but reads the committed partitioned pool as a
 prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experiment's

@@ -48,6 +48,46 @@ def test_mixed_symbol_series_fails_before_pairwise_checks() -> None:
     }
 
 
+def test_duplicate_timestamp_fails_before_pairwise_checks() -> None:
+    series = builders.clean_series(symbol="AAPL")
+    series[1] = series[1].model_copy(update={"timestamp_utc": series[0].timestamp_utc})
+
+    report = DataQualityEngine().check(series, "AAPL")
+
+    assert report.passed is False
+    assert _issue_checks(report) == {"duplicate_timestamp"}
+    assert report.issues[0].context == {
+        "timestamps": [series[0].timestamp_utc.isoformat()],
+    }
+
+
+def test_mixed_source_series_fails_before_pairwise_checks() -> None:
+    series = builders.clean_series(symbol="AAPL")
+    series[1] = series[1].model_copy(update={"source": "alpaca"})
+
+    report = DataQualityEngine().check(series, "AAPL")
+
+    assert report.passed is False
+    assert _issue_checks(report) == {"source_mismatch"}
+    assert report.issues[0].context == {
+        "expected_source": None,
+        "bar_sources": ["alpaca", "yfinance"],
+    }
+
+
+def test_homogeneous_source_must_match_expected_adapter_source() -> None:
+    report = DataQualityEngine().check(
+        builders.clean_series(symbol="AAPL"), "AAPL", expected_source="alpaca"
+    )
+
+    assert report.passed is False
+    assert _issue_checks(report) == {"source_mismatch"}
+    assert report.issues[0].context == {
+        "expected_source": "alpaca",
+        "bar_sources": ["yfinance"],
+    }
+
+
 def test_missing_bars_are_flagged_as_warning_without_failing() -> None:
     series = builders.with_missing_bars(builders.clean_series())
     report = DataQualityEngine().check(series, "AAPL")

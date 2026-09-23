@@ -1,9 +1,10 @@
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from itertools import pairwise
 
-from app.data.models import DataQualityIssue, DataQualityReport, PriceBar
+from app.data.models import DataQualityIssue, DataQualityReport, PriceBar, Source
 
 
 @dataclass(frozen=True)
@@ -38,7 +39,9 @@ class DataQualityEngine:
     def __init__(self, config: QualityConfig | None = None) -> None:
         self._config = config or QualityConfig()
 
-    def check(self, bars: list[PriceBar], symbol: str) -> DataQualityReport:
+    def check(
+        self, bars: list[PriceBar], symbol: str, *, expected_source: Source | None = None
+    ) -> DataQualityReport:
         ordered = sorted(bars, key=lambda b: b.timestamp_utc)
         issues: list[DataQualityIssue] = []
         normalized_symbol = symbol.strip().upper()
@@ -59,6 +62,45 @@ class DataQualityEngine:
                     },
                 )
             )
+        if ordered:
+            timestamps = [bar.timestamp_utc for bar in ordered]
+            duplicate_timestamps = sorted(
+                timestamp for timestamp, count in Counter(timestamps).items() if count > 1
+            )
+            if duplicate_timestamps:
+                issues.append(
+                    DataQualityIssue(
+                        check="duplicate_timestamp",
+                        severity="error",
+                        message=("flags potential unusable series: duplicate calendar timestamps"),
+                        context={
+                            "timestamps": [
+                                timestamp.isoformat() for timestamp in duplicate_timestamps
+                            ]
+                        },
+                    )
+                )
+
+            bar_sources = {bar.source for bar in ordered}
+            if len(bar_sources) != 1 or (
+                expected_source is not None and bar_sources != {expected_source}
+            ):
+                issues.append(
+                    DataQualityIssue(
+                        check="source_mismatch",
+                        severity="error",
+                        message=(
+                            "flags potential unusable series: bar sources do not match "
+                            "one expected adapter source"
+                        ),
+                        context={
+                            "expected_source": expected_source,
+                            "bar_sources": sorted(bar_sources),
+                        },
+                    )
+                )
+
+        if issues:
             return DataQualityReport(
                 symbol=normalized_symbol, checked_at=datetime.now(UTC), issues=issues
             )

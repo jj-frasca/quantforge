@@ -62,3 +62,32 @@ def test_pipeline_blocks_mislabeled_adapter_series() -> None:
     assert {issue.check for issue in result.quality_report.issues} == {"symbol_mismatch"}
     assert repo.get_bars("AAPL", _START, _END) == []
     assert len(repo.quality_reports) == 1
+
+
+def test_pipeline_blocks_duplicate_calendar_rows() -> None:
+    bars = builders.clean_series(symbol="AAPL")
+    bars[1] = bars[1].model_copy(update={"timestamp_utc": bars[0].timestamp_utc})
+    repo = InMemoryPriceBarRepository()
+    pipeline = DataIngestionPipeline(_SeriesAdapter(bars), repo)
+
+    result = pipeline.ingest("AAPL", _START, _END)
+
+    assert result.stored is False
+    assert {issue.check for issue in result.quality_report.issues} == {"duplicate_timestamp"}
+    assert repo.get_bars("AAPL", _START, _END) == []
+    assert len(repo.quality_reports) == 1
+
+
+def test_pipeline_blocks_bars_from_a_different_source_than_adapter() -> None:
+    bars = [
+        bar.model_copy(update={"source": "alpaca"}) for bar in builders.clean_series(symbol="AAPL")
+    ]
+    repo = InMemoryPriceBarRepository()
+    pipeline = DataIngestionPipeline(_SeriesAdapter(bars), repo)
+
+    result = pipeline.ingest("AAPL", _START, _END)
+
+    assert result.stored is False
+    assert {issue.check for issue in result.quality_report.issues} == {"source_mismatch"}
+    assert repo.get_bars("AAPL", _START, _END) == []
+    assert len(repo.quality_reports) == 1
