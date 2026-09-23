@@ -3,7 +3,7 @@
 - **Severity:** High — a completed methodology artifact can be attributed to code that did not
   produce it
 - **Found:** 2026-09-11 by Codex hostile review of ADR-081 workflow orchestration
-- **Status:** Open; ADR-083 accepted before implementation
+- **Status:** Resolved by ADR-083
 - **Affected:** `panel-null-calibration.yml`, `PanelNullCohort`, panel preparation/batch commands
 
 ## Finding
@@ -42,3 +42,16 @@ Record one explicit 40-character lowercase git revision in the frozen cohort man
 dispatch `${{ github.sha }}` into preparation and every batch, and fail before search execution when
 the batch's declared revision differs from the manifest. The consolidated artifact then preserves
 the executed revision even if its commit is rebased onto newer master.
+
+## Resolution
+
+ADR-083 implemented the required correction. `PanelNullCohort.code_revision` requires an exact
+40-character lowercase git SHA; the preparation and batch commands require it; and
+`panel-null-calibration.yml` passes the workflow's `GITHUB_SHA` to both stages. The production batch
+loads and revalidates the frozen cohort/source pair, then rejects revision drift before constructing
+the search. Shards and consolidated calibration artifacts retain the exact cohort identity, while
+the recovery path additionally requires the authoritative source run's `head_sha` to match it.
+
+Regression coverage includes schema rejection of malformed revisions and a batch test proving a
+mismatched revision fails before the search callback can execute. No panel-null measurement has
+been dispatched and no generated artifact was changed by closing this finding.
