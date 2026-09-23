@@ -3,6 +3,8 @@
 import numpy as np
 import numpy.typing as npt
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from app.validation.pbo import probability_of_backtest_overfitting
 
@@ -112,4 +114,42 @@ def test_an_uneven_split_still_matches_the_definition() -> None:
 
     assert probability_of_backtest_overfitting(performance, 10) == pytest.approx(
         _reference_pbo(performance, 10)
+    )
+
+
+def test_tied_candidates_cannot_move_pbo_across_the_gate_when_reordered() -> None:
+    """ADR-105: column position is not evidence about overfitting.
+
+    Positional argmax/argsort tie handling gave this same candidate set PBO 1/3 in its original
+    order and 1/2 after a permutation, changing the strict production gate verdict.
+    """
+    performance = np.array(
+        [
+            [1.0, 0.0, 0.0, -1.0],
+            [-1.0, -1.0, -1.0, -1.0],
+            [-1.0, 1.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 1.0],
+            [-1.0, 1.0, 1.0, -1.0],
+            [0.0, 1.0, 0.0, -1.0],
+            [1.0, 1.0, 1.0, -1.0],
+        ],
+        dtype=np.float64,
+    )
+
+    baseline = probability_of_backtest_overfitting(performance, n_splits=4)
+    reordered = probability_of_backtest_overfitting(performance[:, [0, 3, 2, 1]], n_splits=4)
+
+    assert baseline == pytest.approx(reordered)
+
+
+@given(seed=st.integers(min_value=0, max_value=100_000))
+def test_pbo_is_invariant_to_candidate_column_permutations(seed: int) -> None:
+    """Financial-math invariant: relabeling a discrete candidate set cannot change PBO."""
+    rng = np.random.default_rng(seed)
+    performance = rng.choice([-1.0, 0.0, 1.0], size=(40, 6))
+    permutation = rng.permutation(performance.shape[1])
+
+    assert probability_of_backtest_overfitting(performance, n_splits=4) == pytest.approx(
+        probability_of_backtest_overfitting(performance[:, permutation], n_splits=4)
     )

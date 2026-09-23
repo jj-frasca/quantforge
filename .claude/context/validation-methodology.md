@@ -104,6 +104,12 @@ family-local value omitted the final cross-family argmax and could pass a global
 Parameter stability remains family-local because unrelated families do not define a neighborhood.
 ADR-104 advances calibration identity; pre-ADR-104 artifacts do not measure this PBO procedure.
 
+**Tie handling (ADR-105).** Exact Sharpe ties use average one-based OOS ranks, and every tied IS
+maximum contributes its equal-weight `logit <= 0` indicator to that split. Positional `argmax` plus
+ordinal `argsort` made the same candidate set report PBO 0.167–0.500 under column permutations.
+Candidate labels are not evidence; PBO is now permutation-invariant. With no ties the statistic is
+unchanged. Calibration identity advances again, and the live `pbo_max` remains strictly 0.5.
+
 ---
 
 ## 3. Walk-forward evaluation (ADR-038)

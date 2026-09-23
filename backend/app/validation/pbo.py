@@ -2,6 +2,7 @@ from itertools import combinations
 
 import numpy as np
 import numpy.typing as npt
+from scipy.stats import rankdata
 
 FloatArray = npt.NDArray[np.float64]
 
@@ -37,7 +38,7 @@ def probability_of_backtest_overfitting(
 
     groups = np.array_split(np.arange(n_obs), n_splits)
     half = n_splits // 2
-    overfit = 0
+    overfit = 0.0
     total = 0
 
     # Every subset of `half` groups appears twice across the C(n, n/2) splits — once in-sample and
@@ -58,14 +59,17 @@ def probability_of_backtest_overfitting(
         is_set = set(is_groups)
         oos_groups = tuple(g for g in range(n_splits) if g not in is_set)
 
-        best = int(np.argmax(sharpe_for(is_groups)))
+        is_sharpe = sharpe_for(is_groups)
+        best = np.flatnonzero(is_sharpe == is_sharpe.max())
         oos_sharpe = sharpe_for(oos_groups)
-        # rank of the IS-best config among OOS configs (0 = worst), as a fraction in (0, 1)
-        oos_rank = int(np.argsort(np.argsort(oos_sharpe))[best])
-        w = (oos_rank + 1) / (n_configs + 1)
-        logit = np.log(w / (1.0 - w))
+        # ADR-105: tied OOS values receive the midpoint of their occupied one-based ranks. Every
+        # tied IS maximum contributes equally, which is the expectation under uniform selection
+        # among indistinguishable winners and cannot change when candidate columns are permuted.
+        oos_ranks = rankdata(oos_sharpe, method="average")
+        w = oos_ranks[best] / (n_configs + 1)
+        logits = np.log(w / (1.0 - w))
 
-        overfit += int(logit <= 0.0)
+        overfit += float(np.mean(logits <= 0.0))
         total += 1
 
     return overfit / total

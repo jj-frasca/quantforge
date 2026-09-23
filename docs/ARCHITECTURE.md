@@ -674,6 +674,13 @@ Calibration identity advances, so earlier null/power artifacts remain evidence f
 family-local PBO procedure and require ordinary sole-writer refresh before component rates are
 quoted for ADR-104. No refresh was dispatched as part of the code change.
 
+**PBO ties are permutation-invariant as of ADR-105.** Exact in-sample Sharpe ties contribute the
+equal-weight mean of their overfit indicators, and tied out-of-sample Sharpes receive their average
+one-based rank. The old positional `argmax`/`argsort` behavior could move one unchanged candidate
+set from PBO 0.167 to 0.500 when columns were reordered, crossing the strict live gate. No-tie cases
+are unchanged, `pbo_max` did not move, and calibration identity advances without dispatching or
+editing generated evidence locally.
+
 **Daily shards carry the lifetime denominator forward (ADR-062), and reports count it once
 (ADR-066).** Each shard writes only its own artifact but reads the committed partitioned pool as a
 prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experiment's
