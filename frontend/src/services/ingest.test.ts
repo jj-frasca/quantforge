@@ -38,3 +38,13 @@ test('requestIngest throws on a non-2xx response, surfacing the backend detail',
   )
   await expect(requestIngest(request)).rejects.toThrow(/502.*unknown symbol/)
 })
+
+test('requestIngest throws with just the status when the body has no detail', async () => {
+  server.use(http.post('/api/v1/ingest', () => HttpResponse.json({}, { status: 500 })))
+  await expect(requestIngest(request)).rejects.toThrow(/^Ingest request failed \(500\)$/)
+})
+
+test('requestIngest throws with just the status when the body is not JSON', async () => {
+  server.use(http.post('/api/v1/ingest', () => new HttpResponse('boom', { status: 500 })))
+  await expect(requestIngest(request)).rejects.toThrow(/^Ingest request failed \(500\)$/)
+})

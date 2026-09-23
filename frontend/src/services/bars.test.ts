@@ -47,3 +47,13 @@ test('requestBars throws on a non-2xx response with the backend detail', async (
   )
   await expect(requestBars(query)).rejects.toThrow(/422.*bad range/)
 })
+
+test('requestBars throws with just the status when the body has no detail', async () => {
+  server.use(http.get('/api/v1/bars', () => HttpResponse.json({}, { status: 500 })))
+  await expect(requestBars(query)).rejects.toThrow(/^Bars request failed \(500\)$/)
+})
+
+test('requestBars throws with just the status when the body is not JSON', async () => {
+  server.use(http.get('/api/v1/bars', () => new HttpResponse('boom', { status: 500 })))
+  await expect(requestBars(query)).rejects.toThrow(/^Bars request failed \(500\)$/)
+})

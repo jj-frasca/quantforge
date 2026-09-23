@@ -28,3 +28,15 @@ test('requestValidation throws on a non-2xx response, surfacing the backend deta
   )
   await expect(requestValidation(request)).rejects.toThrow(/422.*insufficient data/)
 })
+
+test('requestValidation throws with just the status when the body has no detail', async () => {
+  server.use(http.post('/api/v1/validate', () => HttpResponse.json({}, { status: 500 })))
+  await expect(requestValidation(request)).rejects.toThrow(/^Validation request failed \(500\)$/)
+})
+
+test('requestValidation throws with just the status when the body is not JSON', async () => {
+  server.use(
+    http.post('/api/v1/validate', () => new HttpResponse('boom', { status: 500 })),
+  )
+  await expect(requestValidation(request)).rejects.toThrow(/^Validation request failed \(500\)$/)
+})

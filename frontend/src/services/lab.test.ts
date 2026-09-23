@@ -5,7 +5,10 @@ import {
   requestCrossSectional,
   requestGraduates,
   requestLeaderboard,
+  requestNullCalibration,
+  requestNullComparison,
   requestPaperPortfolio,
+  requestPowerCalibration,
   requestWindowComparison,
   requestWindowExperiment,
 } from './lab'
@@ -212,4 +215,100 @@ test('requestWindowExperiment throws on a non-2xx response', async () => {
     http.get('/api/v1/window-experiment', () => new HttpResponse(null, { status: 503 })),
   )
   await expect(requestWindowExperiment()).rejects.toThrow(/Window experiment request failed \(503\)/)
+})
+
+test('requestNullCalibration parses the measured rows', async () => {
+  server.use(
+    http.get('/api/v1/null-calibration', () =>
+      HttpResponse.json([
+        {
+          n_symbols: 200,
+          n_graduates: 0,
+          false_graduation_rate: 0,
+          n_clear_deflation_bar: 0,
+          deflation_bar: 2.11,
+          max_deflated_sharpe: -0.42,
+          max_holdout_sharpe: -0.27,
+          gate_config_version: 'v1',
+          null_mode: 'iid_normal',
+        },
+      ]),
+    ),
+  )
+  const rows = await requestNullCalibration()
+  expect(rows).toHaveLength(1)
+  expect(rows[0].null_mode).toBe('iid_normal')
+})
+
+test('requestNullCalibration throws on a non-2xx response', async () => {
+  server.use(
+    http.get('/api/v1/null-calibration', () => new HttpResponse(null, { status: 500 })),
+  )
+  await expect(requestNullCalibration()).rejects.toThrow(/Null calibration request failed \(500\)/)
+})
+
+test('requestNullComparison parses the measured rows', async () => {
+  server.use(
+    http.get('/api/v1/null-comparison', () =>
+      HttpResponse.json([
+        {
+          statistic: 'walk-forward excess',
+          null_mode: 'bootstrap:SPY',
+          real_n: 66,
+          real_median: -0.119,
+          null_n: 200,
+          null_median: -0.006,
+          null_p95: 0.096,
+          real_exceeds_null_p95: false,
+          comparable: true,
+        },
+      ]),
+    ),
+  )
+  const rows = await requestNullComparison()
+  expect(rows).toHaveLength(1)
+  expect(rows[0].statistic).toBe('walk-forward excess')
+})
+
+test('requestNullComparison throws on a non-2xx response', async () => {
+  server.use(
+    http.get('/api/v1/null-comparison', () => new HttpResponse(null, { status: 500 })),
+  )
+  await expect(requestNullComparison()).rejects.toThrow(/Null comparison request failed \(500\)/)
+})
+
+test('requestPowerCalibration parses the measured sweeps', async () => {
+  server.use(
+    http.get('/api/v1/power-calibration', () =>
+      HttpResponse.json([
+        {
+          edge: 'ar1',
+          gate_config_version: 'v1',
+          search_config_version: 'v1',
+          n_bars: 7400,
+          cells: [
+            {
+              n_symbols: 50,
+              n_detected: 32,
+              detection_rate: 0.64,
+              n_clear_deflation_bar: 32,
+              deflation_bar: 2.13,
+              edge: 'ar1',
+              gate_config_version: 'v1',
+            },
+          ],
+        },
+      ]),
+    ),
+  )
+  const sweeps = await requestPowerCalibration()
+  expect(sweeps).toHaveLength(1)
+  expect(sweeps[0].cells[0].detection_rate).toBe(0.64)
+})
+
+test('requestPowerCalibration throws on a non-2xx response', async () => {
+  server.use(
+    http.get('/api/v1/power-calibration', () => new HttpResponse(null, { status: 500 })),
+  )
+  await expect(requestPowerCalibration()).rejects.toThrow(/Power calibration request failed \(500\)/)
 })

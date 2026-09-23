@@ -68,3 +68,13 @@ test('requestBacktest throws on non-2xx with backend detail', async () => {
   )
   await expect(requestBacktest(request)).rejects.toThrow(/422.*insufficient data/)
 })
+
+test('requestBacktest throws with just the status when the body has no detail', async () => {
+  server.use(http.post('/api/v1/backtest', () => HttpResponse.json({}, { status: 500 })))
+  await expect(requestBacktest(request)).rejects.toThrow(/^Backtest request failed \(500\)$/)
+})
+
+test('requestBacktest throws with just the status when the body is not JSON', async () => {
+  server.use(http.post('/api/v1/backtest', () => new HttpResponse('boom', { status: 500 })))
+  await expect(requestBacktest(request)).rejects.toThrow(/^Backtest request failed \(500\)$/)
+})
