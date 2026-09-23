@@ -178,7 +178,7 @@ def parse_company_facts(company_facts: dict[str, Any], symbol: str) -> Fundament
     revenue = float(latest["val"])
 
     revenue_growth_yoy: float | None = None
-    if len(revenue_rows) >= 2:
+    if len(revenue_rows) >= 2 and int(revenue_rows[-2]["fy"]) == fiscal_year - 1:
         prior = float(revenue_rows[-2]["val"])
         if prior != 0.0:
             revenue_growth_yoy = (revenue - prior) / abs(prior)

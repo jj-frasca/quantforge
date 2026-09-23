@@ -79,6 +79,19 @@ def test_missing_prior_year_leaves_growth_none() -> None:
     assert snap.revenue_growth_yoy is None
 
 
+def test_non_adjacent_prior_fiscal_year_leaves_growth_none() -> None:
+    # FY2023 is absent (e.g. a fiscal-year-end change or a restated filing that skips a year).
+    # The nearest available prior row is FY2022, two years back -> not a true YoY comparison,
+    # so revenue_growth_yoy must be None rather than silently a 2-year growth rate.
+    facts = _facts(two_years=False)
+    facts["facts"]["us-gaap"]["Revenues"]["units"]["USD"].insert(
+        0, _usd_fact(300_000, 2022, "0000320193-23-000001", "2022-09-30")
+    )
+    snap = parse_company_facts(facts, "AAPL")
+    assert snap.fiscal_year == 2024
+    assert snap.revenue_growth_yoy is None
+
+
 def test_missing_gross_profit_leaves_gross_margin_none() -> None:
     snap = parse_company_facts(_facts(include_gross=False), "AAPL")
     assert snap.gross_margin is None
