@@ -7,7 +7,7 @@ import { http, HttpResponse } from 'msw'
 import { beforeEach } from 'vitest'
 
 import { useAppShell } from '../../state/appShell'
-import { server } from '../../test/server'
+import { defaultStrategyCatalog, server } from '../../test/server'
 import { passingReport, renderWithClient } from '../../test/utils'
 import { ValidationReportPage } from './ValidationReportPage'
 
@@ -90,6 +90,49 @@ test('hydrates the form from a pending validation handoff on mount', async () =>
   expect(screen.getByLabelText(/end date/i)).toHaveValue('2024-12-31')
   // Store is cleared post-consumption so re-mounts don't re-apply.
   expect(useAppShell.getState().pendingValidation).toBeNull()
+})
+
+test('editing symbol and date fields propagates to the submitted request', async () => {
+  let body: { symbol?: string; start_date?: string; end_date?: string } | undefined
+  server.use(
+    http.post('/api/v1/validate', async ({ request }) => {
+      body = (await request.json()) as typeof body
+      return HttpResponse.json(passingReport)
+    }),
+  )
+
+  renderWithClient(<ValidationReportPage />)
+  await screen.findByLabelText(/^strategy$/i)
+
+  await userEvent.clear(screen.getByLabelText(/^symbol$/i))
+  await userEvent.type(screen.getByLabelText(/^symbol$/i), 'qqq')
+  const startInput = screen.getByLabelText(/start date/i)
+  await userEvent.clear(startInput)
+  await userEvent.type(startInput, '2018-04-10')
+  const endInput = screen.getByLabelText(/end date/i)
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2023-11-30')
+
+  await userEvent.click(screen.getByRole('button', { name: /run validation/i }))
+  await screen.findByRole('status')
+
+  expect(body?.symbol).toBe('QQQ')
+  expect(body?.start_date).toBe('2018-04-10T00:00:00Z')
+  expect(body?.end_date).toBe('2023-11-30T00:00:00Z')
+})
+
+test('shows the selected strategy citations when the catalog entry has them', async () => {
+  server.use(
+    http.get('/api/v1/strategies', () =>
+      HttpResponse.json([
+        { ...defaultStrategyCatalog[0], citations: ['Lo & MacKinlay (1990)', 'Moskowitz et al. (2012)'] },
+        ...defaultStrategyCatalog.slice(1),
+      ]),
+    ),
+  )
+  renderWithClient(<ValidationReportPage />)
+  expect(await screen.findByText('Lo & MacKinlay (1990)')).toBeInTheDocument()
+  expect(screen.getByText('Moskowitz et al. (2012)')).toBeInTheDocument()
 })
 
 test('surfaces the backend detail when validation fails', async () => {
