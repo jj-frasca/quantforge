@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import cast
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -22,8 +22,9 @@ def sharpe_ratio(returns: pd.Series) -> float:
 
 @dataclass(frozen=True)
 class SharpeConfidenceInterval:
-    """A symmetric confidence interval around an observed annualized Sharpe (ADR-109)."""
+    """An iid-normal confidence interval around an observed annualized Sharpe."""
 
+    assumption: Literal["iid_normal"]
     confidence: float
     lower: float
     upper: float
@@ -45,6 +46,8 @@ def sharpe_confidence_interval(
         `None` when there are fewer than 2 returns (Sharpe itself is undefined) or fewer than a
         year of data, below which the asymptotic normal approximation is unreliable.
     """
+    if not np.isfinite(confidence) or not 0.0 < confidence < 1.0:
+        raise ValueError("confidence must be finite and between 0 and 1")
     if len(returns) < 2:
         return None
     years = len(returns) / TRADING_DAYS
@@ -54,6 +57,7 @@ def sharpe_confidence_interval(
     standard_error = float(np.sqrt((1.0 + sharpe**2 / (2.0 * TRADING_DAYS)) / years))
     z = float(norm.ppf(0.5 + confidence / 2.0))
     return SharpeConfidenceInterval(
+        assumption="iid_normal",
         confidence=confidence,
         lower=sharpe - z * standard_error,
         upper=sharpe + z * standard_error,

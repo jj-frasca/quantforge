@@ -108,15 +108,17 @@ flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 - `calmar` (ADR-108, corrected by ADR-110): geometric `annualized_return / abs(max_drawdown)` — a pure ratio of two other
   `BacktestMetrics` fields, not a new estimate from the returns Series. 0.0 if `max_drawdown ==
   0.0`, same degenerate-series convention. **Descriptive only**, same as `sortino` above.
-- `sharpe_ci` (ADR-109): `SharpeConfidenceInterval | None` — a 95%-default confidence interval on
+- `sharpe_ci` (ADRs 109, 111): `SharpeConfidenceInterval | None` — a 95%-default iid-normal confidence interval on
   `sharpe` via Lo (2002)'s asymptotic standard error, `sqrt((1 + SR^2/504) / years)` where `years =
   len(returns) / 252`. A DIFFERENT question than PBO/DSR (selection bias across a search): this is
   the sampling uncertainty in one already-observed Sharpe. `None` below 2 returns or below 1 year
   of data (the asymptotic normal approximation is unreliable there) — callers must handle null.
   Re-derives the same formula `app/research/lab/frontier.py`'s `sharpe_standard_error` (ADR-043)
   uses rather than importing it: `backtesting/` sits below `lab/` in this codebase's layering.
-  **Descriptive only.** Rendered in `BacktestResultView` as a `95% CI: lower – upper` line under
-  the Sharpe tile when present, nothing when `null` (same session, follow-up commit).
+  The interval carries `assumption: "iid_normal"`; serial correlation or non-normal returns can
+  make it too narrow. `confidence` must be finite and strictly between 0 and 1. **Descriptive
+  only.** Rendered in `BacktestResultView` as an `IID-normal 95% interval: lower – upper` line
+  under the Sharpe tile when present, nothing when `null`.
 
 ---
 

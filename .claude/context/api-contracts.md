@@ -162,7 +162,7 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
     "metrics": {
       "sharpe": 1.5, "max_drawdown": -0.18, "total_return": 0.42,
       "annualized_return": 0.18, "annualized_vol": 0.12, "sortino": 2.1, "calmar": 1.0,
-      "sharpe_ci": { "confidence": 0.95, "lower": 0.9, "upper": 2.1 }
+      "sharpe_ci": { "assumption": "iid_normal", "confidence": 0.95, "lower": 0.9, "upper": 2.1 }
     },
     "equity_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."],
     "buy_and_hold_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."],
@@ -210,11 +210,13 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
     reused. **The field is `null`** when the SPY series can't be fetched or doesn't overlap
     — a benchmark is context, not a precondition, so its absence never fails the backtest.
     The frontend Zod schema mirrors it as **nullable** ([[feedback-frontend-shadow-validators]]).
-  - `metrics.sharpe_ci` (ADR-109) is `null` when the backtest window covers fewer than 252 bars
+  - `metrics.sharpe_ci` (ADRs 109, 111) is an explicitly identified iid-normal interval and is
+    `null` when the backtest window covers fewer than 252 bars
     (~1 year) — Lo (2002)'s asymptotic standard error is unreliable below that. The frontend Zod
     schema mirrors it as `.nullable()` (required key, nullable value — matches
-    `benchmark_comparison`'s pattern) and `BacktestResultView` renders a `95% CI: lower – upper`
-    line under the Sharpe tile only when present.
+    `benchmark_comparison`'s pattern). When present, it carries `assumption: "iid_normal"`, and
+    `BacktestResultView` renders an `IID-normal 95% interval: lower – upper` line plus a warning
+    that serial correlation or non-normal returns can make the interval too narrow.
   - `metrics.total_return` and `metrics.annualized_return` (ADR-110) compound the complete net
     return path, including the first period's turnover cost. Annualized return is geometric CAGR,
     not arithmetic daily mean × 252; Calmar uses that same CAGR as its numerator.

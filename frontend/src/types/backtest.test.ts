@@ -16,7 +16,12 @@ const validResponse = {
     annualized_vol: 0.12,
     sortino: 2.1,
     calmar: 1.0,
-    sharpe_ci: { confidence: 0.95, lower: 0.9, upper: 2.1 },
+    sharpe_ci: {
+      assumption: 'iid_normal' as const,
+      confidence: 0.95,
+      lower: 0.9,
+      upper: 2.1,
+    },
   },
   equity_curve: [
     { timestamp_utc: '2024-01-01T00:00:00Z', equity: 100_000 },
@@ -110,6 +115,26 @@ test('backtestResponseSchema rejects metrics missing the sharpe_ci key entirely'
   delete metricsWithoutSharpeCi.sharpe_ci
   const bad = { ...validResponse, metrics: metricsWithoutSharpeCi }
   expect(() => backtestResponseSchema.parse(bad)).toThrow()
+})
+
+test('backtestResponseSchema requires the iid-normal Sharpe interval identity', () => {
+  const missingAssumption = {
+    ...validResponse,
+    metrics: {
+      ...validResponse.metrics,
+      sharpe_ci: { confidence: 0.95, lower: 0.9, upper: 2.1 },
+    },
+  }
+  expect(() => backtestResponseSchema.parse(missingAssumption)).toThrow()
+  expect(() =>
+    backtestResponseSchema.parse({
+      ...validResponse,
+      metrics: {
+        ...validResponse.metrics,
+        sharpe_ci: { assumption: 'hac', confidence: 0.95, lower: 0.9, upper: 2.1 },
+      },
+    }),
+  ).toThrow()
 })
 
 test('strategyConfigSchema accepts any name (backend is the discriminator authority)', () => {

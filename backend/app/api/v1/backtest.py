@@ -44,6 +44,7 @@ class EquityPoint(BaseModel):
 
 
 class SharpeConfidenceIntervalView(BaseModel):
+    assumption: Literal["iid_normal"]
     confidence: float
     lower: float
     upper: float
@@ -315,6 +316,7 @@ def _to_response(
             calmar=result.metrics.calmar,
             sharpe_ci=(
                 SharpeConfidenceIntervalView(
+                    assumption=result.metrics.sharpe_ci.assumption,
                     confidence=result.metrics.sharpe_ci.confidence,
                     lower=result.metrics.sharpe_ci.lower,
                     upper=result.metrics.sharpe_ci.upper,

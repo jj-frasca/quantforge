@@ -19,7 +19,12 @@ const winning: BacktestResponse = {
     annualized_vol: 0.12,
     sortino: 2.3,
     calmar: 2.8,
-    sharpe_ci: { confidence: 0.95, lower: 0.82, upper: 2.18 },
+    sharpe_ci: {
+      assumption: 'iid_normal',
+      confidence: 0.95,
+      lower: 0.82,
+      upper: 2.18,
+    },
   },
   equity_curve: [
     { timestamp_utc: '2024-01-01T00:00:00Z', equity: 100_000 },
@@ -91,7 +96,8 @@ test('uses the failing chrome for a negative total return', () => {
 
 test('renders the Sharpe confidence interval when present (ADR-109)', () => {
   render(<BacktestResultView result={winning} />)
-  expect(screen.getByText(/95% ci: 0\.82 – 2\.18/i)).toBeInTheDocument()
+  expect(screen.getByText(/iid-normal 95% interval: 0\.82 – 2\.18/i)).toBeInTheDocument()
+  expect(screen.getByText(/serial correlation.*too narrow/i)).toBeInTheDocument()
 })
 
 test('renders no confidence interval line when sharpe_ci is null (< 1yr of history)', () => {
@@ -100,7 +106,7 @@ test('renders no confidence interval line when sharpe_ci is null (< 1yr of histo
     metrics: { ...winning.metrics, sharpe_ci: null },
   }
   render(<BacktestResultView result={shortWindow} />)
-  expect(screen.queryByText(/95% ci/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/iid-normal 95% interval/i)).not.toBeInTheDocument()
 })
 
 test('renders plain-English hints under each headline metric so a non-quant can read them', () => {

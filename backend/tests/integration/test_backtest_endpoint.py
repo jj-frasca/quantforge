@@ -478,6 +478,7 @@ def test_backtest_endpoint_sharpe_ci_present_at_one_year_or_more() -> None:
         assert len(body["equity_curve"]) >= 252
         ci = body["metrics"]["sharpe_ci"]
         assert ci is not None
+        assert ci["assumption"] == "iid_normal"
         assert ci["confidence"] == pytest.approx(0.95)
         assert ci["lower"] <= body["metrics"]["sharpe"] <= ci["upper"]
     finally:

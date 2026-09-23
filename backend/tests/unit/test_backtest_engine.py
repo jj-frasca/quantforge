@@ -231,6 +231,14 @@ def test_sharpe_confidence_interval_present_at_one_year_of_data() -> None:
     ci = sharpe_confidence_interval(returns)
     assert ci is not None
     assert ci.confidence == pytest.approx(0.95)
+    assert ci.assumption == "iid_normal"
+
+
+@pytest.mark.parametrize("confidence", [np.nan, -0.1, 0.0, 1.0, 1.1])
+def test_sharpe_confidence_interval_rejects_invalid_confidence(confidence: float) -> None:
+    returns = pd.Series(np.linspace(-0.01, 0.01, TRADING_DAYS))
+    with pytest.raises(ValueError, match="confidence"):
+        sharpe_confidence_interval(returns, confidence=confidence)
 
 
 def test_sharpe_confidence_interval_brackets_the_point_estimate() -> None:

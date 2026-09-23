@@ -33,7 +33,8 @@ export function BacktestResultView({ result }: Props) {
           <dd>{asRatio(result.metrics.sharpe)}</dd>
           {result.metrics.sharpe_ci && (
             <p className="metric-ci">
-              95% CI: {asRatio(result.metrics.sharpe_ci.lower)} –{' '}
+              IID-normal {(result.metrics.sharpe_ci.confidence * 100).toFixed(0)}% interval:{' '}
+              {asRatio(result.metrics.sharpe_ci.lower)} –{' '}
               {asRatio(result.metrics.sharpe_ci.upper)}
             </p>
           )}
@@ -41,7 +42,7 @@ export function BacktestResultView({ result }: Props) {
             Return per unit of risk. Above 1 is good; above 2 is excellent; below 0
             means losing money on average.{' '}
             {result.metrics.sharpe_ci
-              ? "The range beside it is how much this estimate could be off by sampling noise alone."
+              ? 'This range assumes independent, normally distributed returns; serial correlation or non-normal returns can make it too narrow.'
               : 'Under a year of history — too little data to show a confidence range.'}
           </small>
         </div>
