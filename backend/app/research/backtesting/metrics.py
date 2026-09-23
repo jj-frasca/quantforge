@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 from scipy.stats import norm
 
 TRADING_DAYS = 252
@@ -138,10 +140,53 @@ def max_drawdown(equity: pd.Series) -> float:
     return max(float(drawdown.min()), -1.0)
 
 
-def total_return(equity: pd.Series) -> float:
-    if len(equity) == 0:
+def _validated_log_returns(returns: pd.Series) -> NDArray[np.float64]:
+    values = returns.to_numpy(dtype=np.float64)
+    if not np.isfinite(values).all():
+        raise ValueError("returns must be finite")
+    if np.any(values <= -1.0):
+        raise ValueError("returns must preserve positive compounded wealth")
+    log_returns = np.log1p(values)
+    return cast(NDArray[np.float64], log_returns)
+
+
+def _compounded_log_growth(returns: pd.Series) -> float:
+    with np.errstate(over="ignore", invalid="ignore"):
+        return float(_validated_log_returns(returns).sum())
+
+
+def total_return(returns: pd.Series) -> float:
+    """Complete compounded return, including the first net observation (ADR-110)."""
+    if len(returns) == 0:
         return 0.0
-    return float(equity.iloc[-1] / equity.iloc[0] - 1.0)
+    with np.errstate(over="ignore", under="ignore"):
+        growth = float(np.exp(_compounded_log_growth(returns)))
+    if not np.isfinite(growth) or growth <= 0.0:
+        raise ValueError("compounded wealth must be positive and finite")
+    return growth - 1.0
+
+
+def annualized_return(returns: pd.Series) -> float:
+    """Geometric annual return over the complete net-return path (ADR-110)."""
+    if len(returns) == 0:
+        return 0.0
+    annual_log_growth = _compounded_log_growth(returns) * TRADING_DAYS / len(returns)
+    with np.errstate(over="ignore", under="ignore"):
+        growth = float(np.exp(annual_log_growth))
+    if not np.isfinite(growth) or growth <= 0.0:
+        raise ValueError("annualized wealth must be positive and finite")
+    return growth - 1.0
+
+
+def _max_drawdown_from_returns(returns: pd.Series) -> float:
+    if len(returns) == 0:
+        return 0.0
+    cumulative_log_growth = np.cumsum(_validated_log_returns(returns))
+    with np.errstate(over="ignore", under="ignore"):
+        wealth = np.exp(np.concatenate(([0.0], cumulative_log_growth)))
+    if not np.isfinite(wealth).all() or np.any(wealth <= 0.0):
+        raise ValueError("compounded wealth path must be positive and finite")
+    return max_drawdown(pd.Series(wealth))
 
 
 @dataclass(frozen=True)
@@ -156,14 +201,14 @@ class BacktestMetrics:
     sharpe_ci: SharpeConfidenceInterval | None
 
     @classmethod
-    def from_series(cls, net_returns: pd.Series, equity: pd.Series) -> "BacktestMetrics":
-        ann_return = float(net_returns.mean() * TRADING_DAYS) if len(net_returns) else 0.0
+    def from_series(cls, net_returns: pd.Series) -> "BacktestMetrics":
+        ann_return = annualized_return(net_returns)
+        dd = _max_drawdown_from_returns(net_returns)
         ann_vol = float(net_returns.std() * np.sqrt(TRADING_DAYS)) if len(net_returns) > 1 else 0.0
-        dd = max_drawdown(equity)
         return cls(
             sharpe=sharpe_ratio(net_returns),
             max_drawdown=dd,
-            total_return=total_return(equity),
+            total_return=total_return(net_returns),
             annualized_return=ann_return,
             annualized_vol=ann_vol,
             sortino=sortino_ratio(net_returns),

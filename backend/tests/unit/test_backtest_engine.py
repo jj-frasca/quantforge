@@ -13,6 +13,8 @@ from tests.fixtures.synthetic import builders
 from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.metrics import (
     TRADING_DAYS,
+    BacktestMetrics,
+    annualized_return,
     calmar_ratio,
     max_drawdown,
     sharpe_confidence_interval,
@@ -103,6 +105,10 @@ def test_metrics_handle_empty_series() -> None:
     assert max_drawdown(empty) == 0.0
     assert total_return(empty) == 0.0
     assert sortino_ratio(empty) == 0.0
+    metrics = BacktestMetrics.from_series(empty)
+    assert metrics.total_return == 0.0
+    assert metrics.annualized_return == 0.0
+    assert metrics.max_drawdown == 0.0
 
 
 def test_sortino_ratio_zero_for_single_observation() -> None:
@@ -152,6 +158,61 @@ def test_calmar_ratio_divides_annualized_return_by_drawdown_magnitude() -> None:
 
 def test_calmar_ratio_is_negative_for_a_losing_strategy() -> None:
     assert calmar_ratio(annualized_return=-0.05, max_drawdown=-0.10) == pytest.approx(-0.5)
+
+
+def test_return_metrics_include_initial_turnover_cost() -> None:
+    prices = _prices([100.0, 100.0])
+    signals = pd.Series(1.0, index=prices.index)
+
+    metrics = BacktestEngine(cost_rate=0.10).run(prices, signals).metrics
+
+    assert metrics.total_return == pytest.approx(-0.10)
+    assert metrics.annualized_return < 0.0
+    assert metrics.calmar < 0.0
+
+
+def test_annualized_return_and_calmar_follow_compounded_wealth() -> None:
+    # Positive arithmetic mean (+1% per period) but negative compounded wealth:
+    # 1.20 * 0.82 = 0.984 for every pair. Arithmetic mean annualization reverses the sign.
+    returns = pd.Series([0.20, -0.18] * 126, dtype="float64")
+
+    metrics = BacktestMetrics.from_series(returns)
+    expected_total = float((1.0 + returns).prod() - 1.0)
+    expected_annualized = float((1.0 + expected_total) ** (TRADING_DAYS / len(returns)) - 1.0)
+
+    assert metrics.total_return == pytest.approx(expected_total)
+    assert metrics.annualized_return == pytest.approx(expected_annualized)
+    assert metrics.total_return < 0.0
+    assert metrics.annualized_return < 0.0
+    assert metrics.calmar < 0.0
+
+
+@pytest.mark.parametrize("invalid_return", [np.nan, np.inf, -np.inf, -1.0])
+def test_return_metrics_reject_invalid_compounded_wealth(invalid_return: float) -> None:
+    with pytest.raises(ValueError, match=r"returns|wealth"):
+        BacktestMetrics.from_series(pd.Series([0.0, invalid_return]))
+
+
+def test_return_metrics_reject_compounded_wealth_underflow() -> None:
+    with pytest.raises(ValueError, match="wealth"):
+        BacktestMetrics.from_series(pd.Series([-0.90] * 400))
+
+
+def test_total_return_rejects_compounded_wealth_overflow() -> None:
+    with pytest.raises(ValueError, match="wealth"):
+        total_return(pd.Series([1e308, 1e308]))
+
+
+def test_annualized_return_rejects_annual_wealth_overflow() -> None:
+    with pytest.raises(ValueError, match="wealth"):
+        annualized_return(pd.Series([1e308, 0.0]))
+
+
+def test_return_metrics_reject_intermediate_wealth_overflow() -> None:
+    # Terminal log wealth is finite after the losses, but the path overflows at its second peak.
+    returns = pd.Series([1e308, 1e308] + [-0.999999999999999] * 40)
+    with pytest.raises(ValueError, match="wealth path"):
+        BacktestMetrics.from_series(returns)
 
 
 def test_sharpe_confidence_interval_none_below_two_returns() -> None:
@@ -272,6 +333,24 @@ def test_calmar_ratio_is_finite_when_max_drawdown_is_nonzero(
     # §8 invariant #12: Calmar is finite whenever max_drawdown != 0.0.
     result = calmar_ratio(annualized_return=annualized_return, max_drawdown=max_dd)
     assert np.isfinite(result)
+
+
+@settings(deadline=None)
+@given(
+    returns=st.lists(
+        st.floats(min_value=-0.2, max_value=0.2, allow_nan=False, allow_infinity=False),
+        min_size=2,
+        max_size=50,
+    )
+)
+def test_annualized_return_has_compounded_total_return_sign(returns: list[float]) -> None:
+    # ADR-110: geometric annualization is a monotone transform of positive terminal wealth, so
+    # it can never reverse the sign of the complete compounded return path.
+    series = pd.Series(returns, dtype="float64")
+
+    metrics = BacktestMetrics.from_series(series)
+
+    assert np.sign(metrics.annualized_return) == np.sign(metrics.total_return)
 
 
 @settings(deadline=None)

@@ -188,8 +188,9 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
   ```
   - `buy_and_hold_curve` is a 100% long position of the SAME symbol from t=0, same
     `initial_capital`, no costs — the canonical "is the strategy doing anything?" check.
-  - `drawdown_curve` is `equity / cummax - 1` over the strategy curve; each `drawdown` is
-    in `[-1, 0]` with `0` meaning "at peak".
+  - `drawdown_curve` is `equity / running_peak - 1` over the strategy curve, with requested
+    `initial_capital` as the pre-return peak (ADR-110); an initial-period cost or loss therefore
+    remains visible. Each `drawdown` is in `[-1, 0]` with `0` meaning "at peak".
   - `rolling_sharpe_curve` is the annualized rolling Sharpe of the strategy returns over
     `rolling_sharpe_window` bars (default 60); warmup values are `0.0` (not NaN).
   - `return_distribution` is the histogram of daily strategy returns plus sample
@@ -214,6 +215,9 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
     schema mirrors it as `.nullable()` (required key, nullable value — matches
     `benchmark_comparison`'s pattern) and `BacktestResultView` renders a `95% CI: lower – upper`
     line under the Sharpe tile only when present.
+  - `metrics.total_return` and `metrics.annualized_return` (ADR-110) compound the complete net
+    return path, including the first period's turnover cost. Annualized return is geometric CAGR,
+    not arithmetic daily mean × 252; Calmar uses that same CAGR as its numerator.
 - `422` → insufficient data after the cache-miss ingest, or an unknown strategy discriminator.
 
 **DI**: `get_data_adapter` + `get_repository`. Same overrides as /validate in tests.

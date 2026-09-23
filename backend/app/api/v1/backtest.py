@@ -150,8 +150,9 @@ def _series_to_curve(series: "pd.Series") -> list[EquityPoint]:
     return [EquityPoint(timestamp_utc=ts, equity=float(value)) for ts, value in series.items()]
 
 
-def _equity_to_drawdown(equity: "pd.Series") -> list[DrawdownPoint]:
-    dd = equity / equity.cummax() - 1.0
+def _equity_to_drawdown(equity: "pd.Series", *, initial_equity: float) -> list[DrawdownPoint]:
+    running_peak = equity.cummax().clip(lower=initial_equity)
+    dd = equity / running_peak - 1.0
     return [DrawdownPoint(timestamp_utc=ts, drawdown=float(value)) for ts, value in dd.items()]
 
 
@@ -325,7 +326,7 @@ def _to_response(
         equity_curve=_series_to_curve(result.equity_curve),
         buy_and_hold_curve=_series_to_curve(bh_equity),
         buy_and_hold_total_return=bh_total_return,
-        drawdown_curve=_equity_to_drawdown(result.equity_curve),
+        drawdown_curve=_equity_to_drawdown(result.equity_curve, initial_equity=initial_capital),
         rolling_sharpe_curve=_rolling_sharpe(strategy_returns, _ROLLING_SHARPE_WINDOW),
         rolling_sharpe_window=_ROLLING_SHARPE_WINDOW,
         return_distribution=_return_distribution(strategy_returns, _RETURN_HIST_BINS),

@@ -56,7 +56,7 @@ class BacktestEngine:
         return BacktestResult(
             equity_curve=equity_curve,
             returns=net,
-            metrics=BacktestMetrics.from_series(net, equity_curve),
+            metrics=BacktestMetrics.from_series(net),
             n_trades=n_trades,
             cost_rate=self.cost_rate,
             position=position,

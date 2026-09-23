@@ -65,8 +65,8 @@ export function BacktestResultView({ result }: Props) {
           <dt>Annualized return</dt>
           <dd>{asPercent(result.metrics.annualized_return)}</dd>
           <small className="metric-hint">
-            What this would have averaged per year. The S&P 500 has averaged ~10%
-            historically.
+            Compounded annual growth of this backtest. The S&P 500 has compounded at
+            roughly 10% annually over long periods.
           </small>
         </div>
         <div>

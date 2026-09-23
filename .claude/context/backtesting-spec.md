@@ -93,14 +93,19 @@ flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 
 - `sharpe`: `sqrt(252) * mean(net) / std(net)` (daily). 0.0 if std==0 (constant returns).
 - `max_drawdown`: `min(equity/equity.cummax() - 1)` — **in [-1.0, 0.0]**. Positive = bug.
-- `total_return`: `equity[-1]/equity[0] - 1`.
-- `annualized_return`, `annualized_vol`: standard sqrt(252) scaling.
+- `total_return` (ADR-110): `product(1 + net) - 1` over every net observation, including the
+  first bar's initial-position cost. It is never derived from `equity[-1]/equity[0]`, because the
+  first equity observation is already post-return and would drop that first period.
+- `annualized_return` (ADR-110): the geometric compound rate
+  `product(1 + net) ** (252 / n) - 1`; it therefore always has the same sign as total return.
+  Non-finite returns or a non-positive compounded-wealth path fail closed instead of emitting a
+  misleading scalar. `annualized_vol` retains standard sqrt(252) scaling.
 - `sortino` (ADR-107): `sqrt(252) * mean(net) / downside_semi_std(net)` — same sqrt(252)
   convention as Sharpe, but the denominator only squares shortfall below target 0.0 (upside
   dispersion never penalizes) and divides by the full sample size. 0.0 if no return falls below
   target, mirroring Sharpe's degenerate-series convention rather than +inf. **Descriptive only —
   not read by the gate, PBO, DSR, or any threshold** (charter §4).
-- `calmar` (ADR-108): `annualized_return / abs(max_drawdown)` — a pure ratio of two other
+- `calmar` (ADR-108, corrected by ADR-110): geometric `annualized_return / abs(max_drawdown)` — a pure ratio of two other
   `BacktestMetrics` fields, not a new estimate from the returns Series. 0.0 if `max_drawdown ==
   0.0`, same degenerate-series convention. **Descriptive only**, same as `sortino` above.
 - `sharpe_ci` (ADR-109): `SharpeConfidenceInterval | None` — a 95%-default confidence interval on
