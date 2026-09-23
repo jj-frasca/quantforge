@@ -16,6 +16,7 @@ const validResponse = {
     annualized_vol: 0.12,
     sortino: 2.1,
     calmar: 1.0,
+    sharpe_ci: { confidence: 0.95, lower: 0.9, upper: 2.1 },
   },
   equity_curve: [
     { timestamp_utc: '2024-01-01T00:00:00Z', equity: 100_000 },
@@ -91,6 +92,23 @@ test('backtestResponseSchema rejects metrics missing calmar', () => {
   const metricsWithoutCalmar: Record<string, unknown> = { ...validResponse.metrics }
   delete metricsWithoutCalmar.calmar
   const bad = { ...validResponse, metrics: metricsWithoutCalmar }
+  expect(() => backtestResponseSchema.parse(bad)).toThrow()
+})
+
+test('backtestResponseSchema accepts a null sharpe_ci', () => {
+  // ADR-109: null below a year of backtest history — a legitimate value, not an error.
+  const parsed = backtestResponseSchema.parse({
+    ...validResponse,
+    metrics: { ...validResponse.metrics, sharpe_ci: null },
+  })
+  expect(parsed.metrics.sharpe_ci).toBeNull()
+})
+
+test('backtestResponseSchema rejects metrics missing the sharpe_ci key entirely', () => {
+  // The KEY must be present (null or an object) — the backend always serializes it.
+  const metricsWithoutSharpeCi: Record<string, unknown> = { ...validResponse.metrics }
+  delete metricsWithoutSharpeCi.sharpe_ci
+  const bad = { ...validResponse, metrics: metricsWithoutSharpeCi }
   expect(() => backtestResponseSchema.parse(bad)).toThrow()
 })
 

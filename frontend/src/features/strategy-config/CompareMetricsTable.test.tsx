@@ -33,6 +33,7 @@ const success = (sharpe: number): CompareRow => ({
       annualized_vol: 0.08,
       sortino: 1.9,
       calmar: 1.0,
+      sharpe_ci: null,
     },
     equity_curve: [],
     buy_and_hold_curve: [],

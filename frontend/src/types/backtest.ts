@@ -80,6 +80,12 @@ export const backtestMetricsSchema = z.object({
   sortino: z.number(),
   // Annualized return over |max_drawdown| (ADR-108): descriptive, not a gate input.
   calmar: z.number(),
+  // 95%-default confidence interval on `sharpe` via Lo (2002) (ADR-109). NULLABLE by
+  // contract: null below a year of backtest history, where the asymptotic normal
+  // approximation is unreliable — see feedback-frontend-shadow-validators.
+  sharpe_ci: z
+    .object({ confidence: z.number(), lower: z.number(), upper: z.number() })
+    .nullable(),
 })
 
 export type BacktestMetricsView = z.infer<typeof backtestMetricsSchema>

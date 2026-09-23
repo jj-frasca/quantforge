@@ -210,9 +210,10 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
     — a benchmark is context, not a precondition, so its absence never fails the backtest.
     The frontend Zod schema mirrors it as **nullable** ([[feedback-frontend-shadow-validators]]).
   - `metrics.sharpe_ci` (ADR-109) is `null` when the backtest window covers fewer than 252 bars
-    (~1 year) — Lo (2002)'s asymptotic standard error is unreliable below that. Backend + API
-    only as of ADR-109; the frontend Zod schema does not yet have a field for it (an unknown
-    response key is silently stripped by `z.object()`'s default mode, not a breaking change).
+    (~1 year) — Lo (2002)'s asymptotic standard error is unreliable below that. The frontend Zod
+    schema mirrors it as `.nullable()` (required key, nullable value — matches
+    `benchmark_comparison`'s pattern) and `BacktestResultView` renders a `95% CI: lower – upper`
+    line under the Sharpe tile only when present.
 - `422` → insufficient data after the cache-miss ingest, or an unknown strategy discriminator.
 
 **DI**: `get_data_adapter` + `get_repository`. Same overrides as /validate in tests.

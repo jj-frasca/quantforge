@@ -110,7 +110,8 @@ flat equity, zero trades; higher cost_rate → total return monotonically ≤.
   of data (the asymptotic normal approximation is unreliable there) — callers must handle null.
   Re-derives the same formula `app/research/lab/frontier.py`'s `sharpe_standard_error` (ADR-043)
   uses rather than importing it: `backtesting/` sits below `lab/` in this codebase's layering.
-  **Descriptive only.** Backend + API only as of ADR-109 — no frontend display yet.
+  **Descriptive only.** Rendered in `BacktestResultView` as a `95% CI: lower – upper` line under
+  the Sharpe tile when present, nothing when `null` (same session, follow-up commit).
 
 ---
 

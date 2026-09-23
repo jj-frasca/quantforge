@@ -31,9 +31,18 @@ export function BacktestResultView({ result }: Props) {
         <div>
           <dt>Sharpe</dt>
           <dd>{asRatio(result.metrics.sharpe)}</dd>
+          {result.metrics.sharpe_ci && (
+            <p className="metric-ci">
+              95% CI: {asRatio(result.metrics.sharpe_ci.lower)} –{' '}
+              {asRatio(result.metrics.sharpe_ci.upper)}
+            </p>
+          )}
           <small className="metric-hint">
             Return per unit of risk. Above 1 is good; above 2 is excellent; below 0
-            means losing money on average.
+            means losing money on average.{' '}
+            {result.metrics.sharpe_ci
+              ? "The range beside it is how much this estimate could be off by sampling noise alone."
+              : 'Under a year of history — too little data to show a confidence range.'}
           </small>
         </div>
         <div>
