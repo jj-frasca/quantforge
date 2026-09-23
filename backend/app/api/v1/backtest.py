@@ -274,8 +274,9 @@ def _benchmark_comparison(
         return None
 
     bench_returns = bench_close.pct_change().fillna(0.0)
-    comparison = BenchmarkComparator(_BENCHMARK_SYMBOL).compare(strategy_returns, bench_returns)
-    if comparison.excess_returns.empty:
+    try:
+        comparison = BenchmarkComparator(_BENCHMARK_SYMBOL).compare(strategy_returns, bench_returns)
+    except ValueError:
         return None
     return BenchmarkComparisonView(
         benchmark_symbol=_BENCHMARK_SYMBOL,

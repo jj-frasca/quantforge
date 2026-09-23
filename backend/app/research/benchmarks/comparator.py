@@ -31,6 +31,14 @@ class BenchmarkComparator:
         self, strategy_returns: pd.Series, benchmark_returns: pd.Series
     ) -> BenchmarkComparison:
         strat, bench = strategy_returns.align(benchmark_returns, join="inner")
+        if len(strat) < 2:
+            raise ValueError("returns must have at least two aligned observations")
+        strat_values = strat.to_numpy(dtype=np.float64)
+        bench_values = bench.to_numpy(dtype=np.float64)
+        if not np.isfinite(strat_values).all() or not np.isfinite(bench_values).all():
+            raise ValueError("returns must be finite")
+        if np.any(strat_values <= -1.0) or np.any(bench_values <= -1.0):
+            raise ValueError("returns must preserve positive wealth")
         excess = strat - bench
 
         bench_var = float(bench.var())
@@ -45,6 +53,9 @@ class BenchmarkComparator:
         # (a ratio of compounded curves, always positive). Compounding the return *difference*
         # (strat - bench) is invalid — it can fall to <= -1 and yield a meaningless curve.
         relative_equity = (1.0 + strat).cumprod() / (1.0 + bench).cumprod()
+        relative_equity_with_baseline = pd.Series(
+            np.concatenate(([1.0], relative_equity.to_numpy(dtype=np.float64)))
+        )
 
         return BenchmarkComparison(
             excess_returns=excess,
@@ -52,5 +63,5 @@ class BenchmarkComparator:
             alpha=alpha,
             beta=beta,
             tracking_error=tracking_error,
-            benchmark_relative_drawdown=max_drawdown(relative_equity),
+            benchmark_relative_drawdown=max_drawdown(relative_equity_with_baseline),
         )

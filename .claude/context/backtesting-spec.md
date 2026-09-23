@@ -125,14 +125,16 @@ flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 ## 5. BenchmarkComparator
 
 `app/research/benchmarks/comparator.py`. Default benchmark SPY. Given strategy `net` returns
-and `benchmark` returns (aligned):
+and `benchmark` returns (aligned), requires at least two finite overlapping observations and each
+return greater than -1 (ADR-112):
 
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)
 - `tracking_error = sqrt(252) * std(excess)`
 - `benchmark_relative_drawdown`: max drawdown of the **relative** equity curve
-  `(1+strat).cumprod() / (1+bench).cumprod()` (a ratio — always positive). Do NOT compound the
+  `(1+strat).cumprod() / (1+bench).cumprod()` from a prepended unit baseline (a ratio — always
+  positive). Do NOT compound the
   return *difference* (`strat - bench`); it can fall ≤ −1 and produce a meaningless curve.
 
 **Oracle**: SPY vs SPY → excess≈0, IR≈0, alpha≈0, beta≈1.0 (ARCHITECTURE.md §8).

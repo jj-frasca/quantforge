@@ -203,11 +203,12 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
     y-coordinate when overlaid on the equity-curve chart. The first bar with a non-zero
     position is NOT a marker (we mark signal *changes*, not the initial state). Empty list
     if the strategy never moves direction in the backtest window.
-  - `benchmark_comparison` (ADR-013) is the strategy-vs-SPY decomposition: annualized
+  - `benchmark_comparison` (ADRs 013, 112) is the strategy-vs-SPY decomposition: annualized
     `alpha`, `beta`, `information_ratio`, annualized `tracking_error`, and
     `benchmark_relative_drawdown` (worst underperformance vs SPY, in `[-1, 0]`). SPY is
     fetched via the same cache-aside path; when `symbol == "SPY"` the fetched series is
-    reused. **The field is `null`** when the SPY series can't be fetched or doesn't overlap
+    reused. **The field is `null`** when the SPY series can't be fetched or has fewer than two
+    valid overlapping return observations
     — a benchmark is context, not a precondition, so its absence never fails the backtest.
     The frontend Zod schema mirrors it as **nullable** ([[feedback-frontend-shadow-validators]]).
   - `metrics.sharpe_ci` (ADRs 109, 111) is an explicitly identified iid-normal interval and is

@@ -50,6 +50,25 @@ def test_relative_drawdown_is_bounded_when_strategy_underperforms() -> None:
     assert -1.0 <= drawdown < 0.0
 
 
+def test_relative_drawdown_includes_first_period_underperformance() -> None:
+    index = pd.date_range("2024-01-01", periods=2, freq="D", tz="UTC")
+    comparison = BenchmarkComparator().compare(
+        pd.Series([-0.10, 0.0], index=index), pd.Series([0.0, 0.0], index=index)
+    )
+    assert comparison.benchmark_relative_drawdown == pytest.approx(-0.10)
+
+
+@pytest.mark.parametrize(
+    ("strategy", "benchmark"),
+    [([0.01], [0.0]), ([0.01, np.nan], [0.0, 0.0]), ([-1.0, 0.0], [0.0, 0.0])],
+)
+def test_comparison_rejects_insufficient_or_invalid_evidence(
+    strategy: list[float], benchmark: list[float]
+) -> None:
+    with pytest.raises(ValueError, match="returns"):
+        BenchmarkComparator().compare(pd.Series(strategy), pd.Series(benchmark))
+
+
 def test_constant_benchmark_does_not_divide_by_zero() -> None:
     index = pd.date_range("2024-01-01", periods=10, freq="D", tz="UTC")
     flat_bench = pd.Series(0.0, index=index)

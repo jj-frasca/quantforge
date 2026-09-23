@@ -37,3 +37,18 @@ def test_benchmark_comparison_none_when_series_do_not_overlap() -> None:
         spy_close,
     )
     assert result is None
+
+
+def test_benchmark_comparison_none_when_only_one_bar_overlaps() -> None:
+    strategy_returns = pd.Series([0.001, 0.002], index=pd.to_datetime(["2024-01-01", "2024-01-02"]))
+    spy_close = pd.Series([100.0, 101.0], index=pd.to_datetime(["2024-01-02", "2024-01-03"]))
+    result = _benchmark_comparison(
+        "SPY",
+        _START,
+        _END,
+        _NeverCalledAdapter(),
+        InMemoryPriceBarRepository(),
+        strategy_returns,
+        spy_close,
+    )
+    assert result is None
