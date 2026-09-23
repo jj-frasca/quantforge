@@ -5,6 +5,7 @@ import pytest
 from app.research.lab.candidate_budget import (
     allocate_candidate_budget,
     allocate_catalog_candidate_budget,
+    select_space_filling_candidates,
 )
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
@@ -93,6 +94,36 @@ def test_budget_is_a_cap_when_the_resolved_search_space_is_smaller() -> None:
     assert len(allocation.families["alpha"]) == 2
     assert allocation.refinement_reserve == 3
     assert allocation.n_allocated == 5
+
+
+def test_select_space_filling_candidates_given_negative_limit_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="limit must be >= 0"):
+        select_space_filling_candidates(
+            [_Point(0), _Point(1)], -1, parameters=lambda point: point.parameters
+        )
+
+
+def test_select_space_filling_candidates_given_zero_limit_returns_empty_tuple() -> None:
+    result = select_space_filling_candidates(
+        [_Point(0), _Point(1)], 0, parameters=lambda point: point.parameters
+    )
+
+    assert result == ()
+
+
+def test_select_space_filling_candidates_given_uneven_parameter_keys_raises() -> None:
+    @dataclass(frozen=True)
+    class _Uneven:
+        params: dict[str, int]
+
+        @property
+        def parameters(self) -> dict[str, int]:
+            return self.params
+
+    candidates = [_Uneven({"a": 0}), _Uneven({"a": 1, "b": 2})]
+
+    with pytest.raises(ValueError, match="same parameters"):
+        select_space_filling_candidates(candidates, 1, parameters=lambda point: point.parameters)
 
 
 def test_default_catalog_budget_represents_every_family_inside_200_candidates() -> None:
