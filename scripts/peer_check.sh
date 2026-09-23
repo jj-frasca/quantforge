@@ -3,7 +3,9 @@
 # Claude session (AUTONOMY_CHARTER.md's standing warning). Answers, in one cheap call, the three
 # questions sessions #95-98 kept re-deriving by hand before touching any file:
 #   1. Is another `claude` process actually running right now, and since when?
-#   2. Which "hot" files (the areas peers have repeatedly iterated on) has it touched recently?
+#   2. Which files (backend/app/research, backend/app/validation, .claude/context) has recent
+#      history touched — discovered from the last 20 commits, not a hardcoded list, so it tracks
+#      a peer's scope automatically as it grows instead of going stale (see session #99's retro).
 #   3. Has the single highest-stakes gated workflow (panel-null calibration) been dispatched yet?
 # Read-only: no git state is modified. Safe to run from anywhere inside the repo.
 set -uo pipefail
@@ -19,19 +21,15 @@ echo "-- claude processes --"
 ps -axo pid,ppid,etime,lstart,command 2>/dev/null | awk 'NR==1 || /[c]laude/'
 
 echo
-echo "-- recent activity on peer-hot files (last commit each) --"
-for f in \
-  backend/app/research/lab/panel_null.py \
-  backend/app/research/lab/calibration.py \
-  backend/app/research/lab/probability_dsr.py \
-  backend/app/research/lab/gate.py \
-  backend/app/research/lab/pool_report.py \
-  .claude/context/validation-methodology.md \
-  .claude/context/data-contracts.md \
-  .claude/context/backtesting-spec.md \
-  .claude/context/api-contracts.md \
-; do
-  [ -f "$f" ] || continue
+echo "-- files touched in the last 20 commits (peer-hot territory, discovered not hardcoded) --"
+# A fixed file list goes stale the moment a peer's scope grows (this happened between
+# session #98 and #99 — the peer expanded from panel_null.py into pbo.py, search.py,
+# experiment.py, none of which were on the old hardcoded list). Deriving the list from
+# recent history instead means it tracks the peer automatically.
+git log --oneline -20 --name-only --pretty=format: -- \
+    backend/app/research backend/app/validation .claude/context \
+  2>/dev/null | sort -u | while read -r f; do
+  [ -n "$f" ] && [ -f "$f" ] || continue
   line=$(git log -1 --format='%h %ad %s' --date=short -- "$f" 2>/dev/null)
   printf '  %-55s %s\n' "$f" "${line:-(no history)}"
 done
