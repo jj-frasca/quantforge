@@ -103,6 +103,14 @@ flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 - `calmar` (ADR-108): `annualized_return / abs(max_drawdown)` — a pure ratio of two other
   `BacktestMetrics` fields, not a new estimate from the returns Series. 0.0 if `max_drawdown ==
   0.0`, same degenerate-series convention. **Descriptive only**, same as `sortino` above.
+- `sharpe_ci` (ADR-109): `SharpeConfidenceInterval | None` — a 95%-default confidence interval on
+  `sharpe` via Lo (2002)'s asymptotic standard error, `sqrt((1 + SR^2/504) / years)` where `years =
+  len(returns) / 252`. A DIFFERENT question than PBO/DSR (selection bias across a search): this is
+  the sampling uncertainty in one already-observed Sharpe. `None` below 2 returns or below 1 year
+  of data (the asymptotic normal approximation is unreliable there) — callers must handle null.
+  Re-derives the same formula `app/research/lab/frontier.py`'s `sharpe_standard_error` (ADR-043)
+  uses rather than importing it: `backtesting/` sits below `lab/` in this codebase's layering.
+  **Descriptive only.** Backend + API only as of ADR-109 — no frontend display yet.
 
 ---
 

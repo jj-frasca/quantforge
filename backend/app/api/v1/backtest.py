@@ -43,6 +43,12 @@ class EquityPoint(BaseModel):
     equity: float
 
 
+class SharpeConfidenceIntervalView(BaseModel):
+    confidence: float
+    lower: float
+    upper: float
+
+
 class BacktestMetricsView(BaseModel):
     sharpe: float
     max_drawdown: float
@@ -51,6 +57,8 @@ class BacktestMetricsView(BaseModel):
     annualized_vol: float
     sortino: float
     calmar: float
+    # None below a year of history — ADR-109's Lo (2002) approximation is unreliable there.
+    sharpe_ci: SharpeConfidenceIntervalView | None
 
 
 class DrawdownPoint(BaseModel):
@@ -304,6 +312,15 @@ def _to_response(
             annualized_vol=result.metrics.annualized_vol,
             sortino=result.metrics.sortino,
             calmar=result.metrics.calmar,
+            sharpe_ci=(
+                SharpeConfidenceIntervalView(
+                    confidence=result.metrics.sharpe_ci.confidence,
+                    lower=result.metrics.sharpe_ci.lower,
+                    upper=result.metrics.sharpe_ci.upper,
+                )
+                if result.metrics.sharpe_ci is not None
+                else None
+            ),
         ),
         equity_curve=_series_to_curve(result.equity_curve),
         buy_and_hold_curve=_series_to_curve(bh_equity),

@@ -2,8 +2,10 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
 TRADING_DAYS = 252
+_MIN_YEARS_FOR_SHARPE_CI = 1.0
 
 
 def sharpe_ratio(returns: pd.Series) -> float:
@@ -14,6 +16,46 @@ def sharpe_ratio(returns: pd.Series) -> float:
     if std == 0.0 or not np.isfinite(std):
         return 0.0
     return float(np.sqrt(TRADING_DAYS) * returns.mean() / std)
+
+
+@dataclass(frozen=True)
+class SharpeConfidenceInterval:
+    """A symmetric confidence interval around an observed annualized Sharpe (ADR-109)."""
+
+    confidence: float
+    lower: float
+    upper: float
+
+
+def sharpe_confidence_interval(
+    returns: pd.Series, *, confidence: float = 0.95
+) -> SharpeConfidenceInterval | None:
+    """Confidence interval on the annualized Sharpe via Lo (2002)'s asymptotic standard error.
+
+    Notes:
+        Answers a different question than PBO/DSR: those price MULTIPLE-TESTING/selection bias
+        across a search; this is the SAMPLING uncertainty in one already-observed Sharpe, given
+        only the years of history actually available. Standard error is
+        `sqrt((1 + SR^2 / (2*252)) / years)` — the same asymptotic formula this project already
+        uses for the detectable-edge frontier (ADR-043, `app/research/lab/frontier.py`'s
+        `sharpe_standard_error`), re-derived here rather than imported: `backtesting/` sits below
+        `lab/` in this codebase's layering, so a function here cannot import from there.
+        `None` when there are fewer than 2 returns (Sharpe itself is undefined) or fewer than a
+        year of data, below which the asymptotic normal approximation is unreliable.
+    """
+    if len(returns) < 2:
+        return None
+    years = len(returns) / TRADING_DAYS
+    if years < _MIN_YEARS_FOR_SHARPE_CI:
+        return None
+    sharpe = sharpe_ratio(returns)
+    standard_error = float(np.sqrt((1.0 + sharpe**2 / (2.0 * TRADING_DAYS)) / years))
+    z = float(norm.ppf(0.5 + confidence / 2.0))
+    return SharpeConfidenceInterval(
+        confidence=confidence,
+        lower=sharpe - z * standard_error,
+        upper=sharpe + z * standard_error,
+    )
 
 
 def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float:
@@ -111,6 +153,7 @@ class BacktestMetrics:
     annualized_vol: float
     sortino: float
     calmar: float
+    sharpe_ci: SharpeConfidenceInterval | None
 
     @classmethod
     def from_series(cls, net_returns: pd.Series, equity: pd.Series) -> "BacktestMetrics":
@@ -125,4 +168,5 @@ class BacktestMetrics:
             annualized_vol=ann_vol,
             sortino=sortino_ratio(net_returns),
             calmar=calmar_ratio(annualized_return=ann_return, max_drawdown=dd),
+            sharpe_ci=sharpe_confidence_interval(net_returns),
         )

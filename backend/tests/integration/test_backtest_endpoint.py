@@ -54,6 +54,8 @@ def test_backtest_endpoint_returns_equity_curve_and_metrics() -> None:
         assert "sharpe" in body["metrics"]
         assert isinstance(body["metrics"]["sortino"], float)
         assert isinstance(body["metrics"]["calmar"], float)
+        # _BODY's Jan-Dec 2024 window yields 239 bars < 252 (ADR-109's one-year floor): null.
+        assert body["metrics"]["sharpe_ci"] is None
         assert len(body["equity_curve"]) > 0
         first = body["equity_curve"][0]
         assert set(first) == {"timestamp_utc", "equity"}
@@ -448,5 +450,35 @@ def test_backtest_endpoint_rejects_insufficient_data() -> None:
             "/api/v1/backtest", json=_BODY
         )
         assert response.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_backtest_endpoint_sharpe_ci_null_below_one_year_of_data() -> None:
+    # ADR-109: valid backtest (> _MIN_BARS), but under 252 bars -> no confidence interval.
+    try:
+        response = _client(_FakeAdapter(n=100), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest", json=_BODY
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["metrics"]["sharpe_ci"] is None
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_backtest_endpoint_sharpe_ci_present_at_one_year_or_more() -> None:
+    # ADR-109: a wide enough request window (>= 252 bars in range) must carry a CI.
+    try:
+        response = _client(_FakeAdapter(n=400), InMemoryPriceBarRepository()).post(
+            "/api/v1/backtest",
+            json={**_BODY, "end_date": "2025-06-01T00:00:00Z"},
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert len(body["equity_curve"]) >= 252
+        ci = body["metrics"]["sharpe_ci"]
+        assert ci is not None
+        assert ci["confidence"] == pytest.approx(0.95)
+        assert ci["lower"] <= body["metrics"]["sharpe"] <= ci["upper"]
     finally:
         app.dependency_overrides.clear()

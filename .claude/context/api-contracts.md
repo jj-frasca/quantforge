@@ -161,7 +161,8 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
     "cost_rate": 0.001,
     "metrics": {
       "sharpe": 1.5, "max_drawdown": -0.18, "total_return": 0.42,
-      "annualized_return": 0.18, "annualized_vol": 0.12, "sortino": 2.1, "calmar": 1.0
+      "annualized_return": 0.18, "annualized_vol": 0.12, "sortino": 2.1, "calmar": 1.0,
+      "sharpe_ci": { "confidence": 0.95, "lower": 0.9, "upper": 2.1 }
     },
     "equity_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."],
     "buy_and_hold_curve": [{ "timestamp_utc": "...", "equity": 100000.0 }, "..."],
@@ -208,6 +209,10 @@ An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` i
     reused. **The field is `null`** when the SPY series can't be fetched or doesn't overlap
     — a benchmark is context, not a precondition, so its absence never fails the backtest.
     The frontend Zod schema mirrors it as **nullable** ([[feedback-frontend-shadow-validators]]).
+  - `metrics.sharpe_ci` (ADR-109) is `null` when the backtest window covers fewer than 252 bars
+    (~1 year) — Lo (2002)'s asymptotic standard error is unreliable below that. Backend + API
+    only as of ADR-109; the frontend Zod schema does not yet have a field for it (an unknown
+    response key is silently stripped by `z.object()`'s default mode, not a breaking change).
 - `422` → insufficient data after the cache-miss ingest, or an unknown strategy discriminator.
 
 **DI**: `get_data_adapter` + `get_repository`. Same overrides as /validate in tests.

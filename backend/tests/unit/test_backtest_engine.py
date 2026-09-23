@@ -7,12 +7,15 @@ import pandas as pd
 import pytest
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
+from scipy.stats import norm
 from tests.fixtures.synthetic import builders
 
 from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.metrics import (
+    TRADING_DAYS,
     calmar_ratio,
     max_drawdown,
+    sharpe_confidence_interval,
     sharpe_ratio,
     sortino_ratio,
     total_return,
@@ -151,6 +154,46 @@ def test_calmar_ratio_is_negative_for_a_losing_strategy() -> None:
     assert calmar_ratio(annualized_return=-0.05, max_drawdown=-0.10) == pytest.approx(-0.5)
 
 
+def test_sharpe_confidence_interval_none_below_two_returns() -> None:
+    assert sharpe_confidence_interval(pd.Series([0.01])) is None
+
+
+def test_sharpe_confidence_interval_none_below_one_year_of_data() -> None:
+    # ADR-109: the asymptotic Lo (2002) approximation is unreliable below a year of data.
+    short = pd.Series(np.full(TRADING_DAYS - 1, 0.001))
+    assert sharpe_confidence_interval(short) is None
+
+
+def test_sharpe_confidence_interval_present_at_one_year_of_data() -> None:
+    rng = np.random.default_rng(7)
+    returns = pd.Series(rng.normal(0.0005, 0.01, TRADING_DAYS))
+    ci = sharpe_confidence_interval(returns)
+    assert ci is not None
+    assert ci.confidence == pytest.approx(0.95)
+
+
+def test_sharpe_confidence_interval_brackets_the_point_estimate() -> None:
+    rng = np.random.default_rng(11)
+    returns = pd.Series(rng.normal(0.0003, 0.012, 3 * TRADING_DAYS))
+    point = sharpe_ratio(returns)
+    ci = sharpe_confidence_interval(returns)
+    assert ci is not None
+    assert ci.lower <= point <= ci.upper
+
+
+def test_sharpe_confidence_interval_matches_hand_computed_bounds() -> None:
+    rng = np.random.default_rng(13)
+    returns = pd.Series(rng.normal(0.0004, 0.011, 2 * TRADING_DAYS))
+    point = sharpe_ratio(returns)
+    years = len(returns) / TRADING_DAYS
+    se = np.sqrt((1.0 + point**2 / (2.0 * TRADING_DAYS)) / years)
+    z = norm.ppf(0.975)
+    ci = sharpe_confidence_interval(returns)
+    assert ci is not None
+    assert ci.lower == pytest.approx(point - z * se)
+    assert ci.upper == pytest.approx(point + z * se)
+
+
 # --- Hypothesis invariants ---
 
 
@@ -229,6 +272,26 @@ def test_calmar_ratio_is_finite_when_max_drawdown_is_nonzero(
     # §8 invariant #12: Calmar is finite whenever max_drawdown != 0.0.
     result = calmar_ratio(annualized_return=annualized_return, max_drawdown=max_dd)
     assert np.isfinite(result)
+
+
+@settings(deadline=None)
+@given(
+    returns=st.lists(
+        st.floats(min_value=-0.1, max_value=0.1, allow_nan=False, allow_infinity=False),
+        min_size=TRADING_DAYS,
+        max_size=TRADING_DAYS * 2,
+    )
+)
+def test_sharpe_confidence_interval_always_brackets_the_point_estimate(
+    returns: list[float],
+) -> None:
+    # ADR-109: a symmetric z-interval around the point estimate must contain it by construction,
+    # for any return series long enough to produce an interval at all.
+    assume(len(set(returns)) > 1)
+    series = pd.Series(returns)
+    ci = sharpe_confidence_interval(series)
+    assert ci is not None
+    assert ci.lower <= sharpe_ratio(series) <= ci.upper
 
 
 @settings(deadline=None)
