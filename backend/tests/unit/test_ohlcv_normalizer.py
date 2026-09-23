@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from app.data.normalizers.ohlcv import OHLCVNormalizer, RawBar
 
@@ -71,3 +73,48 @@ def test_normalizer_clamps_high_low_to_bar_extremes() -> None:
     assert bar.high >= max(bar.open, bar.close)
     assert bar.low <= min(bar.open, bar.close)
     assert bar.high == Decimal("104")  # clamped up from the vendor's 103.5
+
+
+_price = st.floats(min_value=0.01, max_value=50_000, allow_nan=False, allow_infinity=False)
+
+
+@given(
+    open_=_price,
+    high_=_price,
+    low_=_price,
+    close_=_price,
+    volume=st.integers(min_value=0, max_value=10**9),
+)
+def test_normalizer_is_idempotent_on_already_adjusted_output(
+    open_: float, high_: float, low_: float, close_: float, volume: int
+) -> None:
+    # ARCHITECTURE.md §8 invariant #9: the normalizer is idempotent. A PriceBar it has already
+    # produced has close == adj_close by construction (adj_factor already applied) — feeding it
+    # back through as a "raw" row (adj_close = close, factor 1) must be a no-op.
+    normalizer = OHLCVNormalizer()
+    once = normalizer.normalize(
+        [_raw(open=open_, high=high_, low=low_, close=close_, adj_close=close_, volume=volume)],
+        "AAPL",
+        "yfinance",
+    )[0]
+
+    twice = normalizer.normalize(
+        [
+            _raw(
+                open=float(once.open),
+                high=float(once.high),
+                low=float(once.low),
+                close=float(once.close),
+                adj_close=float(once.close),
+                volume=volume,
+            )
+        ],
+        "AAPL",
+        "yfinance",
+    )[0]
+
+    assert twice.adj_factor == Decimal("1.000000")
+    assert twice.open == once.open
+    assert twice.high == once.high
+    assert twice.low == once.low
+    assert twice.close == once.close
