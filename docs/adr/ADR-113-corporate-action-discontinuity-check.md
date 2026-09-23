@@ -1,6 +1,6 @@
 # ADR-113: Add the corporate_action discontinuity check to DataQualityEngine
 
-- **Status**: Accepted
+- **Status**: Accepted; factor-based suppression superseded by ADR-114
 - **Date**: 2026-09-23
 - **Deciders**: Autonomous session #101 (delegated authority, AUTONOMY_CHARTER.md §1)
 

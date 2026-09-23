@@ -113,7 +113,7 @@ shown. Checks FLAG potential issues — they do not guarantee correctness.
 |---|---|---|---|---|
 | 1 | `survivorship_risk` | universe may exclude delisted symbols — **risk flag only, not solved** | n/a (always informational when universe is yfinance-sourced) | info |
 | 2 | `split_dividend_consistency` | implausible `adj_factor` jump between consecutive bars | factor ratio outside [0.5, 2.0] step | warning |
-| 3 | `corporate_action` | price discontinuity suggesting delisting/merger/remap | gap > 50% not explained by adj_factor | warning |
+| 3 | `corporate_action` | adjusted-price discontinuity suggesting delisting/merger/remap | adjusted-close gap > 50% (independent of adj_factor; ADR-114) | warning |
 | 4 | `missing_bars` | gaps in the expected trading-day sequence | any missing expected session | warning |
 | 5 | `price_anomaly` | single-bar move beyond threshold | abs(close-to-close) > 20% | warning |
 | 6 | `stale_data` | symbol not updated within expected frequency | no new bar within N expected sessions (default 5) | warning |

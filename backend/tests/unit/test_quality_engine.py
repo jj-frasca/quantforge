@@ -67,15 +67,15 @@ def test_moderate_anomaly_below_corporate_action_threshold_is_not_flagged() -> N
     assert "corporate_action" not in _issue_checks(report)
 
 
-def test_large_gap_explained_by_adj_factor_is_not_flagged_as_corporate_action() -> None:
-    # Same index gets both a large close move AND a matching adj_factor jump: check 2
-    # already explains it, so check 3 should not also fire for that pair.
+def test_adjusted_gap_with_adj_factor_jump_flags_both_independent_checks() -> None:
+    # Canonical close is already adjusted, so an adj_factor jump cannot explain away a
+    # large move that remains in close. Both independent observations must be retained.
     series = builders.with_split(
         builders.with_corporate_action_gap(builders.clean_series()), factor=Decimal("0.25")
     )
     report = DataQualityEngine().check(series, "AAPL")
     assert "split_dividend_consistency" in _issue_checks(report)
-    assert "corporate_action" not in _issue_checks(report)
+    assert "corporate_action" in _issue_checks(report)
 
 
 def test_stale_prices_at_end_of_series_are_flagged() -> None:

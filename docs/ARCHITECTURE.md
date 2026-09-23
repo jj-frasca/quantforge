@@ -102,7 +102,7 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
 - **`experiment_store.py`** — not built; `ExperimentManifest` lives in `backtesting/manifest.py`.
 - **Polygon adapter** — Phase 3+; only the `Source` enum value exists, so **vendor
   cross-validation** (check #8) cannot run. **Corporate-action detection** (check #3,
-  ADR-113) needed no second vendor and is now implemented. Active `DataQualityEngine`
+  ADR-113/114) needed no second vendor and is now implemented. Active `DataQualityEngine`
   checks: `insufficient_data` (error), `survivorship_risk` (info), `missing_bars`,
   `price_anomaly`, `stale_data`, `split_dividend_consistency`, `corporate_action`
   (warnings). Timezone (#7) is enforced at the PriceBar boundary (raises), not as a soft flag.
@@ -687,6 +687,11 @@ Previously one `NaN` in an otherwise dominant candidate changed PBO from 0.000 t
 undefined sample Sharpe fell through the guarded division as zero. Missing evidence is never a flat
 return. Finite constant candidates remain valid; no finite-input result, threshold, or calibration
 identity changed.
+
+**Corporate-action gaps use the adjusted-price contract (ADR-114).** Canonical OHLC has already
+had `adj_factor` applied, so a factor jump cannot explain away a large move that remains in
+`PriceBar.close`. The corporate-action and split/dividend checks therefore run independently and
+may both warn on one pair; each remains a heuristic flag rather than a claim about the cause.
 
 **Daily shards carry the lifetime denominator forward (ADR-062), and reports count it once
 (ADR-066).** Each shard writes only its own artifact but reads the committed partitioned pool as a

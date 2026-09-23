@@ -146,12 +146,12 @@ class DataQualityEngine:
         return issues
 
     def _corporate_action(self, bars: list[PriceBar]) -> list[DataQualityIssue]:
-        """Large close gap NOT explained by an adj_factor jump (check 3, ADR-113).
+        """Large adjusted-close gap suggesting a corporate action (check 3, ADR-114).
 
         Notes:
-            A real split/dividend already shows up as an adj_factor jump (check 2), since
-            close is pre-adjusted at ingestion. So this only fires for the pair check 2
-            would NOT flag — the two checks partition rather than overlap.
+            Canonical close is pre-adjusted at ingestion, so an adj_factor change cannot
+            explain a large move that remains in close. Check 2 records factor jumps
+            independently; one pair can legitimately trigger both warnings.
         """
         issues: list[DataQualityIssue] = []
         threshold = self._config.corporate_action_pct
@@ -159,17 +159,15 @@ class DataQualityEngine:
             move = abs((curr.close - prev.close) / prev.close)
             if move <= threshold:
                 continue
-            adj_ratio = curr.adj_factor / prev.adj_factor
-            if self._config.adj_factor_low <= adj_ratio <= self._config.adj_factor_high:
-                issues.append(
-                    DataQualityIssue(
-                        check="corporate_action",
-                        severity="warning",
-                        message=(
-                            f"flags potential corporate action: {move:.2%} single-bar move "
-                            f"(> {threshold:.0%}) not explained by an adj_factor change"
-                        ),
-                        context={"at": curr.timestamp_utc.isoformat(), "move": str(move)},
-                    )
+            issues.append(
+                DataQualityIssue(
+                    check="corporate_action",
+                    severity="warning",
+                    message=(
+                        f"flags potential corporate action: {move:.2%} adjusted-close move "
+                        f"(> {threshold:.0%})"
+                    ),
+                    context={"at": curr.timestamp_utc.isoformat(), "move": str(move)},
                 )
+            )
         return issues
