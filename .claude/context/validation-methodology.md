@@ -96,6 +96,14 @@ Input: a performance matrix `R` of shape (T observations, N configurations). Pro
 - **Invariant**: PBO ∈ [0, 1]. A matrix of pure-noise configs ⇒ PBO ≈ 0.5; a single
   dominant config ⇒ PBO ≈ 0.
 
+**Search-level scope (ADR-104).** Production selects within parameter grids and then across strategy
+families; longitudinal refinement can add another adaptively chosen grid. The gate therefore uses
+one PBO over the complete matrix of every concrete candidate evaluated in the current search and
+persists that same procedure-level value on each compact family-finalist summary. The former
+family-local value omitted the final cross-family argmax and could pass a globally overfit selector.
+Parameter stability remains family-local because unrelated families do not define a neighborhood.
+ADR-104 advances calibration identity; pre-ADR-104 artifacts do not measure this PBO procedure.
+
 ---
 
 ## 3. Walk-forward evaluation (ADR-038)

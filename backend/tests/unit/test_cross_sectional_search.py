@@ -184,6 +184,13 @@ def test_cross_sectional_family_finalists_share_the_lifetime_dsr_haircut() -> No
     )
 
 
+def test_cross_sectional_family_finalists_share_whole_search_pbo() -> None:
+    exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_momentum", "xs_reversal"])
+
+    assert len(exp.trials) == 2
+    assert len({trial.pbo for trial in exp.trials}) == 1
+
+
 def test_cross_sectional_trial_budget_caps_concrete_configs() -> None:
     exp = run_cross_sectional_search(
         _noise_panel(),

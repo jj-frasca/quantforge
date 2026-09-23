@@ -663,6 +663,17 @@ the denominator without bloating the partitioned pool; historical longitudinal c
 lower bound because generated records cannot be honestly reconstructed. FINDING-003 separately
 recorded that `GateConfig.trial_budget=200` was inert.
 
+**PBO prices the whole current search as of ADR-104.** ADR-046 intentionally left PBO family-local,
+but that statistic was then used as a live gate after selecting across all family finalists and,
+for longitudinal searches, an adaptive refined grid. A stable winner inside one family does not
+show that the cross-family argmax retains its rank out of sample. Longitudinal and cross-sectional
+searches now compute one CSCV PBO over every concrete candidate evaluated in the current run and
+persist it on every compact finalist summary; parameter stability remains family-local because
+unrelated strategy families have no common parameter neighborhood. The threshold is unchanged.
+Calibration identity advances, so earlier null/power artifacts remain evidence for the former
+family-local PBO procedure and require ordinary sole-writer refresh before component rates are
+quoted for ADR-104. No refresh was dispatched as part of the code change.
+
 **Daily shards carry the lifetime denominator forward (ADR-062), and reports count it once
 (ADR-066).** Each shard writes only its own artifact but reads the committed partitioned pool as a
 prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experiment's

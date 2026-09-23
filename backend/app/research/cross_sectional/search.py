@@ -166,7 +166,8 @@ def run_cross_sectional_search(
     (ADR-024). For each strategy: build config = (signal params x quantile), run the engine on the
     in-sample panel to get one portfolio return series per config, and validate the (T, N) matrix.
     Family finalists receive one whole-search lifetime DSR haircut before the best strategy overall
-    is scored once on the sealed holdout and fed to the unmodified GraduationGate (ADR-046).
+    is scored once on the sealed holdout and fed to the unmodified GraduationGate (ADR-046). Their
+    shared PBO is likewise computed over every current concrete config (ADR-104).
     """
     gate_config = config or GateConfig()
     registry = default_strategies(value_scores=value_scores, quality_scores=quality_scores)
@@ -189,6 +190,7 @@ def run_cross_sectional_search(
     finalists: list[tuple[CrossSectionalStrategy, Params, float]] = []
     total_configs = 0
     candidate_sharpes: list[float] = []
+    candidate_returns: list[npt.NDArray[np.float64]] = []
     finalist_moments: list[ReturnMoments | None] = []
     for name, allocated_configs in allocation.families.items():
         strategy = registry[name]
@@ -210,6 +212,7 @@ def run_cross_sectional_search(
         best_params, best_quantile = configs[best_i]
         total_configs += len(configs)
         candidate_sharpes.extend(sharpes)
+        candidate_returns.extend(s.to_numpy(dtype=np.float64) for s in series)
         finalist_moments.append(return_moments(series[best_i]))
         # The IC is a property of the RANKING, so it is computed from the finalist's signal and is
         # independent of the quantile the portfolio happened to trade (ADR-035).
@@ -241,13 +244,25 @@ def run_cross_sectional_search(
     probabilities = whole_search_deflated_sharpe_probabilities(
         observed, finalist_moments, candidate_sharpes, lifetime_trials
     )
+    whole_search_pbo = probability_of_backtest_overfitting(
+        np.column_stack(candidate_returns), pbo_splits
+    )
     trials = [
-        trial.model_copy(update={"deflated_sharpe": dsr, "deflated_sharpe_probability": psr})
+        trial.model_copy(
+            update={
+                "deflated_sharpe": dsr,
+                "deflated_sharpe_probability": psr,
+                "pbo": whole_search_pbo,
+            }
+        )
         for trial, dsr, psr in zip(trials, repriced, probabilities, strict=True)
     ]
     best_idx = max(range(len(trials)), key=lambda i: trials[i].observed_sharpe)
     best_report = reports[best_idx].model_copy(
-        update={"deflated_sharpe": trials[best_idx].deflated_sharpe}
+        update={
+            "deflated_sharpe": trials[best_idx].deflated_sharpe,
+            "pbo": whole_search_pbo,
+        }
     )
     strategy, params, quantile = finalists[best_idx]
 

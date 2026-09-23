@@ -19,7 +19,9 @@ class Trial(BaseModel):
 
     The DSR/MinTRL denominator is the sum of ``n_evaluated_configs``, not the number of summary
     objects. Keeping one summary per family preserves the pool's bounded size without pretending
-    that selecting the family finalist evaluated only one hypothesis.
+    that selecting the family finalist evaluated only one hypothesis. ADR-104 makes ``pbo`` the
+    current whole-search procedure value shared by every summary; legacy rows retain the earlier
+    family-local meaning under their historical search identity.
     """
 
     model_config = ConfigDict(frozen=True)

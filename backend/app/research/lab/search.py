@@ -1,6 +1,8 @@
 from collections.abc import Sequence
 from typing import Literal
 
+import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from app.data.fundamentals import (
@@ -26,6 +28,7 @@ from app.research.lab.trial_accounting import (
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.grid_generator import find_catalog_entry, refine_grid
 from app.validation.engine import ValidationEngine
+from app.validation.pbo import probability_of_backtest_overfitting
 from app.validation.report import ValidationReport
 
 _MIN_CONFIGS_FOR_PBO = 2
@@ -45,7 +48,12 @@ def _numeric_params(strategy: BaseStrategy) -> dict[str, float | int]:
 
 def _score_configs(
     configs: list[BaseStrategy], frame: pd.DataFrame, engine: BacktestEngine
-) -> tuple[BaseStrategy, list[float], ReturnMoments | None]:
+) -> tuple[
+    BaseStrategy,
+    list[float],
+    ReturnMoments | None,
+    list[npt.NDArray[np.float64]],
+]:
     """The config with the highest in-sample Sharpe — matches ValidationEngine's own `best`
     selection, so the holdout is scored on the same config the report describes.
 
@@ -58,13 +66,15 @@ def _score_configs(
     best_sharpe = float("-inf")
     best_returns: pd.Series | None = None
     sharpes: list[float] = []
+    returns: list[npt.NDArray[np.float64]] = []
     for config in configs:
         result = engine.run_strategy(frame, config)
         sharpes.append(result.metrics.sharpe)
+        returns.append(result.returns.to_numpy(dtype=np.float64))
         if result.metrics.sharpe > best_sharpe:
             best_sharpe, best, best_returns = result.metrics.sharpe, config, result.returns
     moments = None if best_returns is None else return_moments(best_returns)
-    return best, sharpes, moments
+    return best, sharpes, moments, returns
 
 
 SelectBy = Literal["observed", "walk_forward"]
@@ -113,7 +123,8 @@ def run_search(
     touches it, once, for the finalist. Every family's finalist is recorded as a Trial; the best
     candidate's verdict (pass or fail) is always attached so failures are legible.
     ``n_evaluated_configs`` and ``lifetime_trials`` count the concrete hypotheses that produced
-    those compact summaries (ADR-046).
+    those compact summaries (ADR-046), and their shared PBO measures the complete current candidate
+    matrix rather than resetting inside the selected family (ADR-104).
     """
     gate_config = config or GateConfig()
     handle, sealed = split_holdout(frame, symbol)
@@ -130,12 +141,16 @@ def run_search(
     best_configs: list[BaseStrategy] = []
     reports: list[ValidationReport] = []
     candidate_sharpes: list[float] = []
+    candidate_returns: list[npt.NDArray[np.float64]] = []
     finalist_moments: list[ReturnMoments | None] = []
     for name, allocated_configs in allocation.families.items():
         configs = list(allocated_configs)
         report = validator.validate(name, configs, handle.frame)
-        best_config, config_sharpes, moments = _score_configs(configs, handle.frame, engine)
+        best_config, config_sharpes, moments, config_returns = _score_configs(
+            configs, handle.frame, engine
+        )
         candidate_sharpes.extend(config_sharpes)
+        candidate_returns.extend(config_returns)
         finalist_moments.append(moments)
         trials.append(
             Trial(
@@ -182,10 +197,11 @@ def run_search(
             refined_report = validator.validate(
                 trials[best_idx].strategy_name, refined_configs, handle.frame
             )
-            refined_config, refined_sharpes, refined_moments = _score_configs(
+            refined_config, refined_sharpes, refined_moments, refined_returns = _score_configs(
                 refined_configs, handle.frame, engine
             )
             candidate_sharpes.extend(refined_sharpes)
+            candidate_returns.extend(refined_returns)
             finalist_moments.append(refined_moments)
             trials.append(
                 Trial(
@@ -209,13 +225,23 @@ def run_search(
     probabilities = whole_search_deflated_sharpe_probabilities(
         observed, finalist_moments, candidate_sharpes, lifetime_trials
     )
+    whole_search_pbo = probability_of_backtest_overfitting(np.column_stack(candidate_returns))
     trials = [
-        trial.model_copy(update={"deflated_sharpe": dsr, "deflated_sharpe_probability": psr})
+        trial.model_copy(
+            update={
+                "deflated_sharpe": dsr,
+                "deflated_sharpe_probability": psr,
+                "pbo": whole_search_pbo,
+            }
+        )
         for trial, dsr, psr in zip(trials, repriced, probabilities, strict=True)
     ]
     best_idx = _select_index(trials, select_by)
     best_report = reports[best_idx].model_copy(
-        update={"deflated_sharpe": trials[best_idx].deflated_sharpe}
+        update={
+            "deflated_sharpe": trials[best_idx].deflated_sharpe,
+            "pbo": whole_search_pbo,
+        }
     )
     finalist_config = best_configs[best_idx]
     holdout = score_on_holdout(sealed, finalist_config)

@@ -108,6 +108,41 @@ def test_family_finalists_share_one_whole_search_dsr_haircut() -> None:
     )
 
 
+def test_pbo_prices_the_whole_search_before_the_gate() -> None:
+    """ADR-104: the cross-family argmax is part of the selected procedure.
+
+    On this fixed no-edge path the winning SMA family's local PBO is 0.429, but CSCV over all 16
+    candidates is 0.508. A family-local gate passes the omitted selection layer; the whole-search
+    gate must reject it.
+    """
+    gate = GateConfig(
+        dsr_min=-100.0,
+        pbo_max=0.5,
+        stability_min=-1.0,
+        holdout_sharpe_min=-100.0,
+        require_beat_buy_and_hold=False,
+    )
+
+    exp = run_search(_random_walk_frame(18), "AAPL", ["sma", "momentum"], config=gate)
+
+    assert all(trial.pbo == pytest.approx(0.5079365079365079) for trial in exp.trials)
+    assert exp.best_gate_result is not None
+    assert exp.best_gate_result.pbo_ok is False
+
+
+def test_refined_candidates_are_included_in_whole_search_pbo() -> None:
+    exp = run_search(
+        _random_walk_frame(8),
+        "AAPL",
+        ["sma", "momentum"],
+        config=GateConfig(trial_budget=12),
+        refine=True,
+    )
+
+    assert len(exp.trials) == 3
+    assert len({trial.pbo for trial in exp.trials}) == 1
+
+
 def test_trial_budget_caps_concrete_configs_and_is_order_robust() -> None:
     gate = GateConfig(trial_budget=10)
     first = run_search(
