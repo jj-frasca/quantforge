@@ -53,6 +53,7 @@ def test_backtest_endpoint_returns_equity_curve_and_metrics() -> None:
         assert "metrics" in body
         assert "sharpe" in body["metrics"]
         assert isinstance(body["metrics"]["sortino"], float)
+        assert isinstance(body["metrics"]["calmar"], float)
         assert len(body["equity_curve"]) > 0
         first = body["equity_curve"][0]
         assert set(first) == {"timestamp_utc", "equity"}

@@ -1478,6 +1478,7 @@ test_ohlcv_normalizer_given_negative_price_raises_validation_error
 9. Normalizer: idempotent
 10. ExperimentManifest: round-trips JSON with all fields preserved
 11. Sortino: finite whenever a return falls below target (ADR-107)
+12. Calmar: finite whenever max drawdown is nonzero (ADR-108)
 ```
 
 ### Backtest Correctness Oracle Tests (required before any validation runs)

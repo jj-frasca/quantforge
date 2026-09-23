@@ -100,6 +100,9 @@ flat equity, zero trades; higher cost_rate → total return monotonically ≤.
   dispersion never penalizes) and divides by the full sample size. 0.0 if no return falls below
   target, mirroring Sharpe's degenerate-series convention rather than +inf. **Descriptive only —
   not read by the gate, PBO, DSR, or any threshold** (charter §4).
+- `calmar` (ADR-108): `annualized_return / abs(max_drawdown)` — a pure ratio of two other
+  `BacktestMetrics` fields, not a new estimate from the returns Series. 0.0 if `max_drawdown ==
+  0.0`, same degenerate-series convention. **Descriptive only**, same as `sortino` above.
 
 ---
 

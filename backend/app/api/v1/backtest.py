@@ -50,6 +50,7 @@ class BacktestMetricsView(BaseModel):
     annualized_return: float
     annualized_vol: float
     sortino: float
+    calmar: float
 
 
 class DrawdownPoint(BaseModel):
@@ -302,6 +303,7 @@ def _to_response(
             annualized_return=result.metrics.annualized_return,
             annualized_vol=result.metrics.annualized_vol,
             sortino=result.metrics.sortino,
+            calmar=result.metrics.calmar,
         ),
         equity_curve=_series_to_curve(result.equity_curve),
         buy_and_hold_curve=_series_to_curve(bh_equity),

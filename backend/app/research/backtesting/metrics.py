@@ -37,6 +37,20 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float:
     return float(np.sqrt(TRADING_DAYS) * (returns.mean() - target) / semi_std)
 
 
+def calmar_ratio(annualized_return: float, max_drawdown: float) -> float:
+    """Annualized return over the magnitude of max drawdown (Young 1991), ADR-108.
+
+    Notes:
+        Pure ratio of two already-computed `BacktestMetrics` fields, not a new estimate from
+        a returns Series. 0.0 when `max_drawdown == 0.0` (a flat/never-drawn-down equity
+        curve), mirroring `sharpe_ratio`/`sortino_ratio`'s degenerate-series convention of
+        0.0 rather than +inf.
+    """
+    if max_drawdown == 0.0:
+        return 0.0
+    return float(annualized_return / abs(max_drawdown))
+
+
 @dataclass(frozen=True)
 class ReturnMoments:
     """Per-period sample moments of a return series, in the convention the PSR is written in.
@@ -96,16 +110,19 @@ class BacktestMetrics:
     annualized_return: float
     annualized_vol: float
     sortino: float
+    calmar: float
 
     @classmethod
     def from_series(cls, net_returns: pd.Series, equity: pd.Series) -> "BacktestMetrics":
         ann_return = float(net_returns.mean() * TRADING_DAYS) if len(net_returns) else 0.0
         ann_vol = float(net_returns.std() * np.sqrt(TRADING_DAYS)) if len(net_returns) > 1 else 0.0
+        dd = max_drawdown(equity)
         return cls(
             sharpe=sharpe_ratio(net_returns),
-            max_drawdown=max_drawdown(equity),
+            max_drawdown=dd,
             total_return=total_return(equity),
             annualized_return=ann_return,
             annualized_vol=ann_vol,
             sortino=sortino_ratio(net_returns),
+            calmar=calmar_ratio(annualized_return=ann_return, max_drawdown=dd),
         )

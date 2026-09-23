@@ -11,6 +11,7 @@ from tests.fixtures.synthetic import builders
 
 from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.metrics import (
+    calmar_ratio,
     max_drawdown,
     sharpe_ratio,
     sortino_ratio,
@@ -136,6 +137,20 @@ def test_sortino_ratio_matches_hand_computed_value() -> None:
     assert sortino_ratio(returns) == pytest.approx(expected)
 
 
+def test_calmar_ratio_zero_when_max_drawdown_is_zero() -> None:
+    # ADR-108: a flat/never-drawn-down equity curve returns 0.0, not +inf — mirrors
+    # sharpe_ratio's and sortino_ratio's degenerate-series convention.
+    assert calmar_ratio(annualized_return=0.12, max_drawdown=0.0) == 0.0
+
+
+def test_calmar_ratio_divides_annualized_return_by_drawdown_magnitude() -> None:
+    assert calmar_ratio(annualized_return=0.20, max_drawdown=-0.10) == pytest.approx(2.0)
+
+
+def test_calmar_ratio_is_negative_for_a_losing_strategy() -> None:
+    assert calmar_ratio(annualized_return=-0.05, max_drawdown=-0.10) == pytest.approx(-0.5)
+
+
 # --- Hypothesis invariants ---
 
 
@@ -198,6 +213,21 @@ def test_sortino_ratio_is_finite_when_a_return_falls_below_target(
     # (0.0 by default), i.e. downside deviation is strictly positive.
     assume(any(r < 0.0 for r in returns))
     result = sortino_ratio(pd.Series(returns))
+    assert np.isfinite(result)
+
+
+@settings(deadline=None)
+@given(
+    annualized_return=st.floats(
+        min_value=-1.0, max_value=5.0, allow_nan=False, allow_infinity=False
+    ),
+    max_dd=st.floats(min_value=-1.0, max_value=-1e-6, allow_nan=False, allow_infinity=False),
+)
+def test_calmar_ratio_is_finite_when_max_drawdown_is_nonzero(
+    annualized_return: float, max_dd: float
+) -> None:
+    # §8 invariant #12: Calmar is finite whenever max_drawdown != 0.0.
+    result = calmar_ratio(annualized_return=annualized_return, max_drawdown=max_dd)
     assert np.isfinite(result)
 
 
