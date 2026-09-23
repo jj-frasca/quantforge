@@ -7,7 +7,7 @@ import { http, HttpResponse } from 'msw'
 import { beforeEach } from 'vitest'
 
 import { useAppShell } from '../../state/appShell'
-import { server } from '../../test/server'
+import { defaultStrategyCatalog, server } from '../../test/server'
 import { renderWithClient } from '../../test/utils'
 import type { BacktestResponse } from '../../types/backtest'
 import { BacktestResultsPage } from './BacktestResultsPage'
@@ -187,6 +187,42 @@ test('shows the selected strategy description and citations', async () => {
   renderWithClient(<BacktestResultsPage />)
   await screen.findByLabelText(/symbol/i)
   expect(screen.getByText(/trend-following baseline/i)).toBeInTheDocument()
+
+  // The default catalog's entries all have empty `citations` arrays, so the
+  // populated case (the `citations.length > 0` branch) needs its own override.
+  server.use(
+    http.get('/api/v1/strategies', () =>
+      HttpResponse.json([
+        { ...defaultStrategyCatalog[0], citations: ['Lo & MacKinlay (1990)', 'Moskowitz et al. (2012)'] },
+        ...defaultStrategyCatalog.slice(1),
+      ]),
+    ),
+  )
+  renderWithClient(<BacktestResultsPage />)
+  expect(await screen.findByText('Lo & MacKinlay (1990)')).toBeInTheDocument()
+  expect(screen.getByText('Moskowitz et al. (2012)')).toBeInTheDocument()
+})
+
+test('editing start and end date propagates to the request body', async () => {
+  let body: { start_date?: string; end_date?: string } | undefined
+  server.use(
+    http.post('/api/v1/backtest', async ({ request }) => {
+      body = (await request.json()) as typeof body
+      return HttpResponse.json(successResponse)
+    }),
+  )
+  renderWithClient(<BacktestResultsPage />)
+  const startInput = await screen.findByLabelText(/start date/i)
+  await userEvent.clear(startInput)
+  await userEvent.type(startInput, '2019-03-15')
+  const endInput = screen.getByLabelText(/end date/i)
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2021-09-01')
+
+  await userEvent.click(screen.getByRole('button', { name: /run backtest/i }))
+  await screen.findByLabelText('backtest result')
+  expect(body?.start_date).toBe('2019-03-15T00:00:00Z')
+  expect(body?.end_date).toBe('2021-09-01T00:00:00Z')
 })
 
 test('submitting each catalog strategy reaches the backend (no client-side discriminated-union drift)', async () => {
