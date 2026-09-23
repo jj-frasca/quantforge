@@ -101,11 +101,11 @@ The §4 tree below is the **target** layout; not all of it is built yet. Authori
   cache-aside store today is TimescaleDB itself; Redis is for hot-path/intra-request memoization.
 - **`experiment_store.py`** — not built; `ExperimentManifest` lives in `backtesting/manifest.py`.
 - **Polygon adapter** — Phase 3+; only the `Source` enum value exists, so **vendor
-  cross-validation** (check #8) cannot run. **Corporate-action detection** (check #3) is also
-  not implemented yet. Active `DataQualityEngine` checks: `insufficient_data` (error),
-  `survivorship_risk` (info), `missing_bars`, `price_anomaly`, `stale_data`,
-  `split_dividend_consistency` (warnings). Timezone (#7) is enforced at the PriceBar boundary
-  (raises), not as a soft flag.
+  cross-validation** (check #8) cannot run. **Corporate-action detection** (check #3,
+  ADR-113) needed no second vendor and is now implemented. Active `DataQualityEngine`
+  checks: `insufficient_data` (error), `survivorship_risk` (info), `missing_bars`,
+  `price_anomaly`, `stale_data`, `split_dividend_consistency`, `corporate_action`
+  (warnings). Timezone (#7) is enforced at the PriceBar boundary (raises), not as a soft flag.
 - **Frontend pages**: `validation-report`, `data-explorer`, and `backtest-results` are built;
   `strategy-config` is still an empty dir (Backtest Results already takes per-strategy params
   via its discriminated form — the separate page may be unnecessary).

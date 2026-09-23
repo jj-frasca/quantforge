@@ -124,3 +124,15 @@ def with_split(
     b = out[index]
     out[index] = _bar(b.symbol, b.timestamp_utc, b.close, factor, b.source, b.volume)
     return out
+
+
+def with_corporate_action_gap(
+    bars: list[PriceBar], index: int = 15, pct: Decimal = Decimal("-0.60")
+) -> list[PriceBar]:
+    """Large close move with adj_factor unchanged -> unexplained discontinuity (check 3)."""
+    out = list(bars)
+    prev_close = out[index - 1].close
+    new_close = (prev_close * (Decimal("1") + pct)).quantize(Decimal("0.000001"))
+    b = out[index]
+    out[index] = _bar(b.symbol, b.timestamp_utc, new_close, b.adj_factor, b.source, b.volume)
+    return out

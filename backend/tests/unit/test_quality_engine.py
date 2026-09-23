@@ -1,5 +1,7 @@
 """DataQualityEngine: clean series passes (survivorship info only), empty fails, and missing-bars / price-anomaly / stale / split-jump heuristics each flag without blocking."""
 
+from decimal import Decimal
+
 from tests.fixtures.synthetic import builders
 
 from app.data.quality.engine import DataQualityEngine, QualityConfig
@@ -47,6 +49,33 @@ def test_adj_factor_jump_is_flagged_as_split_inconsistency() -> None:
     series = builders.with_split(builders.clean_series())
     report = DataQualityEngine().check(series, "AAPL")
     assert "split_dividend_consistency" in _issue_checks(report)
+
+
+def test_unexplained_large_gap_is_flagged_as_corporate_action() -> None:
+    series = builders.with_corporate_action_gap(builders.clean_series())
+    report = DataQualityEngine().check(series, "AAPL")
+    assert "corporate_action" in _issue_checks(report)
+    assert "price_anomaly" in _issue_checks(report)  # both independently fire
+
+
+def test_moderate_anomaly_below_corporate_action_threshold_is_not_flagged() -> None:
+    # -0.25 down (> 20% price_anomaly threshold) and its next-bar bounce-back
+    # (0.25 / 0.75 = 33%) both stay under the 50% corporate_action threshold.
+    series = builders.with_extreme_move(builders.clean_series(), pct=Decimal("-0.25"))
+    report = DataQualityEngine().check(series, "AAPL")
+    assert "price_anomaly" in _issue_checks(report)
+    assert "corporate_action" not in _issue_checks(report)
+
+
+def test_large_gap_explained_by_adj_factor_is_not_flagged_as_corporate_action() -> None:
+    # Same index gets both a large close move AND a matching adj_factor jump: check 2
+    # already explains it, so check 3 should not also fire for that pair.
+    series = builders.with_split(
+        builders.with_corporate_action_gap(builders.clean_series()), factor=Decimal("0.25")
+    )
+    report = DataQualityEngine().check(series, "AAPL")
+    assert "split_dividend_consistency" in _issue_checks(report)
+    assert "corporate_action" not in _issue_checks(report)
 
 
 def test_stale_prices_at_end_of_series_are_flagged() -> None:

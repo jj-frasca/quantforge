@@ -14,6 +14,7 @@ class QualityConfig:
     stale_max_repeats: int = 5
     adj_factor_low: Decimal = Decimal("0.5")
     adj_factor_high: Decimal = Decimal("2.0")
+    corporate_action_pct: Decimal = Decimal("0.50")
     flag_survivorship: bool = True
     min_bars: int = 2
 
@@ -31,8 +32,7 @@ class DataQualityEngine:
         Checks FLAG potential issues; they do not guarantee correctness. Only structural
         problems that make the data unusable (insufficient data) fail the gate (error
         severity); individual anomalies are warnings that inform without blocking.
-        Corporate-action and vendor cross-validation checks arrive in Phase 3 (the latter
-        needs a second vendor).
+        Vendor cross-validation (check 8) arrives in Phase 3 — it needs a second vendor.
     """
 
     def __init__(self, config: QualityConfig | None = None) -> None:
@@ -69,6 +69,7 @@ class DataQualityEngine:
         issues.extend(self._price_anomaly(ordered))
         issues.extend(self._stale_data(ordered))
         issues.extend(self._split_consistency(ordered))
+        issues.extend(self._corporate_action(ordered))
 
         return DataQualityReport(symbol=symbol, checked_at=datetime.now(UTC), issues=issues)
 
@@ -140,6 +141,35 @@ class DataQualityEngine:
                         severity="warning",
                         message=f"flags potential adj_factor jump: ratio {ratio} between consecutive bars",
                         context={"at": curr.timestamp_utc.isoformat(), "ratio": str(ratio)},
+                    )
+                )
+        return issues
+
+    def _corporate_action(self, bars: list[PriceBar]) -> list[DataQualityIssue]:
+        """Large close gap NOT explained by an adj_factor jump (check 3, ADR-113).
+
+        Notes:
+            A real split/dividend already shows up as an adj_factor jump (check 2), since
+            close is pre-adjusted at ingestion. So this only fires for the pair check 2
+            would NOT flag — the two checks partition rather than overlap.
+        """
+        issues: list[DataQualityIssue] = []
+        threshold = self._config.corporate_action_pct
+        for prev, curr in pairwise(bars):
+            move = abs((curr.close - prev.close) / prev.close)
+            if move <= threshold:
+                continue
+            adj_ratio = curr.adj_factor / prev.adj_factor
+            if self._config.adj_factor_low <= adj_ratio <= self._config.adj_factor_high:
+                issues.append(
+                    DataQualityIssue(
+                        check="corporate_action",
+                        severity="warning",
+                        message=(
+                            f"flags potential corporate action: {move:.2%} single-bar move "
+                            f"(> {threshold:.0%}) not explained by an adj_factor change"
+                        ),
+                        context={"at": curr.timestamp_utc.isoformat(), "move": str(move)},
                     )
                 )
         return issues
