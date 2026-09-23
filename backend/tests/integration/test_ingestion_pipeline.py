@@ -49,3 +49,16 @@ def test_pipeline_blocks_storage_when_quality_gate_fails() -> None:
     assert repo.get_bars("AAPL", _START, _END) == []
     # the report is still persisted even though the bars are not
     assert len(repo.quality_reports) == 1
+
+
+def test_pipeline_blocks_mislabeled_adapter_series() -> None:
+    repo = InMemoryPriceBarRepository()
+    pipeline = DataIngestionPipeline(_SeriesAdapter(builders.clean_series(symbol="AAPL")), repo)
+
+    result = pipeline.ingest("MSFT", _START, _END)
+
+    assert result.stored is False
+    assert result.quality_report.passed is False
+    assert {issue.check for issue in result.quality_report.issues} == {"symbol_mismatch"}
+    assert repo.get_bars("AAPL", _START, _END) == []
+    assert len(repo.quality_reports) == 1

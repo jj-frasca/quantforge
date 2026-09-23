@@ -693,6 +693,11 @@ had `adj_factor` applied, so a factor jump cannot explain away a large move that
 `PriceBar.close`. The corporate-action and split/dividend checks therefore run independently and
 may both warn on one pair; each remains a heuristic flag rather than a claim about the cause.
 
+**Quality reports are bound to their bar symbol (ADR-115).** A non-empty input must contain only
+the normalized symbol named by the report. Mixed or mislabeled series fail with a structural
+`symbol_mismatch` error before pairwise heuristics, so the ingestion pipeline persists the failed
+audit record but cannot store bars under a passing report for different evidence.
+
 **Daily shards carry the lifetime denominator forward (ADR-062), and reports count it once
 (ADR-066).** Each shard writes only its own artifact but reads the committed partitioned pool as a
 prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experiment's

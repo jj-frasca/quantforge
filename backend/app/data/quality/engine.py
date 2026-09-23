@@ -41,6 +41,27 @@ class DataQualityEngine:
     def check(self, bars: list[PriceBar], symbol: str) -> DataQualityReport:
         ordered = sorted(bars, key=lambda b: b.timestamp_utc)
         issues: list[DataQualityIssue] = []
+        normalized_symbol = symbol.strip().upper()
+
+        bar_symbols = {bar.symbol for bar in ordered}
+        if ordered and bar_symbols != {normalized_symbol}:
+            issues.append(
+                DataQualityIssue(
+                    check="symbol_mismatch",
+                    severity="error",
+                    message=(
+                        "flags potential unusable series: bar symbols do not match "
+                        f"requested symbol {normalized_symbol!r}"
+                    ),
+                    context={
+                        "requested_symbol": normalized_symbol,
+                        "bar_symbols": sorted(bar_symbols),
+                    },
+                )
+            )
+            return DataQualityReport(
+                symbol=normalized_symbol, checked_at=datetime.now(UTC), issues=issues
+            )
 
         if len(ordered) < self._config.min_bars:
             issues.append(
@@ -51,7 +72,9 @@ class DataQualityEngine:
                     context={"count": len(ordered)},
                 )
             )
-            return DataQualityReport(symbol=symbol, checked_at=datetime.now(UTC), issues=issues)
+            return DataQualityReport(
+                symbol=normalized_symbol, checked_at=datetime.now(UTC), issues=issues
+            )
 
         if self._config.flag_survivorship:
             issues.append(
@@ -71,7 +94,9 @@ class DataQualityEngine:
         issues.extend(self._split_consistency(ordered))
         issues.extend(self._corporate_action(ordered))
 
-        return DataQualityReport(symbol=symbol, checked_at=datetime.now(UTC), issues=issues)
+        return DataQualityReport(
+            symbol=normalized_symbol, checked_at=datetime.now(UTC), issues=issues
+        )
 
     def _missing_bars(self, bars: list[PriceBar]) -> list[DataQualityIssue]:
         issues: list[DataQualityIssue] = []

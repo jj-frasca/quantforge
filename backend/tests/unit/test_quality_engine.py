@@ -26,6 +26,28 @@ def test_empty_series_fails_with_insufficient_data_error() -> None:
     assert "insufficient_data" in _issue_checks(report)
 
 
+def test_series_symbol_mismatch_fails_before_time_series_checks() -> None:
+    report = DataQualityEngine().check(builders.clean_series(symbol="AAPL"), "MSFT")
+
+    assert report.symbol == "MSFT"
+    assert report.passed is False
+    assert _issue_checks(report) == {"symbol_mismatch"}
+
+
+def test_mixed_symbol_series_fails_before_pairwise_checks() -> None:
+    series = builders.clean_series(symbol="AAPL")
+    series[1] = builders.clean_series(symbol="MSFT", n=2)[1]
+
+    report = DataQualityEngine().check(series, "AAPL")
+
+    assert report.passed is False
+    assert _issue_checks(report) == {"symbol_mismatch"}
+    assert report.issues[0].context == {
+        "requested_symbol": "AAPL",
+        "bar_symbols": ["AAPL", "MSFT"],
+    }
+
+
 def test_missing_bars_are_flagged_as_warning_without_failing() -> None:
     series = builders.with_missing_bars(builders.clean_series())
     report = DataQualityEngine().check(series, "AAPL")
