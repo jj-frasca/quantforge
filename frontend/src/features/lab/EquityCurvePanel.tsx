@@ -10,15 +10,13 @@ import {
 } from 'recharts'
 
 import type { EquityPoint } from '../../types/lab'
+import { fmtCompact } from './format'
 import { useEquityCurve } from './useEquityCurve'
 
 const PAPER_START = 100_000
 
 const fmtCurrency = (value: number): string =>
   `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
-const fmtCompact = (value: number): string =>
-  `$${value.toLocaleString('en-US', { notation: 'compact', maximumFractionDigits: 1 })}`
 
 // Signed cumulative return vs the $100k paper start — the honest "are we making money?" number.
 const fmtReturn = (value: number): string => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(2)}%`
