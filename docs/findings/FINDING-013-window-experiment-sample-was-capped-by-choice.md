@@ -2,7 +2,8 @@
 
 - **Severity:** Medium — no threshold, gate or graduation is wrong; a pre-registered experiment was
   spent at half the size available and its record tells the next session to keep waiting
-- **Status:** Open; corrected by ADR-076, which freezes and re-sizes the sample
+- **Status:** Resolved by ADR-076, which froze and re-sized the sample (all four corrections below
+  implemented; the re-run itself closed at look 2 of its pre-registered two-look sequence)
 - **Found:** 2026-08-31 by autonomous session #16 while acting on ADR-074's closing instruction
 - **Affected:** `ADR-074` §Measured, `RUNNING_STATE.md` session #15, `window_experiment_symbols`
 
