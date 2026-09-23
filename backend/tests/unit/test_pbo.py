@@ -45,6 +45,28 @@ def test_invalid_inputs_raise() -> None:
         probability_of_backtest_overfitting(np.zeros((4, 4)), n_splits=8)
 
 
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_non_finite_returns_are_rejected_instead_of_scored_as_zero(bad: float) -> None:
+    """ADR-106: invalid evidence cannot be converted into a finite, gate-changing rank."""
+    performance = np.random.default_rng(3).normal(0.0, 1.0, (300, 8))
+    performance[:, 0] += 0.5
+    performance[0, 0] = bad
+
+    with pytest.raises(ValueError, match="finite"):
+        probability_of_backtest_overfitting(performance, n_splits=8)
+
+
+@pytest.mark.parametrize("shape", [(8,), (4, 4, 2)])
+def test_performance_must_be_a_two_dimensional_matrix(shape: tuple[int, ...]) -> None:
+    with pytest.raises(ValueError, match="two-dimensional"):
+        probability_of_backtest_overfitting(np.zeros(shape), n_splits=2)
+
+
+def test_each_balanced_half_must_have_two_observations_for_sample_sharpe() -> None:
+    with pytest.raises(ValueError, match="two observations"):
+        probability_of_backtest_overfitting(np.zeros((2, 2)), n_splits=2)
+
+
 # --- the group-sum formulation must be the same statistic, not merely a similar one ---
 
 

@@ -28,6 +28,8 @@ def probability_of_backtest_overfitting(
         probability of backtest overfitting, in [0, 1]. Pure noise -> ~0.5.
     """
     performance = np.asarray(performance, dtype=np.float64)
+    if performance.ndim != 2:
+        raise ValueError("performance must be a two-dimensional matrix")
     n_obs, n_configs = performance.shape
     if n_configs < 2:
         raise ValueError("need >= 2 configurations")
@@ -35,6 +37,10 @@ def probability_of_backtest_overfitting(
         raise ValueError("n_splits must be even and >= 2")
     if n_obs < n_splits:
         raise ValueError("need at least n_splits observations")
+    if n_obs // 2 < 2:
+        raise ValueError("each balanced half needs at least two observations")
+    if not np.isfinite(performance).all():
+        raise ValueError("performance must contain only finite returns")
 
     groups = np.array_split(np.arange(n_obs), n_splits)
     half = n_splits // 2

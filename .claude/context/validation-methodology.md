@@ -110,6 +110,13 @@ ordinal `argsort` made the same candidate set report PBO 0.167–0.500 under col
 Candidate labels are not evidence; PBO is now permutation-invariant. With no ties the statistic is
 unchanged. Calibration identity advances again, and the live `pbo_max` remains strictly 0.5.
 
+**Evidence boundary (ADR-106).** PBO rejects non-matrix, non-finite, and statistically unmeasurable
+inputs before computing a split. A `NaN` or infinity is not a zero-return observation: the former
+guarded division silently assigned contaminated candidates Sharpe zero and returned a valid-looking,
+gate-changing PBO. Every balanced half must contain at least two observations for sample standard
+deviation. Finite constant candidates remain valid and retain Sharpe zero. This changes no valid
+finite statistic or threshold, so calibration identity does not advance.
+
 ---
 
 ## 3. Walk-forward evaluation (ADR-038)

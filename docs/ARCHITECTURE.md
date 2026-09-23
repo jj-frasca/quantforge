@@ -681,6 +681,13 @@ set from PBO 0.167 to 0.500 when columns were reordered, crossing the strict liv
 are unchanged, `pbo_max` did not move, and calibration identity advances without dispatching or
 editing generated evidence locally.
 
+**PBO evidence fails closed as of ADR-106.** The CSCV boundary rejects malformed dimensionality,
+`NaN`/infinite returns, and split geometries with fewer than two observations in a balanced half.
+Previously one `NaN` in an otherwise dominant candidate changed PBO from 0.000 to 0.829 because an
+undefined sample Sharpe fell through the guarded division as zero. Missing evidence is never a flat
+return. Finite constant candidates remain valid; no finite-input result, threshold, or calibration
+identity changed.
+
 **Daily shards carry the lifetime denominator forward (ADR-062), and reports count it once
 (ADR-066).** Each shard writes only its own artifact but reads the committed partitioned pool as a
 prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experiment's
