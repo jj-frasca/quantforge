@@ -29,6 +29,22 @@ test('renders the interpretations panel with each metric verdict', () => {
   expect(interpretations).toHaveTextContent(/Parameter stability.*fragility/i)
 })
 
+test('styles a warning-verdict interpretation distinctly from good/bad', () => {
+  // The fixtures only ever use 'good' or 'bad' — 'warning' (the ternary's middle case) had no
+  // coverage at all.
+  render(
+    <ValidationReportView
+      report={{
+        ...failingReport,
+        interpretations: [
+          { metric: 'pbo', message: 'borderline', verdict: 'warning' },
+        ],
+      }}
+    />,
+  )
+  expect(screen.getByText('borderline').closest('li')).toHaveClass('issue', 'warning')
+})
+
 // ADR-038: the walk-forward tile must report what the splits MEASURED, not how many there were.
 test('reports the walk-forward out-of-sample Sharpe when one was computed', () => {
   render(
@@ -103,6 +119,26 @@ test('reads the walk-forward Sharpe against what holding the same windows earned
   )
   expect(screen.getByTestId('walk-forward-hold')).toHaveTextContent('0.30')
   expect(screen.getByTestId('walk-forward-hold')).toHaveTextContent(/\+0\.04 over holding/i)
+})
+
+test('signs a negative gap when the search underperformed holding, not just a positive one', () => {
+  render(
+    <ValidationReportView
+      report={{
+        ...passingReport,
+        walk_forward: {
+          n_splits: 5,
+          splits: [],
+          mean_is_sharpe: 1.0,
+          mean_oos_sharpe: 0.2,
+          consistency: 0.8,
+          efficiency: 0.34,
+          mean_oos_hold_sharpe: 0.3,
+        },
+      }}
+    />,
+  )
+  expect(screen.getByTestId('walk-forward-hold')).toHaveTextContent('-0.10 over holding')
 })
 
 test('says nothing about holding when no benchmark was measured', () => {

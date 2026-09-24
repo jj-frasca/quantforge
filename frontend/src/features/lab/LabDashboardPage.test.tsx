@@ -177,6 +177,67 @@ test('the dashboard still renders when the gate has never been calibrated', asyn
   expect(screen.queryByLabelText('gate calibration')).toBeNull()
 })
 
+test('shows the power calibration panel once the endpoint has data (ADR-041/042/053)', async () => {
+  // No test on this page had ever supplied /api/v1/power-calibration data, so the
+  // `power.data && <GatePowerPanel />` wiring itself was unverified end to end.
+  server.use(
+    http.get('/api/v1/leaderboard', () => HttpResponse.json([])),
+    http.get('/api/v1/paper-portfolio', () => HttpResponse.json([])),
+    http.get('/api/v1/power-calibration', () =>
+      HttpResponse.json([
+        {
+          edge: 'ar1',
+          gate_config_version: 'v1',
+          search_config_version: 'abcdef0123456789',
+          n_bars: 5400,
+          cells: [
+            {
+              n_symbols: 50,
+              n_detected: 32,
+              detection_rate: 0.64,
+              n_clear_deflation_bar: 32,
+              deflation_bar: 2.11,
+              edge: 'ar1',
+              phi: 0.3,
+              gate_config_version: 'v1',
+            },
+          ],
+        },
+      ]),
+    ),
+  )
+  renderWithClient(<LabDashboardPage />)
+
+  expect(await screen.findByLabelText('gate power')).toBeInTheDocument()
+  expect(screen.getByText('64%')).toBeInTheDocument()
+})
+
+test('shows the window comparison panel once the endpoint has data (ADR-074)', async () => {
+  // Same gap as the power-calibration wiring above, for /api/v1/window-comparison.
+  server.use(
+    http.get('/api/v1/leaderboard', () => HttpResponse.json([])),
+    http.get('/api/v1/paper-portfolio', () => HttpResponse.json([])),
+    http.get('/api/v1/window-comparison', () =>
+      HttpResponse.json({
+        n_symbols: 368,
+        short_n_bars: 5446,
+        long_n_bars: 9232,
+        oos_delta_median: -0.038,
+        oos_delta_ci_low: -0.06,
+        oos_delta_ci_high: -0.009,
+        in_sample_delta_median: 0.012,
+        in_sample_delta_ci_low: -0.005,
+        in_sample_delta_ci_high: 0.034,
+        n_finalist_changed: 257,
+      }),
+    ),
+  )
+  renderWithClient(<LabDashboardPage />)
+
+  expect(await screen.findByLabelText('window comparison')).toBeInTheDocument()
+  expect(screen.getByText(/257 of 368/)).toBeInTheDocument()
+})
+
 test('leads with how the pool reads against a no-edge surrogate', async () => {
   server.use(
     http.get('/api/v1/leaderboard', () => HttpResponse.json([])),
