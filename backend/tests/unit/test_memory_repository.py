@@ -33,6 +33,20 @@ def test_get_bars_respects_half_open_range() -> None:
     assert out == []
 
 
+def test_save_bars_is_idempotent() -> None:
+    # Mirrors test_timescale_repository.py's test_save_bars_is_idempotent: production storage
+    # upserts on the (symbol, timestamp_utc, source) PK (FINDING-050/ADR-122), so the two
+    # PriceBarRepository implementations must agree that re-saving the same bars doesn't duplicate
+    # them — e.g. `_load_frame`'s cache-aside re-ingest on a partial cache hit calls save_bars
+    # again for an overlapping range.
+    repo = InMemoryPriceBarRepository()
+    bars = builders.clean_series(n=10)
+    repo.save_bars(bars)
+    repo.save_bars(bars)
+    out = repo.get_bars("AAPL", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 3, 1, tzinfo=UTC))
+    assert len(out) == 10
+
+
 def test_save_quality_report_is_retained() -> None:
     repo = InMemoryPriceBarRepository()
     report = DataQualityReport(symbol="AAPL", checked_at=datetime(2024, 1, 2, tzinfo=UTC))
