@@ -51,7 +51,12 @@ class AlpacaDataAdapter(DataSourceAdapter):
             )
             for bar in raw_bars
         ]
-        return self._normalizer.normalize(raw, symbol, self.source)
+        bars = self._normalizer.normalize(raw, symbol, self.source)
+        # Alpaca's `end` query param is documented as inclusive (unlike yfinance's), and
+        # `_fetch_bars` sends only the date portion, so a real response can include a bar dated ON
+        # `end` (FINDING-055/ADR-127). Enforce the half-open [start, end) contract this method
+        # promises (base.py) here, regardless of what the vendor actually returns.
+        return [b for b in bars if start <= b.timestamp_utc < end]
 
     def _fetch_bars(  # pragma: no cover - network/pagination glue, exercised by the live test
         self, symbol: str, start: datetime, end: datetime

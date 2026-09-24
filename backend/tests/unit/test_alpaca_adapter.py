@@ -38,6 +38,26 @@ def test_fetch_price_bars_maps_and_normalizes_alpaca_bars() -> None:
     assert bars[0].timestamp_utc.tzinfo is not None
 
 
+def test_fetch_price_bars_excludes_a_bar_at_or_after_the_exclusive_end() -> None:
+    # FINDING-055/ADR-127: Alpaca's `end` query param is documented as INCLUSIVE, but
+    # DataSourceAdapter.fetch_price_bars promises the half-open [start, end) contract every other
+    # adapter and DataQualityEngine's range_mismatch check (ADR-119) enforce. `_fetch_bars` passes
+    # `end.date().isoformat()` straight through with no adjustment, so a real Alpaca response can
+    # include a bar dated ON the caller's exclusive `end` boundary. Simulate that vendor behavior
+    # via the injected fetcher (which bypasses the untested network glue) and assert the adapter's
+    # OWN output still honors the documented contract regardless of what the vendor returns.
+    bars_including_end_boundary = [
+        *_BARS,
+        {"t": "2024-02-01T05:00:00Z", "o": 103.0, "h": 105.0, "l": 102.0, "c": 104.0, "v": 800},
+    ]
+    adapter = AlpacaDataAdapter("key", "secret", fetcher=_fetcher(bars_including_end_boundary))
+    bars = adapter.fetch_price_bars(
+        "AAPL", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 2, 1, tzinfo=UTC)
+    )
+    assert len(bars) == 3
+    assert all(b.timestamp_utc < datetime(2024, 2, 1, tzinfo=UTC) for b in bars)
+
+
 def test_empty_result_is_empty_list() -> None:
     adapter = AlpacaDataAdapter("key", "secret", fetcher=_fetcher([]))
     assert (
