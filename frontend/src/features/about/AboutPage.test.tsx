@@ -5,7 +5,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 
-import { server } from '../../test/server'
+import { defaultStrategyCatalog, server } from '../../test/server'
 import { renderWithClient } from '../../test/utils'
 import { AboutPage } from './AboutPage'
 
@@ -33,6 +33,26 @@ test('renders catalog strategies grouped by category once /strategies resolves',
   // canonical order.
   expect(screen.getByRole('heading', { name: 'Trend' })).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: 'Mean Reversion' })).toBeInTheDocument()
+})
+
+test('renders a strategy entry\'s citations when the catalog provides them', async () => {
+  // The default catalog's entries all have empty `citations` arrays (mirrors
+  // production's mostly-uncited strategies), so the `citations.length > 0`
+  // branch needs its own override to exercise.
+  server.use(
+    http.get('/api/v1/strategies', () =>
+      HttpResponse.json([
+        {
+          ...defaultStrategyCatalog[0],
+          citations: ['Lo & MacKinlay (1990)', 'Moskowitz et al. (2012)'],
+        },
+        ...defaultStrategyCatalog.slice(1),
+      ]),
+    ),
+  )
+  renderWithClient(<AboutPage />)
+  expect(await screen.findByText('Lo & MacKinlay (1990)')).toBeInTheDocument()
+  expect(screen.getByText('Moskowitz et al. (2012)')).toBeInTheDocument()
 })
 
 test('surfaces a catalog error when /strategies fails', async () => {
