@@ -15,6 +15,7 @@ from pathlib import Path
 
 from app.research.fundamentals.record import (
     load_fundamentals_pool,
+    load_fundamentals_shard,
     merge_fundamental_records,
     rank_fundamentals,
 )
@@ -26,8 +27,18 @@ def main() -> None:
 
     merged = load_fundamentals_pool(main_pool)
     shard_files = sorted(shard_dir.glob("fundamentals_shard_*.json"))
+    skipped = 0
     for shard_file in shard_files:
-        merged = merge_fundamental_records(merged, load_fundamentals_pool(shard_file))
+        # A shard writer killed mid-write (a 350-minute-timeout cloud job) can leave truncated/
+        # invalid JSON. One corrupt shard must not cost every OTHER shard's work for the week
+        # (FINDING-057/ADR-129) — the same resilience fundamental_sweep.py already applies
+        # per-company ("a bad name never crashes the shard").
+        records = load_fundamentals_shard(shard_file)
+        if records is None:
+            print(f"skipping corrupt/invalid shard: {shard_file}")
+            skipped += 1
+            continue
+        merged = merge_fundamental_records(merged, records)
 
     main_pool.parent.mkdir(parents=True, exist_ok=True)
     payload = [r.model_dump(mode="json") for r in merged]
@@ -37,7 +48,8 @@ def main() -> None:
     board = combined if combined else rank_fundamentals(merged, by="quality", top=20)
     basis = "combined quality*value" if combined else "quality (no priced names yet)"
     print(
-        f"consolidated {len(shard_files)} shard(s) -> {len(merged)} companies in the pool.\n"
+        f"consolidated {len(shard_files) - skipped}/{len(shard_files)} shard(s) "
+        f"({skipped} skipped) -> {len(merged)} companies in the pool.\n"
         f"Top {len(board)} by {basis}:"
     )
     for r in board:

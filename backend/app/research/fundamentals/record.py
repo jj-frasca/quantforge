@@ -11,7 +11,7 @@ lives in the sweep script); every score cites its filing and flags potential, ne
 import json
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.data.fundamentals import FundamentalsHistory
 from app.research.fundamentals.quality import quality_score
@@ -104,6 +104,18 @@ def load_fundamentals_pool(path: Path) -> list[FundamentalRecord]:
     if not path.exists():
         return []
     return [FundamentalRecord.model_validate(row) for row in json.loads(path.read_text())]
+
+
+def load_fundamentals_shard(path: Path) -> list[FundamentalRecord] | None:
+    """Read one sweep shard, tolerating a corrupt file. `None` (not `[]`, to distinguish "corrupt"
+    from "genuinely empty shard") on truncated/invalid JSON or a record that fails validation —
+    a shard writer killed mid-write (FINDING-057/ADR-129) must not cost every OTHER shard's work
+    in the same consolidation run, mirroring the sweep's own "a bad name never crashes the shard"
+    resilience (fundamental_sweep.py)."""
+    try:
+        return load_fundamentals_pool(path)
+    except (json.JSONDecodeError, ValidationError):
+        return None
 
 
 def score_maps(

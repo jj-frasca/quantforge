@@ -11,6 +11,7 @@ from app.research.fundamentals.record import (
     FundamentalRecord,
     compute_fundamental_record,
     load_fundamentals_pool,
+    load_fundamentals_shard,
     merge_fundamental_records,
     rank_fundamentals,
     score_maps,
@@ -225,3 +226,27 @@ def test_load_fundamentals_pool_is_empty_when_the_file_is_absent(tmp_path: Path)
     # The pool is written only by the cloud sweep (ADR-030), so a fresh clone has no file yet —
     # readers must degrade to "no scores" rather than crash the hunt.
     assert load_fundamentals_pool(tmp_path / "missing.json") == []
+
+
+def test_load_fundamentals_shard_returns_records_for_a_good_shard(tmp_path: Path) -> None:
+    path = tmp_path / "fundamentals_shard_0.json"
+    records = [_record("AAA", 1, 2024, quality=0.8, value=0.3)]
+    path.write_text(json.dumps([r.model_dump(mode="json") for r in records]))
+    assert load_fundamentals_shard(path) == records
+
+
+def test_load_fundamentals_shard_returns_none_for_truncated_json(tmp_path: Path) -> None:
+    # FINDING-057/ADR-129: a shard writer killed mid-write (a 350-minute-timeout cloud job) can
+    # leave truncated/invalid JSON. consolidate_fundamentals.py folds every shard's output into
+    # ONE pool file in one loop — a single corrupt shard must not cost every OTHER shard's work
+    # for the week, mirroring the "a bad name never crashes the shard" resilience already
+    # established in fundamental_sweep.py itself.
+    path = tmp_path / "fundamentals_shard_1.json"
+    path.write_text('[{"symbol": "AAA", "cik": 1,')  # truncated
+    assert load_fundamentals_shard(path) is None
+
+
+def test_load_fundamentals_shard_returns_none_for_invalid_records(tmp_path: Path) -> None:
+    path = tmp_path / "fundamentals_shard_2.json"
+    path.write_text(json.dumps([{"not": "a valid FundamentalRecord"}]))
+    assert load_fundamentals_shard(path) is None
