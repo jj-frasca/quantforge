@@ -38,6 +38,20 @@ test('renders the graduates table with symbol, strategy and deflation verdict', 
   expect(screen.getByText('2 graduates · 1 survives universe deflation')).toBeInTheDocument()
 })
 
+test('shows a dash for the deflation verdict on a graduate that predates it', async () => {
+  server.use(
+    http.get('/api/v1/graduates', () =>
+      HttpResponse.json([{ ...graduates[0], survives_universe_deflation: null }]),
+    ),
+  )
+  renderWithClient(<GraduatesPanel />)
+
+  expect(await screen.findByRole('cell', { name: 'CRM' })).toBeInTheDocument()
+  expect(screen.getByText('—')).toBeInTheDocument()
+  expect(screen.queryByText('survives')).not.toBeInTheDocument()
+  expect(screen.queryByText('selection-lucky')).not.toBeInTheDocument()
+})
+
 test('renders the empty state when no strategy has graduated', async () => {
   server.use(http.get('/api/v1/graduates', () => HttpResponse.json([])))
   renderWithClient(<GraduatesPanel />)

@@ -70,6 +70,17 @@ test('labels a band-reversion sweep by its half-life, not by phi', () => {
   expect(screen.getByText('0%')).toBeInTheDocument()
 })
 
+test('labels a mean-reverting AR(1) sweep with a minus sign, not a bare number', () => {
+  // power_calibration.py's default phi is -0.20 (mean reversion); phi > 0 is trend
+  // persistence — the label's sign branch had only ever been exercised with a positive phi.
+  render(
+    <GatePowerPanel
+      sweeps={[sweep({ cells: [cell({ phi: -0.2 })] })]}
+    />,
+  )
+  expect(screen.getByText('phi -0.2')).toBeInTheDocument()
+})
+
 test('shows capture, because a zero with low capture is a catalog problem not a gate problem', () => {
   render(<GatePowerPanel sweeps={[sweep()]} />)
   expect(screen.getByText('76.9%')).toBeInTheDocument()

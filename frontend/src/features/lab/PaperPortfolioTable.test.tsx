@@ -62,6 +62,20 @@ test('renders a position that has never traded as unmeasured, not as a score of 
   expect(screen.queryByRole('cell', { name: '0.00' })).not.toBeInTheDocument()
 })
 
+test('flags a traded position that lags buy-and-hold, not just one that beats it', () => {
+  // The 'beats'/'lags' class only applies once a position has actually traded (untraded rows
+  // render unmeasured instead, per the test above) — this is the other half of that branch,
+  // never exercised: a real trade count with beats_buy_and_hold false.
+  const lagging: PaperPosition = {
+    ...open,
+    score: { ...open.score!, beats_buy_and_hold: false },
+  }
+  render(<PaperPortfolioTable positions={[lagging]} />)
+  const sharpeCell = screen.getByRole('cell', { name: '0.90' })
+  expect(sharpeCell).toHaveClass('lags')
+  expect(sharpeCell).not.toHaveClass('beats')
+})
+
 test('summarizes the position count and open count', () => {
   render(<PaperPortfolioTable positions={[open, closed]} />)
   expect(screen.getByText(/2 positions · 1 open/i)).toBeInTheDocument()
