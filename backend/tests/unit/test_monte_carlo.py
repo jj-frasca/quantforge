@@ -29,6 +29,20 @@ def test_paths_are_strictly_positive() -> None:
     assert (paths > 0).all()
 
 
+def test_paths_are_strictly_positive_under_extreme_volatility() -> None:
+    # FINDING-051/ADR-123: the class's own invariant claim ("every factor is exp(...) > 0, so all
+    # path values are strictly positive") is true in exact arithmetic but not in float64 — a
+    # sufficiently extreme (if unrealistic) sigma drives the TRUE compounded GBM value below
+    # float64's smallest representable double for a real fraction of paths, and a naive cumprod
+    # floors those entries to exactly 0.0. sigma=40 (4000% annualized vol) at a 1-year horizon
+    # reproduces this directly against the pre-fix implementation.
+    paths = MonteCarloSimulator().simulate(
+        s0=100.0, mu=0.0, sigma=40.0, n_steps=252, n_paths=500, seed=1
+    )
+    assert np.isfinite(paths).all()
+    assert (paths > 0).all()
+
+
 def test_same_seed_is_deterministic() -> None:
     a = MonteCarloSimulator().simulate(s0=100.0, mu=0.05, sigma=0.2, n_steps=30, n_paths=8, seed=42)
     b = MonteCarloSimulator().simulate(s0=100.0, mu=0.05, sigma=0.2, n_steps=30, n_paths=8, seed=42)

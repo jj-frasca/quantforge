@@ -41,4 +41,9 @@ class MonteCarloSimulator:
         paths = np.empty((n_paths, n_steps + 1), dtype=np.float64)
         paths[:, 0] = s0
         paths[:, 1:] = s0 * np.cumprod(steps, axis=1)
-        return paths
+        # Every factor is exp(...) > 0 in exact arithmetic, but a sufficiently extreme sigma over
+        # many steps drives the true compounded value below float64's smallest representable
+        # double, which np.cumprod floors to exactly 0.0 (FINDING-051/ADR-123). Clamp to the
+        # smallest positive double so the class's own strict-positivity invariant (§8 #8) holds by
+        # construction rather than silently failing at extreme-but-valid parameters.
+        return np.maximum(paths, np.finfo(np.float64).tiny)
