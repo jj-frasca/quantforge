@@ -12,8 +12,12 @@ interface Step {
   body: string
 }
 
+// No exact strategy count here on purpose (this used to say "Eleven" and drifted stale
+// as the catalog grew to 34+ unnoticed for months) -- this banner has no live catalog
+// data of its own, and it's rendered on every page, so it isn't worth wiring in a fetch
+// just to keep a number current.
 const STEPS: readonly Step[] = [
-  { title: 'Pick a strategy', body: 'Eleven built-in setups grouped by category.' },
+  { title: 'Pick a strategy', body: 'A library of built-in setups grouped by category.' },
   { title: 'Adjust if you want', body: 'Every field is pre-filled with sensible defaults.' },
   { title: 'See the result', body: 'Equity curve, drawdowns, and validation in one click.' },
 ]
