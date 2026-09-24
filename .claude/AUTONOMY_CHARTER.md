@@ -111,6 +111,15 @@ end of the session; you will not get an end. Each autonomous session appends a d
 `Next session should:` is the most important line you write. A fresh session with no memory reads
 it and starts working immediately instead of re-deriving context. Make it specific enough to act on.
 
+**Rotation rule (added session #103, 2026-09-23):** `RUNNING_STATE.md` is gitignored local state
+that only ever grows. It previously reached ~405 KB/5,161 lines — past the Read tool's 256 KB
+single-call cap — causing repeated failed `Read` attempts at session start. When the file
+approaches ~200 KB (`wc -c .claude/RUNNING_STATE.md`), move its oldest full `## <date> —
+AUTONOMOUS SESSION <n>` sections into `.claude/RUNNING_STATE_ARCHIVE.md` (also gitignored; add it
+next to `RUNNING_STATE.md` in `.gitignore` if it isn't already there), keeping the top orientation
+block and the most recent sessions in the live file. Note the cutoff in both files' headers so a
+future session knows where to look for older decisions.
+
 ## 6. Retro pass — run this before you stop
 
 Every session ends with a short self-improvement pass. The goal is that session N+1 is measurably
