@@ -95,6 +95,26 @@ def test_compute_with_price_adds_value_and_combined() -> None:
         assert rec.combined_score is None
 
 
+def test_compute_with_full_price_history_populates_pe_ps_percentiles() -> None:
+    # FINDING-052/ADR-124: compute_fundamental_record's own-history P/E and P/S percentile legs
+    # (ADR-022) need each YEAR's `price` populated (via price_join.attach_fiscal_year_prices), not
+    # just the current price — a history whose years all lack `price` can never produce a
+    # percentile (multiples.py's pe_hist/ps_hist filter on `y.price is not None`), which is exactly
+    # what fundamental_sweep.py was doing in production before this fix.
+    hist = _history(
+        "CCC",
+        3,
+        _year(2021, eps=1.0, price=8.0),
+        _year(2022, eps=1.2, price=10.0),
+        _year(2023, eps=1.5, price=15.0),
+    )
+    rec = compute_fundamental_record(hist, price=20.0)
+    assert rec.value_score is not None
+    assert rec.combined_score == rec.quality_score * rec.value_score
+    assert not any("insufficient P/E history" in f for f in rec.flags)
+    assert not any("insufficient P/S history" in f for f in rec.flags)
+
+
 def test_compute_empty_history_is_all_none_but_records_identity() -> None:
     hist = _history("EMPTY", 9)
     rec = compute_fundamental_record(hist)

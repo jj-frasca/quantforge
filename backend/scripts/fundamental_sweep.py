@@ -17,32 +17,62 @@ bad name never crashes the shard — the same resilience the price hunt learned 
 import json
 import sys
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
+from app.data.fundamentals import FundamentalsHistory
 from app.data.sources.edgar import SecEdgarFundamentalsSource
 from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.fundamentals.record import FundamentalRecord, compute_fundamental_record
 from app.research.lab.sharding import shard_universe
+from app.research.valuation.price_join import attach_fiscal_year_prices
 
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
 _EDGAR_MIN_INTERVAL_S = 0.15  # SEC asks for <= 10 req/s; stay well under.
 
 
-def _latest_price(adapter: YFinanceAdapter, symbol: str, now: datetime) -> float | None:
-    """Best-effort most-recent close for the value leg. Any failure (rate limit, delisting) -> None,
-    which degrades the record to quality-only rather than crashing the sweep."""
+def _price_series(
+    adapter: YFinanceAdapter, symbol: str, since: date, now: datetime
+) -> list[tuple[date, float]]:
+    """Best-effort ascending (date, close) series from `since` to `now`, for joining onto each
+    fiscal year's period end via `attach_fiscal_year_prices` (ADR-022/FINDING-052). Any failure
+    (rate limit, delisting) -> empty list, which degrades the record to quality-only rather than
+    crashing the sweep."""
+    start = datetime.combine(since, datetime.min.time(), tzinfo=UTC)
     try:
-        bars = adapter.fetch_price_bars(symbol, now - timedelta(days=14), now)
+        bars = adapter.fetch_price_bars(symbol, start, now)
     except (ValueError, OSError):
-        return None
-    return float(bars[-1].close) if bars else None
+        return []
+    # attach_fiscal_year_prices/asof_close require ascending order and raise otherwise; don't trust
+    # the adapter's raw return order (bars_to_frame and the in-memory repository both sort
+    # defensively for the same reason rather than assuming vendor order).
+    ordered = sorted(bars, key=lambda b: b.timestamp_utc)
+    return [(bar.timestamp_utc.date(), float(bar.close)) for bar in ordered]
+
+
+def _join_prices(
+    adapter: YFinanceAdapter, symbol: str, history: FundamentalsHistory, now: datetime
+) -> tuple[FundamentalsHistory, float | None]:
+    """Fetch a price series spanning `history`'s fiscal years and join it on (ADR-022), so the
+    own-history P/E and P/S percentile legs of UndervaluationScore are actually computable —
+    passing only the latest close (the prior behavior) left every year's `price` None, which
+    `compute_multiples` requires to build its percentile history (FINDING-052). Falls back to a
+    14-day latest-close-only window (old behavior, quality-only percentile legs) when no year has
+    a `period_end` to anchor the series start on."""
+    since = min((y.period_end for y in history.years if y.period_end is not None), default=None)
+    if since is None:
+        price = _price_series(adapter, symbol, (now - timedelta(days=14)).date(), now)
+        return history, (price[-1][1] if price else None)
+    closes = _price_series(adapter, symbol, since, now)
+    if not closes:
+        return history, None
+    return attach_fiscal_year_prices(history, closes), closes[-1][1]
 
 
 def _sic_description(edgar: SecEdgarFundamentalsSource, symbol: str) -> str | None:
     """Best-effort SIC classification (ADR-095). Any failure -> None, same degrade-not-crash shape
-    as `_latest_price` — a missing classification is not worth losing the whole record over."""
+    as `_price_series` — a missing classification is not worth losing the whole record over."""
     try:
         return edgar.fetch_sic(symbol)
     except (ValueError, OSError, KeyError):
@@ -74,12 +104,12 @@ def main() -> None:
             time.sleep(_EDGAR_MIN_INTERVAL_S)
         if not history.years:
             continue  # no annual fundamentals (ETF/index) -> nothing to score
-        price = _latest_price(adapter, symbol, now)
+        joined_history, price = _join_prices(adapter, symbol, history, now)
         try:
             sic = _sic_description(edgar, symbol)
         finally:
             time.sleep(_EDGAR_MIN_INTERVAL_S)  # a second EDGAR call per symbol (ADR-095)
-        records.append(compute_fundamental_record(history, price, sic))
+        records.append(compute_fundamental_record(joined_history, price, sic))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"fundamentals_shard_{shard_index}.json"
