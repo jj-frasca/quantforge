@@ -38,20 +38,30 @@ class AlpacaDataAdapter(DataSourceAdapter):
         self._fetch = fetcher or self._fetch_bars
 
     def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
-        raw_bars = self._fetch(symbol, start, end)
-        raw = [
-            RawBar(
-                timestamp=_parse_ts(bar["t"]),
-                open=float(bar["o"]),
-                high=float(bar["h"]),
-                low=float(bar["l"]),
-                close=float(bar["c"]),
-                adj_close=float(bar["c"]),
-                volume=int(bar["v"]),
-            )
-            for bar in raw_bars
-        ]
-        bars = self._normalizer.normalize(raw, symbol, self.source)
+        try:
+            raw_bars = self._fetch(symbol, start, end)
+            raw = [
+                RawBar(
+                    timestamp=_parse_ts(bar["t"]),
+                    open=float(bar["o"]),
+                    high=float(bar["h"]),
+                    low=float(bar["l"]),
+                    close=float(bar["c"]),
+                    adj_close=float(bar["c"]),
+                    volume=int(bar["v"]),
+                )
+                for bar in raw_bars
+            ]
+            bars = self._normalizer.normalize(raw, symbol, self.source)
+        except (ValueError, KeyError, OSError):
+            raise  # already the kinds the resilient hunt handles
+        except Exception as exc:
+            # Normalize ANY vendor-specific fetch OR parse error into OSError, same guard as
+            # YFinanceAdapter._fetch_once (FINDING-056/ADR-128) — this adapter's own docstring
+            # already claimed this pattern but never actually implemented it.
+            raise OSError(
+                f"Alpaca fetch failed for {symbol!r}: {type(exc).__name__}: {exc}"
+            ) from exc
         # Alpaca's `end` query param is documented as inclusive (unlike yfinance's), and
         # `_fetch_bars` sends only the date portion, so a real response can include a bar dated ON
         # `end` (FINDING-055/ADR-127). Enforce the half-open [start, end) contract this method

@@ -58,6 +58,53 @@ def test_fetch_price_bars_excludes_a_bar_at_or_after_the_exclusive_end() -> None
     assert all(b.timestamp_utc < datetime(2024, 2, 1, tzinfo=UTC) for b in bars)
 
 
+def test_a_vendor_fetch_error_is_normalized_to_oserror() -> None:
+    # FINDING-056/ADR-128: this adapter's own docstring claims "same pattern as YFinanceAdapter",
+    # but had no exception normalization at all — any vendor-specific fetch/parse error (a
+    # urllib.error.HTTPError, a malformed payload's KeyError on a missing "t"/"o" field, a
+    # decimal.InvalidOperation from a NaN price) would propagate as-is instead of becoming the
+    # OSError the rest of this codebase's resilient callers are written to expect. Mirrors
+    # test_yfinance_adapter.py's equivalent regression test.
+    class _AlpacaRateLimitError(Exception):
+        pass
+
+    def _raises(symbol: str, start: datetime, end: datetime) -> list[dict]:
+        raise _AlpacaRateLimitError("429 Too Many Requests")
+
+    adapter = AlpacaDataAdapter("key", "secret", fetcher=_raises)
+    with pytest.raises(OSError, match="fetch failed"):
+        adapter.fetch_price_bars(
+            "AAPL", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 2, 1, tzinfo=UTC)
+        )
+
+
+def test_a_malformed_vendor_payload_is_not_double_wrapped() -> None:
+    # A missing field is a KeyError, which — like ValueError/OSError — is already "a kind the
+    # resilient hunt handles" per this codebase's convention (mirrors yfinance's equivalent test);
+    # it propagates as-is rather than getting wrapped a second time into OSError.
+    def _missing_field(symbol: str, start: datetime, end: datetime) -> list[dict]:
+        return [
+            {"t": "2024-01-02T05:00:00Z", "o": 100.0, "h": 101.0, "l": 99.0, "v": 1000}
+        ]  # no "c"
+
+    adapter = AlpacaDataAdapter("key", "secret", fetcher=_missing_field)
+    with pytest.raises(KeyError):
+        adapter.fetch_price_bars(
+            "AAPL", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 2, 1, tzinfo=UTC)
+        )
+
+
+def test_a_value_error_from_the_fetcher_is_not_double_wrapped() -> None:
+    def _raises(symbol: str, start: datetime, end: datetime) -> list[dict]:
+        raise ValueError("no data for symbol")
+
+    adapter = AlpacaDataAdapter("key", "secret", fetcher=_raises)
+    with pytest.raises(ValueError, match="no data for symbol"):
+        adapter.fetch_price_bars(
+            "AAPL", datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 2, 1, tzinfo=UTC)
+        )
+
+
 def test_empty_result_is_empty_list() -> None:
     adapter = AlpacaDataAdapter("key", "secret", fetcher=_fetcher([]))
     assert (
