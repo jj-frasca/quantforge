@@ -60,6 +60,12 @@ test('shows the matched sample the real median was taken over', () => {
   expect(screen.getByText('2,427 @ 5,445 bars')).toBeInTheDocument()
 })
 
+test('shows just the matched count when no bar length applies to the row', () => {
+  render(<NullComparisonPanel comparisons={[row({ matched_n_bars: null })]} />)
+  expect(screen.getByText('2,427')).toBeInTheDocument()
+  expect(screen.queryByText(/bars/)).not.toBeInTheDocument()
+})
+
 test('says the drift-controlled comparison is not measured when no excess row exists', () => {
   render(<NullComparisonPanel comparisons={[row()]} />)
   expect(screen.getByTestId('excess-note-walk-forward excess')).toHaveTextContent(/not measured/i)

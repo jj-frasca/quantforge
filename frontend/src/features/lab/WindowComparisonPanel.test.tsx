@@ -129,3 +129,18 @@ test('says the experiment has not been run when there is no artifact', () => {
   render(<WindowComparisonPanel comparison={comparison()} experiment={null} />)
   expect(screen.getByTestId('window-experiment')).toHaveTextContent(/has not been run/i)
 })
+
+test('says the experiment ran but has nothing to report when no symbol carried the benchmark at both windows', () => {
+  render(
+    <WindowComparisonPanel
+      comparison={comparison()}
+      experiment={experiment({
+        excess_delta_median: null,
+        excess_delta_ci_low: null,
+        excess_delta_ci_high: null,
+      })}
+    />,
+  )
+  expect(screen.getByTestId('window-experiment')).toHaveTextContent(/no symbol/i)
+  expect(screen.getByTestId('window-experiment')).toHaveTextContent(/nothing to report/i)
+})
