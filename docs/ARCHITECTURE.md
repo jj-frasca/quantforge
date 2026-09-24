@@ -639,6 +639,38 @@ control (FINDING-017). Real paired excess is **−0.000**; its clustered differe
 CV adds no measured performance beyond holding the same series, and its real excess does not
 separate from the null's. The retained 5,400-bar null cohort remains correctly unmeasured.
 
+**External literature note (2026-09-24, session 106, research-only — no code/threshold change).**
+The pattern above — purged-CV's excess reading flat at zero across every cohort measured so far,
+walk-forward's reading negative and varying non-monotonically by cohort (session 94's 6,075/7,400/
+9,247-bar sweep) — has an external analogue worth recording. Arian, Norouzi M. & Seco,
+*"Backtest overfitting in the machine learning era: A comparison of out-of-sample testing methods
+in a synthetic controlled environment,"* Knowledge-Based Systems 305 (2024),
+[doi:10.1016/j.knosys.2024.112477](https://doi.org/10.1016/j.knosys.2024.112477), built a synthetic
+environment with a KNOWN ground-truth edge (or lack of one) and compared K-Fold, Purged K-Fold,
+Walk-Forward, and Combinatorial Purged CV (CPCV) as out-of-sample testing methods. Per the paper's
+abstract and secondary summaries (the full text is paywalled — this project could not verify the
+primary tables directly, so treat this as directionally suggestive, not confirmed against QuantForge's
+own data): Walk-Forward showed "increased temporal variability and weaker stationarity" and "notable
+shortcomings in false discovery prevention" relative to the purged/combinatorial methods, which the
+paper found comparatively stable. That is an independent, ground-truth-controlled study finding the
+SAME qualitative asymmetry (walk-forward noisier and less trustworthy than purged-CV-family methods)
+that this project has now measured empirically three separate times (ADR-078, the 6,075/7,400/9,247
+sweep, ADR-094) without a QuantForge-specific explanation for why. **This does not resolve "what
+distinguishes the 7,400 vs 9,247 cohorts"** (ADR-094 already ruled out simple history length; sector/
+size/survivorship remain unmeasured, still blocked on `sic_description` coverage per ADR-095) — it is
+a separate, complementary point: it gives external grounding for *trusting purged-CV's flat reading
+over walk-forward's noisy one* when the two disagree, rather than treating the disagreement as an
+unexplained QuantForge-specific artifact. **Not acted on beyond this note** — the paper's top
+performer (CPCV) is a materially larger build than this project's current simple `purged_kfold_splits`
+(combinatorial path enumeration, its own Type-I/power calibration under this project's established
+discipline — see ADR-096's explicit caution about exactly this class of change), and the evidence
+doesn't obviously call for it: QuantForge's PBO gate is already CSCV/combinatorial (Bailey, Borwein,
+López de Prado & Zhu 2015), separate from this `purged_cv_evaluate` diagnostic, and the diagnostic
+that's actually unstable here is walk-forward, not purged-CV. If a future session wants to act on
+this, the shape of the decision is closer to ADR-034's ("decide and record `Status: Accepted`, don't
+leave it a standing `Proposed`") than a quick add — it would need its own full-budget session, per
+this project's established discipline for new statistical machinery.
+
 **ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
 error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against
 1.722), and AR(1) detection moved **34/22/0/0/14/64% → 40/36/0/0/24/66%** for φ = −0.3…+0.3 — four
