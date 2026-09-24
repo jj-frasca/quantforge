@@ -52,13 +52,14 @@ def equal_weight_targets(quotes: list[PositionQuote], equity: float) -> list[Tar
     its slice scaled by its signal (signed), truncated to whole shares toward zero.
 
     Notes:
-        A flat name (signal 0) or a non-positive price yields a 0 target and frees its slice for the
-        active names. Whole-share sizing keeps the reconcile diff a clean integer (idempotent).
+        A flat name (signal 0) or a price that is not strictly positive (non-positive, or NaN —
+        ADR-120/FINDING-048) yields a 0 target and frees its slice for the active names. Whole-share
+        sizing keeps the reconcile diff a clean integer (idempotent).
     """
     active = sum(1 for q in quotes if q.signal != 0.0 and q.price > 0.0)
     targets: list[TargetPosition] = []
     for q in quotes:
-        if active == 0 or q.signal == 0.0 or q.price <= 0.0:
+        if active == 0 or q.signal == 0.0 or not q.price > 0.0:
             targets.append(TargetPosition(symbol=q.symbol, target_qty=0))
             continue
         target_dollars = (equity / active) * q.signal

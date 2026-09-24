@@ -131,6 +131,19 @@ def test_nonpositive_price_is_treated_as_flat() -> None:
     assert targets[0].target_qty == 0
 
 
+def test_nan_price_is_treated_as_flat_not_raised() -> None:
+    # NaN compares False to both `> 0.0` and `<= 0.0`, so a naive pair of guards can exclude
+    # a NaN-priced quote from the active count while still falling through to `target_dollars /
+    # q.price` for it (FINDING-048) — assert it degrades to flat like any other bad price instead.
+    quotes = [
+        PositionQuote(symbol="AAPL", signal=1.0, price=100.0),
+        PositionQuote(symbol="MSFT", signal=1.0, price=float("nan")),
+    ]
+    targets = equal_weight_targets(quotes, equity=10_000.0)
+    by_symbol = {t.symbol: t.target_qty for t in targets}
+    assert by_symbol == {"AAPL": 100, "MSFT": 0}
+
+
 def test_position_quote_and_target_are_frozen() -> None:
     q = PositionQuote(symbol="AAPL", signal=1.0, price=100.0)
     t = TargetPosition(symbol="AAPL", target_qty=50)

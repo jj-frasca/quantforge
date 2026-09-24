@@ -169,6 +169,23 @@ def test_reconcile_flattens_on_explicit_zero_target() -> None:
     assert [(o["symbol"], o["qty"], o["side"]) for o in fake.orders] == [("AAPL", "40", "sell")]
 
 
+def test_reconcile_truncates_fractional_dust_toward_zero_before_diffing() -> None:
+    # Alpaca can report a fractional qty (dividend-reinvestment, manual fractional activity) even
+    # though reconcile only ever places whole-share orders. `int("10.7")` truncates to 10, which
+    # already matches the target, so no order should be placed for the fractional remainder.
+    broker, fake = _broker([_pos("AAPL", "10.7")])
+    orders = reconcile(broker, [TargetPosition(symbol="AAPL", target_qty=10)])
+    assert fake.orders == []
+    assert orders == []
+
+
+def test_reconcile_diffs_from_the_truncated_fractional_qty_not_the_raw_one() -> None:
+    broker, fake = _broker([_pos("AAPL", "10.7")])
+    reconcile(broker, [TargetPosition(symbol="AAPL", target_qty=15)])
+    # Diffed against the truncated 10 (not 10.7 or 11) → needs +5, not +4 or +4.3.
+    assert [(o["symbol"], o["qty"], o["side"]) for o in fake.orders] == [("AAPL", "5", "buy")]
+
+
 def test_reconcile_splits_long_to_short_into_close_then_reverse() -> None:
     broker, fake = _broker([_pos("AAPL", "50")])
     reconcile(broker, [TargetPosition(symbol="AAPL", target_qty=-10)])
