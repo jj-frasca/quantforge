@@ -33,5 +33,11 @@ export function defaultDateRange(yearsBack: number, now: Date = new Date()): Dat
 }
 
 function toIsoDate(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  // Local calendar components, not toISOString() -- ISO formats in UTC, and for
+  // anyone west of UTC (most of the Americas) the local evening is already tomorrow
+  // in UTC, silently turning "today" into tomorrow's date.
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
