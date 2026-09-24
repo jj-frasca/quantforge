@@ -180,7 +180,8 @@ export function AboutPage() {
           build on Python 3.12). <strong>Frontend:</strong> React 19 + TypeScript strict,
           Vite, Tanstack Query 5, Zod 4, Recharts 3. <strong>Testing:</strong> pytest +
           Hypothesis (backend); Vitest + React Testing Library + MSW (frontend); coverage
-          gates 85% backend / 75% frontend, currently 100% / ~90%. <strong>Tooling:</strong>{' '}
+          gates 85% backend / 75% frontend, both comfortably cleared in CI.{' '}
+          <strong>Tooling:</strong>{' '}
           uv, ruff, mypy strict, pre-commit, GitHub Actions CI.
         </p>
       </section>
@@ -189,8 +190,11 @@ export function AboutPage() {
         <h3>What this is NOT</h3>
         <ul className="scope-list">
           <li>
-            <strong>Not a trading app.</strong> There is no live order routing, no broker
-            integration, no paper trading. Out of scope by ADR-001.
+            <strong>Not a real-money trading app.</strong> Frozen graduates ARE forward-
+            tested with real market data via an Alpaca <em>paper</em> account — no real
+            money ever moves (ADR-019/020/021). There is no live order routing to a real
+            brokerage account, and no WebSocket / order-book / HFT microstructure
+            (ADR-001).
           </li>
           <li>
             <strong>Not an alpha generator.</strong> Strategies in the catalog are
@@ -199,9 +203,12 @@ export function AboutPage() {
             PBO ≈ 0.5 and the engine reports it as such.
           </li>
           <li>
-            <strong>Not multi-asset.</strong> The backtest engine works on a single
-            symbol's close series at a time. Pairs and cross-sectional strategies are a
-            future direction, not a current capability.
+            <strong>Not pairs trading.</strong> The single-symbol backtest/validation
+            engine on this page works on one symbol's close series at a time. A separate,
+            orthogonal research track (ADR-024/025) does rank the whole universe each
+            period into dollar-neutral long/short legs — that's a current capability, just
+            not one this page's forms drive; true pairs trading (a specific two-symbol
+            spread) isn't implemented.
           </li>
         </ul>
       </section>
