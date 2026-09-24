@@ -6,39 +6,23 @@ import pytest
 from pydantic import ValidationError
 
 from app.research.strategies.builder import build_strategy, build_strategy_from_dict
-from app.research.strategies.configs import (
-    BollingerBandsConfig,
-    DonchianBreakoutConfig,
-    KeltnerChannelConfig,
-    MACDCrossoverConfig,
-    MeanReversionConfig,
-    MomentumConfig,
-    RSIMeanReversionConfig,
-    SMAConfig,
-    TrendFilteredMeanReversionConfig,
-    TripleMAAlignmentConfig,
-    VolTargetedSMAConfig,
-)
+from app.research.strategies.catalog import STRATEGY_CATALOG
+from app.research.strategies.configs import SMAConfig
 from app.research.strategies.sma import SMAStrategy
 
 
 def test_build_strategy_dispatches_each_config_variant() -> None:
     # Smoke: every catalog discriminator can be constructed via build_strategy. Any
     # missing branch here is the moment ADR-010's promise breaks for /validate.
-    for config in [
-        SMAConfig(),
-        MomentumConfig(),
-        MeanReversionConfig(),
-        RSIMeanReversionConfig(),
-        DonchianBreakoutConfig(),
-        BollingerBandsConfig(),
-        MACDCrossoverConfig(),
-        VolTargetedSMAConfig(),
-        KeltnerChannelConfig(),
-        TrendFilteredMeanReversionConfig(),
-        TripleMAAlignmentConfig(),
-    ]:
-        strategy = build_strategy(config)
+    #
+    # Driven off STRATEGY_CATALOG (not a hand-maintained literal list, FINDING-053/ADR-125): a
+    # hardcoded list here stopped growing after the 11th strategy (2026-06-06) while 23 more were
+    # added since, so this test silently stopped exercising most of build_strategy's isinstance
+    # chain despite its own comment claiming to be the backstop for exactly that regression.
+    # build_strategy_from_dict({}) relies on each config's defaults being valid, which
+    # test_strategy_catalog_consistency.py already asserts for every catalog entry.
+    for entry in STRATEGY_CATALOG:
+        strategy = build_strategy_from_dict(entry.name, {})
         assert strategy.name  # all strategies declare a `name` class var
         assert strategy.parameters  # all strategies expose parameters for the manifest
 
