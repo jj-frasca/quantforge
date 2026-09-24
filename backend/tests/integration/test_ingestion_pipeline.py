@@ -38,6 +38,21 @@ def test_pipeline_ingests_clean_series_end_to_end() -> None:
     assert len(repo.quality_reports) == 1
 
 
+def test_pipeline_result_symbol_matches_the_normalized_quality_report_symbol() -> None:
+    # FINDING-054/ADR-126: DataQualityEngine.check() normalizes (strip+upper) internally and
+    # stamps that onto DataQualityReport.symbol, but IngestionResult.symbol carried the raw,
+    # unnormalized input — for a lowercase/whitespace request, the two symbol fields on one
+    # response disagreed in case, and neither matched what GET /bars (which normalizes its own
+    # response) would echo back for the same symbol.
+    repo = InMemoryPriceBarRepository()
+    pipeline = DataIngestionPipeline(_SeriesAdapter(builders.clean_series(n=30)), repo)
+
+    result = pipeline.ingest("  aapl  ", _START, _END)
+
+    assert result.symbol == "AAPL"
+    assert result.symbol == result.quality_report.symbol
+
+
 def test_pipeline_blocks_storage_when_quality_gate_fails() -> None:
     repo = InMemoryPriceBarRepository()
     pipeline = DataIngestionPipeline(_SeriesAdapter([]), repo)  # empty -> insufficient_data error

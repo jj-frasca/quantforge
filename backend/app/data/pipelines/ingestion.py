@@ -50,7 +50,10 @@ class DataIngestionPipeline:
             self._repository.save_bars(bars)
 
         return IngestionResult(
-            symbol=symbol,
+            # Matches DataQualityEngine.check()'s own internal normalization (FINDING-054/ADR-126)
+            # so IngestionResult.symbol always agrees with quality_report.symbol on the same result,
+            # regardless of the raw request's casing/whitespace.
+            symbol=symbol.strip().upper(),
             bars_ingested=len(bars),
             stored=stored,
             quality_report=report,
