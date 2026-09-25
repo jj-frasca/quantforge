@@ -334,3 +334,36 @@ test('clicking "Validate this strategy" after a backtest hands off to Validation
   expect(state.pendingValidation?.symbol).toBe('AAPL')
   expect(state.pendingValidation?.strategy).toBe('sma')
 })
+
+test('surfaces a catalog error when /strategies fails', async () => {
+  server.use(http.get('/api/v1/strategies', () => HttpResponse.json({}, { status: 500 })))
+  renderWithClient(<BacktestResultsPage />)
+  await waitFor(() => {
+    expect(screen.getByRole('alert')).toHaveTextContent(/could not load the strategy catalog/i)
+  })
+  // The form itself never mounts once the catalog fails to load — there is nothing
+  // sane to submit against.
+  expect(screen.queryByLabelText(/^strategy$/i)).not.toBeInTheDocument()
+})
+
+test('shows a "Running…" label on the submit button while the backtest is in flight', async () => {
+  let releaseResponse: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    releaseResponse = resolve
+  })
+  server.use(
+    http.post('/api/v1/backtest', async () => {
+      await pending
+      return HttpResponse.json(successResponse)
+    }),
+  )
+  renderWithClient(<BacktestResultsPage />)
+  const button = await screen.findByRole('button', { name: /run backtest/i })
+  await userEvent.click(button)
+
+  expect(await screen.findByRole('button', { name: /running…/i })).toBeDisabled()
+
+  releaseResponse()
+  expect(await screen.findByLabelText('backtest result')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /run backtest/i })).toBeInTheDocument()
+})
