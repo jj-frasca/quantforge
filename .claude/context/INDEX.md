@@ -10,7 +10,7 @@ self-contained: it gives everything needed for its subsystem.
 | `backtesting-spec.md` | BacktestEngine (position/cost/equity math — no separate Portfolio class), Metrics, BenchmarkComparator, ExperimentManifest | **Written** (Phase 3) |
 | `validation-methodology.md` | PBO, purged CV, walk-forward, Deflated Sharpe, parameter stability, regime analysis | **Written** (Phase 4) |
 | `research-papers.md` | Citations with implementation summaries (Bailey et al. 2015, López de Prado 2018, etc.) | **Written** (Phase 3) |
-| `api-contracts.md` | Full FastAPI endpoint specifications, response schemas, versioning | **Written** (Phase 5) — all 6 endpoints documented (/health, /strategies, /ingest, /bars, /backtest, /validate) |
+| `api-contracts.md` | Full FastAPI endpoint specifications, response schemas, versioning | **Written**, actively maintained — core endpoints (/health, /strategies, /ingest, /bars, /backtest, /monte-carlo, /validate) plus a growing "Lab endpoints" section (graduates/null-calibration/null-comparison/window-comparison/window-experiment/power-calibration/pool-report/cross-sectional); check the doc directly for the current count, it grows with each ADR |
 
 ## Rule
 Per ARCHITECTURE.md §2.3: data contracts are written BEFORE the schema they describe.
