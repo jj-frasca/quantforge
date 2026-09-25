@@ -133,6 +133,36 @@ TradingMarkets Publishing Group.
 
 ---
 
+## Metrics (backtesting/metrics.py)
+
+**Sortino, Frank A. & van der Meer, Robert (1991)** — "Downside Risk: Capturing What's at Stake
+in Investment Situations". *Journal of Portfolio Management* 17(4), pp. 27–31.
+DOI: 10.3905/jpm.1991.409343
+- Sortino ratio: divides excess return over a target by downside semi-deviation instead of total
+  standard deviation, so upside dispersion is never charged against the strategy. Implementation
+  squares only the shortfall below `target` and divides by the full sample size (the original
+  definition), annualized via the same `sqrt(252)` convention as `sharpe_ratio`. Used by
+  `sortino_ratio` (ADR-107), descriptive only — not a gate input.
+
+**Young, Terry W. (1991)** — "Calmar Ratio: A Smoother Tool". *Futures* 20(12), p. 40.
+- Calmar ratio: annualized return divided by the magnitude of max drawdown. A pure ratio of two
+  already-computed `BacktestMetrics` fields, not a new estimate from a returns series. Used by
+  `calmar_ratio` (ADR-108), descriptive only — not a gate input.
+
+**Lo, Andrew W. (2002)** — "The Statistics of Sharpe Ratios". *Financial Analysts Journal* 58(4),
+pp. 36–52. DOI: 10.2469/faj.v58.n4.2453
+- Asymptotic standard error of an estimated Sharpe ratio under iid returns:
+  `sqrt((1 + SR^2 / 2) / T)` per-period, annualized here as `sqrt((1 + SR^2 / 504) / years)`.
+  Answers a different question than PBO/DSR (selection bias across a search): this is the
+  sampling uncertainty in one already-observed Sharpe, given only the years of history available.
+  Already load-bearing for the population-level detectable-edge frontier
+  (`app/research/lab/frontier.py`, ADR-043); re-derived locally for the per-result case in
+  `sharpe_confidence_interval` (ADR-109) since `backtesting/` sits below `lab/` in this
+  codebase's layering and cannot import from it. `None` below 2 returns or below 1 year of data,
+  where the asymptotic normal approximation is unreliable.
+
+---
+
 ## Validation (Phase 4)
 
 **Bailey, Borwein, López de Prado & Zhu (2015)** — "The Probability of Backtest Overfitting".
