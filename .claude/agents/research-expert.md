@@ -35,12 +35,15 @@ vectorized pandas/numpy. No look-ahead: yesterday's position earns today's retur
 `generate_signals(data: pd.DataFrame) -> pd.Series` — float in [-1.0, 1.0], index == data.index,
 no look-ahead ever (signal at t uses only data up to t). `research_citations: list[str]` —
 never empty; cite the real paper.
-The catalog (`app/research/strategies/catalog.py`) has grown to 35 entries — **don't hardcode
+The catalog (`app/research/strategies/catalog.py`) has grown to 34 entries — **don't hardcode
 a copy here, it drifts** (this list itself used to name only 3 and went stale; same warning
-`backtesting-spec.md` §2 already gives). Check a strategy's own `citations` field rather than
-assuming from its name. Cross-sectional factors live separately in
-`app/research/cross_sectional/registry.py` (16 entries as of 2026-09-24, e.g. `xs_momentum`,
-`xs_value`, `xs_quality`) — same caution applies.
+`backtesting-spec.md` §2 already gives). Verify any count with `len(STRATEGY_CATALOG)` at
+runtime, not `grep -c`: `grep -c "StrategySchema("` overcounts by 1 (it also matches the class
+definition line). Check a strategy's own `citations` field rather than assuming from its name.
+Cross-sectional factors live separately in `app/research/cross_sectional/registry.py`:
+`default_strategies()` returns 13 always-present price-only factors (`xs_momentum`,
+`xs_reversal`, etc.) plus `xs_value`/`xs_quality`/`xs_quality_value`, each added only when the
+caller supplies the corresponding fundamentals score map — 16 max, not a flat 16.
 
 ## BenchmarkComparator — required on every BacktestResult
 Default SPY. Provides excess_returns, information_ratio, alpha/beta (OLS), tracking_error,
