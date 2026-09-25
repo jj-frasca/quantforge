@@ -63,3 +63,10 @@ echo "-- local vs origin/master --"
 git fetch origin master -q 2>/dev/null
 git status --porcelain=v2 --branch 2>/dev/null | awk '/^# branch.ab/ {print "  " $0}'
 git log --oneline -3 2>/dev/null | sed 's/^/  /'
+
+echo
+echo "-- worktree/disk hygiene (session #109 found 6.4 GB of abandoned worktrees invisible here) --"
+git worktree list 2>/dev/null | sed 's/^/  /'
+if [ -d .claude/worktrees ]; then
+  du -sh .claude/worktrees 2>/dev/null | sed 's/^/  .claude\/worktrees: /'
+fi
