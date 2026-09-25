@@ -65,6 +65,12 @@ def test_default_paths_point_at_the_in_repo_data_dir() -> None:
     assert get_pool_path().name == "research_pool"  # per-symbol partitions (ADR-032)
     assert get_portfolio_path().name == "paper_portfolio.json"
     assert get_pool_path().parent.name == "data"
+    assert get_calibration_path().name == "null_calibration"
+    assert get_calibration_path().parent.name == "data"
+    assert get_window_experiment_path().name == "adr076_summary.json"
+    assert get_window_experiment_path().parent.name == "window_experiment"
+    assert get_power_calibration_path().name == "power_calibration"
+    assert get_power_calibration_path().parent.name == "data"
 
 
 def test_leaderboard_returns_ranked_rows(tmp_path) -> None:
