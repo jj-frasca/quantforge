@@ -79,6 +79,18 @@ test('shows an error message when the leaderboard endpoint fails', async () => {
   expect(await screen.findByText(/could not load the leaderboard/i)).toBeInTheDocument()
 })
 
+test('shows an error message when the paper-portfolio endpoint fails', async () => {
+  server.use(
+    http.get('/api/v1/leaderboard', () => HttpResponse.json([])),
+    http.get('/api/v1/paper-portfolio', () => new HttpResponse(null, { status: 500 })),
+  )
+  renderWithClient(<LabDashboardPage />)
+
+  expect(
+    await screen.findByText(/could not load the paper portfolio.*failed \(500\)/i),
+  ).toBeInTheDocument()
+})
+
 test('shows a loading indicator while the portfolio is pending', async () => {
   server.use(
     http.get('/api/v1/leaderboard', () => HttpResponse.json([])),
