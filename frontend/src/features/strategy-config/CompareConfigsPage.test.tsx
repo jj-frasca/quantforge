@@ -203,3 +203,13 @@ test('a per-row failure surfaces only on that row — others still render metric
   // independently of row 0's failure.
   expect(screen.getByText('0.80')).toBeInTheDocument()
 })
+
+test('surfaces a catalog error when /strategies fails', async () => {
+  server.use(http.get('/api/v1/strategies', () => HttpResponse.json({}, { status: 500 })))
+  renderWithClient(<CompareConfigsPage />)
+  await waitFor(() => {
+    expect(screen.getByRole('alert')).toHaveTextContent(/could not load the strategy catalog/i)
+  })
+  // Nothing sane to compare against without a catalog — the form never mounts.
+  expect(screen.queryByRole('group', { name: /^config A$/i })).not.toBeInTheDocument()
+})
