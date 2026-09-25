@@ -43,6 +43,33 @@ test('typing a negative value keeps the minus sign instead of being silently dro
   expect(screen.getByTestId('stored')).toHaveTextContent('-85')
 })
 
+const uncappedRatio: ParamSchema = {
+  name: 'z_scale',
+  type: 'float',
+  default: 1.5,
+  minimum: null,
+  maximum: null,
+  step: null,
+  label: 'Z scale',
+  description: null,
+}
+
+function UncappedHarness() {
+  const [values, setValues] = useState<Record<string, number>>({ z_scale: 1.5 })
+  return <StrategyParamForm parameters={[uncappedRatio]} values={values} onChange={setValues} />
+}
+
+test('a param with no minimum/step (both nullable in the schema) renders without a min bound and with a free-form step', () => {
+  // Every current catalog entry happens to set minimum + step, so this schema-legal
+  // combination (ParamSchema.minimum/step are `z.number().nullable().optional()`) had
+  // never been exercised — `param.minimum ?? undefined` and the float fallback to
+  // `step="any"` both sat uncovered.
+  render(<UncappedHarness />)
+  const input = screen.getByLabelText(/z scale/i)
+  expect(input).not.toHaveAttribute('min')
+  expect(input).toHaveAttribute('step', 'any')
+})
+
 // A second, more direct regression -- asserting the DOM value literally stays "-" after
 // one keystroke -- is NOT expressible here: jsdom's input[type=number] returns "" from
 // `.value` for an in-progress invalid number in BOTH the buggy and fixed implementation
