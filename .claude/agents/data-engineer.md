@@ -22,8 +22,8 @@ what makes vendor cross-validation (quality check 8) real. Each adapter sets an
 - **PriceBar**: symbol, `timestamp_utc` (tz-aware UTC), open/high/low/close (`Decimal`,
   split/dividend-adjusted), volume (int), `adj_factor` (`Decimal`), source, `quality_flags`
   (`dict | None`; `None` = clean). Prices are `Decimal`, never `float`.
-- **FundamentalData**: symbol, report_date, pe/pb/ps/ev_ebitda, revenue, net_income,
-  market_cap, sector, industry, source. Ratios are nullable — never coerce missing to 0.
+- **FundamentalData**: symbol, report_date, pe_ratio/pb_ratio/ps_ratio/ev_ebitda, revenue,
+  net_income, market_cap, sector, industry, source. Ratios are nullable — never coerce missing to 0.
 - **DataQualityReport**: symbol, checked_at, issues (list), `passed` (bool).
   ALL downstream components MUST verify `passed is True` before using the data (ADR-006).
 
