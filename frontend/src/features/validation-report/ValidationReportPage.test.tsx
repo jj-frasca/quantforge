@@ -148,3 +148,35 @@ test('surfaces the backend detail when validation fails', async () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/insufficient data/i)
   })
 })
+
+test('surfaces a catalog error when /strategies fails', async () => {
+  server.use(http.get('/api/v1/strategies', () => HttpResponse.json({}, { status: 500 })))
+  renderWithClient(<ValidationReportPage />)
+  await waitFor(() => {
+    expect(screen.getByRole('alert')).toHaveTextContent(/could not load the strategy catalog/i)
+  })
+  expect(screen.queryByLabelText(/^strategy$/i)).not.toBeInTheDocument()
+})
+
+test('shows a "Validating…" label on the submit button while the request is in flight', async () => {
+  let releaseResponse: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    releaseResponse = resolve
+  })
+  server.use(
+    http.post('/api/v1/validate', async () => {
+      await pending
+      return HttpResponse.json(passingReport)
+    }),
+  )
+  renderWithClient(<ValidationReportPage />)
+  const button = await screen.findByRole('button', { name: /run validation/i })
+  await userEvent.click(button)
+
+  expect(await screen.findByRole('button', { name: /validating…/i })).toBeDisabled()
+
+  releaseResponse()
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: /run validation/i })).toBeInTheDocument()
+  })
+})
