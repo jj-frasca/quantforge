@@ -1368,6 +1368,17 @@ Validation specs: .claude/context/validation-methodology.md
 Citations: .claude/context/research-papers.md
 ```
 
+> **The two blocks above are the ORIGINAL Phase 2/3 design-contract drafts**, embedded verbatim
+> per this section's own opening rule ("write each agent spec BEFORE implementing its module").
+> They are a historical record of the plan, not a live mirror, and have since diverged
+> materially from the real files (e.g. the quality-check list predates ADR-113/115/118/119, the
+> strategy taxonomy predates `cross_sectional/`/`fundamentals/`/`lab/`/`valuation/`, and the
+> catalog size shown is a 2026-05-era number against a 2026-09 catalog of 34). Treat this
+> section the way §0.6 treats itself relative to §0.6.1: frozen history, not current truth.
+> **Read the live files directly** — `.claude/agents/data-engineer.md`,
+> `.claude/agents/research-expert.md` — for current domain knowledge (audited and corrected
+> 2026-09-24/25, session 108).
+
 ### 6.3 Session Playbook Templates
 
 These are what you actually paste into Claude Code. Short. Specific. Scoped.
