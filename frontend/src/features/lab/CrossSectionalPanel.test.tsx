@@ -62,6 +62,17 @@ test('shows a graduate verdict + holdout Sharpe when a strategy graduated', asyn
   expect(screen.getByText(/holdout Sharpe 0.63/)).toBeInTheDocument()
 })
 
+test('reads "no ranked strategy" when best_strategy_name is null', async () => {
+  server.use(
+    http.get('/api/v1/cross-sectional', () =>
+      HttpResponse.json({ ...view, best_strategy_name: null }),
+    ),
+  )
+  renderWithClient(<CrossSectionalPanel />)
+
+  expect(await screen.findByText(/no ranked strategy/)).toBeInTheDocument()
+})
+
 test('shows an error message when the cross-sectional endpoint fails', async () => {
   server.use(http.get('/api/v1/cross-sectional', () => new HttpResponse(null, { status: 500 })))
   renderWithClient(<CrossSectionalPanel />)

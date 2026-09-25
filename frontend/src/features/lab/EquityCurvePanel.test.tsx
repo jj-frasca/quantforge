@@ -33,6 +33,30 @@ test('renders the headline current equity and return since the $100k start', asy
   expect(screen.getByText(/as of 2026-08-05 · cash \$60,917\.07 · 3 positions/)).toBeInTheDocument()
 })
 
+test('renders a positive-return, single-position headline with the "pass" badge and no plural', async () => {
+  // Every other test's "latest" point (curve[1] above) is negative-return with 3
+  // positions, so the sign, badge-color, and singular/plural branches never flipped.
+  const positiveSingle = [
+    curve[0],
+    {
+      timestamp: '2026-08-06T00:00:00Z',
+      equity: 101_500.25,
+      cash: 50_000.0,
+      n_positions: 1,
+      return_since_start: 0.015,
+    },
+  ]
+  server.use(http.get('/api/v1/equity-curve', () => HttpResponse.json(positiveSingle)))
+  renderWithClient(<EquityCurvePanel />)
+
+  expect(await screen.findByText('$101,500.25')).toBeInTheDocument()
+  expect(screen.getByText(/\+1\.50% since \$100k start/)).toBeInTheDocument()
+  expect(screen.getByText(/as of 2026-08-06 · cash \$50,000\.00 · 1 position\b/)).toBeInTheDocument()
+  expect(screen.getByText(/\+1\.50% since \$100k start/).closest('.status-badge')).toHaveClass(
+    'pass',
+  )
+})
+
 test('renders the empty state when no snapshot has been recorded', async () => {
   server.use(http.get('/api/v1/equity-curve', () => HttpResponse.json([])))
   renderWithClient(<EquityCurvePanel />)

@@ -46,6 +46,17 @@ test('states the detection rate against the effect size that produced it', () =>
   expect(screen.getByText('32 / 50')).toBeInTheDocument()
 })
 
+test('takes the middle value, not an average, when a cell has an odd number of oracle Sharpes', () => {
+  // Every other fixture's Sharpe arrays have an even length (2 or 0), so median()'s
+  // odd-length branch (the plain `sorted[mid]`, no averaging) had never run.
+  render(
+    <GatePowerPanel
+      sweeps={[sweep({ cells: [cell({ oracle_sharpes: [3.9, 4.5, 3.9] })] })]}
+    />,
+  )
+  expect(screen.getByText('+3.90')).toBeInTheDocument()
+})
+
 test('labels a band-reversion sweep by its half-life, not by phi', () => {
   render(
     <GatePowerPanel

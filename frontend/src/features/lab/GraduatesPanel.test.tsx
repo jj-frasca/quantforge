@@ -59,6 +59,21 @@ test('renders the empty state when no strategy has graduated', async () => {
   expect(await screen.findByText(/no strategy has cleared the gate/i)).toBeInTheDocument()
 })
 
+test('renders an em dash for a graduate with no holdout Sharpe yet', async () => {
+  // Both fixture rows above always carry a holdout_sharpe — a graduate that has
+  // cleared the gate but not yet reached the locked holdout evaluation never hit
+  // fmtSharpe's null branch.
+  server.use(
+    http.get('/api/v1/graduates', () =>
+      HttpResponse.json([{ ...graduates[0], holdout_sharpe: null }]),
+    ),
+  )
+  renderWithClient(<GraduatesPanel />)
+
+  expect(await screen.findByRole('cell', { name: 'CRM' })).toBeInTheDocument()
+  expect(screen.getAllByRole('cell', { name: '—' })).toHaveLength(1)
+})
+
 test('shows an error message when the graduates endpoint fails', async () => {
   server.use(http.get('/api/v1/graduates', () => new HttpResponse(null, { status: 500 })))
   renderWithClient(<GraduatesPanel />)
