@@ -43,6 +43,13 @@ test('marks graduate rows and shows the deflation verdict honestly', () => {
   expect(screen.getByText('graduate')).toBeInTheDocument()
 })
 
+test('shows "survives" for a graduate that clears universe deflation', () => {
+  // graduate/reject above only ever cover false/null — the true (honestly rare) case
+  // was never rendered.
+  render(<LeaderboardTable rows={[{ ...graduate, survives_universe_deflation: true }]} />)
+  expect(screen.getByText('survives')).toBeInTheDocument()
+})
+
 test('shows an em dash for null holdout / deflation on rejected rows', () => {
   render(<LeaderboardTable rows={[reject]} />)
   const rejectRow = screen.getByRole('cell', { name: 'SPY' }).closest('tr')

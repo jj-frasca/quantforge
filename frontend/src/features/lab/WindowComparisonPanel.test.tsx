@@ -100,6 +100,22 @@ test('reports the frozen experiment at its own boundary, not at 95%', () => {
   expect(frozen).toHaveTextContent('-0.008')
   expect(frozen).toHaveTextContent('[-0.055, +0.022]')
   expect(frozen).toHaveTextContent(/0\.0294/)
+  // ADR-076's real, closed result covers zero — "does not fire". This is the only
+  // interval the default fixture ever exercises.
+  expect(frozen).toHaveTextContent(/the criterion does not fire/i)
+})
+
+test('reads "the criterion fires" when the interval excludes zero (synthetic — not a live result)', () => {
+  // The real ADR-076 sequence is closed at "does not fire" (see the test above); this
+  // is a rendering-branch check only, with an interval that could never come from a
+  // genuine re-measurement of that closed sequence.
+  render(
+    <WindowComparisonPanel
+      comparison={comparison()}
+      experiment={experiment({ excess_delta_ci_low: 0.01, excess_delta_ci_high: 0.05 })}
+    />,
+  )
+  expect(screen.getByTestId('window-experiment')).toHaveTextContent(/the criterion fires\./i)
 })
 
 test('names the frozen sample size rather than the live one', () => {

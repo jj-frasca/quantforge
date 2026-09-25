@@ -105,3 +105,22 @@ test('renders an empty state when there are no positions', () => {
   render(<PaperPortfolioTable positions={[]} />)
   expect(screen.getByText(/no paper positions yet/i)).toBeInTheDocument()
 })
+
+test('uses singular "bar" for a one-bar-old scored position, traded and untraded alike', () => {
+  // Every other fixture's forward_bars is 21 or 42 — the singular branch of both the
+  // "not yet measurable" and the normal "N forward bars" text never ran.
+  render(
+    <PaperPortfolioTable
+      positions={[
+        { ...open, symbol: 'TRADED1', score: { ...open.score!, forward_bars: 1 } },
+        {
+          ...open,
+          symbol: 'UNTRADED1',
+          score: { ...open.score!, forward_bars: 1, forward_trades: 0 },
+        },
+      ]}
+    />,
+  )
+  expect(screen.getByText(/^1 forward bar$/i)).toBeInTheDocument()
+  expect(screen.getByText(/not yet measurable — 0 trades in 1 forward bar$/i)).toBeInTheDocument()
+})

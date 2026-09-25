@@ -37,6 +37,13 @@ test('states the measured false-graduation rate for each null mode', () => {
   expect(screen.getAllByText('5,400')).toHaveLength(2)
 })
 
+test('shows the median history length when a calibration spans more than one n_bars value', () => {
+  // Every other fixture's n_bars has exactly one element, so the sort comparator
+  // historyBars() relies on to find the median of 2+ values never ran.
+  render(<GateCalibrationPanel calibrations={[calibration({ n_bars: [7400, 5400, 6800] })]} />)
+  expect(screen.getByText('6,800')).toBeInTheDocument()
+})
+
 test('keeps separate rows for the same null measured at different histories', () => {
   render(
     <GateCalibrationPanel
