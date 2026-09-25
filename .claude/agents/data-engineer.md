@@ -27,9 +27,15 @@ what makes vendor cross-validation (quality check 8) real. Each adapter sets an
 - **DataQualityReport**: symbol, checked_at, issues (list), `passed` (bool).
   ALL downstream components MUST verify `passed is True` before using the data (ADR-006).
 
-## DataQualityEngine — 8 Heuristic Checks
+## DataQualityEngine — 8 Heuristic Checks + structural identity/range guards
 IMPORTANT: these FLAG potential issues. They do NOT guarantee data correctness. Always write
 "flags potential X", never "prevents X" or "guarantees X is absent" (CLAUDE.md rule 6).
+Before the 8 heuristics run, structural checks gate storage entirely (error severity, block
+ingestion and return early): `symbol_mismatch`/`duplicate_timestamp`/`source_mismatch`
+(ADR-115/118 — bars must carry one normalized symbol, one source, unique timestamps),
+`range_mismatch` (ADR-119 — bars must fall inside the adapter's requested half-open range), and
+`insufficient_data`. These are newer than the numbered 8 below and easy to miss — full formal
+table in `data-contracts.md` §5, kept current by whoever last touched `quality/engine.py`.
 1. **Survivorship-bias RISK FLAG** — warns the universe may exclude delisted symbols. This does
    NOT solve survivorship bias; real mitigation needs CRSP-style data unavailable via yfinance.
    Document this limitation explicitly wherever it comes up.

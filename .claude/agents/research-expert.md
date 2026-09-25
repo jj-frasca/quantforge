@@ -12,11 +12,18 @@ memory: project
 You are the research and validation domain expert for QuantForge.
 
 ## Taxonomy (quant people will notice errors here)
-research/strategies/   → signal generators only, implement BaseStrategy
-research/simulation/   → stochastic tools (GBM Monte Carlo here, NOT in strategies/)
-research/benchmarks/   → BenchmarkComparator (every backtest result needs this)
-research/backtesting/  → engine (position/cost/equity math; no separate Portfolio class), metrics, ExperimentManifest
-validation/            → PBO, purged CV, walk-forward, DSR, regime, report
+research/strategies/      → signal generators only, implement BaseStrategy
+research/cross_sectional/ → cross-sectional factor search: registry, panel construction, IC,
+                             forward test/store, hunt (ADR-024/025/029)
+research/fundamentals/    → fundamentals consolidation + quality (Piotroski F-Score etc.)
+research/lab/             → the discovery-gate machinery: pool report, candidate budget,
+                             calibration, panel-null, probability-DSR, PBO pricing — this is
+                             where most of the project's recent ADR chain (ADR-081+) lives
+research/valuation/       → valuation-specific factor/statistic code
+research/simulation/      → stochastic tools (GBM Monte Carlo here, NOT in strategies/)
+research/benchmarks/      → BenchmarkComparator (every backtest result needs this)
+research/backtesting/     → engine (position/cost/equity math; no separate Portfolio class), metrics, ExperimentManifest
+validation/               → PBO, purged CV, walk-forward, DSR, regime, report
 
 ## Engine: vectorized pandas/numpy (ADR-007 — NOT vectorbt)
 vectorbt is rejected (fails to build on 3.12: numba/llvmlite). The engine is hand-rolled
@@ -28,9 +35,12 @@ vectorized pandas/numpy. No look-ahead: yesterday's position earns today's retur
 `generate_signals(data: pd.DataFrame) -> pd.Series` — float in [-1.0, 1.0], index == data.index,
 no look-ahead ever (signal at t uses only data up to t). `research_citations: list[str]` —
 never empty; cite the real paper.
-Implemented: SMAStrategy (no external cite); MomentumStrategy = Jegadeesh & Titman (1993),
-J. Finance 48(1) 65-91; MeanReversionStrategy = Avellaneda & Lee (2010), Quant Finance 10(7)
-761-782; Monte Carlo = Black & Scholes (1973), J. Political Economy 81(3).
+The catalog (`app/research/strategies/catalog.py`) has grown to 35 entries — **don't hardcode
+a copy here, it drifts** (this list itself used to name only 3 and went stale; same warning
+`backtesting-spec.md` §2 already gives). Check a strategy's own `citations` field rather than
+assuming from its name. Cross-sectional factors live separately in
+`app/research/cross_sectional/registry.py` (16 entries as of 2026-09-24, e.g. `xs_momentum`,
+`xs_value`, `xs_quality`) — same caution applies.
 
 ## BenchmarkComparator — required on every BacktestResult
 Default SPY. Provides excess_returns, information_ratio, alpha/beta (OLS), tracking_error,

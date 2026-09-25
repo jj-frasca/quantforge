@@ -18,16 +18,27 @@ is untrusted; do not assume the backend shape. Styling: Tailwind; primitives: sh
 Tests: **Vitest + React Testing Library + MSW** (mock the API; no real network in tests).
 
 ## Priorities
-The **ValidationReport page is ~70% of the frontend effort** — it renders the MVP deliverable.
-Dark mode, data-dense, professional (this is a quant tool, not a consumer app). Build it first
-and best. The four pages: Data Explorer, Strategy Config, Backtest Results, Validation Report.
+Dark mode, data-dense, professional (this is a quant tool, not a consumer app) — everywhere.
+Seven feature areas now exist under `src/features/`: `about`, `data-explorer`, `strategy-config`
+(single-run config plus `CompareConfigsPage`), `backtest-results`, `validation-report`, and
+`lab` — the discovery-gate dashboard (`LabDashboardPage`/`DiscoveriesPage` plus a dozen panels:
+graduates, null-comparison, window-comparison, gate-power/calibration, cross-sectional,
+paper-portfolio, leaderboard). **`lab` is now the largest and fastest-growing feature area, not
+`validation-report`** — the old "ValidationReport is ~70% of the effort" framing predates the
+lab dashboard's build-out and is stale; check `ls src/features/` rather than trusting a fixed
+priority order here.
 
-## API contract (the only backend it talks to right now)
-`POST /api/v1/validate` → `ValidationReport` (see .claude/context/api-contracts.md). The Zod
-schema MUST mirror the backend model exactly: strategy_name, observed_sharpe, deflated_sharpe,
-pbo (0–1), parameter_stability_score (0–1), n_walk_forward_splits, n_purged_folds, flags[],
-passed (bool, server-computed). `passed` is authoritative — render the verdict from it, don't
-recompute. Surface `flags` prominently (they're the honesty signal). `GET /health` exists too.
+## API contract
+Full, current endpoint list: `.claude/context/api-contracts.md` — it now covers validate,
+backtest, strategies, and a growing set of `lab` endpoints (graduates, null-comparison,
+window-comparison, gate-power/calibration, cross-sectional, paper-portfolio); don't treat any
+one endpoint as "the only backend," that framing is already stale. The Zod schema MUST mirror
+the backend model exactly — the network is untrusted, do not assume the backend shape.
+Worked example, still accurate: `POST /api/v1/validate` → `ValidationReport` — strategy_name,
+observed_sharpe, deflated_sharpe, pbo (0–1), parameter_stability_score (0–1),
+n_walk_forward_splits, n_purged_folds, flags[], passed (bool, server-computed). `passed` is
+authoritative — render the verdict from it, don't recompute. Surface `flags` prominently
+(they're the honesty signal). `GET /health` exists too.
 
 ## Conventions
 - Functional components, hooks. No `any`; no `@ts-ignore` without a cited reason.
