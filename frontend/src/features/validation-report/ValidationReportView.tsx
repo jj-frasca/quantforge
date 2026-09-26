@@ -27,7 +27,7 @@ export function ValidationReportView({ report }: Props) {
         <div>
           <dt>
             Observed{' '}
-            <Term definition="Return per unit of risk — annualized mean return divided by annualized standard deviation. Above 1 is good; above 2 is excellent; below 0 means losing money on average.">
+            <Term definition="Return per unit of risk — annualized mean return divided by annualized standard deviation. Above 1 is good; above 2 is excellent; below 0 means losing money on average. This is the BEST of a grid of configurations generated mechanically from the strategy's catalog parameter range (ADR-010), not the specific parameters shown on Backtest Results — the two pages run different experiments, so their Sharpe values are not expected to match.">
               Sharpe
             </Term>
           </dt>
