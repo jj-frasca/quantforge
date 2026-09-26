@@ -32,13 +32,15 @@ echo "-- files touched in the last 20 commits (peer-hot territory, discovered no
 # A fixed file list goes stale the moment a peer's scope grows (this happened between
 # session #98 and #99 — the peer expanded from panel_null.py into pbo.py, search.py,
 # experiment.py, none of which were on the old hardcoded list; session #107 found it had grown
-# again into backend/app/data/{quality,storage} and backend/app/api with zero visibility here).
-# Deriving the list from recent history instead means it tracks the peer automatically WITHIN
-# these directories — it is still not a full-repo scan, so a git log -3 on the specific file
-# you're about to edit remains the real safety check, not just a clean report from this script.
+# again into backend/app/data/{quality,storage} and backend/app/api with zero visibility here,
+# and widened the list a second time to add those two directories). Session #114 found the same
+# blind-spot class a THIRD time (backend/app/execution/sizing.py, a same-day commit, invisible
+# here because execution/ was never on the list) and, rather than widening again piecemeal,
+# scans all of backend/app directly — this is the fully future-proof version the session #107
+# comment above already named as the real fix. .claude/context is scanned separately since it's
+# outside backend/app entirely.
 git log --oneline -20 --name-only --pretty=format: -- \
-    backend/app/research backend/app/validation backend/app/data backend/app/api \
-    .claude/context \
+    backend/app .claude/context \
   2>/dev/null | sort -u | while read -r f; do
   [ -n "$f" ] && [ -f "$f" ] || continue
   line=$(git log -1 --format='%h %ad %s' --date=short -- "$f" 2>/dev/null)
