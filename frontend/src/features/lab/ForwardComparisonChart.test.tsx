@@ -57,3 +57,28 @@ test('renders an empty state when no position has a score', () => {
   render(<ForwardComparisonChart positions={[unscored]} />)
   expect(screen.getByText(/no forward scores yet/i)).toBeInTheDocument()
 })
+
+test('renders both bars when the same symbol holds two scored positions under different strategies', () => {
+  // A symbol can legitimately appear twice: it graduated under one strategy, that position
+  // retired, and it later re-graduated under a different one — both can carry a forward score
+  // simultaneously (confirmed directly against data/paper_portfolio.json: BIIB, DLR, and IT
+  // each hold two scored positions under different strategy_names). Every other list in this
+  // feature (LeaderboardTable, GraduatesPanel, PaperPortfolioTable) keys by
+  // `${symbol}-${strategy_name}`; this chart keyed its bars by bare `symbol` alone, so the second
+  // position collided with the first as a React key.
+  //
+  // NOT verifiable here: a real Playwright run against this exact production data (e2e/smoke.spec.ts,
+  // now covering the "Live" page) caught this live as a "two children with the same key" React
+  // console.error; jsdom does not reproduce it — this test passes identically before and after
+  // the fix (confirmed directly, not assumed) because Recharts' <Bar> reads its <Cell> children as
+  // configuration via React.Children rather than mounting them through jsdom's DOM reconciler the
+  // same way a real browser does. Same jsdom-blind-spot class as ADR-130's minus-sign input bug.
+  // The summary count below is the one thing jsdom CAN verify: both positions are counted.
+  const secondStrategy: PaperPosition = {
+    ...scored,
+    strategy_name: 'vwap_reversion',
+    score: { ...scored.score!, forward_sharpe: 0.3, beats_buy_and_hold: true },
+  }
+  render(<ForwardComparisonChart positions={[scored, secondStrategy]} />)
+  expect(screen.getByText(/2 of 2 positions beating buy-and-hold/i)).toBeInTheDocument()
+})

@@ -33,6 +33,7 @@ export function ForwardComparisonChart({ positions }: Props) {
   }
 
   const data = scored.map((p) => ({
+    key: `${p.symbol}-${p.strategy_name}`,
     symbol: p.symbol,
     strategy: p.score?.forward_sharpe ?? 0,
     benchmark: p.score?.buy_and_hold_sharpe ?? 0,
@@ -57,7 +58,7 @@ export function ForwardComparisonChart({ positions }: Props) {
           <Bar name="Strategy (forward)" dataKey="strategy">
             {data.map((d) => (
               // Green when the strategy beats buy-and-hold; amber when it doesn't — the honest signal.
-              <Cell key={d.symbol} fill={d.beats ? '#22c55e' : '#f59e0b'} />
+              <Cell key={d.key} fill={d.beats ? '#22c55e' : '#f59e0b'} />
             ))}
           </Bar>
           <Bar name="Buy & hold" dataKey="benchmark" fill="#94a3b8" />

@@ -4,7 +4,7 @@ import { ONBOARDING_DISMISSED_KEY } from '../src/components/ui/OnboardingBanner'
 
 // FAST SMOKE LAYER — the "did I break a button / blank-page / JSX-parse" check.
 // Unlike backtest-flow.spec.ts this needs NO market data: it just drives the nav
-// across all four pages and fails on any uncaught runtime/console error. This is
+// across all seven pages and fails on any uncaught runtime/console error. This is
 // the cheap counterpart to MSW Vitest — it proves the real bundle boots and every
 // page actually mounts in a browser, which is exactly what the unclosed-JSX-fragment
 // Vite parse error and the silent-form-submit regressions slipped past.
@@ -14,6 +14,7 @@ const PAGES = [
   { nav: 'Backtest Results', heading: 'Backtest Results' },
   { nav: 'Compare Configs', heading: 'Compare Configurations' },
   { nav: 'Validation', heading: 'Validation Report' },
+  { nav: 'Live', heading: 'Live' },
   { nav: 'Discoveries', heading: 'Discoveries' },
   { nav: 'About', heading: 'About QuantForge' },
 ] as const
