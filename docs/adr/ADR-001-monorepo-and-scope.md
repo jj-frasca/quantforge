@@ -1,6 +1,9 @@
 # ADR-001: Monorepo with explicit scope cuts
 
-- **Status**: Accepted
+- **Status**: Accepted; the paper-trading scope cut is superseded by ADR-019 (2026-07-02,
+  paper-only forward-testing, no real money). The monorepo decision and the remaining cuts
+  (WebSockets, order book/OMS, LSTM, Reddit/FinBERT before Phase 8, institutional execution
+  simulation) stand unchanged.
 - **Date**: 2026-05-27
 - **Deciders**: Joe Frasca
 
@@ -38,4 +41,5 @@ simulation. These omissions are deliberate, not gaps.
 - Internal layering (data → research → validation) is enforced by convention and review,
   since the repo won't enforce it.
 - A reviewer reading the repo sees the scope cuts and understands they were chosen to
-  protect the rigor story — the absence of paper trading is a feature, not an oversight.
+  protect the rigor story — the absence of paper trading was a deliberate cut, not an
+  oversight, for the ~5 weeks it held (until ADR-019 reversed it in part).
