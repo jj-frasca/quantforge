@@ -1,7 +1,10 @@
 # FINDING-001: Calibration artifacts do not identify the search they measured
 
 - **Severity:** High (methodology lineage; stale Type-I/power claims can look current)
-- **Status:** Fix proposed in ADR-044
+- **Status:** Resolved (ADR-044). `search_config_version` is stamped on every
+  `NullCalibration`/`PowerCalibration` (`calibration_search_version`, `calibration.py`), legacy
+  artifacts default to `"legacy-unspecified"`, and `merge_calibrations` refuses to consolidate
+  shards whose `search_config_version` differs (`calibration.py:1356-1359`).
 - **Affected:** ADR-036, ADR-037, ADR-041, ADR-042; `NullCalibration`, `PowerCalibration`
 
 ## Finding
