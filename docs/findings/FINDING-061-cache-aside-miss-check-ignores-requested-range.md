@@ -23,12 +23,17 @@
 
 The cache-aside "hit" condition is **"did the repository return at least 30 bars for this
 symbol within the requested window,"** not **"does the repository's data actually cover the
-requested `[start, end)` range."** `InMemoryPriceBarRepository.get_bars` (and, presumably, the
-real TimescaleDB repository — not checked this session, but the same endpoint code calls both
-through the same `PriceBarRepository` Protocol) correctly filters to bars inside `[start, end)`,
-so it never returns bars *outside* the request — but it silently returns however many bars
-*happen to already be stored* inside that window, which can be far fewer than the window
-actually contains if an earlier, narrower ingest only ever populated part of it.
+requested `[start, end)` range."** `InMemoryPriceBarRepository.get_bars` correctly filters to
+bars inside `[start, end)`, so it never returns bars *outside* the request — but it silently
+returns however many bars *happen to already be stored* inside that window, which can be far
+fewer than the window actually contains if an earlier, narrower ingest only ever populated part
+of it. **Confirmed the real `TimescaleDB` repository shares this exact shape**
+(`backend/app/data/storage/timescale.py::get_bars`, read directly this session): the same
+`WHERE timestamp_utc >= start AND timestamp_utc < end` SQL filter, no row-count-vs-range check
+either. Both `PriceBarRepository` Protocol implementations are affected identically — this is
+not a memory-backend-only dev quirk, it would reproduce against the production TimescaleDB store
+too, since the bug lives entirely in the shared endpoint code that calls either repository, not
+in a repository-specific quirk.
 
 **Reproduced end-to-end this session:**
 1. Data Explorer: ingested AAPL for `2025-09-26 .. 2026-09-26` (the page's own default 1-year
@@ -70,13 +75,14 @@ wider window), and exactly what this session's own live-browser "agent eyes" pas
 to catch (per RUNNING_STATE.md session 106/114's own retros: bugs that only manifest from real,
 stateful interaction, not a single mocked unit test).
 
-Real-world blast radius is probably concentrated in the **interactive frontend flows**
-(`STORAGE_BACKEND=memory` local dev, and the real TimescaleDB-backed production repository across
-sequential user requests) rather than the autonomous research pipelines (`hunt.py`,
-`daily_discovery`, etc.), which — as far as this session checked without reading their full
-call graphs — likely always ingest their own full needed range in one shot per symbol rather
-than incrementally widening an existing cache entry. That assumption is **not verified this
-session** and should be checked by whoever picks this up.
+Real-world blast radius is probably concentrated in the **interactive frontend flows** (a real
+user, across sequential requests, ingesting a narrow range then later requesting a wider one —
+now confirmed to reproduce identically against either repository implementation) rather than the
+autonomous research pipelines (`hunt.py`, `daily_discovery`, etc.), which — as far as this
+session checked without reading their full call graphs — likely always ingest their own full
+needed range in one shot per symbol rather than incrementally widening an existing cache entry.
+That pipeline assumption is **not verified this session** and should be checked by whoever picks
+this up.
 
 ## Suggested fix direction (not implemented — peer territory)
 
