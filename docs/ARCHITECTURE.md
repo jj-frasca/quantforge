@@ -741,6 +741,11 @@ half-open `[start, end)` request to the same structural preflight. Any returned 
 `start` or at/after `end` fails as `range_mismatch` before heuristics and storage, so vendor
 overfetch, inclusive-end, pagination, or timezone-boundary defects cannot pollute the shared cache.
 
+**Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
+timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
+callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,
+or reversed requests cannot acquire vendor data or create a quality report.
+
 **Daily shards carry the lifetime denominator forward (ADR-062), and reports count it once
 (ADR-066).** Each shard writes only its own artifact but reads the committed partitioned pool as a
 prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experiment's

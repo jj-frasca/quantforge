@@ -15,6 +15,16 @@ class IngestionResult:
     quality_report: DataQualityReport
 
 
+def validate_ingestion_range(start: datetime, end: datetime) -> None:
+    """Require one non-empty timezone-aware half-open acquisition interval."""
+    if start.tzinfo is None or start.utcoffset() is None:
+        raise ValueError("start and end must be timezone-aware")
+    if end.tzinfo is None or end.utcoffset() is None:
+        raise ValueError("start and end must be timezone-aware")
+    if start >= end:
+        raise ValueError("start must be before end")
+
+
 class DataIngestionPipeline:
     """Adapter -> normalize (in adapter) -> quality gate -> store (ADR-006).
 
@@ -35,6 +45,7 @@ class DataIngestionPipeline:
         self._quality = quality_engine or DataQualityEngine()
 
     def ingest(self, symbol: str, start: datetime, end: datetime) -> IngestionResult:
+        validate_ingestion_range(start, end)
         bars = self._adapter.fetch_price_bars(symbol, start, end)
         report = self._quality.check(
             bars,

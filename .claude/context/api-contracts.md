@@ -98,6 +98,8 @@ stall the event loop (ADR-009).
   "end_date":   "2024-12-01T00:00:00Z"
 }
 ```
+Both bounds must be timezone-aware and `start_date < end_date` (ADR-132). Invalid ranges return
+`422` before adapter fetch; aware non-UTC offsets are accepted as absolute instants.
 
 **Responses**:
 - `200` → `IngestResponse`:

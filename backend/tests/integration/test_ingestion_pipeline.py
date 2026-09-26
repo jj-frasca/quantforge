@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 
+import pytest
 from tests.fixtures.synthetic import builders
 
 from app.data.models import PriceBar
@@ -22,6 +23,14 @@ class _SeriesAdapter(DataSourceAdapter):
 
     def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
         return self._bars
+
+
+class _FailIfCalledAdapter(DataSourceAdapter):
+    source = "yfinance"
+    adapter_version = "test-1"
+
+    def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+        raise AssertionError("invalid range reached the adapter")
 
 
 def test_pipeline_ingests_clean_series_end_to_end() -> None:
@@ -121,3 +130,24 @@ def test_pipeline_blocks_bars_outside_requested_half_open_range() -> None:
     assert {issue.check for issue in result.quality_report.issues} == {"range_mismatch"}
     assert repo.get_bars("AAPL", datetime(2023, 1, 1, tzinfo=UTC), _END) == []
     assert len(repo.quality_reports) == 1
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "message"),
+    [
+        (datetime(2024, 1, 1), _END, "timezone-aware"),
+        (_START, datetime(2024, 3, 1), "timezone-aware"),
+        (_START, _START, "start must be before end"),
+        (_END, _START, "start must be before end"),
+    ],
+)
+def test_pipeline_rejects_invalid_request_range_before_adapter_access(
+    start: datetime, end: datetime, message: str
+) -> None:
+    repo = InMemoryPriceBarRepository()
+    pipeline = DataIngestionPipeline(_FailIfCalledAdapter(), repo)
+
+    with pytest.raises(ValueError, match=message):
+        pipeline.ingest("AAPL", start, end)
+
+    assert repo.quality_reports == []

@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Self
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from app.data.models import DataQualityReport
-from app.data.pipelines.ingestion import DataIngestionPipeline
+from app.data.pipelines.ingestion import DataIngestionPipeline, validate_ingestion_range
 from app.data.sources.base import DataSourceAdapter
 from app.data.storage.repository import PriceBarRepository
 from app.dependencies import get_data_adapter, get_repository
@@ -17,6 +17,11 @@ class IngestRequest(BaseModel):
     symbol: str
     start_date: datetime
     end_date: datetime
+
+    @model_validator(mode="after")
+    def validate_range(self) -> Self:
+        validate_ingestion_range(self.start_date, self.end_date)
+        return self
 
 
 class IngestResponse(BaseModel):

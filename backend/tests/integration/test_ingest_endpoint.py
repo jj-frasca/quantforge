@@ -3,6 +3,7 @@ quality report. Clean data -> stored=True, passed=True; insufficient data -> sto
 
 from datetime import datetime
 
+import pytest
 from fastapi.testclient import TestClient
 from tests.fixtures.synthetic import builders
 
@@ -29,6 +30,14 @@ class _SeriesAdapter(DataSourceAdapter):
 
     def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
         return self._bars
+
+
+class _FailIfCalledAdapter(DataSourceAdapter):
+    source = "yfinance"
+    adapter_version = "fake-1"
+
+    def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+        raise AssertionError("invalid range reached the adapter")
 
 
 def _client(adapter: DataSourceAdapter, repo: PriceBarRepository) -> TestClient:
@@ -71,5 +80,30 @@ def test_ingest_does_not_store_when_quality_gate_fails() -> None:
         body = response.json()
         assert body["stored"] is False
         assert body["quality_report"]["passed"] is False
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize(
+    ("start_date", "end_date"),
+    [
+        ("2024-01-01T00:00:00", "2024-12-01T00:00:00Z"),
+        ("2024-01-01T00:00:00Z", "2024-12-01T00:00:00"),
+        ("2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z"),
+        ("2024-12-01T00:00:00Z", "2024-01-01T00:00:00Z"),
+    ],
+)
+def test_ingest_rejects_invalid_request_range_before_adapter_access(
+    start_date: str, end_date: str
+) -> None:
+    try:
+        repo = InMemoryPriceBarRepository()
+        response = _client(_FailIfCalledAdapter(), repo).post(
+            "/api/v1/ingest",
+            json={"symbol": "AAPL", "start_date": start_date, "end_date": end_date},
+        )
+
+        assert response.status_code == 422
+        assert repo.quality_reports == []
     finally:
         app.dependency_overrides.clear()
