@@ -43,6 +43,17 @@ test('switches to Backtest Results from the nav', async () => {
   ).toBeInTheDocument()
 })
 
+test('switches to Compare Configs from the nav', async () => {
+  renderWithClient(<App />)
+  await userEvent.click(screen.getByRole('button', { name: 'Compare Configs' }))
+  expect(
+    await screen.findByRole('heading', { name: 'Compare Configurations' }),
+  ).toBeInTheDocument()
+  expect(
+    screen.getByRole('button', { name: 'Compare Configs', current: 'page' }),
+  ).toBeInTheDocument()
+})
+
 test('switches to the Live dashboard from the nav', async () => {
   renderWithClient(<App />)
   await userEvent.click(screen.getByRole('button', { name: 'Live' }))
