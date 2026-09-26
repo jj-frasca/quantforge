@@ -3,6 +3,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  DefaultLegendContent,
   Legend,
   ReferenceLine,
   ResponsiveContainer,
@@ -53,7 +54,17 @@ export function ForwardComparisonChart({ positions }: Props) {
           <XAxis dataKey="symbol" />
           <YAxis tickFormatter={(v: number) => v.toFixed(1)} />
           <Tooltip formatter={(value) => (typeof value === 'number' ? value.toFixed(2) : String(value))} />
-          <Legend />
+          <Legend
+            content={() => (
+              <DefaultLegendContent
+                payload={[
+                  { value: 'Strategy — beats buy-and-hold', type: 'square', color: '#22c55e' },
+                  { value: 'Strategy — does not beat', type: 'square', color: '#f59e0b' },
+                  { value: 'Buy & hold', type: 'square', color: '#94a3b8' },
+                ]}
+              />
+            )}
+          />
           <ReferenceLine y={0} stroke="#94a3b8" />
           <Bar name="Strategy (forward)" dataKey="strategy">
             {data.map((d) => (

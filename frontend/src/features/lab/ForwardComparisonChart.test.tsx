@@ -82,3 +82,13 @@ test('renders both bars when the same symbol holds two scored positions under di
   render(<ForwardComparisonChart positions={[scored, secondStrategy]} />)
   expect(screen.getByText(/2 of 2 positions beating buy-and-hold/i)).toBeInTheDocument()
 })
+
+// NOT covered by a jsdom test (confirmed directly, not assumed — see above): the same live-browser
+// pass also found the legend showed "Strategy (forward)" with an arbitrary black swatch matching
+// none of the actual per-bar colors (green/amber, set via <Cell fill> based on `beats`). Fixed with
+// a custom <Legend content> naming each real color. `getByText` on the new legend labels fails
+// under jsdom the same way the old ones would have — ResponsiveContainer renders 0x0 here, so
+// Legend's content never mounts at all, not just the SVG bars. Verified for real instead: rendered
+// the dev server in a live browser and read `.recharts-legend-wrapper`'s textContent directly,
+// confirming "Strategy — beats buy-and-hold" / "Strategy — does not beat" / "Buy & hold" all render
+// (and the old single "Strategy (forward)" entry is gone).
