@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Watch the parallel WP agents (token-free: pure git + gh, no claude). Fetches all branches and, for
-# each non-master branch, reports commits-ahead, last-activity, open PR, and CI conclusion. Slacks a
-# digest ONLY when the state changes since last run (or CI is red), so it's quiet until there's news.
+# Watch any non-master remote branch (token-free: pure git + gh, no claude) — originally built for
+# the parallel /orchestrate-agents WP branches (all merged and deleted, session 113), now generically
+# whatever's left in `git branch -r` (currently the unrelated codex/* branches; a different agent
+# system's territory, left alone per RUNNING_STATE session 109). For each, reports commits-ahead,
+# last-activity, open PR, and CI conclusion. Slacks a digest ONLY when the state changes since last
+# run (or CI is red), so it's quiet until there's news.
 # Installed as a launchd agent (com.jjfrasca.quantforge-monitor), every 30 min.
 set -uo pipefail
 export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
