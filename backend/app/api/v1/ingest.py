@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, model_validator
 
 from app.data.models import DataQualityReport
-from app.data.pipelines.ingestion import DataIngestionPipeline, validate_ingestion_range
+from app.data.pipelines.ingestion import DataIngestionPipeline, validate_request_range
 from app.data.sources.base import DataSourceAdapter
 from app.data.storage.repository import PriceBarRepository
 from app.dependencies import get_data_adapter, get_repository
@@ -20,7 +20,7 @@ class IngestRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_range(self) -> Self:
-        validate_ingestion_range(self.start_date, self.end_date)
+        validate_request_range(self.start_date, self.end_date)
         return self
 
 

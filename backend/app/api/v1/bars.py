@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.data.models import PriceBar
+from app.data.pipelines.ingestion import validate_request_range
 from app.data.storage.repository import PriceBarRepository
 from app.dependencies import get_repository
 
@@ -53,6 +54,10 @@ def bars(
     start_date: Annotated[datetime, Query()],
     end_date: Annotated[datetime, Query()],
 ) -> BarsResponse:
+    try:
+        validate_request_range(start_date, end_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     cached = repository.get_bars(symbol, start_date, end_date)
     return BarsResponse(
         symbol=symbol.strip().upper(),

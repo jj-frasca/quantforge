@@ -1,10 +1,11 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Self
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from app.api.v1.backtest import _MIN_BARS, _load_frame
+from app.data.pipelines.ingestion import validate_request_range
 from app.data.sources.base import DataSourceAdapter
 from app.data.storage.repository import PriceBarRepository
 from app.dependencies import get_data_adapter, get_repository
@@ -24,6 +25,11 @@ class ValidateRequest(BaseModel):
     strategy: str
     start_date: datetime
     end_date: datetime
+
+    @model_validator(mode="after")
+    def validate_range(self) -> Self:
+        validate_request_range(self.start_date, self.end_date)
+        return self
 
 
 # Sync endpoint on purpose: FastAPI runs `def` handlers in a threadpool, so the blocking

@@ -135,9 +135,9 @@ The ingestion pipeline also binds the adapter result to its requested half-open 
 range (ADR-119). Any pre-start or end-inclusive/later timestamp emits `range_mismatch`, returns
 before pairwise heuristics, and blocks the entire list from storage. Direct quality-engine callers
 without an acquisition request may omit both expected bounds; supplying only one bound is invalid.
-The request itself must contain two timezone-aware instants with `start < end` (ADR-132). The
-pipeline enforces this before adapter access, and the ingest API rejects the same malformed ranges
-at schema validation; aware non-UTC offsets remain valid instants.
+The request itself must contain two timezone-aware instants with `start < end` (ADR-132/133). The
+pipeline enforces this before adapter access, and every public range-bearing API rejects the same
+malformed interval before repository or adapter access; aware non-UTC offsets remain valid instants.
 
 ---
 

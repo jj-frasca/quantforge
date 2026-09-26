@@ -61,6 +61,9 @@ threadpool (ADR-009).
 - `start_date` (ISO-8601 datetime)
 - `end_date` (ISO-8601 datetime)
 
+Both bounds must be timezone-aware and `start_date < end_date` (ADR-133). Invalid ranges return
+`422` before the repository query.
+
 **Responses**:
 - `200` → `BarsResponse`:
   ```json
@@ -151,6 +154,7 @@ are echoed back in the response.
 
 An unknown `name`, a non-positive `initial_capital`, or a negative `cost_rate` is a
 422 from Pydantic — never reaches the handler.
+Naive, zero-width, or reversed date ranges likewise return `422` before cache access (ADR-133).
 
 **Responses**:
 - `200` → `BacktestResponse`:
@@ -237,6 +241,8 @@ realized returns, and Monte-Carlo simulates `n_paths` GBM equity paths over `hor
 - **Request**: `{ symbol, strategy (StrategyConfig), start_date, end_date, horizon_days=252,
   n_paths=10000, loss_threshold=0.2, seed=42, initial_capital=100000, cost_rate=0.001 }`.
   `horizon_days >= 1`, `n_paths >= 1`, `loss_threshold ∈ (0, 1]` (else `422`).
+  Date bounds must be timezone-aware and strictly ordered; malformed ranges return `422` before
+  cache access (ADR-133).
 - **Response** `MonteCarloResponse`:
   ```json
   {
@@ -280,6 +286,8 @@ from the repo. Cache hits never call the data adapter.
 ```
 Given the resulting bars, the server builds the price frame, runs a built-in parameter grid
 for the chosen strategy through `ValidationEngine`, and returns the report.
+Date bounds must be timezone-aware and strictly ordered; malformed ranges return `422` before
+cache access (ADR-133).
 
 **Responses**:
 - `200` → `ValidationReport`:

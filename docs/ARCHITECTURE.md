@@ -746,6 +746,11 @@ timezone-aware and strictly ordered (`start < end`). The pipeline enforces the i
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,
 or reversed requests cannot acquire vendor data or create a quality report.
 
+**Every public research range uses that same interval contract (ADR-133).** Backtest, validation,
+Monte Carlo, and ingest body models reject malformed bounds during schema validation; the read-only
+bars handler applies the same helper before its repository query. Cache state can no longer decide
+whether an invalid request is accepted, and aware non-UTC instants remain valid.
+
 **Daily shards carry the lifetime denominator forward (ADR-062), and reports count it once
 (ADR-066).** Each shard writes only its own artifact but reads the committed partitioned pool as a
 prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experiment's

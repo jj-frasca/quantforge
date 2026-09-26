@@ -1,10 +1,11 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Self
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.api.v1.backtest import _MIN_BARS, _load_frame
+from app.data.pipelines.ingestion import validate_request_range
 from app.data.sources.base import DataSourceAdapter
 from app.data.storage.repository import PriceBarRepository
 from app.dependencies import get_data_adapter, get_repository
@@ -27,6 +28,11 @@ class MonteCarloRequest(BaseModel):
     seed: int = 42
     initial_capital: float = Field(default=100_000.0, gt=0)
     cost_rate: float = Field(default=0.001, ge=0)
+
+    @model_validator(mode="after")
+    def validate_range(self) -> Self:
+        validate_request_range(self.start_date, self.end_date)
+        return self
 
 
 class MonteCarloResponse(BaseModel):

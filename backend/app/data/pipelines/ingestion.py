@@ -15,7 +15,7 @@ class IngestionResult:
     quality_report: DataQualityReport
 
 
-def validate_ingestion_range(start: datetime, end: datetime) -> None:
+def validate_request_range(start: datetime, end: datetime) -> None:
     """Require one non-empty timezone-aware half-open acquisition interval."""
     if start.tzinfo is None or start.utcoffset() is None:
         raise ValueError("start and end must be timezone-aware")
@@ -45,7 +45,7 @@ class DataIngestionPipeline:
         self._quality = quality_engine or DataQualityEngine()
 
     def ingest(self, symbol: str, start: datetime, end: datetime) -> IngestionResult:
-        validate_ingestion_range(start, end)
+        validate_request_range(start, end)
         bars = self._adapter.fetch_price_bars(symbol, start, end)
         report = self._quality.check(
             bars,
