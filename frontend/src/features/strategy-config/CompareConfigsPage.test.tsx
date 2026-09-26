@@ -204,6 +204,42 @@ test('a per-row failure surfaces only on that row — others still render metric
   expect(screen.getByText('0.80')).toBeInTheDocument()
 })
 
+test('every row failing renders the empty comparison-chart state', async () => {
+  server.use(
+    http.post('/api/v1/backtest', () =>
+      HttpResponse.json({ detail: 'insufficient data' }, { status: 422 }),
+    ),
+  )
+
+  renderWithClient(<CompareConfigsPage />)
+  await screen.findByRole('group', { name: /^config A$/i })
+  await userEvent.click(screen.getByRole('button', { name: /run comparison/i }))
+
+  await waitFor(() => {
+    expect(screen.getByRole('table', { name: /comparison/i })).toBeInTheDocument()
+  })
+  expect(
+    screen.getByText(/no rows returned results — see the table below/i),
+  ).toBeInTheDocument()
+})
+
+test('adding a row after the comparison settles renders "No result returned" for it', async () => {
+  server.use(http.post('/api/v1/backtest', () => HttpResponse.json(responseFor(0.8, 0.18))))
+
+  renderWithClient(<CompareConfigsPage />)
+  await screen.findByRole('group', { name: /^config A$/i })
+  await userEvent.click(screen.getByRole('button', { name: /run comparison/i }))
+  await waitFor(() => {
+    expect(screen.getByRole('table', { name: /comparison/i })).toBeInTheDocument()
+  })
+
+  // compare.results still has 2 entries; adding a 3rd row outruns it — that row has
+  // no matching result yet even though the table is already rendered from the settle.
+  await userEvent.click(screen.getByRole('button', { name: /\+ add config/i }))
+  await screen.findByRole('group', { name: /^config C$/i })
+  expect(screen.getByText(/no result returned\./i)).toBeInTheDocument()
+})
+
 test('surfaces a catalog error when /strategies fails', async () => {
   server.use(http.get('/api/v1/strategies', () => HttpResponse.json({}, { status: 500 })))
   renderWithClient(<CompareConfigsPage />)
