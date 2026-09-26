@@ -2,6 +2,7 @@
 // quality issues sorted by severity (errors first, then warnings, then info). An
 // empty issues list should render an explicit "no issues" note, not silence.
 import { render, screen, within } from '@testing-library/react'
+import { vi } from 'vitest'
 
 import type { IngestResponse } from '../../types/ingest'
 import { IngestResultView } from './IngestResultView'
@@ -55,4 +56,40 @@ test('renders a failed verdict and surfaces issues with errors first', () => {
   expect(items[0]).toHaveTextContent(/\[error\]/)
   expect(items[1]).toHaveTextContent(/missing_bars/i)
   expect(items[2]).toHaveTextContent(/stale_data/i)
+})
+
+test('renders every issue even when several share the same check and message', () => {
+  // The backend's _missing_bars emits one issue PER gap (distinguished only by a `context`
+  // bag React never sees as a key), so a templated message like "1 expected trading day(s)
+  // absent" legitimately repeats across distinct real-world gaps -- confirmed live against
+  // AAPL: a year of real bars produced 10 separate missing_bars issues with this exact
+  // identical message. A key derived only from check+message collides across all of them.
+  const repeatedIssue = {
+    check: 'missing_bars',
+    severity: 'warning' as const,
+    message: 'flags potential missing bars: 1 expected trading day(s) absent',
+  }
+  const manyGapsResult: IngestResponse = {
+    symbol: 'AAPL',
+    bars_ingested: 251,
+    stored: true,
+    quality_report: {
+      symbol: 'AAPL',
+      checked_at: '2024-01-02T00:00:00Z',
+      issues: Array.from({ length: 10 }, () => ({ ...repeatedIssue })),
+      passed: true,
+    },
+  }
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+  render(<IngestResultView result={manyGapsResult} />)
+
+  const issuesList = screen.getByLabelText('quality issues')
+  expect(within(issuesList).getAllByRole('listitem')).toHaveLength(10)
+  expect(
+    consoleError.mock.calls.some((args) =>
+      String(args[0]).includes('two children with the same key'),
+    ),
+  ).toBe(false)
+  consoleError.mockRestore()
 })

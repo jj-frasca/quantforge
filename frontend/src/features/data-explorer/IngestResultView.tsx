@@ -46,8 +46,16 @@ export function IngestResultView({ result }: Props) {
 
       {issues.length > 0 ? (
         <ul aria-label="quality issues" className="issues">
-          {issues.map((issue) => (
-            <li key={`${issue.check}-${issue.message}`} className={`issue ${issue.severity}`}>
+          {issues.map((issue, index) => (
+            // `context` (the only field that actually distinguishes two same-check,
+            // same-message issues -- e.g. two different missing_bars gaps that both happen
+            // to span exactly 1 day) is an untyped, open bag (see types/ingest.ts), so it
+            // can't be trusted as a key. Index is a safe tiebreaker: `issues` is a fresh
+            // array computed from one report each render, never reordered independently.
+            <li
+              key={`${issue.check}-${issue.message}-${index}`}
+              className={`issue ${issue.severity}`}
+            >
               <span className="check">{issue.check}</span>
               <span className="severity">[{issue.severity}]</span>
               <span className="message">{issue.message}</span>
