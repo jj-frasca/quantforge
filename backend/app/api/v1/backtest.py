@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Literal
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.data.models import PriceBar
 from app.data.pipelines.ingestion import DataIngestionPipeline
 from app.data.sources.base import DataSourceAdapter
 from app.data.storage.repository import PriceBarRepository
@@ -23,6 +24,9 @@ _ROLLING_SHARPE_WINDOW = 60
 _TRADING_DAYS = 252
 _RETURN_HIST_BINS = 30
 _BENCHMARK_SYMBOL = "SPY"
+# Longest realistic NYSE closure (year-end / July 4th falling next to a weekend) a cached
+# boundary bar can legitimately sit behind a requested start/end (FINDING-061).
+_RANGE_COVERAGE_TOLERANCE = timedelta(days=5)
 
 
 class BacktestRequest(BaseModel):
@@ -228,6 +232,23 @@ def _rolling_sharpe(returns: "pd.Series", window: int) -> list[RollingSharpePoin
     return [RollingSharpePoint(timestamp_utc=ts, sharpe=float(v)) for ts, v in sharpe.items()]
 
 
+def _covers_range(bars: list[PriceBar], start: datetime, end: datetime) -> bool:
+    """Whether ``bars`` (already filtered to ``[start, end)``) actually spans that range.
+
+    A bar count above ``_MIN_BARS`` is not the same claim as "the store has this range" —
+    a narrower, earlier ingest for the same symbol can leave plenty of bars sitting well
+    inside a later, wider request without covering it end to end (FINDING-061). Trading
+    calendars have gaps, so the first/last bar won't land exactly on `start`/`end`; allow
+    the tolerance rather than demanding an exact boundary bar.
+    """
+    if not bars:
+        return False
+    return (
+        bars[0].timestamp_utc - start <= _RANGE_COVERAGE_TOLERANCE
+        and end - bars[-1].timestamp_utc <= _RANGE_COVERAGE_TOLERANCE
+    )
+
+
 def _load_frame(
     symbol: str,
     start: datetime,
@@ -237,7 +258,7 @@ def _load_frame(
 ) -> "pd.DataFrame":
     """Cache-aside load: read the store, ingest on a miss, return the canonical frame."""
     bars = repository.get_bars(symbol, start, end)
-    if len(bars) < _MIN_BARS:
+    if len(bars) < _MIN_BARS or not _covers_range(bars, start, end):
         DataIngestionPipeline(adapter, repository).ingest(symbol, start, end)
         bars = repository.get_bars(symbol, start, end)
     return bars_to_frame(bars)

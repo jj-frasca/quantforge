@@ -2,7 +2,7 @@
 strategy+params and returns the equity curve + metrics; 422 on insufficient data;
 unknown strategy name fails Pydantic validation."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -493,5 +493,47 @@ def test_backtest_endpoint_sharpe_ci_present_at_one_year_or_more() -> None:
         assert ci["assumption"] == "iid_normal"
         assert ci["confidence"] == pytest.approx(0.95)
         assert ci["lower"] <= body["metrics"]["sharpe"] <= ci["upper"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_backtest_endpoint_widens_a_narrower_cached_range() -> None:
+    # FINDING-061: an earlier, narrower ingest for the same symbol left the repository
+    # holding well over _MIN_BARS bars *inside* this request's window, but nowhere near
+    # covering it end to end. The cache-aside check must notice the range isn't covered
+    # and re-ingest, not stop at "we already have >= 30 bars in range."
+    try:
+        repo = InMemoryPriceBarRepository()
+        # Pre-warm with a narrow slice fully inside the Jan-Dec 2024 request below.
+        repo.save_bars(
+            builders.clean_series(symbol="AAPL", n=60, start=datetime(2024, 9, 1, tzinfo=UTC))
+        )
+        response = _client(_FakeAdapter(), repo).post("/api/v1/backtest", json=_BODY)
+        assert response.status_code == 200, response.text
+        body = response.json()
+        # A full Jan-Dec 2024 fetch yields 239 bars (see the sibling test above); the
+        # truncated cache alone would yield far fewer than that.
+        assert len(body["equity_curve"]) > 200
+        first_ts = datetime.fromisoformat(body["equity_curve"][0]["timestamp_utc"])
+        assert first_ts < datetime(2024, 2, 1, tzinfo=UTC)
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_backtest_endpoint_true_cache_hit_does_not_call_adapter() -> None:
+    # A genuine hit (cache already covers the full requested range) must still skip the
+    # network fetch entirely — the fix must not degrade into "always re-ingest."
+    class _BoomAdapter(DataSourceAdapter):
+        source = "yfinance"
+        adapter_version = "fake-boom"
+
+        def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+            raise AssertionError("adapter should not be called on a true cache hit")
+
+    try:
+        repo = InMemoryPriceBarRepository()
+        repo.save_bars(builders.clean_series(symbol="AAPL", n=300))
+        response = _client(_BoomAdapter(), repo).post("/api/v1/backtest", json=_BODY)
+        assert response.status_code == 200, response.text
     finally:
         app.dependency_overrides.clear()

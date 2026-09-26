@@ -1,12 +1,19 @@
 # FINDING-061: The bars cache-aside "miss" check ignores the requested date range
 
 - **Severity:** Medium-High
-- **Status:** Open — reproduced and root-caused, **not fixed this session**. Every file that
-  would need to change (`backend/app/api/v1/backtest.py`, `validation.py`, `monte_carlo.py`) is
-  currently peer-hot (all three carry a same-day peer commit as of 2026-09-23, confirmed via
-  `git log -3` before writing this up) — per `AUTONOMY_CHARTER.md`'s peer-collision rules, this
-  session read and root-caused the bug but left the fix for whoever next has that territory free
-  (the peer itself, or a future session once `scripts/peer_check.sh` shows it's gone cold).
+- **Status:** **Fixed**, session 116 (2026-09-26). `scripts/peer_check.sh` showed
+  `backtest.py`/`monte_carlo.py`'s last peer touch was 2026-09-23 (3 days cold, no
+  uncommitted peer changes there) and `validation.py` cold since 2026-06-04 — territory was
+  free. Fixed per the "Suggested fix direction" below: `_load_frame` (`backend/app/api/v1/
+  backtest.py`) now checks range coverage via a new `_covers_range` helper (first/last
+  cached bar within a 5-calendar-day tolerance of the requested `start`/`end`, to allow for
+  weekend/holiday gaps) in addition to the existing bar-count floor. `monte_carlo.py` gets
+  the fix for free (imports `_load_frame`). `validation.py`'s inlined duplicate copy was
+  consolidated to call the shared `_load_frame` instead of re-implementing the same logic —
+  matching `monte_carlo.py`'s existing pattern and closing the "fixing the logic twice" risk
+  this finding flagged. See `fix(api): check cached range coverage, not just bar count` for
+  the commit. The Backtest/Validation Sharpe-divergence question below remains a **separate,
+  still-open thread** — this fix addresses the truncation only.
 - **Found:** 2026-09-26, autonomous session 115, live-driving Backtest Results + Validation
   Report against the real running dev servers with real yfinance data (the same "agent eyes"
   technique that found FINDING-060/ADR-131/ADR-130 in prior sessions).
@@ -84,7 +91,26 @@ needed range in one shot per symbol rather than incrementally widening an existi
 That pipeline assumption is **not verified this session** and should be checked by whoever picks
 this up.
 
-## Suggested fix direction (not implemented — peer territory)
+## Fix (implemented session 116, 2026-09-26)
+
+Exactly as suggested below: `_load_frame`'s miss condition is now
+`len(bars) < _MIN_BARS or not _covers_range(bars, start, end)`, where `_covers_range` checks
+`bars[0].timestamp_utc - start <= 5 days` and `end - bars[-1].timestamp_utc <= 5 days` (empty
+`bars` is always a miss). The 5-day tolerance is the longest realistic NYSE closure (a holiday
+landing next to a weekend); it deliberately does not demand an exact boundary bar, since trading
+calendars have gaps. Relies on the same overlap-safe `save_bars` upsert semantics named below —
+re-ingesting a widened range is safe. `validation.py`'s inlined duplicate was replaced with a call
+to the shared `_load_frame`, so there is now exactly one implementation of this logic, matching
+how `monte_carlo.py` already consumed it.
+
+Regression coverage: `test_backtest_endpoint_widens_a_narrower_cached_range` and
+`test_validate_endpoint_widens_a_narrower_cached_range` reproduce this finding's exact scenario
+(pre-warm with a narrower in-window slice, request the wider range, assert the full range is
+actually served); `test_backtest_endpoint_true_cache_hit_does_not_call_adapter` guards against
+overcorrecting into "always re-ingest" by asserting a genuine full-coverage hit still skips the
+network fetch.
+
+## Original suggested fix direction (superseded by the "Fix" section above)
 
 The miss condition needs to check **range coverage**, not just count: e.g. compare the earliest/
 latest cached `timestamp_utc` against the requested `start`/`end` (or have

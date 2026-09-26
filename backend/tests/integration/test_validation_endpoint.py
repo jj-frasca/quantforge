@@ -1,7 +1,7 @@
 """POST /api/v1/validate (integration, cache-aside): cache miss → ingest pipeline runs;
 cache hit → adapter is NOT called; 422 on unknown strategy or insufficient data."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -116,5 +116,24 @@ def test_validate_endpoint_rejects_insufficient_data() -> None:
             "/api/v1/validate", json=_BODY
         )
         assert response.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_validate_endpoint_widens_a_narrower_cached_range() -> None:
+    # FINDING-061: shares backtest.py's `_load_frame` cache-aside helper, which was fixed
+    # to check range coverage, not just bar count, against exactly this scenario — an
+    # earlier narrower ingest leaving > _MIN_BARS bars sitting inside a later, wider request.
+    try:
+        adapter = _FakeAdapter()
+        repo = InMemoryPriceBarRepository()
+        repo.save_bars(
+            builders.clean_series(symbol="AAPL", n=60, start=datetime(2024, 9, 1, tzinfo=UTC))
+        )
+        response = _client(adapter, repo).post("/api/v1/validate", json=_BODY)
+        assert response.status_code == 200, response.text
+        # The narrower cached slice alone would have made the adapter unnecessary (>
+        # _MIN_BARS already); a second call means the wider range was actually fetched.
+        assert adapter.calls == 1
     finally:
         app.dependency_overrides.clear()

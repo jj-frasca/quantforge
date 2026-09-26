@@ -4,18 +4,16 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from app.data.pipelines.ingestion import DataIngestionPipeline
+from app.api.v1.backtest import _MIN_BARS, _load_frame
 from app.data.sources.base import DataSourceAdapter
 from app.data.storage.repository import PriceBarRepository
 from app.dependencies import get_data_adapter, get_repository
-from app.research.frames import bars_to_frame
 from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
 from app.validation.engine import ValidationEngine
 from app.validation.report import ValidationReport
 
 router = APIRouter(tags=["validation"])
 
-_MIN_BARS = 30
 _MIN_CONFIGS_FOR_PBO = 2  # CSCV needs at least 2 valid configs to estimate overfitting
 
 
@@ -43,15 +41,7 @@ def validate(
             detail=f"unknown strategy: {request.strategy!r}; see GET /api/v1/strategies",
         )
 
-    bars = repository.get_bars(request.symbol, request.start_date, request.end_date)
-    if len(bars) < _MIN_BARS:
-        # Cache miss: run the ingestion pipeline (quality gate persists either way; bars
-        # are stored only if the gate passes), then re-read from the repo.
-        DataIngestionPipeline(adapter, repository).ingest(
-            request.symbol, request.start_date, request.end_date
-        )
-        bars = repository.get_bars(request.symbol, request.start_date, request.end_date)
-    frame = bars_to_frame(bars)
+    frame = _load_frame(request.symbol, request.start_date, request.end_date, adapter, repository)
     if len(frame) < _MIN_BARS:
         raise HTTPException(
             status_code=422,
