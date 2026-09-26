@@ -951,10 +951,16 @@ RULE: Survivorship bias: we flag the risk in universe selection. We do not solve
 
 ## 3. What Is NOT Being Built
 
+> **"Paper trading" below is superseded in part.** This table is the original spec's cut list;
+> ADR-019 (2026-07-02) later reversed the paper-trading cut specifically (forward-testing only,
+> no real money — ADR-019/020/021, live since July, see §0.6 line ~130). WebSocket streaming and
+> order book/OMS remain cut exactly as stated: CLAUDE.md rule 7 keeps both out of scope even after
+> ADR-019, since neither is needed for a paper-only forward-test loop.
+
 | Cut | Reason |
 |---|---|
-| Paper trading / live execution | Realistic fill simulation is years of work; low ROI |
-| WebSocket streaming | Depends on paper trading |
+| Paper trading / live execution | ~~Realistic fill simulation is years of work; low ROI~~ — reversed in part: paper-only forward-testing is built (ADR-019/020/021); real-money live execution remains cut |
+| WebSocket streaming | Depends on live (real-money) execution, still cut |
 | Order book / OMS | Same |
 | Reddit/FinBERT NLP pipeline | Phase 8+ only; low alpha signal relative to complexity |
 | LSTM / neural networks | Require data/compute not available at this scale |
