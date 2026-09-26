@@ -130,6 +130,21 @@ needed range in one shot per symbol rather than incrementally widening an existi
 That pipeline assumption is **not verified this session** and should be checked by whoever picks
 this up.
 
+**Verified (session 117, 2026-09-26): the pipeline assumption above understates it.** Every
+`backend/scripts/*.py` entry point (`hunt.py`, `run_hunt.py`, `shard_hunt.py`,
+`cross_sectional_hunt.py`, `cross_sectional_forward.py`, `consolidate_pool.py`, `paper.py`,
+`paper_broker.py`, `fundamental_sweep.py`, `null_calibration.py`, `prepare_panel_null.py`,
+`window_experiment.py`, `history_length_experiment.py` — grepped the whole directory, not a
+sample) calls `adapter.fetch_price_bars(symbol, start, now)` **directly**, never
+`PriceBarRepository.get_bars` / `_load_frame` / `DataIngestionPipeline`. `grep -rln "get_bars\|
+DataIngestionPipeline" app/research/` returns nothing either. So the pipeline isn't "affected in
+practice because it happens to always request the full range" — it structurally never touches
+the cache-aside code path this finding describes at all; it re-fetches from the adapter fresh on
+every run, every script, unconditionally. **This bug class cannot occur in the research
+pipeline, full stop** — the entire blast radius was, and is, the API layer
+(`backtest.py`/`validation.py`/`monte_carlo.py`) and whatever calls it (the frontend, or any
+future direct API client).
+
 ## Fix (implemented session 116, 2026-09-26)
 
 Exactly as suggested below: `_load_frame`'s miss condition is now
