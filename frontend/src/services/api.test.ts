@@ -40,3 +40,10 @@ test('requestValidation throws with just the status when the body is not JSON', 
   )
   await expect(requestValidation(request)).rejects.toThrow(/^Validation request failed \(500\)$/)
 })
+
+test('requestValidation throws with just the status when detail is not a string', async () => {
+  server.use(
+    http.post('/api/v1/validate', () => HttpResponse.json({ detail: { code: 7 } }, { status: 500 })),
+  )
+  await expect(requestValidation(request)).rejects.toThrow(/^Validation request failed \(500\)$/)
+})

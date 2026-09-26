@@ -48,3 +48,10 @@ test('requestIngest throws with just the status when the body is not JSON', asyn
   server.use(http.post('/api/v1/ingest', () => new HttpResponse('boom', { status: 500 })))
   await expect(requestIngest(request)).rejects.toThrow(/^Ingest request failed \(500\)$/)
 })
+
+test('requestIngest throws with just the status when detail is not a string', async () => {
+  server.use(
+    http.post('/api/v1/ingest', () => HttpResponse.json({ detail: { code: 7 } }, { status: 500 })),
+  )
+  await expect(requestIngest(request)).rejects.toThrow(/^Ingest request failed \(500\)$/)
+})

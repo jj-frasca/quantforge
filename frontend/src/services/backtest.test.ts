@@ -81,3 +81,10 @@ test('requestBacktest throws with just the status when the body is not JSON', as
   server.use(http.post('/api/v1/backtest', () => new HttpResponse('boom', { status: 500 })))
   await expect(requestBacktest(request)).rejects.toThrow(/^Backtest request failed \(500\)$/)
 })
+
+test('requestBacktest throws with just the status when detail is not a string', async () => {
+  server.use(
+    http.post('/api/v1/backtest', () => HttpResponse.json({ detail: { code: 7 } }, { status: 500 })),
+  )
+  await expect(requestBacktest(request)).rejects.toThrow(/^Backtest request failed \(500\)$/)
+})

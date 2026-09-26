@@ -57,3 +57,10 @@ test('requestBars throws with just the status when the body is not JSON', async 
   server.use(http.get('/api/v1/bars', () => new HttpResponse('boom', { status: 500 })))
   await expect(requestBars(query)).rejects.toThrow(/^Bars request failed \(500\)$/)
 })
+
+test('requestBars throws with just the status when detail is not a string', async () => {
+  server.use(
+    http.get('/api/v1/bars', () => HttpResponse.json({ detail: { code: 7 } }, { status: 500 })),
+  )
+  await expect(requestBars(query)).rejects.toThrow(/^Bars request failed \(500\)$/)
+})
