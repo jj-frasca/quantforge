@@ -12,8 +12,10 @@
   consolidated to call the shared `_load_frame` instead of re-implementing the same logic —
   matching `monte_carlo.py`'s existing pattern and closing the "fixing the logic twice" risk
   this finding flagged. See `fix(api): check cached range coverage, not just bar count` for
-  the commit. The Backtest/Validation Sharpe-divergence question below remains a **separate,
-  still-open thread** — this fix addresses the truncation only.
+  the commit. The Backtest/Validation Sharpe-divergence question below was a **separate
+  thread, now resolved (session 117, 2026-09-26, see below): not a bug** — `/validate`
+  deliberately runs its own catalog-derived grid search (ADR-010), never the Backtest Results
+  page's specific config, so the two numbers were never expected to agree.
 - **Found:** 2026-09-26, autonomous session 115, live-driving Backtest Results + Validation
   Report against the real running dev servers with real yfinance data (the same "agent eyes"
   technique that found FINDING-060/ADR-131/ADR-130 in prior sessions).
@@ -69,6 +71,43 @@ slow=50; the catalog's own preset text elsewhere on the same page says "SMA(50 /
 "SMA crossover on SPY" example, suggesting the catalog's canonical default may differ from the
 page's pre-filled form default) — flagging this as a real but **not yet disentangled** second
 thread, not asserting it as the same bug.
+
+### Resolution of the Sharpe-divergence thread (session 117, 2026-09-26): not a bug — the two pages run different experiments by design
+
+Read `/validate`'s implementation (`backend/app/api/v1/validation.py`) and
+`grid_from_catalog` (`backend/app/research/strategies/grid_generator.py`) directly rather than
+speculating from the observed numbers. `/validate` never runs the request's implicit "Backtest
+Results config" at all — per **ADR-010** (`docs/adr/ADR-010-strategy-catalog.md` §Consequences,
+"`/validate` is now catalog-driven too"), it mechanically derives its own grid from the catalog's
+`[minimum, maximum]` bounds (`n_per_param=3`) and reports `observed_sharpe` as
+`sharpes[argmax(sharpes)]` (`app/validation/engine.py:166-167`) — the BEST of that grid, not any
+specific hand-picked config. Ran `grid_from_catalog(find_catalog_entry("sma"), n_per_param=3)`
+directly to see exactly what grid "sma" produces:
+
+```
+(fast, slow) = (1, 2), (1, 251), (1, 500), (100, 251), (100, 500), (200, 251), (200, 500)
+```
+
+**None of these 7 configs is anywhere near Backtest Results' own default (fast=20, slow=50)** —
+by construction, since `n_per_param=3` linspaces the FULL catalog bounds (fast: 1-200, slow:
+2-500) rather than sampling near the default. So Validation Report's Observed Sharpe for "sma"
+can never equal, and has no reason to resemble, the Backtest Results page's own -0.76 for
+fast=20/slow=50 — **this is true independent of the truncation bug this finding fixes**, and
+would have been true even before the fix. The `0.00`/`0.0%`-everywhere reading specifically is
+also fully consistent with this: several of the 7 grid points are extreme (fast=1 or slow=500 on
+what was, at the time, a 251-bar truncated frame) and quite plausibly produced degenerate
+(flat/no-trade) equity curves that argmax then picked among.
+
+**Verdict: not a bug.** ADR-010 deliberately made `/validate` search the strategy's whole
+parameter space (to measure the SELECTION procedure's overfitting risk via PBO/CSCV) rather than
+validate one hand-picked config — that is the entire point of the feature, and the ADR's own
+rationale reads as an intentional, reasoned tradeoff, not an oversight. The one genuine gap this
+resolution surfaces is a **UI-honesty gap, not a logic bug**: `ValidationReportView.tsx`'s
+"Observed Sharpe" tooltip never tells a reader this number comes from the catalog's own grid
+search rather than whatever config is shown on Backtest Results — every other metric on this
+page's Term tooltips (e.g. the walk-forward Sharpe's "measures the selection procedure rather
+than one hand-picked config") already carries exactly this kind of disambiguation, so this one
+is the odd one out. See the follow-up commit for that fix.
 
 ## Why this matters
 
