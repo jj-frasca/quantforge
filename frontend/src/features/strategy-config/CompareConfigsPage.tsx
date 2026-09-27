@@ -2,6 +2,7 @@ import { useId, useMemo, useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
 import { defaultDateRange } from '../../lib/defaultDateRange'
+import { isValidDateRange } from '../../lib/dateRangeValidity'
 import type { BacktestRequest } from '../../types/backtest'
 import type { StrategySchema } from '../../types/strategies'
 import { groupByCategory } from '../strategies/groupByCategory'
@@ -91,10 +92,13 @@ export function CompareConfigsPage() {
     setRows((current) => (current.length <= MIN_ROWS ? current : current.filter((r) => r.id !== id)))
   }
 
+  const validDateRange = isValidDateRange(startDate, endDate)
+
   const canSubmit =
     !!selectedEntry &&
     rows.length >= MIN_ROWS &&
     rows.every((r) => allValid(r.values)) &&
+    validDateRange &&
     compare.status !== 'pending'
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -169,6 +173,9 @@ export function CompareConfigsPage() {
               required
             />
           </Field>
+          {!validDateRange && (
+            <p role="alert">Start date must be before end date.</p>
+          )}
           <Field label="Initial capital ($)">
             <input
               type="number"

@@ -97,6 +97,26 @@ test('editing symbol and date fields propagates to the ingest request', async ()
   expect(ingestBody?.end_date).toBe('2023-02-20T00:00:00Z')
 })
 
+test('disables submit and shows an inline message for an equal or reversed date range', async () => {
+  // FINDING-064: the backend (ADR-132) now rejects equal/reversed ranges with a 422 —
+  // this form should catch it before submit rather than round-trip to find out.
+  renderWithClient(<DataExplorerPage />)
+  const startInput = screen.getByLabelText(/start date/i)
+  const endInput = screen.getByLabelText(/end date/i)
+  await userEvent.clear(startInput)
+  await userEvent.type(startInput, '2021-01-01')
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2021-01-01')
+
+  expect(screen.getByRole('alert')).toHaveTextContent(/start date must be before end date/i)
+  expect(screen.getByRole('button', { name: /ingest data/i })).toBeDisabled()
+
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2022-01-01')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /ingest data/i })).not.toBeDisabled()
+})
+
 test('surfaces the backend detail when ingestion fails', async () => {
   server.use(
     http.post('/api/v1/ingest', () =>

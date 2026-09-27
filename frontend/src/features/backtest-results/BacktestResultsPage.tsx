@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
 import { defaultDateRange } from '../../lib/defaultDateRange'
+import { isValidDateRange } from '../../lib/dateRangeValidity'
 import { useAppShell } from '../../state/appShell'
 import type { BacktestRequest, StrategyConfig } from '../../types/backtest'
 import type { StrategySchema } from '../../types/strategies'
@@ -48,6 +49,8 @@ export function BacktestResultsPage() {
   const [initialCapital, setInitialCapital] = useState<number>(DEFAULT_INITIAL_CAPITAL)
   const [costRateBps, setCostRateBps] = useState<number>(DEFAULT_COST_RATE_BPS)
   const [selection, setSelection] = useState<StrategySelection | null>(null)
+
+  const validDateRange = isValidDateRange(startDate, endDate)
 
   const catalog = strategies.data
   const selectedEntry = selection
@@ -163,6 +166,9 @@ export function BacktestResultsPage() {
               required
             />
           </Field>
+          {!validDateRange && (
+            <p role="alert">Start date must be before end date.</p>
+          )}
           <Field
             label="Initial capital ($)"
             hint="Starting equity for the backtest; defaults to $100,000."
@@ -187,7 +193,10 @@ export function BacktestResultsPage() {
               onChange={(event) => setCostRateBps(Number(event.target.value))}
             />
           </Field>
-          <button type="submit" disabled={backtest.isPending || !allParamsValid(paramValues)}>
+          <button
+            type="submit"
+            disabled={backtest.isPending || !allParamsValid(paramValues) || !validDateRange}
+          >
             {backtest.isPending ? 'Running…' : 'Run backtest'}
           </button>
           </form>

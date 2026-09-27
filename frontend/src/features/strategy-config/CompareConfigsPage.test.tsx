@@ -240,6 +240,27 @@ test('adding a row after the comparison settles renders "No result returned" for
   expect(screen.getByText(/no result returned\./i)).toBeInTheDocument()
 })
 
+test('disables submit and shows an inline message for an equal or reversed date range', async () => {
+  // FINDING-064: the backend (ADR-133) now rejects equal/reversed ranges with a 422 —
+  // this form should catch it before submit rather than round-trip to find out.
+  renderWithClient(<CompareConfigsPage />)
+  await screen.findByRole('group', { name: /^config A$/i })
+  const startInput = screen.getByLabelText(/start date/i)
+  const endInput = screen.getByLabelText(/end date/i)
+  await userEvent.clear(startInput)
+  await userEvent.type(startInput, '2021-01-01')
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2021-01-01')
+
+  expect(screen.getByRole('alert')).toHaveTextContent(/start date must be before end date/i)
+  expect(screen.getByRole('button', { name: /run comparison/i })).toBeDisabled()
+
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2022-01-01')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /run comparison/i })).not.toBeDisabled()
+})
+
 test('surfaces a catalog error when /strategies fails', async () => {
   server.use(http.get('/api/v1/strategies', () => HttpResponse.json({}, { status: 500 })))
   renderWithClient(<CompareConfigsPage />)

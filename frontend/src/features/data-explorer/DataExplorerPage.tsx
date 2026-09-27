@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
 import { defaultDateRange } from '../../lib/defaultDateRange'
+import { isValidDateRange } from '../../lib/dateRangeValidity'
 import type { BarsQuery } from '../../types/bars'
 import type { IngestRequest } from '../../types/ingest'
 import { IngestResultView } from './IngestResultView'
@@ -33,6 +34,7 @@ export function DataExplorerPage() {
   // committedQuery is set on submit so the chart's useQuery doesn't fire on mount.
   const [committedQuery, setCommittedQuery] = useState<BarsQuery | null>(null)
   const priceBars = usePriceBars(committedQuery)
+  const validDateRange = isValidDateRange(startDate, endDate)
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -80,7 +82,10 @@ export function DataExplorerPage() {
             required
           />
         </Field>
-        <button type="submit" disabled={ingest.isPending}>
+        {!validDateRange && (
+          <p role="alert">Start date must be before end date.</p>
+        )}
+        <button type="submit" disabled={ingest.isPending || !validDateRange}>
           {ingest.isPending ? 'Ingesting…' : 'Ingest data'}
         </button>
       </form>

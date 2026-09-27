@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
 import { defaultDateRange } from '../../lib/defaultDateRange'
+import { isValidDateRange } from '../../lib/dateRangeValidity'
 import { useAppShell } from '../../state/appShell'
 import type { ValidateRequest } from '../../types/validation'
 import { groupByCategory } from '../strategies/groupByCategory'
@@ -48,6 +49,7 @@ export function ValidationReportPage() {
   )
   const [startDate, setStartDate] = useState(initialHandoff?.startDate ?? DEFAULTS.startDate)
   const [endDate, setEndDate] = useState(initialHandoff?.endDate ?? DEFAULTS.endDate)
+  const validDateRange = isValidDateRange(startDate, endDate)
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -116,7 +118,10 @@ export function ValidationReportPage() {
               required
             />
           </Field>
-          <button type="submit" disabled={validation.isPending}>
+          {!validDateRange && (
+            <p role="alert">Start date must be before end date.</p>
+          )}
+          <button type="submit" disabled={validation.isPending || !validDateRange}>
             {validation.isPending ? 'Validating…' : 'Run validation'}
           </button>
         </form>

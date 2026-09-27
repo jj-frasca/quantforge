@@ -346,6 +346,31 @@ test('surfaces a catalog error when /strategies fails', async () => {
   expect(screen.queryByLabelText(/^strategy$/i)).not.toBeInTheDocument()
 })
 
+test('disables submit and shows an inline message for an equal or reversed date range', async () => {
+  // FINDING-064: the backend (ADR-133) now rejects equal/reversed ranges with a 422 —
+  // this form should catch it before submit rather than round-trip to find out.
+  renderWithClient(<BacktestResultsPage />)
+  const startInput = await screen.findByLabelText(/start date/i)
+  const endInput = screen.getByLabelText(/end date/i)
+  await userEvent.clear(startInput)
+  await userEvent.type(startInput, '2021-01-01')
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2021-01-01')
+
+  expect(screen.getByRole('alert')).toHaveTextContent(/start date must be before end date/i)
+  expect(screen.getByRole('button', { name: /run backtest/i })).toBeDisabled()
+
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2020-06-01')
+  expect(screen.getByRole('alert')).toHaveTextContent(/start date must be before end date/i)
+  expect(screen.getByRole('button', { name: /run backtest/i })).toBeDisabled()
+
+  await userEvent.clear(endInput)
+  await userEvent.type(endInput, '2022-01-01')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /run backtest/i })).not.toBeDisabled()
+})
+
 test('shows a "Running…" label on the submit button while the backtest is in flight', async () => {
   let releaseResponse: () => void = () => {}
   const pending = new Promise<void>((resolve) => {
