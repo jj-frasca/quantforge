@@ -118,6 +118,12 @@ Single-name forward scoring, lifecycle decisions, and paper-order target sizing 
 range, and executed revision. The report symbol must equal the managed position symbol. Legacy
 scores keep `None`; failed or mismatched evidence produces no new score or target.
 
+Cross-sectional forward scoring requires an exact mapping of every frozen universe symbol to a
+`ResearchDataset` (ADR-140). Reports must match their mapping symbols, every component must name one
+executed revision, and panel alignment must retain the frozen columns in order. Any component
+failure leaves the prior factor score unchanged; a new score stores ordered
+`ResearchDatasetEvidence` for the complete panel.
+
 ---
 
 ## 5. The 8 quality checks (formal definitions)

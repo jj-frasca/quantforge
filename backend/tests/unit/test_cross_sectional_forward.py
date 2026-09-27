@@ -4,12 +4,16 @@ on bars AFTER its freeze boundary and benchmarking against the equal-weight long
 same benchmark ADR-024 used at the holdout). Everything is pure over injectable panels -- no network,
 no look-ahead (weights at t use prices <= t)."""
 
+from dataclasses import replace
+from typing import cast
+
 import numpy as np
 import pandas as pd
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from app.data.models import DataQualityReport
 from app.research.cross_sectional.forward import (
     CrossSectionalExitPolicy,
     CrossSectionalForwardScore,
@@ -21,6 +25,7 @@ from app.research.cross_sectional.forward import (
     score_forward,
 )
 from app.research.cross_sectional.search import CrossSectionalExperiment, CrossSectionalTrial
+from app.research.dataset import ResearchDataset
 from app.research.lab.experiment import Graduate
 from app.research.lab.gate import GateConfig, GateResult
 
@@ -49,6 +54,23 @@ def _momentum_position(panel: pd.DataFrame, split: int = 400) -> CrossSectionalP
         cost_rate=0.001,
         frozen_at=panel.index[split].to_pydatetime(),
     )
+
+
+def _datasets(panel: pd.DataFrame, *, revision: str = "a" * 40) -> dict[str, ResearchDataset]:
+    start = panel.index.min().to_pydatetime()
+    end = (panel.index.max() + pd.Timedelta(days=1)).to_pydatetime()
+    return {
+        symbol: ResearchDataset(
+            frame=pd.DataFrame({"close": panel[symbol]}, index=panel.index),
+            quality_report=DataQualityReport(symbol=symbol, source="yfinance", checked_at=end),
+            source="yfinance",
+            adapter_version="test-1",
+            start=start,
+            end=end,
+            git_commit_hash=revision,
+        )
+        for symbol in panel.columns
+    }
 
 
 def test_score_forward_scores_only_post_freeze_bars_vs_equal_weight_benchmark() -> None:
@@ -237,9 +259,120 @@ def test_manage_book_promotes_a_new_graduate() -> None:
     )
     # Freeze near the end so the new position is inside its grace period -> stays open.
     now = panel.index[-5].to_pydatetime()
-    book = manage_cross_sectional_book([], [exp], lambda _p: panel, now=now)
+    book = manage_cross_sectional_book([], [exp], lambda _p: _datasets(panel), now=now)
     assert len(book) == 1
     assert book[0].status == "open" and book[0].strategy_name == "xs_momentum"
+
+
+def test_manage_book_persists_ordered_complete_panel_evidence() -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel)
+
+    book = manage_cross_sectional_book(
+        [position], [], lambda _position: _datasets(panel), now=panel.index.max().to_pydatetime()
+    )
+
+    assert book[0].score is not None
+    assert book[0].score.evidence is not None
+    assert [item.quality_report.symbol for item in book[0].score.evidence] == list(panel.columns)
+
+
+def test_manage_book_plain_panel_cannot_update_a_frozen_factor() -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel)
+
+    book = manage_cross_sectional_book(
+        [position], [], lambda _position: panel, now=panel.index.max().to_pydatetime()
+    )
+
+    assert book == [position]
+
+
+def test_manage_book_defers_when_one_frozen_symbol_is_missing() -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel)
+    incomplete = _datasets(panel)
+    incomplete.pop(panel.columns[-1])
+
+    book = manage_cross_sectional_book(
+        [position], [], lambda _position: incomplete, now=panel.index.max().to_pydatetime()
+    )
+
+    assert book == [position]
+
+
+def test_manage_book_defers_when_frozen_universe_contains_duplicates() -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel).model_copy(
+        update={"universe_symbols": [*panel.columns[:-1], panel.columns[-2]]}
+    )
+
+    book = manage_cross_sectional_book(
+        [position], [], lambda _position: _datasets(panel), now=panel.index.max().to_pydatetime()
+    )
+
+    assert book == [position]
+
+
+def test_manage_book_defers_when_mapping_value_is_not_a_research_dataset() -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel)
+    datasets = _datasets(panel)
+    datasets[panel.columns[0]] = cast(ResearchDataset, panel[[panel.columns[0]]])
+
+    book = manage_cross_sectional_book(
+        [position], [], lambda _position: datasets, now=panel.index.max().to_pydatetime()
+    )
+
+    assert book == [position]
+
+
+def test_manage_book_defers_when_quality_report_symbol_is_mislabeled() -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel)
+    datasets = _datasets(panel)
+    symbol = panel.columns[0]
+    datasets[symbol] = replace(
+        datasets[symbol],
+        quality_report=datasets[symbol].quality_report.model_copy(update={"symbol": "WRONG"}),
+    )
+
+    book = manage_cross_sectional_book(
+        [position], [], lambda _position: datasets, now=panel.index.max().to_pydatetime()
+    )
+
+    assert book == [position]
+
+
+def test_manage_book_defers_when_component_revisions_differ() -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel)
+    datasets = _datasets(panel)
+    symbol = panel.columns[0]
+    datasets[symbol] = replace(datasets[symbol], git_commit_hash="b" * 40)
+
+    book = manage_cross_sectional_book(
+        [position], [], lambda _position: datasets, now=panel.index.max().to_pydatetime()
+    )
+
+    assert book == [position]
+
+
+def test_manage_book_defers_when_alignment_drops_a_short_history_symbol() -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel)
+    datasets = _datasets(panel)
+    symbol = panel.columns[0]
+    short_frame = datasets[symbol].frame.iloc[-100:]
+    datasets[symbol] = replace(
+        datasets[symbol], frame=short_frame, start=short_frame.index.min().to_pydatetime()
+    )
+
+    book = manage_cross_sectional_book(
+        [position], [], lambda _position: datasets, now=panel.index.max().to_pydatetime()
+    )
+
+    assert book == [position]
 
 
 def test_manage_book_ignores_experiments_without_a_graduate() -> None:
@@ -262,14 +395,14 @@ def test_manage_book_retires_a_deteriorating_open_position_and_does_not_re_promo
         exp, frozen_at=panel.index[400].to_pydatetime(), cost_rate=0.001
     )
     now = panel.index.max().to_pydatetime()
-    book = manage_cross_sectional_book([open_pos], [exp], lambda _p: panel, now=now)
+    book = manage_cross_sectional_book([open_pos], [exp], lambda _p: _datasets(panel), now=now)
     assert len(book) == 1  # the same graduate is NOT re-promoted alongside the open one
     retired = book[0]
     assert retired.status == "retired" and retired.retired_at == now
     assert retired.exit_reasons  # carries the reason(s) it was cut
 
     # A retired factor is kept as an honest record and never re-promoted.
-    book2 = manage_cross_sectional_book(book, [exp], lambda _p: panel, now=now)
+    book2 = manage_cross_sectional_book(book, [exp], lambda _p: _datasets(panel), now=now)
     assert len(book2) == 1 and book2[0].status == "retired"
 
 

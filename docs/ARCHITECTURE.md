@@ -766,6 +766,13 @@ mislabeled datasets, and failed quality checks cannot update a position or produ
 Legacy scores remain readable with explicitly absent evidence. Cross-sectional forward panels have
 a separate fixed-universe identity and are not covered by this single-name decision.
 
+**Cross-sectional forward factors keep their frozen universe (ADR-140).** A production update now
+requires one quality-gated `ResearchDataset` for every symbol frozen at promotion, one executed
+revision, and the exact same columns after common-calendar/history alignment. Any missing, failed,
+mislabeled, short-history, or identity-drifted component defers the whole factor update rather than
+silently changing its ranks or equal-weight benchmark. New scores persist the ordered evidence for
+every component; legacy and direct synthetic scores remain explicitly evidence-null.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

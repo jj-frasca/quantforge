@@ -179,6 +179,13 @@ request range, and executed revision), and its report symbol must match the froz
 Provider/quality failures leave the prior managed score unchanged and yield no broker target;
 legacy scores without evidence remain valid.
 
+ADR-140 applies panel semantics to cross-sectional forward testing. The managed-book provider must
+return one `ResearchDataset` per frozen universe symbol; exact membership, report symbols, common
+revision, and post-alignment columns are checked before the factor or equal-weight benchmark is
+computed. Any failure defers the entire position update instead of scoring a different subset.
+New `CrossSectionalForwardScore` rows carry the ordered complete component evidence; legacy and
+direct synthetic scores may retain `None`.
+
 ---
 
 ## 8. Oracle tests (must pass before any Phase 4 validation)

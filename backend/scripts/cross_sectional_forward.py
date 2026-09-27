@@ -14,8 +14,6 @@ DATA SOURCE: forces YFinanceAdapter (long common history), same rationale as the
 from datetime import UTC, datetime
 from pathlib import Path
 
-import pandas as pd
-
 from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.cross_sectional.forward import (
@@ -23,9 +21,8 @@ from app.research.cross_sectional.forward import (
     manage_cross_sectional_book,
 )
 from app.research.cross_sectional.forward_store import JsonFileCrossSectionalBook
-from app.research.cross_sectional.hunt import price_panel_from_frames
 from app.research.cross_sectional.store import JsonFileCrossSectionalStore
-from app.research.frames import bars_to_frame
+from app.research.dataset import ResearchDataset, current_git_revision, fetch_research_dataset
 from app.research.lab.history import RECENT_HISTORY_START
 
 DATA = Path(__file__).resolve().parents[2] / "data"
@@ -39,18 +36,20 @@ def main() -> None:
     # forced: cross-sectional momentum needs a long common history.
     adapter = YFinanceAdapter(retry=CLOUD)
     now = datetime.now(UTC)
+    git_commit_hash = current_git_revision()
     graduates = [e for e in store.all() if e.graduate is not None]
 
-    def panel_provider(position: CrossSectionalPosition) -> pd.DataFrame:
-        frames: dict[str, pd.DataFrame] = {}
-        for symbol in position.universe_symbols:
-            try:
-                frames[symbol] = bars_to_frame(
-                    adapter.fetch_price_bars(symbol, RECENT_HISTORY_START, now)
-                )
-            except (ValueError, KeyError, OSError):
-                continue  # a dropped name just narrows the panel; the factor still ranks the rest.
-        return price_panel_from_frames(frames)
+    def panel_provider(position: CrossSectionalPosition) -> dict[str, ResearchDataset]:
+        return {
+            symbol: fetch_research_dataset(
+                adapter,
+                symbol,
+                RECENT_HISTORY_START,
+                now,
+                git_commit_hash=git_commit_hash,
+            )
+            for symbol in position.universe_symbols
+        }
 
     positions = manage_cross_sectional_book(
         book_store.positions(), graduates, panel_provider, now=now

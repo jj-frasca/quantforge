@@ -8,7 +8,7 @@ used at the holdout. This mirrors the SHAPE of the single-name `paper.py` / `por
 injectable panels -- no network, no look-ahead (weights at t use prices <= t).
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from typing import Literal
 
@@ -17,8 +17,10 @@ from pydantic import BaseModel, ConfigDict
 
 from app.research.backtesting.metrics import max_drawdown, sharpe_ratio
 from app.research.cross_sectional.engine import asset_returns, portfolio_returns
+from app.research.cross_sectional.hunt import price_panel_from_frames
 from app.research.cross_sectional.registry import default_strategies
 from app.research.cross_sectional.search import CrossSectionalExperiment
+from app.research.dataset import ResearchDataset, ResearchDatasetEvidence
 
 
 class CrossSectionalForwardEquityPoint(BaseModel):
@@ -48,6 +50,8 @@ class CrossSectionalForwardScore(BaseModel):
     beats_benchmark: bool
     as_of: datetime
     forward_equity: list[CrossSectionalForwardEquityPoint] = []
+    # ADR-140: absent only for legacy rows and direct synthetic scoring.
+    evidence: list[ResearchDatasetEvidence] | None = None
 
 
 class CrossSectionalPosition(BaseModel):
@@ -71,7 +75,7 @@ class CrossSectionalPosition(BaseModel):
     exit_reasons: list[str] = []
 
 
-PanelProvider = Callable[[CrossSectionalPosition], pd.DataFrame]
+PanelDatasetProvider = Callable[[CrossSectionalPosition], Mapping[str, ResearchDataset]]
 
 
 def _factor_returns(position: CrossSectionalPosition, panel: pd.DataFrame) -> pd.Series:
@@ -94,7 +98,10 @@ def _benchmark_returns(panel: pd.DataFrame) -> pd.Series:
 
 
 def score_forward(
-    position: CrossSectionalPosition, panel: pd.DataFrame
+    position: CrossSectionalPosition,
+    panel: pd.DataFrame,
+    *,
+    evidence: list[ResearchDatasetEvidence] | None = None,
 ) -> CrossSectionalForwardScore:
     """Score `position` on the bars of `panel` strictly after its freeze date, vs the equal-weight
     long-only universe (ADR-025). The engine runs over the FULL panel so signals are warmed up by the
@@ -111,6 +118,7 @@ def score_forward(
             benchmark_sharpe=0.0,
             beats_benchmark=False,
             as_of=as_of.to_pydatetime(),
+            evidence=evidence,
         )
 
     fwd = _factor_returns(position, panel)[forward_mask]
@@ -136,7 +144,37 @@ def score_forward(
         beats_benchmark=fwd_sharpe > bench_sharpe,
         as_of=as_of.to_pydatetime(),
         forward_equity=forward_equity,
+        evidence=evidence,
     )
+
+
+def _frozen_panel(
+    position: CrossSectionalPosition, datasets: Mapping[str, ResearchDataset]
+) -> tuple[pd.DataFrame, list[ResearchDatasetEvidence]]:
+    """Validate and align the exact checked dataset set frozen on the position (ADR-140)."""
+    expected = position.universe_symbols
+    if len(expected) != len(set(expected)):
+        raise ValueError("frozen cross-sectional universe symbols must be unique")
+    if set(datasets) != set(expected):
+        raise ValueError("forward datasets must exactly match the frozen universe")
+
+    ordered: list[ResearchDataset] = []
+    for symbol in expected:
+        dataset = datasets[symbol]
+        if not isinstance(dataset, ResearchDataset):
+            raise TypeError("cross-sectional forward provider must return ResearchDataset values")
+        if dataset.quality_report.symbol != symbol.strip().upper():
+            raise ValueError("forward dataset symbol does not match frozen universe symbol")
+        ordered.append(dataset)
+    if len({dataset.git_commit_hash for dataset in ordered}) != 1:
+        raise ValueError("all forward panel datasets must name the same git revision")
+
+    panel = price_panel_from_frames(
+        {symbol: dataset.frame for symbol, dataset in zip(expected, ordered, strict=True)}
+    )
+    if list(panel.columns) != expected:
+        raise ValueError("aligned forward panel must retain the exact frozen universe")
+    return panel, [dataset.evidence() for dataset in ordered]
 
 
 class CrossSectionalExitPolicy(BaseModel):
@@ -256,7 +294,7 @@ def freeze_cross_sectional_graduate(
 def manage_cross_sectional_book(
     positions: list[CrossSectionalPosition],
     graduate_experiments: list[CrossSectionalExperiment],
-    panel_provider: PanelProvider,
+    panel_provider: PanelDatasetProvider,
     *,
     exit_policy: CrossSectionalExitPolicy | None = None,
     now: datetime,
@@ -289,8 +327,15 @@ def manage_cross_sectional_book(
         if position.status != "open":
             updated.append(position)
             continue
-        panel = panel_provider(position)
-        score = score_forward(position, panel)
+        try:
+            datasets = panel_provider(position)
+            if not isinstance(datasets, Mapping):
+                raise TypeError("cross-sectional forward provider must return a dataset mapping")
+            panel, evidence = _frozen_panel(position, datasets)
+        except (ValueError, KeyError, OSError, ArithmeticError, TypeError):
+            updated.append(position)
+            continue
+        score = score_forward(position, panel, evidence=evidence)
         decision = evaluate_cross_sectional_lifecycle(position, panel, policy)
         if decision.action == "retire":
             updated.append(
