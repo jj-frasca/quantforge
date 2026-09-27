@@ -1,6 +1,7 @@
 """DataQualityIssue / DataQualityReport models: severity validation, UTC checked_at, and that `passed` is computed (False iff any error-severity issue)."""
 
 from datetime import UTC, datetime
+from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
@@ -23,6 +24,13 @@ def _report(**overrides: object) -> DataQualityReport:
 
 def test_quality_report_with_no_issues_passes() -> None:
     assert _report().passed is True
+
+
+def test_quality_report_has_stable_canonical_identity() -> None:
+    report = _report()
+
+    assert isinstance(report.id, UUID)
+    assert DataQualityReport.model_validate_json(report.model_dump_json()).id == report.id
 
 
 def test_legacy_quality_report_without_source_is_explicitly_unknown() -> None:

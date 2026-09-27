@@ -114,6 +114,7 @@ Both bounds must be timezone-aware and `start_date < end_date` (ADR-132). Invali
     "bars_ingested": 230,
     "stored": true,
     "quality_report": {
+      "id": "b69c580d-a0fb-4ec6-8a66-d7044a0f46e1",
       "symbol": "AAPL",
       "source": "yfinance",
       "checked_at": "...",
@@ -126,6 +127,8 @@ Both bounds must be timezone-aware and `start_date < end_date` (ADR-132). Invali
   nothing was written to the repo (the report itself still is).
   `quality_report.source` names the adapter whose evidence was checked; it is nullable only for
   legacy or direct reports whose acquisition source was not recorded (ADR-135).
+  `quality_report.id` is the stable persisted row identity to record as
+  `ExperimentManifest.data_quality_report_id` (ADR-136).
 
 **DI**: `get_data_adapter` + `get_repository` (both swappable via `app.dependency_overrides`).
 

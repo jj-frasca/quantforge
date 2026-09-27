@@ -24,9 +24,10 @@ what makes vendor cross-validation (quality check 8) real. Each adapter sets an
   (`dict | None`; `None` = clean). Prices are `Decimal`, never `float`.
 - **FundamentalData**: symbol, report_date, pe_ratio/pb_ratio/ps_ratio/ev_ebitda, revenue,
   net_income, market_cap, sector, industry, source. Ratios are nullable — never coerce missing to 0.
-- **DataQualityReport**: symbol, nullable source (`None` only for legacy/direct unknown provenance),
-  checked_at, issues (list), `passed` (bool). Pipeline reports carry the active adapter source
-  even when source validation fails (ADR-135).
+- **DataQualityReport**: stable UUID `id`, symbol, nullable source (`None` only for legacy/direct
+  unknown provenance), checked_at, issues (list), `passed` (bool). The id is created before storage
+  for exact manifest linkage (ADR-136); pipeline reports carry the active adapter source even when
+  source validation fails (ADR-135).
   ALL downstream components MUST verify `passed is True` before using the data (ADR-006).
 
 ## DataQualityEngine — 8 Heuristic Checks + structural identity/range guards

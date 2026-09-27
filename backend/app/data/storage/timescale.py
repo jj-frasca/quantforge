@@ -1,5 +1,4 @@
 from datetime import datetime
-from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -31,7 +30,7 @@ class TimescaleDBPriceBarRepository:
         with self._session_factory() as session:
             session.add(
                 DataQualityReportORM(
-                    id=uuid4(),
+                    id=report.id,
                     symbol=report.symbol,
                     source=report.source,
                     checked_at=report.checked_at,

@@ -88,6 +88,7 @@ class DataQualityIssue:
     context: dict | None # offending values, dates, thresholds
 
 class DataQualityReport:
+    id: UUID                       # stable before/during/after persistence; manifest lineage key
     symbol: str
     source: Source | None          # adapter checked; None = legacy/direct unknown provenance
     checked_at: datetime          # tz-aware UTC
@@ -95,7 +96,9 @@ class DataQualityReport:
     passed: bool                  # downstream MUST verify passed is True (ADR-006)
 ```
 `passed` is `False` if any issue has severity `"error"`. `warning`/`info` do not fail the gate
-but are recorded. Wording is always "flags potential X" (CLAUDE.md rule 6).
+but are recorded. The report creates its UUID before persistence; TimescaleDB stores that exact
+value so `ExperimentManifest.data_quality_report_id` can identify the checked snapshot (ADR-136).
+Wording is always "flags potential X" (CLAUDE.md rule 6).
 
 ---
 

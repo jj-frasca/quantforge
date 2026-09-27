@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
@@ -32,6 +33,7 @@ class DataQualityReport(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+    id: UUID = Field(default_factory=uuid4)
     symbol: str
     source: Source | None = None
     checked_at: datetime

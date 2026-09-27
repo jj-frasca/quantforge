@@ -57,6 +57,7 @@ def test_ingest_stores_bars_and_returns_a_passing_report() -> None:
         assert body["bars_ingested"] == 30
         assert body["stored"] is True
         assert body["quality_report"]["passed"] is True
+        assert body["quality_report"]["id"] == str(repo.quality_reports[0].id)
         # bars are queryable back through the repo
         assert (
             len(
