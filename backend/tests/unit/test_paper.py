@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.data.models import DataQualityReport
+from app.research.dataset import ResearchDataset
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import (
@@ -36,9 +38,24 @@ def _position(frozen_at: datetime = _FREEZE) -> PaperPosition:
     )
 
 
+def _dataset(frame: pd.DataFrame | None = None) -> ResearchDataset:
+    frame = _frame() if frame is None else frame
+    return ResearchDataset(
+        frame=frame,
+        quality_report=DataQualityReport(
+            symbol="AAA", source="yfinance", checked_at=datetime(2024, 1, 1, tzinfo=UTC)
+        ),
+        source="yfinance",
+        adapter_version="test-1",
+        start=frame.index.min().to_pydatetime(),
+        end=(frame.index.max() + pd.Timedelta(days=1)).to_pydatetime(),
+        git_commit_hash="a" * 40,
+    )
+
+
 def test_evaluate_forward_scores_only_bars_after_the_freeze() -> None:
     frame = _frame()
-    score = evaluate_forward(_position(), frame)
+    score = evaluate_forward(_position(), _dataset(frame))
     assert isinstance(score, ForwardScore)
     # Only bars strictly after the freeze date are counted as forward.
     expected_fwd = int((frame.index > _FREEZE).sum())
@@ -52,7 +69,7 @@ def test_evaluate_forward_scores_only_bars_after_the_freeze() -> None:
 
 def test_no_forward_bars_yet_when_freeze_is_after_the_last_bar() -> None:
     frame = _frame()
-    score = evaluate_forward(_position(datetime(2030, 1, 1, tzinfo=UTC)), frame)
+    score = evaluate_forward(_position(datetime(2030, 1, 1, tzinfo=UTC)), _dataset(frame))
     assert score.forward_bars == 0
     assert score.forward_return == 0.0
     assert score.beats_buy_and_hold is False
@@ -63,7 +80,7 @@ def test_evaluate_forward_populates_a_normalized_forward_equity_series() -> None
     """ADR-023: the forward equity index (base 1.0, compounding per bar) is served for the
     dashboard curve. Its terminal value must reconcile with the reported scalar returns."""
     frame = _frame()
-    score = evaluate_forward(_position(), frame)
+    score = evaluate_forward(_position(), _dataset(frame))
     # One point per forward bar.
     assert len(score.forward_equity) == score.forward_bars
     assert all(isinstance(p, ForwardEquityPoint) for p in score.forward_equity)
@@ -84,7 +101,7 @@ def test_forward_equity_series_round_trips_through_the_json_store(tmp_path: obje
     assert isinstance(tmp_path, pathlib.Path)
     frame = _frame()
     position = _position()
-    scored = position.model_copy(update={"score": evaluate_forward(position, frame)})
+    scored = position.model_copy(update={"score": evaluate_forward(position, _dataset(frame))})
     store = JsonFilePaperPortfolio(tmp_path / "pf.json")
     store.save([scored])
     reloaded = store.positions()[0]
@@ -143,7 +160,7 @@ def test_freeze_graduate_rejects_a_non_graduate() -> None:
 
 
 def test_position_and_score_round_trip_json() -> None:
-    pos = _position().model_copy(update={"score": evaluate_forward(_position(), _frame())})
+    pos = _position().model_copy(update={"score": evaluate_forward(_position(), _dataset())})
     assert PaperPosition.model_validate_json(pos.model_dump_json()) == pos
 
 
@@ -161,7 +178,7 @@ def test_portfolio_add_persists_and_dedups(tmp_path) -> None:
 
 def test_portfolio_save_round_trips_scores(tmp_path) -> None:
     path = tmp_path / "portfolio.json"
-    scored = _position().model_copy(update={"score": evaluate_forward(_position(), _frame())})
+    scored = _position().model_copy(update={"score": evaluate_forward(_position(), _dataset())})
     JsonFilePaperPortfolio(path).save([scored])
     loaded = JsonFilePaperPortfolio(path).positions()
     assert loaded == [scored]

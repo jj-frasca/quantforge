@@ -17,14 +17,12 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-import pandas as pd
-
 from app.config import get_settings
 from app.dependencies import build_data_adapter
 from app.execution.alpaca_broker import AlpacaBroker, AlpacaOrder, reconcile
 from app.execution.equity_curve import JsonFileEquityCurve, append_equity_point
 from app.execution.sizing import TargetPosition, equal_weight_targets, quote_position
-from app.research.frames import bars_to_frame
+from app.research.dataset import ResearchDataset, current_git_revision, fetch_research_dataset
 from app.research.lab.history import RECENT_HISTORY_START
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
 
@@ -36,7 +34,7 @@ PAPER_URL = "https://paper-api.alpaca.markets"
 
 def compute_targets(
     open_positions: list[PaperPosition],
-    frame_provider: Callable[[str], pd.DataFrame],
+    frame_provider: Callable[[str], ResearchDataset],
     equity: float,
 ) -> list[TargetPosition]:
     """Pure orchestration: resolve each OPEN position over its fresh frame into a signed,
@@ -45,7 +43,15 @@ def compute_targets(
     """
     quotes = []
     for position in open_positions:
-        frame = frame_provider(position.symbol)
+        try:
+            dataset = frame_provider(position.symbol)
+            if not isinstance(dataset, ResearchDataset):
+                raise TypeError("paper target provider must return ResearchDataset")
+            if dataset.quality_report.symbol != position.symbol.strip().upper():
+                raise ValueError("paper target dataset symbol does not match position")
+        except (ValueError, KeyError, OSError, ArithmeticError):
+            continue
+        frame = dataset.frame
         if frame.empty:
             continue
         quotes.append(quote_position(position, frame))
@@ -58,9 +64,16 @@ def main() -> None:  # pragma: no cover - live wiring, exercised by the @live sm
     open_positions = [p for p in portfolio.positions() if p.status == "open"]
     adapter = build_data_adapter(settings)
     now = datetime.now(UTC)
+    git_commit_hash = current_git_revision()
 
-    def frame_provider(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, RECENT_HISTORY_START, now))
+    def frame_provider(symbol: str) -> ResearchDataset:
+        return fetch_research_dataset(
+            adapter,
+            symbol,
+            RECENT_HISTORY_START,
+            now,
+            git_commit_hash=git_commit_hash,
+        )
 
     broker = AlpacaBroker(PAPER_URL, settings.alpaca_api_key, settings.alpaca_secret_key)
     account = broker.account()

@@ -12,8 +12,10 @@ import pandas as pd
 import pytest
 from scripts.paper_broker import PAPER_URL, compute_targets
 
+from app.data.models import DataQualityReport
 from app.execution.alpaca_broker import AlpacaBroker, reconcile
 from app.execution.sizing import TargetPosition
+from app.research.dataset import ResearchDataset
 from app.research.lab.paper import PaperPosition
 
 
@@ -41,27 +43,52 @@ def _empty_frame() -> pd.DataFrame:
     return pd.DataFrame({"close": pd.Series(dtype="float64")}, index=pd.DatetimeIndex([], tz="UTC"))
 
 
+def _dataset(symbol: str, frame: pd.DataFrame) -> ResearchDataset:
+    aware = frame.copy()
+    if aware.index.tz is None:
+        aware.index = aware.index.tz_localize("UTC")
+    return ResearchDataset(
+        frame=aware,
+        quality_report=DataQualityReport(
+            symbol=symbol, source="yfinance", checked_at=datetime(2024, 1, 9, tzinfo=UTC)
+        ),
+        source="yfinance",
+        adapter_version="test-1",
+        start=datetime(2024, 1, 1, tzinfo=UTC),
+        end=datetime(2024, 1, 9, tzinfo=UTC),
+        git_commit_hash="a" * 40,
+    )
+
+
 def test_compute_targets_equal_weights_open_positions() -> None:
     frames = {"AAPL": _uptrend_frame(), "MSFT": _uptrend_frame()}
     targets = compute_targets(
-        [_position("AAPL"), _position("MSFT")], lambda s: frames[s], equity=100_000.0
+        [_position("AAPL"), _position("MSFT")],
+        lambda s: _dataset(s, frames[s]),
+        equity=100_000.0,
     )
     # Two active longs, last close 8.0 each: 50k slice / 8 = 6250 shares apiece.
     assert {t.symbol: t.target_qty for t in targets} == {"AAPL": 6250, "MSFT": 6250}
 
 
 def test_compute_targets_signs_short_positions() -> None:
-    targets = compute_targets([_position("AAPL")], lambda _s: _downtrend_frame(), equity=100_000.0)
+    targets = compute_targets(
+        [_position("AAPL")],
+        lambda s: _dataset(s, _downtrend_frame()),
+        equity=100_000.0,
+    )
     # Single short at last close 1.0: full equity slice * -1 / 1.0 = -100000 shares.
     assert targets[0].symbol == "AAPL"
     assert targets[0].target_qty == -100_000
 
 
 def test_compute_targets_skips_positions_with_no_bars() -> None:
-    frames = {"AAPL": _uptrend_frame(), "MSFT": _empty_frame()}
-    targets = compute_targets(
-        [_position("AAPL"), _position("MSFT")], lambda s: frames[s], equity=100_000.0
-    )
+    def provider(symbol: str) -> ResearchDataset:
+        if symbol == "MSFT":
+            raise ValueError("quality report failed for MSFT: insufficient_data")
+        return _dataset(symbol, _uptrend_frame())
+
+    targets = compute_targets([_position("AAPL"), _position("MSFT")], provider, equity=100_000.0)
     # MSFT has no fresh bars → no quote; AAPL takes the whole book (100k / 8 = 12500).
     assert {t.symbol: t.target_qty for t in targets} == {"AAPL": 12500}
 
@@ -73,12 +100,49 @@ def test_compute_targets_empty_book_is_no_targets() -> None:
 def test_compute_targets_uses_provider_per_symbol() -> None:
     seen: list[str] = []
 
-    def provider(symbol: str) -> pd.DataFrame:
+    def provider(symbol: str) -> ResearchDataset:
         seen.append(symbol)
-        return _uptrend_frame()
+        return _dataset(symbol, _uptrend_frame())
 
     compute_targets([_position("AAPL"), _position("MSFT")], provider, equity=1_000.0)
     assert seen == ["AAPL", "MSFT"]
+
+
+def test_compute_targets_accepts_only_quality_checked_datasets() -> None:
+    with pytest.raises(TypeError, match="ResearchDataset"):
+        compute_targets([_position("AAPL")], lambda _symbol: _uptrend_frame(), equity=1_000.0)
+
+
+def test_compute_targets_sizes_from_quality_checked_dataset_frame() -> None:
+    targets = compute_targets(
+        [_position("AAPL")],
+        lambda symbol: _dataset(symbol, _uptrend_frame()),
+        equity=1_000.0,
+    )
+
+    assert targets[0].symbol == "AAPL"
+    assert targets[0].target_qty == 125
+
+
+def test_compute_targets_skips_a_dataset_fetch_or_quality_failure() -> None:
+    def provider(symbol: str) -> ResearchDataset:
+        if symbol == "MSFT":
+            raise ValueError("quality report failed for MSFT: source_mismatch")
+        return _dataset(symbol, _uptrend_frame())
+
+    targets = compute_targets([_position("AAPL"), _position("MSFT")], provider, equity=1_000.0)
+
+    assert [target.symbol for target in targets] == ["AAPL"]
+
+
+def test_compute_targets_skips_dataset_for_a_different_symbol() -> None:
+    targets = compute_targets(
+        [_position("AAPL")],
+        lambda _symbol: _dataset("MSFT", _uptrend_frame()),
+        equity=1_000.0,
+    )
+
+    assert targets == []
 
 
 def test_paper_url_is_the_paper_host() -> None:

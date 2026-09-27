@@ -8,6 +8,7 @@ from os import environ
 from pathlib import Path
 
 import pandas as pd
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.data.models import DataQualityReport, PriceBar, Source
 from app.data.quality.engine import DataQualityEngine
@@ -15,6 +16,33 @@ from app.data.sources.base import DataSourceAdapter
 from app.research.frames import bars_to_frame
 
 _FULL_GIT_SHA = re.compile(r"[0-9a-f]{40}")
+
+
+class ResearchDatasetEvidence(BaseModel):
+    """Serializable identity of one exact quality-checked vendor dataset (ADR-139)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    quality_report: DataQualityReport
+    source: Source
+    adapter_version: str
+    start: datetime
+    end: datetime
+    git_commit_hash: str
+
+    @model_validator(mode="after")
+    def validate_identity(self) -> "ResearchDatasetEvidence":
+        if not self.quality_report.passed:
+            raise ValueError("dataset evidence requires a passed quality report")
+        if self.quality_report.source != self.source:
+            raise ValueError("quality report source does not match dataset evidence source")
+        if not self.adapter_version.strip():
+            raise ValueError("adapter_version must be non-empty")
+        if self.start >= self.end:
+            raise ValueError("dataset evidence start must be before end")
+        if not _FULL_GIT_SHA.fullmatch(self.git_commit_hash):
+            raise ValueError("git_commit_hash must be a 40-character lowercase hexadecimal SHA")
+        return self
 
 
 @dataclass(frozen=True)
@@ -48,6 +76,17 @@ class ResearchDataset:
             raise ValueError("research dataset frame index must be timezone-aware")
         if not self.frame.index.is_monotonic_increasing or not self.frame.index.is_unique:
             raise ValueError("research dataset frame index must be unique and ascending")
+
+    def evidence(self) -> ResearchDatasetEvidence:
+        """Freeze the serializable acquisition identity beside a durable derived result."""
+        return ResearchDatasetEvidence(
+            quality_report=self.quality_report,
+            source=self.source,
+            adapter_version=self.adapter_version,
+            start=self.start,
+            end=self.end,
+            git_commit_hash=self.git_commit_hash,
+        )
 
 
 def prepare_research_dataset(

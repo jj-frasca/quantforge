@@ -758,6 +758,14 @@ executed revision, and experiment identity. Fetch/quality failures remain skippa
 frames and mixed code revisions cannot produce a pool row; legacy and synthetic panel rows remain
 explicitly lineage-null.
 
+**Single-name forward decisions carry fresh quality evidence (ADR-139).** Managed forward scoring,
+lifecycle exits, and Alpaca paper target sizing accept only the same quality-gated
+`ResearchDataset` boundary used by discovery. New durable forward scores embed the complete passed
+report plus source, adapter version, requested range, and executed revision; plain frames,
+mislabeled datasets, and failed quality checks cannot update a position or produce a paper target.
+Legacy scores remain readable with explicitly absent evidence. Cross-sectional forward panels have
+a separate fixed-universe identity and are not covered by this single-name decision.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

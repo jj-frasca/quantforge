@@ -172,6 +172,13 @@ universe benchmark. Its ordered `PanelComponentManifest` list binds each retaine
 one passed report UUID, source, adapter version, and requested range. The experiment embeds those
 complete reports and validates that their ordered symbols exactly equal `universe_symbols`.
 
+ADR-139 extends the same real-data boundary to single-name forward testing. `manage_portfolio` and
+paper target sizing require `ResearchDataset`, not a plain frame. Every newly computed
+`ForwardScore` stores its `ResearchDatasetEvidence` (complete report, source, adapter version,
+request range, and executed revision), and its report symbol must match the frozen position.
+Provider/quality failures leave the prior managed score unchanged and yield no broker target;
+legacy scores without evidence remain valid.
+
 ---
 
 ## 8. Oracle tests (must pass before any Phase 4 validation)

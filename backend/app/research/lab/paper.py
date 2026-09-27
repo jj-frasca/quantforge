@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.backtesting.metrics import max_drawdown, sharpe_ratio
+from app.research.dataset import ResearchDataset, ResearchDatasetEvidence
 from app.research.lab.experiment import Experiment
 from app.research.lab.universe import expected_max_sharpe_under_null
 from app.research.strategies.builder import build_strategy_from_dict
@@ -49,6 +50,9 @@ class ForwardScore(BaseModel):
     # ADR-073. Defaulted so scores persisted before it still validate; a stored 0 on an old score
     # is indistinguishable from "never traded", which is the honest reading of a zero-return series.
     forward_trades: int = 0
+    # ADR-139: absent only on legacy persisted scores. New production scores retain the exact
+    # checked vendor evidence that supported their lifecycle decision.
+    evidence: ResearchDatasetEvidence | None = None
 
 
 class PaperPosition(BaseModel):
@@ -243,13 +247,14 @@ def _forward_trades(positions: pd.Series, forward_mask: "pd.Series[bool]") -> in
     return int((turnover[forward_mask] > 0).sum())
 
 
-def evaluate_forward(position: PaperPosition, frame: pd.DataFrame) -> ForwardScore:
-    """Score `position` on the bars of `frame` strictly after its freeze date.
+def evaluate_forward(position: PaperPosition, dataset: ResearchDataset) -> ForwardScore:
+    """Score `position` on a checked dataset strictly after its freeze date.
 
     The engine runs over the FULL frame so signals are warmed up by the freeze date; only the
     post-freeze slice is scored. Deterministic; no network. Returns a zero-bar score if no forward
     data has accrued yet.
     """
+    frame = dataset.frame
     as_of = pd.Timestamp(frame.index.max())
     forward_mask = frame.index > pd.Timestamp(position.frozen_at)
     if not bool(forward_mask.any()):
@@ -262,6 +267,7 @@ def evaluate_forward(position: PaperPosition, frame: pd.DataFrame) -> ForwardSco
             beats_buy_and_hold=False,
             as_of=as_of,
             forward_trades=0,
+            evidence=dataset.evidence(),
         )
 
     strategy = build_strategy_from_dict(position.strategy_name, position.parameters)
@@ -296,6 +302,7 @@ def evaluate_forward(position: PaperPosition, frame: pd.DataFrame) -> ForwardSco
         as_of=as_of,
         forward_equity=forward_equity,
         forward_trades=n_trades,
+        evidence=dataset.evidence(),
     )
 
 

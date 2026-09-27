@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.data.models import DataQualityReport
+from app.research.dataset import ResearchDataset
 from app.research.lab.experiment import Experiment, Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.lab.paper import ExitPolicy, ForwardScore, PaperPosition
@@ -27,8 +29,21 @@ def _frame() -> pd.DataFrame:
     return pd.DataFrame({"close": closes}, index=idx)
 
 
-def _provider(symbol: str) -> pd.DataFrame:
-    return _frame()
+def _provider(symbol: str) -> ResearchDataset:
+    return _dataset(symbol)
+
+
+def _dataset(symbol: str = "AAA") -> ResearchDataset:
+    frame = _frame()
+    return ResearchDataset(
+        frame=frame,
+        quality_report=DataQualityReport(symbol=symbol, source="yfinance", checked_at=_NOW),
+        source="yfinance",
+        adapter_version="test-1",
+        start=frame.index.min().to_pydatetime(),
+        end=(frame.index.max() + pd.Timedelta(days=1)).to_pydatetime(),
+        git_commit_hash="a" * 40,
+    )
 
 
 def _graduate_exp(symbol: str) -> Experiment:
@@ -102,6 +117,36 @@ def test_keeps_a_healthy_open_position_and_updates_score() -> None:
     assert out[0].score is not None and out[0].score.forward_bars > 0
 
 
+def test_managed_score_persists_the_exact_checked_dataset_evidence() -> None:
+    dataset = _dataset()
+    out = manage_portfolio(
+        [_open_position()], [], lambda _symbol: dataset, exit_policy=_NEVER_EXIT, now=_NOW
+    )
+
+    assert out[0].score is not None
+    assert out[0].score.evidence is not None
+    assert out[0].score.evidence.quality_report == dataset.quality_report
+    assert out[0].score.evidence.git_commit_hash == dataset.git_commit_hash
+
+
+def test_plain_frame_provider_cannot_update_a_managed_position() -> None:
+    position = _open_position()
+    out = manage_portfolio(
+        [position], [], lambda _symbol: _frame(), exit_policy=_NEVER_EXIT, now=_NOW
+    )
+
+    assert out == [position]
+
+
+def test_mislabeled_dataset_cannot_update_a_managed_position() -> None:
+    position = _open_position()
+    out = manage_portfolio(
+        [position], [], lambda _symbol: _dataset("MSFT"), exit_policy=_NEVER_EXIT, now=_NOW
+    )
+
+    assert out == [position]
+
+
 def test_does_not_re_evaluate_closed_positions() -> None:
     closed = _open_position().model_copy(
         update={"status": "closed", "closed_at": _NOW, "exit_reasons": ["prior exit"]}
@@ -120,10 +165,10 @@ def test_a_bad_data_fetch_keeps_the_position_and_does_not_crash_the_book() -> No
     good = _open_position().model_copy(update={"symbol": "GOOD"})
     bad = _open_position().model_copy(update={"symbol": "BAD"})
 
-    def flaky_provider(symbol: str) -> pd.DataFrame:
+    def flaky_provider(symbol: str) -> ResearchDataset:
         if symbol == "BAD":
             raise InvalidOperation("[<class 'decimal.ConversionSyntax'>]")
-        return _frame()
+        return _dataset(symbol)
 
     out = manage_portfolio([good, bad], [], flaky_provider, exit_policy=_NEVER_EXIT, now=_NOW)
     by_symbol = {p.symbol: p for p in out}

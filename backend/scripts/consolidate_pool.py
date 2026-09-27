@@ -13,11 +13,9 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-import pandas as pd
-
 from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
-from app.research.frames import bars_to_frame
+from app.research.dataset import ResearchDataset, current_git_revision, fetch_research_dataset
 from app.research.lab.experiment import (
     Experiment,
     JsonFileExperimentStore,
@@ -55,9 +53,16 @@ def main() -> None:
     portfolio = JsonFilePaperPortfolio(portfolio_path)
     adapter = YFinanceAdapter(retry=CLOUD)
     now = datetime.now(UTC)
+    git_commit_hash = current_git_revision()
 
-    def frame_provider(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, RECENT_HISTORY_START, now))
+    def frame_provider(symbol: str) -> ResearchDataset:
+        return fetch_research_dataset(
+            adapter,
+            symbol,
+            RECENT_HISTORY_START,
+            now,
+            git_commit_hash=git_commit_hash,
+        )
 
     graduates = [e for e in merged if e.graduate is not None]
     before = portfolio.positions()

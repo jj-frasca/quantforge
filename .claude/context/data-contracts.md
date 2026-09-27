@@ -112,6 +112,12 @@ and persist the complete reports for exactly the columns that survive panel cons
 adapter version, and request range. A skipped or short-history name is not represented as evidence
 for a panel claim it did not enter.
 
+Single-name forward scoring, lifecycle decisions, and paper-order target sizing also consume only
+`ResearchDataset` values (ADR-139). Each new persisted forward score carries a frozen
+`ResearchDatasetEvidence`: the complete passed report, source, adapter version, requested half-open
+range, and executed revision. The report symbol must equal the managed position symbol. Legacy
+scores keep `None`; failed or mismatched evidence produces no new score or target.
+
 ---
 
 ## 5. The 8 quality checks (formal definitions)

@@ -11,11 +11,9 @@ losers cut — automatically. Portfolio persists in-repo. Local-only (live netwo
 from datetime import UTC, datetime
 from pathlib import Path
 
-import pandas as pd
-
 from app.config import get_settings
 from app.dependencies import build_data_adapter
-from app.research.frames import bars_to_frame
+from app.research.dataset import ResearchDataset, current_git_revision, fetch_research_dataset
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.history import RECENT_HISTORY_START
 from app.research.lab.paper import JsonFilePaperPortfolio
@@ -35,9 +33,16 @@ def main() -> None:
     portfolio = JsonFilePaperPortfolio(PORTFOLIO)
     adapter = build_data_adapter(get_settings())
     now = datetime.now(UTC)
+    git_commit_hash = current_git_revision()
 
-    def frame_provider(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, RECENT_HISTORY_START, now))
+    def frame_provider(symbol: str) -> ResearchDataset:
+        return fetch_research_dataset(
+            adapter,
+            symbol,
+            RECENT_HISTORY_START,
+            now,
+            git_commit_hash=git_commit_hash,
+        )
 
     experiments = pool.all()
     graduates = [e for e in experiments if e.graduate is not None]

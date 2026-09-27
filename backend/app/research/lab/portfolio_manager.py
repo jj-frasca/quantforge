@@ -1,9 +1,9 @@
 from collections.abc import Callable
 from datetime import datetime
 
-import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
+from app.research.dataset import ResearchDataset
 from app.research.lab.experiment import Experiment
 from app.research.lab.paper import (
     ExitPolicy,
@@ -13,7 +13,7 @@ from app.research.lab.paper import (
     freeze_graduate,
 )
 
-FrameProvider = Callable[[str], pd.DataFrame]
+DatasetProvider = Callable[[str], ResearchDataset]
 
 
 def newly_promoted(before: list[PaperPosition], after: list[PaperPosition]) -> list[PaperPosition]:
@@ -64,7 +64,7 @@ def deflation_cohorts(positions: list[PaperPosition]) -> DeflationCohorts:
 def manage_portfolio(
     positions: list[PaperPosition],
     graduate_experiments: list[Experiment],
-    frame_provider: FrameProvider,
+    frame_provider: DatasetProvider,
     *,
     exit_policy: ExitPolicy | None = None,
     now: datetime,
@@ -98,7 +98,11 @@ def manage_portfolio(
             updated.append(position)
             continue
         try:
-            frame = frame_provider(position.symbol)
+            dataset = frame_provider(position.symbol)
+            if not isinstance(dataset, ResearchDataset):
+                raise TypeError("forward provider must return ResearchDataset")
+            if dataset.quality_report.symbol != position.symbol.strip().upper():
+                raise ValueError("forward dataset symbol does not match paper position")
         except (ValueError, KeyError, OSError, ArithmeticError, TypeError):
             # A per-position data fetch failure (flaky yfinance: no data, or a malformed bar that
             # makes the OHLCV normalizer raise decimal.InvalidOperation) must not crash the whole
@@ -106,8 +110,8 @@ def manage_portfolio(
             # (prod 2026-08-04; same class of failure the hunts already guard against).
             updated.append(position)
             continue
-        score = evaluate_forward(position, frame)
-        decision = evaluate_lifecycle(position, frame, policy)
+        score = evaluate_forward(position, dataset)
+        decision = evaluate_lifecycle(position, dataset.frame, policy)
         if decision.action == "exit":
             updated.append(
                 position.model_copy(
