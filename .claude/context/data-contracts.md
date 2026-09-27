@@ -188,19 +188,24 @@ CREATE TABLE data_quality_reports (
 
 ## 7. Mandatory query pattern
 
-**Every** price query filters by `symbol` AND a `timestamp_utc` range. Omitting either causes
-a full hypertable scan that times out on multi-year data (ADR-003). No exceptions.
+**Every** price query filters by `symbol`, `source`, AND a `timestamp_utc` range. Omitting the
+symbol or range causes a full hypertable scan that times out on multi-year data (ADR-003).
+Omitting source can combine multiple vendors at one timestamp or reuse the wrong adapter's cache
+(ADR-134). No exceptions.
 
 ```sql
 SELECT timestamp_utc, open, high, low, close, volume, adj_factor
 FROM price_bars
 WHERE symbol = :symbol
+  AND source = :source
   AND timestamp_utc >= :start_utc
   AND timestamp_utc <  :end_utc            -- half-open [start, end)
 ORDER BY timestamp_utc;                     -- ASC for backtests
 ```
 
 - Ranges are half-open `[start, end)` to compose without double-counting boundaries.
+- Source is the active adapter's exact canonical `Source`; ordinary reads never fall back across
+  vendors. Explicit vendor cross-validation is a separate future operation.
 - Ingestion verifies every returned bar belongs to the same half-open request before storage
   (ADR-119); repository filtering is not a substitute for adapter provenance validation.
 - Bind parameters always (no string interpolation — injection + plan-cache).

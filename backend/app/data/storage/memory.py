@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.data.models import DataQualityReport, PriceBar
+from app.data.models import DataQualityReport, PriceBar, Source
 
 
 class InMemoryPriceBarRepository:
@@ -25,10 +25,12 @@ class InMemoryPriceBarRepository:
     def save_quality_report(self, report: DataQualityReport) -> None:
         self._reports.append(report)
 
-    def get_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+    def get_bars(
+        self, symbol: str, start: datetime, end: datetime, *, source: Source
+    ) -> list[PriceBar]:
         bars = self._bars.get(symbol.strip().upper(), {}).values()
         return sorted(
-            (b for b in bars if start <= b.timestamp_utc < end),
+            (b for b in bars if b.source == source and start <= b.timestamp_utc < end),
             key=lambda b: b.timestamp_utc,
         )
 

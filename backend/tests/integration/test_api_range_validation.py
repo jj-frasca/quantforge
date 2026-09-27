@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from app.data.models import PriceBar
+from app.data.models import PriceBar, Source
 from app.data.sources.base import DataSourceAdapter
 from app.data.storage.memory import InMemoryPriceBarRepository
 from app.dependencies import get_data_adapter, get_repository
@@ -22,7 +22,9 @@ class _FailIfCalledAdapter(DataSourceAdapter):
 
 
 class _FailIfAccessedRepository(InMemoryPriceBarRepository):
-    def get_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+    def get_bars(
+        self, symbol: str, start: datetime, end: datetime, *, source: Source
+    ) -> list[PriceBar]:
         raise AssertionError("invalid range reached the repository")
 
 

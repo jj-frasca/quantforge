@@ -49,13 +49,15 @@ table in `data-contracts.md` §5, kept current by whoever last touched `quality/
 8. **Vendor cross-validation** — conflicting prices for the same symbol across adapters.
 
 ## TimescaleDB — Mandatory Query Pattern
-ALWAYS filter by `symbol` AND a `timestamp_utc` range, with bound parameters. Missing either =
-full hypertable scan that times out on multi-year data. Ranges are half-open `[start, end)`.
+ALWAYS filter by `symbol`, the active adapter `source`, AND a `timestamp_utc` range, with bound
+parameters. Missing symbol or range = full hypertable scan; missing source can mix vendors or reuse
+the wrong cache (ADR-134). Ranges are half-open `[start, end)`.
 
 ## Common Mistakes (prevent these)
 - UTC coercion missed → timestamp mixing in backtests.
 - Quality gate skipped → strategy runs on bad data (downstream must check `passed is True`).
 - No date-range filter → full hypertable scan timeout.
+- No source filter → mixed-vendor calendar or wrong-adapter cache reuse.
 - `adj_factor` applied twice → prices come out 2× wrong.
 - Missing ratio coerced to 0 instead of `None` → corrupts screeners/stats.
 

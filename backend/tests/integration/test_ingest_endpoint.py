@@ -64,6 +64,7 @@ def test_ingest_stores_bars_and_returns_a_passing_report() -> None:
                     "AAPL",
                     datetime.fromisoformat(_BODY["start_date"].replace("Z", "+00:00")),
                     datetime.fromisoformat(_BODY["end_date"].replace("Z", "+00:00")),
+                    source="yfinance",
                 )
             )
             == 30

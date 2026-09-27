@@ -262,10 +262,10 @@ def _load_frame(
     repository: PriceBarRepository,
 ) -> "pd.DataFrame":
     """Cache-aside load: read the store, ingest on a miss, return the canonical frame."""
-    bars = repository.get_bars(symbol, start, end)
+    bars = repository.get_bars(symbol, start, end, source=adapter.source)
     if len(bars) < _MIN_BARS or not _covers_range(bars, start, end):
         DataIngestionPipeline(adapter, repository).ingest(symbol, start, end)
-        bars = repository.get_bars(symbol, start, end)
+        bars = repository.get_bars(symbol, start, end, source=adapter.source)
     return bars_to_frame(bars)
 
 

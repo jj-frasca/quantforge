@@ -43,7 +43,7 @@ def test_pipeline_ingests_clean_series_end_to_end() -> None:
     assert result.bars_ingested == 30
     assert result.quality_report.passed is True
     # query back via the mandatory (symbol + range) pattern
-    assert len(repo.get_bars("AAPL", _START, _END)) == 30
+    assert len(repo.get_bars("AAPL", _START, _END, source="yfinance")) == 30
     assert len(repo.quality_reports) == 1
 
 
@@ -70,7 +70,7 @@ def test_pipeline_blocks_storage_when_quality_gate_fails() -> None:
 
     assert result.stored is False
     assert result.quality_report.passed is False
-    assert repo.get_bars("AAPL", _START, _END) == []
+    assert repo.get_bars("AAPL", _START, _END, source="yfinance") == []
     # the report is still persisted even though the bars are not
     assert len(repo.quality_reports) == 1
 
@@ -84,7 +84,7 @@ def test_pipeline_blocks_mislabeled_adapter_series() -> None:
     assert result.stored is False
     assert result.quality_report.passed is False
     assert {issue.check for issue in result.quality_report.issues} == {"symbol_mismatch"}
-    assert repo.get_bars("AAPL", _START, _END) == []
+    assert repo.get_bars("AAPL", _START, _END, source="yfinance") == []
     assert len(repo.quality_reports) == 1
 
 
@@ -98,7 +98,7 @@ def test_pipeline_blocks_duplicate_calendar_rows() -> None:
 
     assert result.stored is False
     assert {issue.check for issue in result.quality_report.issues} == {"duplicate_timestamp"}
-    assert repo.get_bars("AAPL", _START, _END) == []
+    assert repo.get_bars("AAPL", _START, _END, source="yfinance") == []
     assert len(repo.quality_reports) == 1
 
 
@@ -113,7 +113,7 @@ def test_pipeline_blocks_bars_from_a_different_source_than_adapter() -> None:
 
     assert result.stored is False
     assert {issue.check for issue in result.quality_report.issues} == {"source_mismatch"}
-    assert repo.get_bars("AAPL", _START, _END) == []
+    assert repo.get_bars("AAPL", _START, _END, source="yfinance") == []
     assert len(repo.quality_reports) == 1
 
 
@@ -128,7 +128,7 @@ def test_pipeline_blocks_bars_outside_requested_half_open_range() -> None:
 
     assert result.stored is False
     assert {issue.check for issue in result.quality_report.issues} == {"range_mismatch"}
-    assert repo.get_bars("AAPL", datetime(2023, 1, 1, tzinfo=UTC), _END) == []
+    assert repo.get_bars("AAPL", datetime(2023, 1, 1, tzinfo=UTC), _END, source="yfinance") == []
     assert len(repo.quality_reports) == 1
 
 

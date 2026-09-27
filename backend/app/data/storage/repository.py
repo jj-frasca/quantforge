@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Protocol
 
-from app.data.models import DataQualityReport, PriceBar
+from app.data.models import DataQualityReport, PriceBar, Source
 
 
 class PriceBarRepository(Protocol):
@@ -19,6 +19,8 @@ class PriceBarRepository(Protocol):
         """Persist a quality report (kept even when its data is gated out)."""
         ...
 
-    def get_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
-        """Return stored bars for ``symbol`` in the half-open range ``[start, end)``."""
+    def get_bars(
+        self, symbol: str, start: datetime, end: datetime, *, source: Source
+    ) -> list[PriceBar]:
+        """Return ``source`` bars for ``symbol`` in half-open range ``[start, end)``."""
         ...

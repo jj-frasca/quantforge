@@ -50,7 +50,8 @@ category tags. Drives the dynamic strategy form on the frontend (ADR-010).
 ---
 
 ## GET /api/v1/bars
-Return cached price bars for a `(symbol, range)` — pure read, **does not trigger ingestion**.
+Return cached price bars for a `(symbol, active-adapter source, range)` — pure read, **does not
+trigger ingestion**.
 Powers the Data Explorer chart and any future "show what's stored" UIs.
 
 **Why sync**: plain `def` threadpooled by FastAPI; the blocking repository read is in the
@@ -76,12 +77,13 @@ Both bounds must be timezone-aware and `start_date < end_date` (ADR-133). Invali
     ]
   }
   ```
-  Empty array + `n_bars=0` when nothing is cached (not a 404 — "no data" is a normal answer).
+  Empty array + `n_bars=0` when nothing is cached for the active adapter (not a 404 — "no data" is
+  a normal answer). Rows cached under another vendor are not returned (ADR-134).
 - `ChartBar` is a slim float projection of the canonical `PriceBar`. Decimal precision is
   preserved in storage / backtesting; the API boundary converts because charts don't need it.
 
-**DI**: `get_repository` only. The data adapter is intentionally NOT injected — this endpoint
-must never silently call out to a vendor.
+**DI**: `get_repository` + `get_data_adapter`. The adapter is used only for source identity; this
+endpoint never calls `fetch_price_bars` or silently performs vendor I/O.
 
 ---
 

@@ -537,3 +537,31 @@ def test_backtest_endpoint_true_cache_hit_does_not_call_adapter() -> None:
         assert response.status_code == 200, response.text
     finally:
         app.dependency_overrides.clear()
+
+
+def test_backtest_endpoint_does_not_reuse_another_adapters_cache() -> None:
+    class _AlpacaAdapter(_FakeAdapter):
+        source = "alpaca"
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.calls: list[str] = []
+
+        def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+            self.calls.append(symbol)
+            return [
+                bar.model_copy(update={"source": "alpaca"})
+                for bar in super().fetch_price_bars(symbol, start, end)
+            ]
+
+    try:
+        repo = InMemoryPriceBarRepository()
+        repo.save_bars(builders.clean_series(symbol="AAPL", n=300))
+        adapter = _AlpacaAdapter()
+
+        response = _client(adapter, repo).post("/api/v1/backtest", json=_BODY)
+
+        assert response.status_code == 200, response.text
+        assert adapter.calls.count("AAPL") == 1
+    finally:
+        app.dependency_overrides.clear()

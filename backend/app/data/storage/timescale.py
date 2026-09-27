@@ -4,7 +4,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.data.models import DataQualityReport, PriceBar
+from app.data.models import DataQualityReport, PriceBar, Source
 from app.data.storage.orm import DataQualityReportORM, PriceBarORM
 
 
@@ -40,11 +40,14 @@ class TimescaleDBPriceBarRepository:
             )
             session.commit()
 
-    def get_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+    def get_bars(
+        self, symbol: str, start: datetime, end: datetime, *, source: Source
+    ) -> list[PriceBar]:
         stmt = (
             select(PriceBarORM)
             .where(
                 PriceBarORM.symbol == symbol.strip().upper(),
+                PriceBarORM.source == source,
                 PriceBarORM.timestamp_utc >= start,
                 PriceBarORM.timestamp_utc < end,
             )

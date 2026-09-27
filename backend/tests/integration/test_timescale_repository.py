@@ -23,7 +23,7 @@ def test_save_and_get_bars_round_trip(session_factory: sessionmaker[Session]) ->
     bars = builders.clean_series(n=20)
 
     assert repo.save_bars(bars) == 20
-    fetched = repo.get_bars("AAPL", _START, _END)
+    fetched = repo.get_bars("AAPL", _START, _END, source="yfinance")
 
     assert len(fetched) == 20
     assert [b.timestamp_utc for b in fetched] == sorted(b.timestamp_utc for b in fetched)
@@ -37,9 +37,17 @@ def test_get_bars_filters_by_symbol_and_half_open_range(
     bars = builders.clean_series(n=10)
     repo.save_bars(bars)
 
-    assert repo.get_bars("MSFT", _START, _END) == []  # wrong symbol
+    assert repo.get_bars("MSFT", _START, _END, source="yfinance") == []  # wrong symbol
     # range ending exactly at the first bar excludes it (half-open)
-    assert repo.get_bars("AAPL", datetime(2023, 1, 1, tzinfo=UTC), bars[0].timestamp_utc) == []
+    assert (
+        repo.get_bars(
+            "AAPL",
+            datetime(2023, 1, 1, tzinfo=UTC),
+            bars[0].timestamp_utc,
+            source="yfinance",
+        )
+        == []
+    )
 
 
 def test_get_bars_treats_equivalent_timezone_offsets_as_the_same_range(
@@ -50,14 +58,26 @@ def test_get_bars_treats_equivalent_timezone_offsets_as_the_same_range(
     repo.save_bars(bars)
     offset = timezone(timedelta(hours=-5))
 
-    utc = repo.get_bars("AAPL", bars[2].timestamp_utc, bars[7].timestamp_utc)
+    utc = repo.get_bars("AAPL", bars[2].timestamp_utc, bars[7].timestamp_utc, source="yfinance")
     shifted = repo.get_bars(
         "AAPL",
         bars[2].timestamp_utc.astimezone(offset),
         bars[7].timestamp_utc.astimezone(offset),
+        source="yfinance",
     )
 
     assert shifted == utc == bars[2:7]
+
+
+def test_get_bars_filters_by_source(session_factory: sessionmaker[Session]) -> None:
+    repo = TimescaleDBPriceBarRepository(session_factory)
+    yfinance = builders.clean_series(n=5)
+    alpaca = [bar.model_copy(update={"source": "alpaca"}) for bar in yfinance]
+    repo.save_bars([*yfinance, *alpaca])
+
+    out = repo.get_bars("AAPL", _START, _END, source="alpaca")
+
+    assert out == alpaca
 
 
 def test_save_bars_is_idempotent(session_factory: sessionmaker[Session]) -> None:
@@ -65,7 +85,7 @@ def test_save_bars_is_idempotent(session_factory: sessionmaker[Session]) -> None
     bars = builders.clean_series(n=10)
     repo.save_bars(bars)
     repo.save_bars(bars)  # merge upserts on (symbol, timestamp_utc, source)
-    assert len(repo.get_bars("AAPL", _START, _END)) == 10
+    assert len(repo.get_bars("AAPL", _START, _END, source="yfinance")) == 10
 
 
 def test_save_quality_report_persists(session_factory: sessionmaker[Session]) -> None:

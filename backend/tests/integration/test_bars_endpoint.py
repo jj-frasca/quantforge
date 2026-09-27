@@ -1,12 +1,16 @@
 """GET /api/v1/bars (integration): reads bars from the repo (does NOT trigger ingestion);
 returns chart-shaped bars (floats, not Decimal); 200 with [] when nothing is cached."""
 
+from datetime import datetime
+
 from fastapi.testclient import TestClient
 from tests.fixtures.synthetic import builders
 
+from app.data.models import PriceBar
+from app.data.sources.base import DataSourceAdapter
 from app.data.storage.memory import InMemoryPriceBarRepository
 from app.data.storage.repository import PriceBarRepository
-from app.dependencies import get_repository
+from app.dependencies import get_data_adapter, get_repository
 from app.main import app
 
 _QUERY = {
@@ -19,6 +23,14 @@ _QUERY = {
 def _client(repo: PriceBarRepository) -> TestClient:
     app.dependency_overrides[get_repository] = lambda: repo
     return TestClient(app)
+
+
+class _AlpacaAdapter(DataSourceAdapter):
+    source = "alpaca"
+    adapter_version = "test-1"
+
+    def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+        raise AssertionError("GET /bars must not fetch")
 
 
 def test_bars_endpoint_returns_cached_bars_as_floats() -> None:
@@ -58,5 +70,21 @@ def test_bars_endpoint_returns_bars_sorted_by_timestamp() -> None:
         response = _client(repo).get("/api/v1/bars", params=_QUERY)
         timestamps = [bar["timestamp_utc"] for bar in response.json()["bars"]]
         assert timestamps == sorted(timestamps)
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_bars_endpoint_returns_only_the_active_adapters_cached_source() -> None:
+    try:
+        repo = InMemoryPriceBarRepository()
+        yfinance = builders.clean_series(symbol="AAPL", n=5)
+        alpaca = [bar.model_copy(update={"source": "alpaca"}) for bar in yfinance]
+        repo.save_bars([*yfinance, *alpaca])
+        app.dependency_overrides[get_data_adapter] = lambda: _AlpacaAdapter()
+
+        response = _client(repo).get("/api/v1/bars", params=_QUERY)
+
+        assert response.status_code == 200, response.text
+        assert response.json()["n_bars"] == 5
     finally:
         app.dependency_overrides.clear()
