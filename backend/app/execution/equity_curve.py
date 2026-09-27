@@ -22,7 +22,13 @@ class EquityPoint(BaseModel):
     `benchmark_return_since_start` / `alpha_since_start` answer the ONLY honest "are we making
     money?" question — is the book beating the market, not just up in absolute terms? A book up 3%
     while the market is up 5% is LOSING 2 points of alpha. Both are nullable: points snapshotted
-    before benchmark tracking existed are honestly "not measured", never backfilled."""
+    before benchmark tracking existed are honestly "not measured", never backfilled.
+
+    `return_since_start` and `alpha_since_start` deliberately use DIFFERENT baselines (ADR-141):
+    the former is against the nominal paper starting equity (a fixed target), the latter is the
+    book's return since the benchmark's own inception point (`history[0]`, whatever it actually
+    was) minus the benchmark's return over that same window — so alpha is never distorted by
+    however far the book had already drifted from the nominal start before tracking began."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -31,8 +37,9 @@ class EquityPoint(BaseModel):
     cash: float
     n_positions: int
     return_since_start: float
-    # Cumulative return of the market benchmark over the same window, and the book's excess over it
-    # (return_since_start - benchmark_return_since_start). None when no benchmark was supplied.
+    # Cumulative return of the market benchmark since `history[0]` (see append_equity_point), and
+    # the book's excess over it measured across that SAME window (ADR-141) — not
+    # return_since_start - benchmark_return_since_start, which would compare two different windows.
     benchmark_return_since_start: float | None = None
     alpha_since_start: float | None = None
 
@@ -47,12 +54,18 @@ def append_equity_point(
     benchmark_return: float | None = None,
 ) -> list[EquityPoint]:
     """Append a snapshot of `account` to the equity curve, computing the cumulative return vs the
-    paper starting equity and — when `benchmark_return` (the market's cumulative return over the
-    same window) is supplied — the excess return (alpha) over it. Pure and additive — order
-    preserved, existing points untouched."""
+    paper starting equity and — when `benchmark_return` (the market's cumulative return since
+    `history[0]`, i.e. the benchmark's own inception point) is supplied — the excess return (alpha)
+    over it, measured across that same window (ADR-141). Pure and additive — order preserved,
+    existing points untouched."""
     equity = float(account.equity)
     return_since_start = equity / starting_equity - 1.0
-    alpha = None if benchmark_return is None else return_since_start - benchmark_return
+    if benchmark_return is None:
+        alpha = None
+    else:
+        inception_equity = history[0].equity if history else equity
+        book_return_since_inception = equity / inception_equity - 1.0
+        alpha = book_return_since_inception - benchmark_return
     point = EquityPoint(
         timestamp=now,
         equity=equity,

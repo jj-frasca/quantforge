@@ -20,9 +20,12 @@ _QUERY = {
 }
 
 
-def _client(repo: PriceBarRepository) -> TestClient:
-    app.dependency_overrides[get_repository] = lambda: repo
-    return TestClient(app)
+class _YFinanceAdapter(DataSourceAdapter):
+    source = "yfinance"
+    adapter_version = "test-1"
+
+    def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
+        raise AssertionError("GET /bars must not fetch")
 
 
 class _AlpacaAdapter(DataSourceAdapter):
@@ -31,6 +34,18 @@ class _AlpacaAdapter(DataSourceAdapter):
 
     def fetch_price_bars(self, symbol: str, start: datetime, end: datetime) -> list[PriceBar]:
         raise AssertionError("GET /bars must not fetch")
+
+
+def _client(repo: PriceBarRepository, adapter: DataSourceAdapter | None = None) -> TestClient:
+    # Pin the adapter explicitly (default: synthetic yfinance) rather than letting it fall through
+    # to get_data_adapter()'s real settings-driven resolution -- on a machine with real Alpaca paper
+    # keys configured in backend/.env (this project runs a live paper book, ADR-019), that resolves
+    # to Alpaca instead of yfinance, and the endpoint's source-bound filter (bars.py) then silently
+    # returns 0 bars for fixtures saved under source="yfinance". Determinism must not depend on
+    # whether the local .env happens to hold real credentials.
+    app.dependency_overrides[get_repository] = lambda: repo
+    app.dependency_overrides[get_data_adapter] = lambda: adapter or _YFinanceAdapter()
+    return TestClient(app)
 
 
 def test_bars_endpoint_returns_cached_bars_as_floats() -> None:
@@ -80,9 +95,8 @@ def test_bars_endpoint_returns_only_the_active_adapters_cached_source() -> None:
         yfinance = builders.clean_series(symbol="AAPL", n=5)
         alpaca = [bar.model_copy(update={"source": "alpaca"}) for bar in yfinance]
         repo.save_bars([*yfinance, *alpaca])
-        app.dependency_overrides[get_data_adapter] = lambda: _AlpacaAdapter()
 
-        response = _client(repo).get("/api/v1/bars", params=_QUERY)
+        response = _client(repo, _AlpacaAdapter()).get("/api/v1/bars", params=_QUERY)
 
         assert response.status_code == 200, response.text
         assert response.json()["n_bars"] == 5
