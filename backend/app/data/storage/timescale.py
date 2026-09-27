@@ -33,6 +33,7 @@ class TimescaleDBPriceBarRepository:
                 DataQualityReportORM(
                     id=uuid4(),
                     symbol=report.symbol,
+                    source=report.source,
                     checked_at=report.checked_at,
                     passed=report.passed,
                     issues=[issue.model_dump() for issue in report.issues],

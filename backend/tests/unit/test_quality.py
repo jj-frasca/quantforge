@@ -25,6 +25,10 @@ def test_quality_report_with_no_issues_passes() -> None:
     assert _report().passed is True
 
 
+def test_legacy_quality_report_without_source_is_explicitly_unknown() -> None:
+    assert _report().source is None
+
+
 def test_quality_report_with_warning_only_still_passes() -> None:
     assert _report(issues=[_issue("warning")]).passed is True
 

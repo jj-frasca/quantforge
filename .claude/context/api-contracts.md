@@ -113,11 +113,19 @@ Both bounds must be timezone-aware and `start_date < end_date` (ADR-132). Invali
     "symbol": "AAPL",
     "bars_ingested": 230,
     "stored": true,
-    "quality_report": { "symbol": "AAPL", "checked_at": "...", "issues": [], "passed": true }
+    "quality_report": {
+      "symbol": "AAPL",
+      "source": "yfinance",
+      "checked_at": "...",
+      "issues": [],
+      "passed": true
+    }
   }
   ```
   `stored=false` with `quality_report.passed=false` means the gate rejected the data and
   nothing was written to the repo (the report itself still is).
+  `quality_report.source` names the adapter whose evidence was checked; it is nullable only for
+  legacy or direct reports whose acquisition source was not recorded (ADR-135).
 
 **DI**: `get_data_adapter` + `get_repository` (both swappable via `app.dependency_overrides`).
 

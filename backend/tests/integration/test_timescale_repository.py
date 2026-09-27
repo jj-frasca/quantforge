@@ -91,8 +91,12 @@ def test_save_bars_is_idempotent(session_factory: sessionmaker[Session]) -> None
 def test_save_quality_report_persists(session_factory: sessionmaker[Session]) -> None:
     repo = TimescaleDBPriceBarRepository(session_factory)
     repo.save_quality_report(
-        DataQualityReport(symbol="AAPL", checked_at=datetime(2024, 1, 2, tzinfo=UTC))
+        DataQualityReport(
+            symbol="AAPL", source="alpaca", checked_at=datetime(2024, 1, 2, tzinfo=UTC)
+        )
     )
     with session_factory() as session:
+        row = session.execute(select(DataQualityReportORM)).scalar_one()
         count = session.execute(select(func.count()).select_from(DataQualityReportORM)).scalar_one()
     assert count == 1
+    assert row.source == "alpaca"

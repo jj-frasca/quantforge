@@ -49,6 +49,7 @@ class DataQualityReportORM(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
     symbol: Mapped[str] = mapped_column(String)
+    source: Mapped[str | None] = mapped_column(String, nullable=True)
     checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     passed: Mapped[bool] = mapped_column(Boolean)
     issues: Mapped[list[dict[str, object]]] = mapped_column(JSONB)

@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
-from app.data.models.types import Severity
+from app.data.models.types import Severity, Source
 
 
 class DataQualityIssue(BaseModel):
@@ -33,6 +33,7 @@ class DataQualityReport(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     symbol: str
+    source: Source | None = None
     checked_at: datetime
     issues: list[DataQualityIssue] = Field(default_factory=list)
 

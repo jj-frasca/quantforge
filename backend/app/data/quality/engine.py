@@ -54,6 +54,7 @@ class DataQualityEngine:
         ordered = sorted(bars, key=lambda b: b.timestamp_utc)
         issues: list[DataQualityIssue] = []
         normalized_symbol = symbol.strip().upper()
+        report_source = expected_source
 
         bar_symbols = {bar.symbol for bar in ordered}
         if ordered and bar_symbols != {normalized_symbol}:
@@ -91,6 +92,8 @@ class DataQualityEngine:
                 )
 
             bar_sources = {bar.source for bar in ordered}
+            if report_source is None and len(bar_sources) == 1:
+                report_source = next(iter(bar_sources))
             if len(bar_sources) != 1 or (
                 expected_source is not None and bar_sources != {expected_source}
             ):
@@ -136,7 +139,10 @@ class DataQualityEngine:
 
         if issues:
             return DataQualityReport(
-                symbol=normalized_symbol, checked_at=datetime.now(UTC), issues=issues
+                symbol=normalized_symbol,
+                source=report_source,
+                checked_at=datetime.now(UTC),
+                issues=issues,
             )
 
         if len(ordered) < self._config.min_bars:
@@ -149,7 +155,10 @@ class DataQualityEngine:
                 )
             )
             return DataQualityReport(
-                symbol=normalized_symbol, checked_at=datetime.now(UTC), issues=issues
+                symbol=normalized_symbol,
+                source=report_source,
+                checked_at=datetime.now(UTC),
+                issues=issues,
             )
 
         if self._config.flag_survivorship:
@@ -171,7 +180,10 @@ class DataQualityEngine:
         issues.extend(self._corporate_action(ordered))
 
         return DataQualityReport(
-            symbol=normalized_symbol, checked_at=datetime.now(UTC), issues=issues
+            symbol=normalized_symbol,
+            source=report_source,
+            checked_at=datetime.now(UTC),
+            issues=issues,
         )
 
     def _missing_bars(self, bars: list[PriceBar]) -> list[DataQualityIssue]:

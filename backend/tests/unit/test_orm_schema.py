@@ -34,3 +34,4 @@ def test_data_quality_reports_ddl_has_uuid_pk_and_jsonb_issues() -> None:
     assert "UUID" in ddl
     assert "JSONB" in ddl
     assert "BOOLEAN" in ddl
+    assert "source VARCHAR" in ddl

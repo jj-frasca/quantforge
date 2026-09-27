@@ -15,6 +15,7 @@ def _issue_checks(report: object) -> set[str]:
 
 def test_clean_series_passes_with_only_survivorship_info() -> None:
     report = DataQualityEngine().check(builders.clean_series(), "AAPL")
+    assert report.source == "yfinance"
     assert report.passed is True
     severities = {i.severity for i in report.issues}
     assert "error" not in severities
@@ -83,6 +84,7 @@ def test_homogeneous_source_must_match_expected_adapter_source() -> None:
     )
 
     assert report.passed is False
+    assert report.source == "alpaca"
     assert _issue_checks(report) == {"source_mismatch"}
     assert report.issues[0].context == {
         "expected_source": "alpaca",

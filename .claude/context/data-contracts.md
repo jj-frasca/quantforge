@@ -89,6 +89,7 @@ class DataQualityIssue:
 
 class DataQualityReport:
     symbol: str
+    source: Source | None          # adapter checked; None = legacy/direct unknown provenance
     checked_at: datetime          # tz-aware UTC
     issues: list[DataQualityIssue]
     passed: bool                  # downstream MUST verify passed is True (ADR-006)
@@ -129,7 +130,9 @@ symbol named by its `DataQualityReport` (ADR-115), exactly one bar per UTC times
 one source matching the ingestion adapter (ADR-118). Mixed/mislabeled symbols, duplicate calendar
 rows, or mixed/mislabeled sources emit structural errors and are not compared pairwise or stored by
 the ingestion pipeline. Direct quality-engine callers that have no adapter identity may omit the
-expected source, but a mixed-source list still fails.
+expected source, but a mixed-source list still fails. Pipeline reports persist the expected adapter
+source even on a mismatch; direct checks derive source only from a non-empty homogeneous bar set.
+Existing reports remain explicitly `None` rather than inferring history (ADR-135).
 
 The ingestion pipeline also binds the adapter result to its requested half-open `[start, end)`
 range (ADR-119). Any pre-start or end-inclusive/later timestamp emits `range_mismatch`, returns
@@ -178,6 +181,7 @@ CREATE TABLE fundamentals (
 CREATE TABLE data_quality_reports (
     id         UUID PRIMARY KEY,
     symbol     TEXT        NOT NULL,
+    source     TEXT,                    -- nullable only for legacy/direct unknown provenance
     checked_at TIMESTAMPTZ NOT NULL,
     passed     BOOLEAN     NOT NULL,
     issues     JSONB       NOT NULL
