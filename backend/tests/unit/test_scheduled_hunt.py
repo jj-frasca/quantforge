@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 import numpy as np
 import pandas as pd
 
+from app.data.models import DataQualityReport
+from app.research.dataset import ResearchDataset
 from app.research.fundamentals.distress import DistressScreen
 from app.research.fundamentals.record import FundamentalRecord
 from app.research.lab.experiment import (
@@ -59,8 +61,24 @@ def _frame() -> pd.DataFrame:
     return pd.DataFrame({"close": closes}, index=idx)
 
 
-def _provider(symbol: str) -> pd.DataFrame:
-    return _frame()
+def _dataset(symbol: str, frame: pd.DataFrame) -> ResearchDataset:
+    return ResearchDataset(
+        frame=frame,
+        quality_report=DataQualityReport(
+            symbol=symbol,
+            source="yfinance",
+            checked_at=_NOW,
+        ),
+        source="yfinance",
+        adapter_version="test-adapter",
+        start=frame.index[0].to_pydatetime(),
+        end=(frame.index[-1] + pd.Timedelta(days=1)).to_pydatetime(),
+        git_commit_hash="a" * 40,
+    )
+
+
+def _provider(symbol: str) -> ResearchDataset:
+    return _dataset(symbol, _frame())
 
 
 def _graduate_exp(symbol: str) -> Experiment:
@@ -167,11 +185,11 @@ def _uscore(symbol: str, score: float | None) -> UndervaluationScore:
     )
 
 
-def _long_provider(symbol: str) -> pd.DataFrame:
+def _long_provider(symbol: str) -> ResearchDataset:
     rng = np.random.default_rng(1)
     closes = 100.0 * np.cumprod(1 + rng.normal(0.0004, 0.01, 1500))
     idx = pd.date_range("2015-01-01", periods=1500, freq="B", tz="UTC")
-    return pd.DataFrame({"close": closes}, index=idx)
+    return _dataset(symbol, pd.DataFrame({"close": closes}, index=idx))
 
 
 def test_hunt_and_promote_forwards_value_provider_and_config_to_the_hunt() -> None:
@@ -204,11 +222,11 @@ def test_hunt_and_promote_runs_the_hunt_and_records_experiments() -> None:
     pool = InMemoryExperimentStore()
     portfolio = _FakePortfolio()
 
-    def long_provider(symbol: str) -> pd.DataFrame:
+    def long_provider(symbol: str) -> ResearchDataset:
         rng = np.random.default_rng(1)
         closes = 100.0 * np.cumprod(1 + rng.normal(0.0004, 0.01, 1500))
         idx = pd.date_range("2015-01-01", periods=1500, freq="B", tz="UTC")
-        return pd.DataFrame({"close": closes}, index=idx)
+        return _dataset(symbol, pd.DataFrame({"close": closes}, index=idx))
 
     result = hunt_and_promote(
         ["AAA"], ["sma"], long_provider, pool=pool, portfolio=portfolio, now=_NOW, refine=False

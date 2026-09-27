@@ -6,6 +6,7 @@ from typing import Protocol
 import pandas as pd
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
+from app.research.dataset import ResearchDataset
 from app.research.fundamentals.distress import DistressProvider
 from app.research.lab.experiment import ExperimentStore
 from app.research.lab.gate import GateConfig
@@ -15,7 +16,7 @@ from app.research.lab.quality_filter import QualityGateConfig, QualityProvider
 from app.research.lab.universe import UniverseHuntResult, run_universe_hunt
 from app.research.lab.value_filter import ValueGateConfig, ValueProvider
 
-FrameProvider = Callable[[str], pd.DataFrame]
+FrameProvider = Callable[[str], ResearchDataset]
 FundamentalsProvider = Callable[[str], FundamentalSnapshot | None]
 
 
@@ -86,12 +87,16 @@ def hunt_and_promote(
     experiments = pool.all()
     graduates = [e for e in experiments if e.graduate is not None]
     before = {(p.symbol, p.strategy_name) for p in portfolio.positions()}
+
     # ADR-033: promotion draws from the whole pool, so the pool's symbol count is the N a graduate
     # was actually selected from — the honest universe-deflation denominator.
+    def portfolio_frame_provider(symbol: str) -> pd.DataFrame:
+        return frame_provider(symbol).frame
+
     updated = manage_portfolio(
         portfolio.positions(),
         graduates,
-        frame_provider,
+        portfolio_frame_provider,
         exit_policy=exit_policy,
         now=now,
         universe_n_symbols=len({e.symbol for e in experiments}),

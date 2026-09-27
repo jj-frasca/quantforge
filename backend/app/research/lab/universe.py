@@ -2,12 +2,13 @@ import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
+from app.research.backtesting.manifest import ExperimentManifest, compute_parameter_hash
+from app.research.dataset import ResearchDataset
 from app.research.fundamentals.distress import DistressProvider
-from app.research.lab.experiment import Experiment, ExperimentStore
+from app.research.lab.experiment import Experiment, ExperimentStore, selected_trial
 from app.research.lab.gate import GateConfig
 from app.research.lab.quality_filter import QualityGateConfig, QualityProvider, screen_quality
 from app.research.lab.search import run_search
@@ -15,7 +16,7 @@ from app.research.lab.value_filter import ValueGateConfig, ValueProvider, screen
 
 _TRADING_DAYS = 252
 
-FrameProvider = Callable[[str], pd.DataFrame]
+FrameProvider = Callable[[str], ResearchDataset]
 FundamentalsProvider = Callable[[str], FundamentalSnapshot | None]
 
 
@@ -126,7 +127,10 @@ def run_universe_hunt(
                 if not quality.passed:
                     filtered[symbol] = "; ".join(quality.reasons)
                     continue
-            frame = frame_provider(symbol)
+            dataset = frame_provider(symbol)
+            if not isinstance(dataset, ResearchDataset):
+                raise TypeError("frame_provider must return ResearchDataset for real-data claims")
+            frame = dataset.frame
             fundamentals = fundamentals_provider(symbol) if fundamentals_provider else None
             distress = distress_provider(symbol) if distress_provider else None
             prior = store.trials_for_symbol(symbol) if store else 0
@@ -143,6 +147,29 @@ def run_universe_hunt(
                 fundamental_criteria=fundamental_criteria,
                 distress_screen=distress,
                 rationale=rationale,
+            )
+            finalist = selected_trial(exp)
+            manifest_parameters: dict[str, object] = dict(finalist.parameters)
+            manifest = ExperimentManifest(
+                experiment_id=exp.experiment_id,
+                created_at=exp.created_at,
+                git_commit_hash=dataset.git_commit_hash,
+                strategy_name=finalist.strategy_name,
+                parameter_hash=compute_parameter_hash(manifest_parameters),
+                data_source=dataset.source,
+                symbol=exp.symbol,
+                start_date=dataset.start.date(),
+                end_date=dataset.end.date(),
+                data_quality_report_id=dataset.quality_report.id,
+                adapter_version=dataset.adapter_version,
+                validation_config_hash=exp.gate_config.version_hash,
+            )
+            exp = Experiment.model_validate(
+                {
+                    **exp.model_dump(),
+                    "manifest": manifest,
+                    "data_quality_report": dataset.quality_report,
+                }
             )
         except (ValueError, KeyError, OSError, ArithmeticError, TypeError) as exc:
             # A per-symbol failure over unreliable vendor data must never kill the universe hunt.

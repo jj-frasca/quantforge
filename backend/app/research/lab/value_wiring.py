@@ -38,12 +38,12 @@ def frame_to_close_series(frame: pd.DataFrame) -> list[tuple[date, float]]:
     ]
 
 
-def cached_frame_provider(frame_provider: FrameProvider) -> FrameProvider:
+def cached_frame_provider[T](frame_provider: Callable[[str], T]) -> Callable[[str], T]:
     """Memoize ``frame_provider`` per symbol so the hunt's backtest fetch and the value price series
     share ONE fetch — the 503-name sweep must not double the price load."""
-    cache: dict[str, pd.DataFrame] = {}
+    cache: dict[str, T] = {}
 
-    def provide(symbol: str) -> pd.DataFrame:
+    def provide(symbol: str) -> T:
         if symbol not in cache:
             cache[symbol] = frame_provider(symbol)
         return cache[symbol]

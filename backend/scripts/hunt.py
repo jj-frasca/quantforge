@@ -24,7 +24,7 @@ from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.data.sources.edgar import SecEdgarFundamentalsSource
 from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
-from app.research.frames import bars_to_frame
+from app.research.dataset import ResearchDataset, current_git_revision, fetch_research_dataset
 from app.research.fundamentals.distress import make_distress_provider
 from app.research.fundamentals.record import load_fundamentals_pool
 from app.research.lab.experiment import PartitionedExperimentStore
@@ -71,12 +71,22 @@ def main() -> None:
     pool = PartitionedExperimentStore(POOL)
     portfolio = JsonFilePaperPortfolio(PORTFOLIO)
     now = datetime.now(UTC)
+    git_commit_hash = current_git_revision()
 
-    def fetch_frame(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, SEARCH_HISTORY_START, now))
+    def fetch_dataset(symbol: str) -> ResearchDataset:
+        return fetch_research_dataset(
+            adapter,
+            symbol,
+            SEARCH_HISTORY_START,
+            now,
+            git_commit_hash=git_commit_hash,
+        )
 
     # One memoized fetch feeds BOTH the backtest and the value price series (no double price load).
-    frame_provider = cached_frame_provider(fetch_frame)
+    dataset_provider = cached_frame_provider(fetch_dataset)
+
+    def frame_provider(symbol: str) -> pd.DataFrame:
+        return dataset_provider(symbol).frame
 
     def fundamentals_provider(symbol: str) -> FundamentalSnapshot | None:
         try:
@@ -105,7 +115,7 @@ def main() -> None:
     result = hunt_and_promote(
         symbols,
         names,
-        frame_provider,
+        dataset_provider,
         pool=pool,
         portfolio=portfolio,
         fundamentals_provider=fundamentals_provider,

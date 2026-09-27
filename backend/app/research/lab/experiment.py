@@ -6,9 +6,11 @@ from pathlib import Path
 from typing import Protocol
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.data.fundamentals import FundamentalScreen, FundamentalSnapshot
+from app.data.models import DataQualityReport
+from app.research.backtesting.manifest import ExperimentManifest
 from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.valuation import UndervaluationScore
@@ -121,6 +123,32 @@ class Experiment(BaseModel):
     # the records written before the field, which must read as not measured, never as zero excess.
     purged_cv_hold_sharpe: float | None = None
     rationale: str = ""
+    # ADR-137: legacy and synthetic rows have no vendor acquisition claim. New real-data
+    # StrategyLab rows persist both the evidence and its manifest link as one pool record.
+    manifest: ExperimentManifest | None = None
+    data_quality_report: DataQualityReport | None = None
+
+    @model_validator(mode="after")
+    def _validate_quality_lineage(self) -> "Experiment":
+        if self.manifest is None and self.data_quality_report is None:
+            return self
+        if self.manifest is None or self.data_quality_report is None:
+            raise ValueError("manifest and data_quality_report must be present together")
+        if self.manifest.experiment_id != self.experiment_id:
+            raise ValueError("manifest experiment_id must match experiment")
+        if self.manifest.data_quality_report_id != self.data_quality_report.id:
+            raise ValueError("manifest data_quality_report_id must match embedded report")
+        if self.manifest.symbol != self.symbol:
+            raise ValueError("manifest symbol must match experiment")
+        if self.data_quality_report.symbol != self.symbol:
+            raise ValueError("quality report symbol must match experiment")
+        if not self.data_quality_report.passed:
+            raise ValueError("experiment cannot retain a failed quality report")
+        if self.data_quality_report.source is None:
+            raise ValueError("experiment quality report must identify its source")
+        if self.manifest.data_source != self.data_quality_report.source:
+            raise ValueError("manifest data source must match quality report")
+        return self
 
 
 def selected_trial(experiment: Experiment) -> Trial:

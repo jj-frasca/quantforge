@@ -741,6 +741,14 @@ half-open `[start, end)` request to the same structural preflight. Any returned 
 `start` or at/after `end` fails as `range_mismatch` before heuristics and storage, so vendor
 overfetch, inclusive-end, pagination, or timezone-boundary defects cannot pollute the shared cache.
 
+**Single-name StrategyLab claims carry their quality evidence (ADR-137).** Production hunt drivers
+no longer convert adapter bars directly into an un-audited DataFrame. They construct one immutable
+`ResearchDataset` only after the ADR-006 structural and heuristic preflight passes, then persist the
+complete report beside an `ExperimentManifest` whose experiment/report UUIDs, selected strategy and
+parameters, source, adapter version, request dates, code revision, and gate version all describe the
+same pool row. Legacy and synthetic rows remain explicitly nullable rather than receiving invented
+vendor lineage; cross-sectional panel lineage is a separate future decision.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

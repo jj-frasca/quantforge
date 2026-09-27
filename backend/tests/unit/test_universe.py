@@ -4,12 +4,16 @@ is the honest way to find edges — trial counts are per-symbol, so more names =
 shots, not a bigger overfitting penalty on any one name."""
 
 import math
+from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
 import pytest
+from tests.fixtures.synthetic import builders
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
+from app.data.models import DataQualityReport
+from app.research.dataset import ResearchDataset, prepare_research_dataset
 from app.research.fundamentals.distress import DistressScreen
 from app.research.fundamentals.record import FundamentalRecord
 from app.research.lab.experiment import Experiment, Graduate, InMemoryExperimentStore, Trial
@@ -40,11 +44,27 @@ def _trend(seed: int, drift: float, n: int = 1500) -> pd.DataFrame:
     return pd.DataFrame({"close": closes}, index=idx)
 
 
+def _dataset(symbol: str, frame: pd.DataFrame) -> ResearchDataset:
+    return ResearchDataset(
+        frame=frame,
+        quality_report=DataQualityReport(
+            symbol=symbol,
+            source="yfinance",
+            checked_at=datetime(2026, 1, 1, tzinfo=UTC),
+        ),
+        source="yfinance",
+        adapter_version="test-adapter",
+        start=frame.index[0].to_pydatetime(),
+        end=(frame.index[-1] + pd.Timedelta(days=1)).to_pydatetime(),
+        git_commit_hash="a" * 40,
+    )
+
+
 def _provider(frames: dict[str, pd.DataFrame]):
-    def provide(symbol: str) -> pd.DataFrame:
+    def provide(symbol: str) -> ResearchDataset:
         if symbol not in frames:
             raise ValueError(f"no data for {symbol}")
-        return frames[symbol]
+        return _dataset(symbol, frames[symbol])
 
     return provide
 
@@ -58,6 +78,38 @@ def test_universe_hunt_runs_every_symbol_and_records_to_the_pool() -> None:
     # Two stored family finalists summarize 7 SMA + 9 momentum configs (ADR-046).
     assert store.trials_for_symbol("AAA") == 16
     assert store.trials_for_symbol("BBB") == 16
+
+
+def test_universe_hunt_persists_quality_report_and_manifest_lineage() -> None:
+    bars = builders.clean_series(symbol="AAA", n=1500)
+    dataset = prepare_research_dataset(
+        bars,
+        symbol="AAA",
+        source="yfinance",
+        adapter_version="yfinance-test",
+        start=bars[0].timestamp_utc - pd.Timedelta(days=1),
+        end=bars[-1].timestamp_utc + pd.Timedelta(days=1),
+        git_commit_hash="c" * 40,
+    )
+
+    result = run_universe_hunt(["AAA"], ["sma", "momentum"], lambda _symbol: dataset)
+
+    experiment = result.experiments[0]
+    assert experiment.data_quality_report == dataset.quality_report
+    assert experiment.manifest is not None
+    assert experiment.manifest.experiment_id == experiment.experiment_id
+    assert experiment.manifest.data_quality_report_id == dataset.quality_report.id
+    assert experiment.manifest.git_commit_hash == "c" * 40
+    assert experiment.manifest.data_source == "yfinance"
+    assert experiment.manifest.adapter_version == "yfinance-test"
+
+
+def test_universe_hunt_refuses_plain_frame_for_real_data_claim() -> None:
+    frame = _trend(1, 0.0005)
+    result = run_universe_hunt(["AAA"], ["sma"], lambda _symbol: frame)  # type: ignore[arg-type, return-value]
+
+    assert result.experiments == []
+    assert "ResearchDataset" in result.errors["AAA"]
 
 
 def test_a_failing_symbol_is_captured_and_others_still_run() -> None:
@@ -75,10 +127,10 @@ def test_a_data_normalization_error_is_captured_and_others_still_run() -> None:
 
     frames = {"GOOD": _trend(1, 0.0005)}
 
-    def provide(symbol: str) -> pd.DataFrame:
+    def provide(symbol: str) -> ResearchDataset:
         if symbol == "NANHIGH":
             raise InvalidOperation("[<class 'decimal.ConversionSyntax'>]")
-        return frames[symbol]
+        return _dataset(symbol, frames[symbol])
 
     result = run_universe_hunt(["GOOD", "NANHIGH"], ["sma", "momentum"], provide)
     assert [e.symbol for e in result.experiments] == ["GOOD"]
@@ -397,9 +449,9 @@ def test_quality_pre_screen_skips_a_low_quality_name_before_it_is_ever_hunted() 
     frames = {"GOOD": _trend(1, 0.0006), "WEAK": _trend(2, 0.0006)}
     fetched: list[str] = []
 
-    def provider(symbol: str) -> pd.DataFrame:
+    def provider(symbol: str) -> ResearchDataset:
         fetched.append(symbol)
-        return frames[symbol]
+        return _dataset(symbol, frames[symbol])
 
     records = {"GOOD": _qrecord("GOOD", 0.8), "WEAK": _qrecord("WEAK", 0.1)}
     result = run_universe_hunt(

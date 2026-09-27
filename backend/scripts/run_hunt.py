@@ -25,7 +25,7 @@ from app.config import get_settings
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.data.sources.edgar import SecEdgarFundamentalsSource
 from app.dependencies import build_data_adapter
-from app.research.frames import bars_to_frame
+from app.research.dataset import ResearchDataset, current_git_revision, fetch_research_dataset
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.history import SEARCH_HISTORY_START
@@ -85,12 +85,22 @@ def main() -> None:
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     store = PartitionedExperimentStore(POOL)
     end = datetime.now(UTC)
+    git_commit_hash = current_git_revision()
 
-    def fetch_frame(symbol: str) -> pd.DataFrame:
-        return bars_to_frame(adapter.fetch_price_bars(symbol, SEARCH_HISTORY_START, end))
+    def fetch_dataset(symbol: str) -> ResearchDataset:
+        return fetch_research_dataset(
+            adapter,
+            symbol,
+            SEARCH_HISTORY_START,
+            end,
+            git_commit_hash=git_commit_hash,
+        )
 
     # One memoized fetch feeds BOTH the backtest and the value price series (no double price load).
-    frame_provider = cached_frame_provider(fetch_frame)
+    dataset_provider = cached_frame_provider(fetch_dataset)
+
+    def frame_provider(symbol: str) -> pd.DataFrame:
+        return dataset_provider(symbol).frame
 
     def fundamentals_provider(symbol: str) -> FundamentalSnapshot | None:
         try:
@@ -107,7 +117,7 @@ def main() -> None:
     result = run_universe_hunt(
         symbols,
         names,
-        frame_provider,
+        dataset_provider,
         fundamentals_provider=fundamentals_provider,
         config=GateConfig(),
         fundamental_criteria=FundamentalCriteria(),

@@ -31,11 +31,9 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-import pandas as pd
-
 from app.data.fundamentals import FundamentalCriteria
 from app.data.sources.yfinance import YFinanceAdapter
-from app.research.frames import bars_to_frame
+from app.research.dataset import ResearchDataset, current_git_revision, prepare_research_dataset
 from app.research.lab.experiment import (
     Experiment,
     JsonFileExperimentStore,
@@ -108,10 +106,19 @@ def run(shard_index: int, n_shards: int) -> None:
     store = PriorAwareExperimentStore(writer=JsonFileExperimentStore(out_file), prior=pool)
     adapter = YFinanceAdapter()
     now = datetime.now(UTC)
+    git_commit_hash = current_git_revision()
 
-    def frame_provider(symbol: str) -> pd.DataFrame:
-        full = bars_to_frame(adapter.fetch_price_bars(symbol, SEARCH_HISTORY_START, now))
-        return full.tail(CALIBRATION_N_BARS)
+    def dataset_provider(symbol: str) -> ResearchDataset:
+        bars = adapter.fetch_price_bars(symbol, SEARCH_HISTORY_START, now)[-CALIBRATION_N_BARS:]
+        return prepare_research_dataset(
+            bars,
+            symbol=symbol,
+            source=adapter.source,
+            adapter_version=adapter.adapter_version,
+            start=bars[0].timestamp_utc,
+            end=now,
+            git_commit_hash=git_commit_hash,
+        )
 
     print(
         f"shard {shard_index}/{n_shards}: {len(todo)} of {len(frozen)} frozen symbols, truncated "
@@ -120,7 +127,7 @@ def run(shard_index: int, n_shards: int) -> None:
     result = run_universe_hunt(
         todo,
         [entry.name for entry in STRATEGY_CATALOG],
-        frame_provider,
+        dataset_provider,
         config=GateConfig(),
         fundamental_criteria=FundamentalCriteria(),
         store=store,

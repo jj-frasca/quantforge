@@ -100,6 +100,12 @@ but are recorded. The report creates its UUID before persistence; TimescaleDB st
 value so `ExperimentManifest.data_quality_report_id` can identify the checked snapshot (ADR-136).
 Wording is always "flags potential X" (CLAUDE.md rule 6).
 
+Single-name StrategyLab acquisition runs the same engine before search and embeds the complete
+passed report in each new `Experiment`; its `ExperimentManifest.data_quality_report_id` points to
+that exact embedded evidence (ADR-137). This makes cloud-generated pool rows self-contained when no
+TimescaleDB repository is present. Historical pool rows retain null lineage rather than receiving a
+guessed report.
+
 ---
 
 ## 5. The 8 quality checks (formal definitions)

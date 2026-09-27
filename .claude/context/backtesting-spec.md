@@ -158,6 +158,14 @@ sigma sqrt(dt) Z)`. Seeded RNG for determinism. **Invariant**: all path values >
 `data_quality_report_id`, `adapter_version`, `validation_config_hash`, `benchmark_symbol`.
 Without it, a backtest result is not a reproducible scientific claim.
 
+ADR-137 makes this a production contract for new single-name StrategyLab rows rather than a model
+used only by tests. A real-data hunt accepts a `ResearchDataset` only after `DataQualityEngine`
+passes its exact vendor bars, then stores both that full report and a manifest for the selected
+trial. The manifest shares the pool row's experiment UUID and links the embedded report UUID;
+symbol, source, adapter version, request dates, code revision, selected parameter hash, and gate
+configuration are fixed before the row is written. Legacy and synthetic rows remain explicitly
+nullable because their vendor quality lineage cannot be reconstructed honestly.
+
 ---
 
 ## 8. Oracle tests (must pass before any Phase 4 validation)
