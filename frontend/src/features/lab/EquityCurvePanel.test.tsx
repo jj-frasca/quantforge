@@ -57,6 +57,36 @@ test('renders a positive-return, single-position headline with the "pass" badge 
   )
 })
 
+test('renders alpha vs SPY when the benchmark was measured', async () => {
+  const withAlpha = [
+    curve[0],
+    {
+      timestamp: '2026-09-26T06:36:04.077375Z',
+      equity: 86050.87,
+      cash: 57784.08,
+      n_positions: 12,
+      return_since_start: -0.1394913,
+      benchmark_return_since_start: 0.0045189,
+      alpha_since_start: -0.0741096,
+    },
+  ]
+  server.use(http.get('/api/v1/equity-curve', () => HttpResponse.json(withAlpha)))
+  renderWithClient(<EquityCurvePanel />)
+
+  expect(await screen.findByText(/-7\.41% vs SPY/)).toBeInTheDocument()
+  expect(screen.getByText(/-7\.41% vs SPY/).closest('.status-badge')).toHaveClass('muted')
+})
+
+test('omits the alpha badge when the benchmark has not been measured yet', async () => {
+  // Points recorded before benchmark tracking existed are honestly "not measured" (null), never
+  // backfilled -- the panel must not fabricate a 0% or otherwise misleading alpha for them.
+  server.use(http.get('/api/v1/equity-curve', () => HttpResponse.json(curve)))
+  renderWithClient(<EquityCurvePanel />)
+
+  await screen.findByText('$92,488.99')
+  expect(screen.queryByText(/vs SPY/)).not.toBeInTheDocument()
+})
+
 test('renders the empty state when no snapshot has been recorded', async () => {
   server.use(http.get('/api/v1/equity-curve', () => HttpResponse.json([])))
   renderWithClient(<EquityCurvePanel />)

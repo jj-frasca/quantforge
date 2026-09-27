@@ -109,6 +109,10 @@ export const equityPointSchema = z.object({
   cash: z.number(),
   n_positions: z.number().int().nonnegative(),
   return_since_start: z.number(),
+  // Points recorded before benchmark tracking existed are honestly "not measured" (null), never
+  // backfilled (ADR-141).
+  benchmark_return_since_start: z.number().nullable().optional(),
+  alpha_since_start: z.number().nullable().optional(),
 })
 
 export type EquityPoint = z.infer<typeof equityPointSchema>

@@ -62,6 +62,11 @@ function EquityCurveView({ points }: { points: EquityPoint[] }) {
         <span className={`status-badge ${up ? 'pass' : 'muted'}`}>
           {fmtReturn(latest.return_since_start)} since $100k start
         </span>
+        {latest.alpha_since_start != null && (
+          <span className={`status-badge ${latest.alpha_since_start >= 0 ? 'pass' : 'muted'}`}>
+            {fmtReturn(latest.alpha_since_start)} vs SPY
+          </span>
+        )}
       </div>
       <p className="summary">
         as of {asOf} · cash {fmtCurrency(latest.cash)} · {latest.n_positions} position
