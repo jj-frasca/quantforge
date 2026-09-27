@@ -1,6 +1,6 @@
 """InMemoryPriceBarRepository: save/get round-trip, symbol filtering, half-open time-range query, quality-report retention."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 
 from tests.fixtures.synthetic import builders
 
@@ -31,6 +31,22 @@ def test_get_bars_respects_half_open_range() -> None:
     first_ts = bars[0].timestamp_utc
     out = repo.get_bars("AAPL", datetime(2023, 1, 1, tzinfo=UTC), first_ts)
     assert out == []
+
+
+def test_get_bars_treats_equivalent_timezone_offsets_as_the_same_range() -> None:
+    repo = InMemoryPriceBarRepository()
+    bars = builders.clean_series(n=10)
+    repo.save_bars(bars)
+    offset = timezone(timedelta(hours=-5))
+
+    utc = repo.get_bars("AAPL", bars[2].timestamp_utc, bars[7].timestamp_utc)
+    shifted = repo.get_bars(
+        "AAPL",
+        bars[2].timestamp_utc.astimezone(offset),
+        bars[7].timestamp_utc.astimezone(offset),
+    )
+
+    assert shifted == utc == bars[2:7]
 
 
 def test_save_bars_is_idempotent() -> None:

@@ -1,7 +1,7 @@
 """TimescaleDBPriceBarRepository (integration, needs Docker): round-trip, symbol+range
 filtering, idempotent upsert, and quality-report persistence against real TimescaleDB."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import func, select
@@ -40,6 +40,24 @@ def test_get_bars_filters_by_symbol_and_half_open_range(
     assert repo.get_bars("MSFT", _START, _END) == []  # wrong symbol
     # range ending exactly at the first bar excludes it (half-open)
     assert repo.get_bars("AAPL", datetime(2023, 1, 1, tzinfo=UTC), bars[0].timestamp_utc) == []
+
+
+def test_get_bars_treats_equivalent_timezone_offsets_as_the_same_range(
+    session_factory: sessionmaker[Session],
+) -> None:
+    repo = TimescaleDBPriceBarRepository(session_factory)
+    bars = builders.clean_series(n=10)
+    repo.save_bars(bars)
+    offset = timezone(timedelta(hours=-5))
+
+    utc = repo.get_bars("AAPL", bars[2].timestamp_utc, bars[7].timestamp_utc)
+    shifted = repo.get_bars(
+        "AAPL",
+        bars[2].timestamp_utc.astimezone(offset),
+        bars[7].timestamp_utc.astimezone(offset),
+    )
+
+    assert shifted == utc == bars[2:7]
 
 
 def test_save_bars_is_idempotent(session_factory: sessionmaker[Session]) -> None:
