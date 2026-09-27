@@ -773,6 +773,15 @@ mislabeled, short-history, or identity-drifted component defers the whole factor
 silently changing its ranks or equal-weight benchmark. New scores persist the ordered evidence for
 every component; legacy and direct synthetic scores remain explicitly evidence-null.
 
+**Paper-book alpha is windowed to the benchmark's own inception, not the nominal $100k start
+(ADR-141).** `alpha_since_start` now derives the book's own return from `history[0].equity` — the
+same point `benchmark_return_since_start`'s SPY window starts from — rather than from
+`return_since_start`, which is pegged to a fixed nominal $100k the book was never actually observed
+at when tracking began (the real first snapshot was $92,488.99). `return_since_start` itself is
+unchanged and still answers its own, separate "vs. the nominal $100k" question; only the excess-
+return calculation was conflating the two windows. Historical `data/equity_curve.json` entries keep
+their old-formula values; only appends made after this fix use the corrected one.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,
