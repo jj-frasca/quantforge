@@ -3,14 +3,20 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
+from app.research.backtesting.manifest import compute_parameter_hash
+from app.research.cross_sectional.manifest import (
+    CrossSectionalManifest,
+    PanelComponentManifest,
+)
 from app.research.cross_sectional.search import (
     CrossSectionalExperiment,
     run_cross_sectional_search,
 )
 from app.research.cross_sectional.store import CrossSectionalExperimentStore
+from app.research.dataset import ResearchDataset
 from app.research.lab.gate import GateConfig
 
-FrameProvider = Callable[[str], pd.DataFrame]
+DatasetProvider = Callable[[str], ResearchDataset]
 
 _MIN_SYMBOLS = 2
 # A symbol needs at least this many bars to join the panel; the cross-sectional split needs
@@ -48,7 +54,7 @@ def price_panel_from_frames(
 
 def run_cross_sectional_hunt(
     symbols: Sequence[str],
-    frame_provider: FrameProvider,
+    dataset_provider: DatasetProvider,
     *,
     store: CrossSectionalExperimentStore,
     strategy_names: Sequence[str] | None = None,
@@ -64,23 +70,33 @@ def run_cross_sectional_hunt(
     panel, run the search with the pool's cumulative `prior_trials` (so search effort compounds via
     MinTRL), persist the experiment, and return it with the panel/skip metadata. Pure over its
     provider + store → unit-testable without network."""
-    frames: dict[str, pd.DataFrame] = {}
+    datasets: dict[str, ResearchDataset] = {}
     errors: dict[str, str] = {}
     for symbol in symbols:
         try:
-            frames[symbol] = frame_provider(symbol)
+            dataset = dataset_provider(symbol)
+            if not isinstance(dataset, ResearchDataset):
+                raise TypeError("cross-sectional real-data hunt requires ResearchDataset inputs")
+            if dataset.quality_report.symbol != symbol.strip().upper():
+                raise ValueError("research dataset symbol does not match requested symbol")
+            datasets[symbol] = dataset
         except (ValueError, KeyError, OSError, ArithmeticError, TypeError) as exc:
             # A per-symbol fetch/normalize failure over unreliable vendor data must NOT kill the
             # whole universe hunt — record it and move on. ArithmeticError covers the OHLCV
             # normalizer's decimal.InvalidOperation on a malformed (NaN) bar (prod 2026-07-26).
             errors[symbol] = f"{type(exc).__name__}: {exc}"
 
-    panel = price_panel_from_frames(frames)
+    panel = price_panel_from_frames({symbol: dataset.frame for symbol, dataset in datasets.items()})
     if panel.shape[1] < _MIN_SYMBOLS:
         raise ValueError(
             f"need at least {_MIN_SYMBOLS} symbols with data to rank cross-sectionally, "
             f"got {panel.shape[1]}"
         )
+
+    retained = [datasets[symbol] for symbol in panel.columns]
+    revisions = {dataset.git_commit_hash for dataset in retained}
+    if len(revisions) != 1:
+        raise ValueError("all retained panel datasets must name the same git revision")
 
     experiment = run_cross_sectional_search(
         panel,
@@ -92,6 +108,35 @@ def run_cross_sectional_hunt(
         prior_trials=store.prior_trials(),
         cost_rate=cost_rate,
         rationale=rationale,
+    )
+    selected = next(
+        trial for trial in experiment.trials if trial.strategy_name == experiment.best_strategy_name
+    )
+    manifest = CrossSectionalManifest(
+        experiment_id=experiment.experiment_id,
+        created_at=experiment.created_at,
+        git_commit_hash=revisions.pop(),
+        strategy_name=selected.strategy_name,
+        parameter_hash=compute_parameter_hash(selected.parameters),
+        validation_config_hash=experiment.gate_config.version_hash,
+        components=[
+            PanelComponentManifest(
+                symbol=dataset.quality_report.symbol,
+                data_source=dataset.source,
+                adapter_version=dataset.adapter_version,
+                start_date=dataset.start.date(),
+                end_date=dataset.end.date(),
+                data_quality_report_id=dataset.quality_report.id,
+            )
+            for dataset in retained
+        ],
+    )
+    experiment = CrossSectionalExperiment.model_validate(
+        {
+            **experiment.model_dump(),
+            "panel_manifest": manifest,
+            "data_quality_reports": [dataset.quality_report for dataset in retained],
+        }
     )
     store.add(experiment)
     return CrossSectionalHuntResult(experiment=experiment, panel_bars=len(panel), errors=errors)

@@ -106,6 +106,12 @@ that exact embedded evidence (ADR-137). This makes cloud-generated pool rows sel
 TimescaleDB repository is present. Historical pool rows retain null lineage rather than receiving a
 guessed report.
 
+Cross-sectional production hunts apply the same boundary independently to every requested symbol
+and persist the complete reports for exactly the columns that survive panel construction
+(ADR-138). Their ordered panel manifest maps each retained symbol to its report UUID, source,
+adapter version, and request range. A skipped or short-history name is not represented as evidence
+for a panel claim it did not enter.
+
 ---
 
 ## 5. The 8 quality checks (formal definitions)

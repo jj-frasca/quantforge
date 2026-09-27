@@ -1,12 +1,13 @@
 import hashlib
 import json
+from collections.abc import Mapping
 from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-def compute_parameter_hash(params: dict[str, object]) -> str:
+def compute_parameter_hash(params: Mapping[str, object]) -> str:
     """Deterministic, order-independent SHA256 of a parameter dict."""
     payload = json.dumps(params, sort_keys=True, default=str)
     return hashlib.sha256(payload.encode()).hexdigest()

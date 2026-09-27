@@ -7,11 +7,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.data.models import DataQualityReport
 from app.research.cross_sectional.hunt import (
     price_panel_from_frames,
     run_cross_sectional_hunt,
 )
 from app.research.cross_sectional.store import InMemoryCrossSectionalStore
+from app.research.dataset import ResearchDataset
 
 
 def _frame(n: int, seed: int, start: str = "2015-01-01") -> pd.DataFrame:
@@ -21,11 +23,27 @@ def _frame(n: int, seed: int, start: str = "2015-01-01") -> pd.DataFrame:
     return pd.DataFrame({"close": closes}, index=idx)
 
 
+def _dataset(symbol: str, frame: pd.DataFrame, *, revision: str = "a" * 40) -> ResearchDataset:
+    return ResearchDataset(
+        frame=frame,
+        quality_report=DataQualityReport(
+            symbol=symbol,
+            source="yfinance",
+            checked_at=frame.index[-1].to_pydatetime(),
+        ),
+        source="yfinance",
+        adapter_version="yfinance-test",
+        start=frame.index[0].to_pydatetime(),
+        end=(frame.index[-1] + pd.Timedelta(days=1)).to_pydatetime(),
+        git_commit_hash=revision,
+    )
+
+
 def _provider(frames: dict[str, pd.DataFrame]):
-    def provide(symbol: str) -> pd.DataFrame:
+    def provide(symbol: str) -> ResearchDataset:
         if symbol not in frames:
             raise ValueError(f"no data for {symbol}")
-        return frames[symbol]
+        return _dataset(symbol, frames[symbol])
 
     return provide
 
@@ -67,6 +85,12 @@ def test_run_cross_sectional_hunt_persists_and_returns_the_experiment() -> None:
     assert result.panel_bars == 560
     assert result.errors == {}
     assert store.all() == [result.experiment]  # persisted
+    assert result.experiment.panel_manifest is not None
+    assert result.experiment.data_quality_reports is not None
+    assert [c.symbol for c in result.experiment.panel_manifest.components] == ["A", "B", "C", "D"]
+    assert {r.symbol for r in result.experiment.data_quality_reports} == {"A", "B", "C", "D"}
+    assert result.experiment.panel_manifest.git_commit_hash == "a" * 40
+    assert result.experiment.panel_manifest.experiment_id == result.experiment.experiment_id
 
 
 def test_run_cross_sectional_hunt_is_resilient_to_a_bad_symbol() -> None:
@@ -91,10 +115,10 @@ def test_run_cross_sectional_hunt_is_resilient_to_a_data_normalization_error() -
 
     frames = {s: _frame(560, i) for i, s in enumerate(["A", "B", "C"])}
 
-    def provider(symbol: str) -> pd.DataFrame:
+    def provider(symbol: str) -> ResearchDataset:
         if symbol == "NANHIGH":
             raise InvalidOperation("[<class 'decimal.ConversionSyntax'>]")
-        return frames[symbol]
+        return _dataset(symbol, frames[symbol])
 
     store = InMemoryCrossSectionalStore()
     result = run_cross_sectional_hunt(
@@ -123,6 +147,57 @@ def test_run_cross_sectional_hunt_needs_at_least_two_symbols() -> None:
     store = InMemoryCrossSectionalStore()
     with pytest.raises(ValueError, match="at least 2 symbols"):
         run_cross_sectional_hunt(["A", "BAD"], _provider(frames), store=store)
+
+
+def test_run_cross_sectional_hunt_refuses_plain_frames_for_real_data_claim() -> None:
+    frames = {s: _frame(560, i) for i, s in enumerate(["A", "B"])}
+    store = InMemoryCrossSectionalStore()
+
+    with pytest.raises(ValueError, match="at least 2 symbols"):
+        run_cross_sectional_hunt(
+            ["A", "B"],
+            lambda symbol: frames[symbol],  # type: ignore[arg-type,return-value]
+            store=store,
+        )
+
+    assert store.all() == []
+
+
+def test_run_cross_sectional_hunt_persists_only_retained_panel_evidence() -> None:
+    frames = {"A": _frame(560, 1), "B": _frame(560, 2), "SHORT": _frame(28, 3)}
+    result = run_cross_sectional_hunt(
+        list(frames),
+        _provider(frames),
+        store=InMemoryCrossSectionalStore(),
+        strategy_names=["xs_reversal"],
+        quantiles=(0.2, 0.3),
+    )
+
+    assert result.experiment.universe_symbols == ["A", "B"]
+    assert result.experiment.panel_manifest is not None
+    assert result.experiment.data_quality_reports is not None
+    assert [c.symbol for c in result.experiment.panel_manifest.components] == ["A", "B"]
+    assert [r.symbol for r in result.experiment.data_quality_reports] == ["A", "B"]
+
+
+def test_run_cross_sectional_hunt_rejects_mixed_executed_revisions() -> None:
+    frames = {"A": _frame(560, 1), "B": _frame(560, 2)}
+    datasets = {
+        "A": _dataset("A", frames["A"], revision="a" * 40),
+        "B": _dataset("B", frames["B"], revision="b" * 40),
+    }
+    store = InMemoryCrossSectionalStore()
+
+    with pytest.raises(ValueError, match="same git revision"):
+        run_cross_sectional_hunt(
+            list(datasets),
+            datasets.__getitem__,
+            store=store,
+            strategy_names=["xs_reversal"],
+            quantiles=(0.2, 0.3),
+        )
+
+    assert store.all() == []
 
 
 def test_run_cross_sectional_hunt_forwards_quality_scores_to_the_registry() -> None:

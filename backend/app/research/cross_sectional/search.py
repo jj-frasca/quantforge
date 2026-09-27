@@ -5,8 +5,10 @@ from uuid import UUID, uuid4
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.data.models import DataQualityReport
+from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.backtesting.metrics import ReturnMoments, return_moments, sharpe_ratio
 from app.research.cross_sectional.engine import (
     asset_returns,
@@ -14,6 +16,7 @@ from app.research.cross_sectional.engine import (
     split_panel_holdout,
 )
 from app.research.cross_sectional.ic import ICSummary, rank_ic, summarize_ic
+from app.research.cross_sectional.manifest import CrossSectionalManifest
 from app.research.cross_sectional.registry import (
     CrossSectionalStrategy,
     Params,
@@ -67,6 +70,54 @@ class CrossSectionalExperiment(BaseModel):
     best_gate_result: GateResult | None = None
     graduate: Graduate | None = None
     rationale: str = ""
+    # ADR-138: legacy and synthetic rows have no vendor-panel acquisition claim. New production
+    # rows persist the ordered component manifest and the complete report for every retained name.
+    panel_manifest: CrossSectionalManifest | None = None
+    data_quality_reports: list[DataQualityReport] | None = None
+
+    @model_validator(mode="after")
+    def _validate_panel_lineage(self) -> "CrossSectionalExperiment":
+        if self.panel_manifest is None and self.data_quality_reports is None:
+            return self
+        if self.panel_manifest is None or self.data_quality_reports is None:
+            raise ValueError("panel_manifest and data_quality_reports must be present together")
+        manifest = self.panel_manifest
+        if manifest.experiment_id != self.experiment_id:
+            raise ValueError("panel manifest experiment_id must match experiment")
+        if manifest.created_at != self.created_at:
+            raise ValueError("panel manifest created_at must match experiment")
+        if manifest.validation_config_hash != self.gate_config.version_hash:
+            raise ValueError("panel manifest validation config must match experiment")
+        components = {component.symbol: component for component in manifest.components}
+        reports = {report.symbol: report for report in self.data_quality_reports}
+        if len(components) != len(manifest.components):
+            raise ValueError("panel manifest contains duplicate symbols")
+        if len(reports) != len(self.data_quality_reports):
+            raise ValueError("panel quality reports contain duplicate symbols")
+        expected = self.universe_symbols
+        if list(components) != expected or list(reports) != expected:
+            raise ValueError("panel lineage symbols must exactly match the experiment universe")
+        for symbol in expected:
+            component = components[symbol]
+            report = reports[symbol]
+            if not report.passed:
+                raise ValueError("panel lineage cannot retain a failed quality report")
+            if report.source is None:
+                raise ValueError("panel quality report must identify its source")
+            if component.data_quality_report_id != report.id:
+                raise ValueError("panel component report id must match embedded report")
+            if component.data_source != report.source:
+                raise ValueError("panel component source must match embedded report")
+        selected = next(
+            (trial for trial in self.trials if trial.strategy_name == self.best_strategy_name), None
+        )
+        if selected is None:
+            raise ValueError("panel lineage requires the selected strategy trial")
+        if manifest.strategy_name != selected.strategy_name:
+            raise ValueError("panel manifest strategy must match selected trial")
+        if manifest.parameter_hash != compute_parameter_hash(selected.parameters):
+            raise ValueError("panel manifest parameter hash must match selected trial")
+        return self
 
 
 def _trial_params(params: Params, quantile: float) -> dict[str, float | int]:

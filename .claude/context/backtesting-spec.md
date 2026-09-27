@@ -166,6 +166,12 @@ symbol, source, adapter version, request dates, code revision, selected paramete
 configuration are fixed before the row is written. Legacy and synthetic rows remain explicitly
 nullable because their vendor quality lineage cannot be reconstructed honestly.
 
+ADR-138 uses a distinct `CrossSectionalManifest` for a multi-symbol claim. Shared fields bind the
+experiment, selected strategy/parameter hash, validation config, executed revision, and equal-weight
+universe benchmark. Its ordered `PanelComponentManifest` list binds each retained panel column to
+one passed report UUID, source, adapter version, and requested range. The experiment embeds those
+complete reports and validates that their ordered symbols exactly equal `universe_symbols`.
+
 ---
 
 ## 8. Oracle tests (must pass before any Phase 4 validation)

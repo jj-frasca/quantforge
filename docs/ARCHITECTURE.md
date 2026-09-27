@@ -747,7 +747,16 @@ no longer convert adapter bars directly into an un-audited DataFrame. They const
 complete report beside an `ExperimentManifest` whose experiment/report UUIDs, selected strategy and
 parameters, source, adapter version, request dates, code revision, and gate version all describe the
 same pool row. Legacy and synthetic rows remain explicitly nullable rather than receiving invented
-vendor lineage; cross-sectional panel lineage is a separate future decision.
+vendor lineage.
+
+**Cross-sectional panel claims carry every retained component's evidence (ADR-138).** The
+production panel hunt consumes the same quality-gated `ResearchDataset` boundary per requested
+symbol. After short-history and common-calendar filtering, the durable experiment embeds complete
+reports for exactly the retained columns plus one ordered panel manifest binding each report UUID,
+source, adapter version, and request range to the shared selected strategy, parameters, gate,
+executed revision, and experiment identity. Fetch/quality failures remain skippable, but plain
+frames and mixed code revisions cannot produce a pool row; legacy and synthetic panel rows remain
+explicitly lineage-null.
 
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct

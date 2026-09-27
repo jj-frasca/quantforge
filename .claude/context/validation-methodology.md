@@ -235,6 +235,11 @@ t-stat (IR·√periods), hit rate and period count.
 - The t-stat assumes independent periods, so it is **optimistic** for a slow signal whose IC series
   is autocorrelated. Newey-West adjustment is a noted, unbuilt follow-up.
 
+Production panel acquisition is lineage-bearing as of ADR-138. Each requested vendor series must
+cross the ADR-006 `ResearchDataset` boundary before it can enter the hunt. The persisted experiment
+retains complete reports only for the columns surviving history/common-calendar filtering and one
+ordered panel manifest binding those report identities to the selected search and executed code.
+
 ---
 
 ## 7. Gate calibration — Type-I error, power, and the detectable-edge frontier
