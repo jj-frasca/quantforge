@@ -131,6 +131,9 @@ Legacy value/quality graduates without the required map remain readable but cann
 ADR-143 makes those mappings defensive immutable copies, rejects non-finite values and keys outside
 frozen universe order at both model boundaries, and explicitly serializes them back to the same JSON
 object shape. Absent keys remain deliberate score missingness; `None` remains legacy/unsupplied.
+ADR-144 makes a cross-sectional forward position's parameters and ordered universe defensive
+immutable values as well, while preserving their JSON object/array representations. These fields
+are reconstruction identity, not mutable lifecycle state.
 
 ---
 

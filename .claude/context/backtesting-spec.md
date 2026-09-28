@@ -194,6 +194,9 @@ without its required snapshot is left unpromoted rather than rebuilt from a late
 ADR-143 closes the nested-mutation and non-finite-input gaps at both experiment and position model
 boundaries: snapshots are defensive immutable copies whose finite keys must follow frozen universe
 order, while JSON remains an object and retains `None` plus absent-key semantics.
+ADR-144 also deep-freezes the forward position's reconstruction parameters and ordered universe.
+Their JSON shapes remain object and array, but in-place mutation can no longer redirect factor
+scoring, lifecycle evaluation, or panel evidence validation under an existing position identity.
 
 ---
 

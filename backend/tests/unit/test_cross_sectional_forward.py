@@ -4,6 +4,7 @@ on bars AFTER its freeze boundary and benchmarking against the equal-weight long
 same benchmark ADR-024 used at the holdout). Everything is pure over injectable panels -- no network,
 no look-ahead (weights at t use prices <= t)."""
 
+import json
 from dataclasses import replace
 from typing import cast
 
@@ -324,7 +325,36 @@ def test_freeze_cross_sectional_graduate_builds_an_open_position() -> None:
     pos = freeze_cross_sectional_graduate(exp, frozen_at=now, cost_rate=0.001)
     assert pos.status == "open" and pos.frozen_at == now
     assert pos.strategy_name == "xs_momentum"
-    assert pos.universe_symbols == list(panel.columns)
+    assert list(pos.universe_symbols) == list(panel.columns)
+
+
+def test_position_reconstruction_identity_is_defensive_immutable_and_round_trips() -> None:
+    panel = _persistent_momentum_panel()
+    parameters: dict[str, float | int] = {"lookback": 126, "skip": 0, "quantile": 0.2}
+    universe = list(panel.columns)
+    position = CrossSectionalPosition(
+        strategy_name="xs_momentum",
+        parameters=parameters,
+        universe_symbols=universe,
+        cost_rate=0.001,
+        frozen_at=panel.index[400].to_pydatetime(),
+    )
+
+    parameters["quantile"] = 0.49
+    universe.append("OUTSIDE")
+    assert position.parameters["quantile"] == 0.2
+    assert list(position.universe_symbols) == list(panel.columns)
+    with pytest.raises(TypeError):
+        position.parameters["quantile"] = 0.49
+    with pytest.raises(AttributeError):
+        position.universe_symbols.append("OUTSIDE")
+
+    payload = position.model_dump_json()
+    assert '"parameters":{"lookback":126,"skip":0,"quantile":0.2}' in payload
+    assert f'"universe_symbols":{json.dumps(list(panel.columns), separators=(",", ":"))}' in payload
+    restored = CrossSectionalPosition.model_validate_json(payload)
+    assert restored.parameters == position.parameters
+    assert restored.universe_symbols == position.universe_symbols
 
 
 def test_freeze_cross_sectional_graduate_copies_fundamental_snapshots() -> None:

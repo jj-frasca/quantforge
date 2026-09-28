@@ -10,6 +10,7 @@ injectable panels -- no network, no look-ahead (weights at t use prices <= t).
 
 from collections.abc import Callable, Mapping
 from datetime import datetime
+from types import MappingProxyType
 from typing import Literal
 
 import pandas as pd
@@ -65,8 +66,8 @@ class CrossSectionalPosition(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     strategy_name: str
-    parameters: dict[str, float | int]
-    universe_symbols: list[str]
+    parameters: Mapping[str, float | int]
+    universe_symbols: tuple[str, ...]
     cost_rate: float
     frozen_at: datetime
     value_scores: Mapping[str, float] | None = None
@@ -82,8 +83,15 @@ class CrossSectionalPosition(BaseModel):
     ) -> dict[str, float] | None:
         return None if scores is None else dict(scores)
 
+    @field_serializer("parameters")
+    def _serialize_parameters(
+        self, parameters: Mapping[str, float | int]
+    ) -> dict[str, float | int]:
+        return dict(parameters)
+
     @model_validator(mode="after")
     def _freeze_fundamental_snapshots(self) -> "CrossSectionalPosition":
+        object.__setattr__(self, "parameters", MappingProxyType(dict(self.parameters)))
         object.__setattr__(
             self, "value_scores", freeze_score_snapshot(self.value_scores, self.universe_symbols)
         )
@@ -174,7 +182,7 @@ def _frozen_panel(
     position: CrossSectionalPosition, datasets: Mapping[str, ResearchDataset]
 ) -> tuple[pd.DataFrame, list[ResearchDatasetEvidence]]:
     """Validate and align the exact checked dataset set frozen on the position (ADR-140)."""
-    expected = position.universe_symbols
+    expected = list(position.universe_symbols)
     if len(expected) != len(set(expected)):
         raise ValueError("frozen cross-sectional universe symbols must be unique")
     if set(datasets) != set(expected):
@@ -315,7 +323,7 @@ def freeze_cross_sectional_graduate(
     return CrossSectionalPosition(
         strategy_name=graduate.strategy_name,
         parameters=graduate.parameters,
-        universe_symbols=experiment.universe_symbols,
+        universe_symbols=tuple(experiment.universe_symbols),
         cost_rate=cost_rate,
         frozen_at=frozen_at,
         value_scores=experiment.value_scores,
