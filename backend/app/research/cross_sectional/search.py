@@ -74,6 +74,9 @@ class CrossSectionalExperiment(BaseModel):
     # rows persist the ordered component manifest and the complete report for every retained name.
     panel_manifest: CrossSectionalManifest | None = None
     data_quality_reports: list[DataQualityReport] | None = None
+    # ADR-142: exact panel-projected non-price inputs; None retains legacy/unsupplied semantics.
+    value_scores: dict[str, float] | None = None
+    quality_scores: dict[str, float] | None = None
 
     @model_validator(mode="after")
     def _validate_panel_lineage(self) -> "CrossSectionalExperiment":
@@ -123,6 +126,15 @@ class CrossSectionalExperiment(BaseModel):
 def _trial_params(params: Params, quantile: float) -> dict[str, float | int]:
     """Record the searched quantile alongside the signal params, so a finalist is fully specified."""
     return {**params, "quantile": quantile}
+
+
+def _project_score_snapshot(
+    scores: Mapping[str, float] | None, columns: pd.Index
+) -> dict[str, float] | None:
+    """Freeze only scores that could affect this panel, retaining panel order and missingness."""
+    if scores is None:
+        return None
+    return {symbol: float(scores[symbol]) for symbol in columns if symbol in scores}
 
 
 def _config_returns(
@@ -221,7 +233,11 @@ def run_cross_sectional_search(
     shared PBO is likewise computed over every current concrete config (ADR-104).
     """
     gate_config = config or GateConfig()
-    registry = default_strategies(value_scores=value_scores, quality_scores=quality_scores)
+    frozen_value_scores = _project_score_snapshot(value_scores, prices.columns)
+    frozen_quality_scores = _project_score_snapshot(quality_scores, prices.columns)
+    registry = default_strategies(
+        value_scores=frozen_value_scores, quality_scores=frozen_quality_scores
+    )
     names = list(strategy_names) if strategy_names is not None else list(registry)
     in_sample, holdout = split_panel_holdout(prices)
 
@@ -346,4 +362,6 @@ def run_cross_sectional_search(
         best_gate_result=gate_result,
         graduate=graduate,
         rationale=rationale,
+        value_scores=frozen_value_scores,
+        quality_scores=frozen_quality_scores,
     )

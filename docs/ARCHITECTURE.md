@@ -782,6 +782,12 @@ unchanged and still answers its own, separate "vs. the nominal $100k" question; 
 return calculation was conflating the two windows. Historical `data/equity_curve.json` entries keep
 their old-formula values; only appends made after this fix use the corrected one.
 
+**Fundamental factor inputs freeze with the experiment (ADR-142).** New cross-sectional experiments
+persist the exact panel-projected value and quality mappings used by their search. Forward promotion
+copies those snapshots into the position and rebuilds value, quality, and quality-value signals from
+them; it never substitutes a later fundamentals pool. A legacy fundamental graduate without its
+required snapshot stays visible but is not promoted because its selected factor is unreconstructable.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

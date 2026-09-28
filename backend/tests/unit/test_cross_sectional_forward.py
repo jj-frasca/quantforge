@@ -121,6 +121,28 @@ def test_score_forward_reconstructs_value_factor_from_stored_scores() -> None:
     assert score.forward_bars > 0
 
 
+@pytest.mark.parametrize("strategy_name", ["xs_quality", "xs_quality_value"])
+def test_score_forward_reconstructs_quality_factor_from_stored_scores(
+    strategy_name: str,
+) -> None:
+    panel = _noise_panel()
+    value_scores = {f"S{i}": float(i + 1) / 7.0 for i in range(6)}
+    quality_scores = {f"S{i}": float(6 - i) / 7.0 for i in range(6)}
+    pos = CrossSectionalPosition(
+        strategy_name=strategy_name,
+        parameters={"quantile": 0.2},
+        universe_symbols=list(panel.columns),
+        cost_rate=0.001,
+        frozen_at=panel.index[400].to_pydatetime(),
+        value_scores=value_scores,
+        quality_scores=quality_scores,
+    )
+
+    score = score_forward(pos, panel)
+
+    assert score.forward_bars > 0
+
+
 def test_score_forward_raises_on_unknown_strategy() -> None:
     panel = _noise_panel()
     pos = CrossSectionalPosition(
@@ -244,6 +266,20 @@ def test_freeze_cross_sectional_graduate_builds_an_open_position() -> None:
     assert pos.universe_symbols == list(panel.columns)
 
 
+def test_freeze_cross_sectional_graduate_copies_fundamental_snapshots() -> None:
+    panel = _persistent_momentum_panel()
+    value_scores = {symbol: float(i) for i, symbol in enumerate(panel.columns)}
+    quality_scores = {symbol: float(i + 1) for i, symbol in enumerate(panel.columns)}
+    exp = _graduated_experiment(
+        "xs_quality_value", list(panel.columns), {"quantile": 0.2}
+    ).model_copy(update={"value_scores": value_scores, "quality_scores": quality_scores})
+
+    pos = freeze_cross_sectional_graduate(exp, frozen_at=panel.index[400].to_pydatetime())
+
+    assert pos.value_scores == value_scores
+    assert pos.quality_scores == quality_scores
+
+
 def test_freeze_raises_without_a_graduate() -> None:
     exp = _graduated_experiment("xs_momentum", ["A", "B"], {"quantile": 0.2}).model_copy(
         update={"graduate": None}
@@ -262,6 +298,36 @@ def test_manage_book_promotes_a_new_graduate() -> None:
     book = manage_cross_sectional_book([], [exp], lambda _p: _datasets(panel), now=now)
     assert len(book) == 1
     assert book[0].status == "open" and book[0].strategy_name == "xs_momentum"
+
+
+def test_manage_book_promotes_and_scores_a_frozen_quality_graduate() -> None:
+    panel = _persistent_momentum_panel()
+    scores = {symbol: float(i) for i, symbol in enumerate(panel.columns)}
+    exp = _graduated_experiment("xs_quality", list(panel.columns), {"quantile": 0.2}).model_copy(
+        update={"value_scores": None, "quality_scores": scores}
+    )
+
+    book = manage_cross_sectional_book(
+        [], [exp], lambda _position: _datasets(panel), now=panel.index[-5].to_pydatetime()
+    )
+
+    assert len(book) == 1
+    assert book[0].quality_scores == scores
+    assert book[0].score is not None
+
+
+@pytest.mark.parametrize("strategy_name", ["xs_value", "xs_quality", "xs_quality_value"])
+def test_manage_book_skips_legacy_fundamental_graduate_without_its_snapshot(
+    strategy_name: str,
+) -> None:
+    panel = _persistent_momentum_panel()
+    exp = _graduated_experiment(strategy_name, list(panel.columns), {"quantile": 0.2})
+
+    book = manage_cross_sectional_book(
+        [], [exp], lambda _position: _datasets(panel), now=panel.index[-5].to_pydatetime()
+    )
+
+    assert book == []
 
 
 def test_manage_book_persists_ordered_complete_panel_evidence() -> None:

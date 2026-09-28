@@ -206,12 +206,15 @@ def test_run_cross_sectional_hunt_forwards_quality_scores_to_the_registry() -> N
     symbols = ["A", "B", "C", "D", "E", "F"]
     frames = {s: _frame(560, i) for i, s in enumerate(symbols)}
     store = InMemoryCrossSectionalStore()
+    quality_scores = {s: (i + 1) / 6.0 for i, s in enumerate(symbols)}
     result = run_cross_sectional_hunt(
         symbols,
         _provider(frames),
         store=store,
         strategy_names=["xs_quality"],
-        quality_scores={s: (i + 1) / 6.0 for i, s in enumerate(symbols)},
+        quality_scores={**quality_scores, "OUTSIDE": 99.0},
         quantiles=(0.2, 0.3),
     )
     assert [t.strategy_name for t in result.experiment.trials] == ["xs_quality"]
+    assert result.experiment.quality_scores == quality_scores
+    assert result.experiment.value_scores is None

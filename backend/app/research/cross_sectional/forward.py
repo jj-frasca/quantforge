@@ -56,10 +56,10 @@ class CrossSectionalForwardScore(BaseModel):
 
 class CrossSectionalPosition(BaseModel):
     """A cross-sectional graduate frozen for forward-testing (ADR-025). Its config -- the strategy,
-    the searched signal params AND quantile, the universe, the cost rate, and (for xs_value) the
-    static value-score snapshot -- is locked as of `frozen_at`; everything after is genuinely unseen.
-    `score` is the latest forward evaluation (None until first run). A factor is managed: retired when
-    it deteriorates, kept afterward as an honest record and never re-promoted."""
+    the searched signal params AND quantile, the universe, the cost rate, and any static value and
+    quality snapshots -- is locked as of `frozen_at`; everything after is genuinely unseen. `score`
+    is the latest forward evaluation (None until first run). A factor is managed: retired when it
+    deteriorates, kept afterward as an honest record and never re-promoted."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -69,6 +69,7 @@ class CrossSectionalPosition(BaseModel):
     cost_rate: float
     frozen_at: datetime
     value_scores: dict[str, float] | None = None
+    quality_scores: dict[str, float] | None = None
     score: CrossSectionalForwardScore | None = None
     status: Literal["open", "retired"] = "open"
     retired_at: datetime | None = None
@@ -82,7 +83,9 @@ def _factor_returns(position: CrossSectionalPosition, panel: pd.DataFrame) -> pd
     """Recompute the frozen factor's portfolio return series over the FULL panel by rebuilding its
     signal from the unmodified registry. Warmup happens on the full panel; callers slice the
     post-freeze bars. Reuses `engine.portfolio_returns` -- no reinvented returns math."""
-    registry = default_strategies(value_scores=position.value_scores)
+    registry = default_strategies(
+        value_scores=position.value_scores, quality_scores=position.quality_scores
+    )
     strategy = registry.get(position.strategy_name)
     if strategy is None:
         raise ValueError(f"unknown cross-sectional strategy {position.strategy_name!r}")
@@ -274,20 +277,30 @@ def freeze_cross_sectional_graduate(
     frozen_at: datetime,
     *,
     cost_rate: float = 0.001,
-    value_scores: dict[str, float] | None = None,
 ) -> CrossSectionalPosition:
     """Freeze a cross-sectional graduate for forward-testing: lock its strategy, searched params +
-    quantile, universe, cost rate, and (for xs_value) the static score snapshot as of `frozen_at`."""
+    quantile, universe, cost rate, and fundamental score snapshots as of `frozen_at`."""
     graduate = experiment.graduate
     if graduate is None:
         raise ValueError("experiment has no graduate to freeze")
+    if (
+        graduate.strategy_name in {"xs_value", "xs_quality_value"}
+        and experiment.value_scores is None
+    ):
+        raise ValueError("fundamental graduate lacks its frozen value-score snapshot")
+    if (
+        graduate.strategy_name in {"xs_quality", "xs_quality_value"}
+        and experiment.quality_scores is None
+    ):
+        raise ValueError("fundamental graduate lacks its frozen quality-score snapshot")
     return CrossSectionalPosition(
         strategy_name=graduate.strategy_name,
         parameters=graduate.parameters,
         universe_symbols=experiment.universe_symbols,
         cost_rate=cost_rate,
         frozen_at=frozen_at,
-        value_scores=value_scores,
+        value_scores=experiment.value_scores,
+        quality_scores=experiment.quality_scores,
     )
 
 
@@ -299,7 +312,6 @@ def manage_cross_sectional_book(
     exit_policy: CrossSectionalExitPolicy | None = None,
     now: datetime,
     cost_rate: float = 0.001,
-    value_scores: dict[str, float] | None = None,
 ) -> list[CrossSectionalPosition]:
     """Advance the cross-sectional forward book one step (ADR-025, mirrors portfolio_manager): PROMOTE
     new graduates (freeze any factor -- (strategy, universe) -- not already tracked), MONITOR every
@@ -315,11 +327,13 @@ def manage_cross_sectional_book(
         key = (experiment.graduate.strategy_name, tuple(sorted(experiment.universe_symbols)))
         if key in held:
             continue
-        book.append(
-            freeze_cross_sectional_graduate(
-                experiment, frozen_at=now, cost_rate=cost_rate, value_scores=value_scores
+        try:
+            position = freeze_cross_sectional_graduate(
+                experiment, frozen_at=now, cost_rate=cost_rate
             )
-        )
+        except ValueError:
+            continue
+        book.append(position)
         held.add(key)
 
     updated: list[CrossSectionalPosition] = []
@@ -332,11 +346,11 @@ def manage_cross_sectional_book(
             if not isinstance(datasets, Mapping):
                 raise TypeError("cross-sectional forward provider must return a dataset mapping")
             panel, evidence = _frozen_panel(position, datasets)
+            score = score_forward(position, panel, evidence=evidence)
+            decision = evaluate_cross_sectional_lifecycle(position, panel, policy)
         except (ValueError, KeyError, OSError, ArithmeticError, TypeError):
             updated.append(position)
             continue
-        score = score_forward(position, panel, evidence=evidence)
-        decision = evaluate_cross_sectional_lifecycle(position, panel, policy)
         if decision.action == "retire":
             updated.append(
                 position.model_copy(

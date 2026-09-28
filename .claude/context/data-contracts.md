@@ -124,6 +124,11 @@ executed revision, and panel alignment must retain the frozen columns in order. 
 failure leaves the prior factor score unchanged; a new score stores ordered
 `ResearchDatasetEvidence` for the complete panel.
 
+Static fundamental factor inputs are part of the cross-sectional claim (ADR-142). New experiments
+store value and quality mappings projected into retained panel order; `None` means that family was
+not supplied. Forward promotion copies those exact snapshots, never the current fundamentals pool.
+Legacy value/quality graduates without the required map remain readable but cannot be promoted.
+
 ---
 
 ## 5. The 8 quality checks (formal definitions)

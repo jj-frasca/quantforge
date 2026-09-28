@@ -129,11 +129,15 @@ def test_alpha9_strategy_is_searched_by_name() -> None:
 
 
 def test_value_strategy_is_searched_when_scores_are_supplied() -> None:
-    scores = {f"S{i}": float(i) / 6.0 for i in range(6)}
+    scores = {**{f"S{i}": float(i) / 6.0 for i in range(6)}, "OUTSIDE": 99.0}
     exp = run_cross_sectional_search(
         _noise_panel(), strategy_names=["xs_value"], value_scores=scores, config=_LENIENT
     )
     assert [t.strategy_name for t in exp.trials] == ["xs_value"]
+    assert exp.value_scores == {f"S{i}": float(i) / 6.0 for i in range(6)}
+    assert exp.quality_scores is None
+    restored = CrossSectionalExperiment.model_validate_json(exp.model_dump_json())
+    assert restored.value_scores == exp.value_scores
 
 
 def test_unknown_strategy_names_are_skipped() -> None:
