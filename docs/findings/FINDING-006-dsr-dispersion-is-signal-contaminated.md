@@ -1,7 +1,11 @@
 # FINDING-006: DSR's null haircut is estimated from signal-contaminated trials
 
 - **Severity:** Critical (methodology; the DSR gate has measured zero power against extreme edges)
-- **Status:** Remediation implemented by ADR-050; full cloud calibration pending
+- **Status:** Resolved by ADR-050. The production-sized Type-I sweep (0/200 on both nulls, max DSR
+  -0.415 iid / -0.269 bootstrap) and the power sweep (64% detection at oracle Sharpe 3.9) both
+  completed 2026-08-20 with ADR-050's IQR dispersion baked into every quoted number — see
+  `docs/ARCHITECTURE.md`'s "gate's Type-I error is measured" and "gate's POWER is measured"
+  paragraphs, both of which cite this finding as included in their numbers.
 - **Affected:** ADR-046 whole-search DSR, longitudinal and cross-sectional search
 
 ## Finding
@@ -54,5 +58,6 @@ calibration identity, and pass fresh null and power calibration before productio
 ADR-050 uses the Normal-consistent IQR scale of the whole current trial family, with sample standard
 deviation retained below four candidates. It preserves cumulative lifetime N and all thresholds.
 Focused RED tests were observed before implementation. Preliminary 10-seed full-catalog checks
-produced 0/10 positive margins on iid nulls and 9/10 on the strongest AR(1) edge, but the finding is
-not closed until the production-sized iid/bootstrap and both power workflows complete green.
+produced 0/10 positive margins on iid nulls and 9/10 on the strongest AR(1) edge. The
+production-sized iid/bootstrap sweep (run 32354284731) and both power workflows (runs
+32355803804/32355806443) have since completed green — the finding is closed.
