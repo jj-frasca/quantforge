@@ -3,7 +3,10 @@
 - **Severity:** Medium — the headline "are we making money vs. the market?" number is measured
   over two different windows and materially overstates the book's underperformance; not yet
   surfaced in the frontend, but persisted as durable record and printed in every broker-run log
-- **Status:** Open
+- **Status:** Resolved — fixed by ADR-141 (`be33355d`), surfaced on the dashboard by `7e133d29`.
+  `append_equity_point` now derives alpha from `history[0].equity` (the benchmark's own inception
+  point), not from `return_since_start`'s nominal $100k baseline. Live-verified against the running
+  frontend and `data/equity_curve.json` (2026-09-27).
 - **Date:** 2026-09-27
 - **Affects:** `app.execution.equity_curve.append_equity_point`, `scripts/paper_broker.py::main`,
   every `alpha_since_start` value in `data/equity_curve.json` computed since benchmark tracking
