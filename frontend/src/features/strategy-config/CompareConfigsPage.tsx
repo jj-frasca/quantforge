@@ -236,6 +236,12 @@ export function CompareConfigsPage() {
 
       {compare.status === 'settled' && selectedEntry && (
         <>
+          {rows.length !== compare.results.length && (
+            <p role="status">
+              Results below are stale — configs changed since this run. Click "Run
+              comparison" to refresh them.
+            </p>
+          )}
           <CompareEquityCurves rows={rows.map((r, i) => ({ label: rowLabel(i), values: r.values }))} results={compare.results} />
           <CompareSpreadCallout results={compare.results} />
           <CompareMetricsTable

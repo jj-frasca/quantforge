@@ -240,6 +240,32 @@ test('adding a row after the comparison settles renders "No result returned" for
   expect(screen.getByText(/no result returned\./i)).toBeInTheDocument()
 })
 
+test('adding or removing a row after settling nudges the user to re-run the comparison', async () => {
+  server.use(http.post('/api/v1/backtest', () => HttpResponse.json(responseFor(0.8, 0.18))))
+
+  renderWithClient(<CompareConfigsPage />)
+  await screen.findByRole('group', { name: /^config A$/i })
+  await userEvent.click(screen.getByRole('button', { name: /run comparison/i }))
+  await waitFor(() => {
+    expect(screen.getByRole('table', { name: /comparison/i })).toBeInTheDocument()
+  })
+  // Right after settling, row count still matches the results that produced this
+  // table — no nudge yet.
+  expect(screen.queryByText(/results below are stale/i)).not.toBeInTheDocument()
+
+  // Changing the row set outruns the settled results (same "Config C has no result"
+  // situation the test above documents) — the nudge should now explain why.
+  await userEvent.click(screen.getByRole('button', { name: /\+ add config/i }))
+  await screen.findByRole('group', { name: /^config C$/i })
+  expect(screen.getByText(/results below are stale.*run comparison/i)).toBeInTheDocument()
+
+  // Re-running clears it — the results now match the current row set again.
+  await userEvent.click(screen.getByRole('button', { name: /run comparison/i }))
+  await waitFor(() => {
+    expect(screen.queryByText(/results below are stale/i)).not.toBeInTheDocument()
+  })
+})
+
 test('disables submit and shows an inline message for an equal or reversed date range', async () => {
   // FINDING-064: the backend (ADR-133) now rejects equal/reversed ranges with a 422 —
   // this form should catch it before submit rather than round-trip to find out.
