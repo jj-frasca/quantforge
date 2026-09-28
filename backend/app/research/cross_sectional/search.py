@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from app.data.models import DataQualityReport
 from app.research.backtesting.manifest import compute_parameter_hash
@@ -22,6 +22,7 @@ from app.research.cross_sectional.registry import (
     Params,
     default_strategies,
 )
+from app.research.cross_sectional.snapshots import freeze_score_snapshot
 from app.research.lab.candidate_budget import allocate_candidate_budget
 from app.research.lab.experiment import Graduate, Trial
 from app.research.lab.gate import GateConfig, GateResult, GraduationGate
@@ -75,11 +76,25 @@ class CrossSectionalExperiment(BaseModel):
     panel_manifest: CrossSectionalManifest | None = None
     data_quality_reports: list[DataQualityReport] | None = None
     # ADR-142: exact panel-projected non-price inputs; None retains legacy/unsupplied semantics.
-    value_scores: dict[str, float] | None = None
-    quality_scores: dict[str, float] | None = None
+    value_scores: Mapping[str, float] | None = None
+    quality_scores: Mapping[str, float] | None = None
+
+    @field_serializer("value_scores", "quality_scores")
+    def _serialize_score_snapshot(
+        self, scores: Mapping[str, float] | None
+    ) -> dict[str, float] | None:
+        return None if scores is None else dict(scores)
 
     @model_validator(mode="after")
     def _validate_panel_lineage(self) -> "CrossSectionalExperiment":
+        object.__setattr__(
+            self, "value_scores", freeze_score_snapshot(self.value_scores, self.universe_symbols)
+        )
+        object.__setattr__(
+            self,
+            "quality_scores",
+            freeze_score_snapshot(self.quality_scores, self.universe_symbols),
+        )
         if self.panel_manifest is None and self.data_quality_reports is None:
             return self
         if self.panel_manifest is None or self.data_quality_reports is None:

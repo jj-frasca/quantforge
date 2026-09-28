@@ -128,6 +128,9 @@ Static fundamental factor inputs are part of the cross-sectional claim (ADR-142)
 store value and quality mappings projected into retained panel order; `None` means that family was
 not supplied. Forward promotion copies those exact snapshots, never the current fundamentals pool.
 Legacy value/quality graduates without the required map remain readable but cannot be promoted.
+ADR-143 makes those mappings defensive immutable copies, rejects non-finite values and keys outside
+frozen universe order at both model boundaries, and explicitly serializes them back to the same JSON
+object shape. Absent keys remain deliberate score missingness; `None` remains legacy/unsupplied.
 
 ---
 

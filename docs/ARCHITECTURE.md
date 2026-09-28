@@ -788,6 +788,11 @@ copies those snapshots into the position and rebuilds value, quality, and qualit
 them; it never substitutes a later fundamentals pool. A legacy fundamental graduate without its
 required snapshot stays visible but is not promoted because its selected factor is unreconstructable.
 
+**Fundamental snapshots are deeply immutable and finite (ADR-143).** Both experiment and forward-
+position construction defensively copy score maps, require finite values, and require keys to be an
+ordered subset of the frozen universe. The in-memory mapping rejects mutation while its durable
+representation remains the ADR-142 JSON object, including `None` and absent-key semantics.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

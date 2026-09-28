@@ -140,6 +140,23 @@ def test_value_strategy_is_searched_when_scores_are_supplied() -> None:
     assert restored.value_scores == exp.value_scores
 
 
+def test_searched_score_snapshot_is_defensive_immutable_and_round_trips() -> None:
+    scores = {f"S{i}": float(i) / 6.0 for i in range(6)}
+    exp = run_cross_sectional_search(
+        _noise_panel(), strategy_names=["xs_value"], value_scores=scores, config=_LENIENT
+    )
+    assert exp.value_scores is not None
+
+    scores["S0"] = 99.0
+    assert exp.value_scores["S0"] == 0.0
+    with pytest.raises(TypeError, match="immutable"):
+        exp.value_scores["S0"] = 7.0
+
+    restored = CrossSectionalExperiment.model_validate_json(exp.model_dump_json())
+    assert restored.value_scores == exp.value_scores
+    assert list(restored.value_scores or {}) == list(exp.universe_symbols)
+
+
 def test_unknown_strategy_names_are_skipped() -> None:
     exp = run_cross_sectional_search(_noise_panel(), strategy_names=["xs_momentum", "bogus"])
     assert [t.strategy_name for t in exp.trials] == ["xs_momentum"]

@@ -12,6 +12,7 @@ import pandas as pd
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from pydantic import ValidationError
 
 from app.data.models import DataQualityReport
 from app.research.cross_sectional.forward import (
@@ -141,6 +142,66 @@ def test_score_forward_reconstructs_quality_factor_from_stored_scores(
     score = score_forward(pos, panel)
 
     assert score.forward_bars > 0
+
+
+@pytest.mark.parametrize("invalid", [float("nan"), float("inf"), float("-inf")])
+def test_position_rejects_non_finite_fundamental_scores(invalid: float) -> None:
+    panel = _noise_panel()
+    with pytest.raises(ValidationError, match="finite"):
+        CrossSectionalPosition(
+            strategy_name="xs_quality",
+            parameters={"quantile": 0.2},
+            universe_symbols=list(panel.columns),
+            cost_rate=0.001,
+            frozen_at=panel.index[400].to_pydatetime(),
+            quality_scores={"S0": invalid},
+        )
+
+
+@pytest.mark.parametrize(
+    "scores",
+    [
+        {"OUTSIDE": 1.0},
+        {"S1": 1.0, "S0": 0.0},
+    ],
+)
+def test_position_rejects_score_keys_outside_frozen_panel_order(
+    scores: dict[str, float],
+) -> None:
+    panel = _noise_panel()
+    with pytest.raises(ValidationError, match="frozen universe order"):
+        CrossSectionalPosition(
+            strategy_name="xs_quality",
+            parameters={"quantile": 0.2},
+            universe_symbols=list(panel.columns),
+            cost_rate=0.001,
+            frozen_at=panel.index[400].to_pydatetime(),
+            quality_scores=scores,
+        )
+
+
+def test_position_score_snapshot_is_immutable_and_round_trips_as_json_object() -> None:
+    panel = _noise_panel()
+    scores = {"S0": 0.1, "S2": 0.3}
+    position = CrossSectionalPosition(
+        strategy_name="xs_quality",
+        parameters={"quantile": 0.2},
+        universe_symbols=list(panel.columns),
+        cost_rate=0.001,
+        frozen_at=panel.index[400].to_pydatetime(),
+        quality_scores=scores,
+    )
+    assert position.quality_scores is not None
+
+    scores["S0"] = 9.0
+    assert position.quality_scores["S0"] == 0.1
+    with pytest.raises(TypeError, match="immutable"):
+        position.quality_scores.update({"S0": 7.0})
+
+    payload = position.model_dump_json()
+    assert '"quality_scores":{"S0":0.1,"S2":0.3}' in payload
+    restored = CrossSectionalPosition.model_validate_json(payload)
+    assert restored.quality_scores == position.quality_scores
 
 
 def test_score_forward_raises_on_unknown_strategy() -> None:

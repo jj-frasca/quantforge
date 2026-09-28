@@ -191,6 +191,9 @@ experiment because those static fundamental inputs define the `xs_value`, `xs_qu
 `xs_quality_value` trials just as prices do. Promotion copies only those historical snapshots into
 the forward position, and registry reconstruction supplies both. A legacy fundamental graduate
 without its required snapshot is left unpromoted rather than rebuilt from a later fundamentals pool.
+ADR-143 closes the nested-mutation and non-finite-input gaps at both experiment and position model
+boundaries: snapshots are defensive immutable copies whose finite keys must follow frozen universe
+order, while JSON remains an object and retains `None` plus absent-key semantics.
 
 ---
 

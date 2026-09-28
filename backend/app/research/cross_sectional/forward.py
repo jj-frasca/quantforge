@@ -13,13 +13,14 @@ from datetime import datetime
 from typing import Literal
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer, model_validator
 
 from app.research.backtesting.metrics import max_drawdown, sharpe_ratio
 from app.research.cross_sectional.engine import asset_returns, portfolio_returns
 from app.research.cross_sectional.hunt import price_panel_from_frames
 from app.research.cross_sectional.registry import default_strategies
 from app.research.cross_sectional.search import CrossSectionalExperiment
+from app.research.cross_sectional.snapshots import freeze_score_snapshot
 from app.research.dataset import ResearchDataset, ResearchDatasetEvidence
 
 
@@ -68,12 +69,30 @@ class CrossSectionalPosition(BaseModel):
     universe_symbols: list[str]
     cost_rate: float
     frozen_at: datetime
-    value_scores: dict[str, float] | None = None
-    quality_scores: dict[str, float] | None = None
+    value_scores: Mapping[str, float] | None = None
+    quality_scores: Mapping[str, float] | None = None
     score: CrossSectionalForwardScore | None = None
     status: Literal["open", "retired"] = "open"
     retired_at: datetime | None = None
     exit_reasons: list[str] = []
+
+    @field_serializer("value_scores", "quality_scores")
+    def _serialize_score_snapshot(
+        self, scores: Mapping[str, float] | None
+    ) -> dict[str, float] | None:
+        return None if scores is None else dict(scores)
+
+    @model_validator(mode="after")
+    def _freeze_fundamental_snapshots(self) -> "CrossSectionalPosition":
+        object.__setattr__(
+            self, "value_scores", freeze_score_snapshot(self.value_scores, self.universe_symbols)
+        )
+        object.__setattr__(
+            self,
+            "quality_scores",
+            freeze_score_snapshot(self.quality_scores, self.universe_symbols),
+        )
+        return self
 
 
 PanelDatasetProvider = Callable[[CrossSectionalPosition], Mapping[str, ResearchDataset]]
