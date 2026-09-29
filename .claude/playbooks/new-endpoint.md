@@ -23,7 +23,9 @@ Request model: [name]. Response model: [name]. Versioned under /api/v1.
 (app/dependencies.py), propose the handler before writing code.
 
 **Exit criteria**:
-- [ ] Endpoint is async; NO sync/blocking DB calls in the route (CLAUDE.md)
+- [ ] Route is a sync `def` if it does DB work (ADR-009/CLAUDE.md — this stack is
+      synchronous on psycopg3; FastAPI threadpools sync `def` routes, so a blocking driver
+      call must never sit inside an `async def`)
 - [ ] Request + response validated by Pydantic models
 - [ ] Tests via httpx/TestClient: happy path, validation error (422), not-found/error paths
 - [ ] OpenAPI docs render correctly (response_model set)
