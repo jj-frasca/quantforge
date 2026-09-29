@@ -843,6 +843,12 @@ writes enforce open/retired metadata, finite cost and score statistics, unique u
 one ordered complete evidence set at one revision, and coherent non-empty curve geometry. Empty
 legacy curves and evidence-null synthetic/legacy scores remain supported.
 
+**Experiment pool writers revalidate every incoming claim (ADR-150).** The monolithic and
+partitioned single-name stores plus the cross-sectional store reconstruct incoming model dumps
+through ADR-145/147's authoritative boundaries before creating directories or writing bytes. An
+unchecked Pydantic copy can no longer persist a contradictory selected-trial, gate, graduate, or
+panel claim and make the pool fail on its next load; batch validation precedes all partition writes.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

@@ -153,6 +153,9 @@ score curves, and ordered component evidence are defensive immutable copies. The
 open/retired identity, finite cost and score statistics, unique ordered universe membership, exact
 evidence order plus one executed revision, and non-empty curve geometry on construction, managed
 replacement, reload, and store write. Evidence-null and empty-curve compatibility remains explicit.
+ADR-150 requires every persistent experiment-pool writer to revalidate incoming model dumps before
+any filesystem mutation. This applies to monolithic and partitioned single-name pools and the
+cross-sectional pool, preventing unchecked model copies from bypassing ADR-145/147 at write time.
 
 ---
 

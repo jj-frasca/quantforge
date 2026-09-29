@@ -114,6 +114,20 @@ def test_json_file_store_starts_empty_when_file_absent(tmp_path) -> None:
     assert store.trials_for_symbol("AAPL") == 0
 
 
+def test_json_file_store_revalidates_incoming_claim_before_write(tmp_path) -> None:
+    path = tmp_path / "pool.json"
+    store = JsonFileExperimentStore(path)
+    experiment = _experiment("AAPL", 2, graduated=True)
+    store.add(experiment)
+    before = path.read_bytes()
+
+    unchecked = experiment.model_copy(update={"selected_trial_index": 99})
+    with pytest.raises(ValueError, match="selected trial index 99"):
+        store.add(unchecked)
+
+    assert path.read_bytes() == before
+
+
 # ---- PartitionedExperimentStore (ADR-032) --------------------------------------------------------
 
 
@@ -124,6 +138,21 @@ def test_partitioned_store_writes_one_file_per_symbol(tmp_path) -> None:
     store.add(_experiment("MSFT", 4))
     written = sorted(p.name for p in (tmp_path / "research_pool").glob("*.json"))
     assert written == ["AAPL.json", "MSFT.json"]
+
+
+def test_partitioned_store_revalidates_incoming_claim_before_write(tmp_path) -> None:
+    directory = tmp_path / "research_pool"
+    store = PartitionedExperimentStore(directory)
+    experiment = _experiment("AAPL", 2, graduated=True)
+    store.add(experiment)
+    path = directory / "AAPL.json"
+    before = path.read_bytes()
+
+    unchecked = experiment.model_copy(update={"selected_trial_index": 99})
+    with pytest.raises(ValueError, match="selected trial index 99"):
+        store.add(unchecked)
+
+    assert path.read_bytes() == before
 
 
 def test_partitioned_store_persists_across_instances(tmp_path) -> None:

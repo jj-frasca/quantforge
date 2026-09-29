@@ -301,8 +301,9 @@ class JsonFileExperimentStore:
         return [Experiment.model_validate(item) for item in raw]
 
     def add(self, experiment: Experiment) -> None:
+        validated = Experiment.model_validate(experiment.model_dump(round_trip=True))
         experiments = self._load()
-        experiments.append(experiment)
+        experiments.append(validated)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         payload = [e.model_dump(mode="json") for e in experiments]
         # Trailing newline so the file satisfies the end-of-file-fixer pre-commit hook and doesn't
@@ -370,8 +371,12 @@ class PartitionedExperimentStore:
     def extend(self, experiments: list[Experiment]) -> None:
         """Fold a batch in, one partition write per touched symbol. Deduped by `experiment_id`, so
         re-running a shard replaces its experiments instead of duplicating the record."""
+        validated = [
+            Experiment.model_validate(experiment.model_dump(round_trip=True))
+            for experiment in experiments
+        ]
         incoming: dict[str, list[Experiment]] = defaultdict(list)
-        for experiment in experiments:
+        for experiment in validated:
             incoming[experiment.symbol].append(experiment)
         for symbol, batch in incoming.items():
             path = self._partition(symbol)

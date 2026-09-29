@@ -217,6 +217,10 @@ and ordered component evidence join the already-frozen reconstruction fields as 
 copies. Construction, managed replacement, reload, and store writes validate open/retired state,
 finite cost and statistics, unique universe identity, evidence order/common revision, and non-empty
 curve geometry. Evidence-null scores and empty curves remain supported.
+ADR-150 closes the durable-write bypass for experiment pools. Monolithic and partitioned
+single-name writers and the cross-sectional writer reconstruct all incoming model dumps through the
+ADR-145/147 boundaries before any filesystem mutation. Retention, deduplication, and lifetime-trial
+accounting are unchanged.
 
 ---
 

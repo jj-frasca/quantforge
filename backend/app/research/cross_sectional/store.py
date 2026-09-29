@@ -49,8 +49,9 @@ class JsonFileCrossSectionalStore:
         return [CrossSectionalExperiment.model_validate(item) for item in raw]
 
     def add(self, experiment: CrossSectionalExperiment) -> None:
+        validated = CrossSectionalExperiment.model_validate(experiment.model_dump(round_trip=True))
         experiments = self._load()
-        experiments.append(experiment)
+        experiments.append(validated)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         payload = [e.model_dump(mode="json") for e in experiments]
         # Trailing newline so the file satisfies the end-of-file-fixer pre-commit hook.

@@ -4,6 +4,8 @@ cumulative trial count feeds the next search's MinTRL bar), and findings survive
 
 from pathlib import Path
 
+import pytest
+
 from app.research.cross_sectional.search import CrossSectionalExperiment
 from app.research.cross_sectional.store import (
     InMemoryCrossSectionalStore,
@@ -57,3 +59,17 @@ def test_json_store_is_empty_before_first_write(tmp_path: Path) -> None:
     store = JsonFileCrossSectionalStore(tmp_path / "absent.json")
     assert store.all() == []
     assert store.prior_trials() == 0
+
+
+def test_json_store_revalidates_incoming_claim_before_write(tmp_path: Path) -> None:
+    path = tmp_path / "xs_pool.json"
+    store = JsonFileCrossSectionalStore(path)
+    experiment = _exp(18)
+    store.add(experiment)
+    before = path.read_bytes()
+
+    unchecked = experiment.model_copy(update={"best_strategy_name": "missing"})
+    with pytest.raises(ValueError, match="best_strategy_name must identify a persisted trial"):
+        store.add(unchecked)
+
+    assert path.read_bytes() == before
