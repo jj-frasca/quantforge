@@ -212,6 +212,11 @@ nested score evidence are defensive immutable copies. Construction, managed upda
 store writes validate lifecycle identity, evidence symbol, count/finite constraints, and any
 non-empty curve's ordering and terminal returns. Legacy empty curves and evidence-null scores remain
 readable.
+ADR-149 applies the complete boundary to `CrossSectionalPosition`. Lifecycle reasons, score curves,
+and ordered component evidence join the already-frozen reconstruction fields as defensive immutable
+copies. Construction, managed replacement, reload, and store writes validate open/retired state,
+finite cost and statistics, unique universe identity, evidence order/common revision, and non-empty
+curve geometry. Evidence-null scores and empty curves remain supported.
 
 ---
 

@@ -836,6 +836,13 @@ defensive immutable copies. Lifecycle metadata, score evidence, counts, finite s
 non-empty equity curve must agree with the position identity and terminal returns. Legacy empty
 curves and absent evidence remain readable without inventing history.
 
+**Cross-sectional forward claims are deeply frozen and panel-coherent (ADR-149).** The position
+boundary now protects lifecycle reasons, equity curves, and nested ordered component evidence in
+addition to ADR-144's reconstruction identity. Construction, managed replacement, reload, and store
+writes enforce open/retired metadata, finite cost and score statistics, unique universe identity,
+one ordered complete evidence set at one revision, and coherent non-empty curve geometry. Empty
+legacy curves and evidence-null synthetic/legacy scores remain supported.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

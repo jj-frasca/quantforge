@@ -19,7 +19,11 @@ class JsonFileCrossSectionalBook:
         return [CrossSectionalPosition.model_validate(item) for item in raw]
 
     def save(self, positions: list[CrossSectionalPosition]) -> None:
+        validated = [
+            CrossSectionalPosition.model_validate(position.model_dump(round_trip=True))
+            for position in positions
+        ]
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        payload = [p.model_dump(mode="json") for p in positions]
+        payload = [position.model_dump(mode="json") for position in validated]
         # Trailing newline (end-of-file-fixer), same as the other stores.
         self._path.write_text(json.dumps(payload, indent=2) + "\n")

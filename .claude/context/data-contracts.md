@@ -148,6 +148,11 @@ reasons, score curves, and embedded evidence are defensive immutable copies; lif
 evidence symbol, counts, finite statistics, and non-empty curve geometry are validated on
 construction, managed replacement, reload, and store write. Empty legacy curves and absent legacy
 evidence remain explicit supported states.
+ADR-149 applies the same complete boundary to cross-sectional forward positions. Lifecycle reasons,
+score curves, and ordered component evidence are defensive immutable copies. The boundary validates
+open/retired identity, finite cost and score statistics, unique ordered universe membership, exact
+evidence order plus one executed revision, and non-empty curve geometry on construction, managed
+replacement, reload, and store write. Evidence-null and empty-curve compatibility remains explicit.
 
 ---
 

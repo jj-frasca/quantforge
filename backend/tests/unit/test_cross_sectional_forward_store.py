@@ -12,6 +12,7 @@ _NOW = datetime(2024, 6, 1, tzinfo=UTC)
 
 
 def _position(strategy: str = "xs_momentum", status: str = "open") -> CrossSectionalPosition:
+    retired = status == "retired"
     return CrossSectionalPosition(
         strategy_name=strategy,
         parameters={"lookback": 126, "skip": 0, "quantile": 0.2},
@@ -19,6 +20,8 @@ def _position(strategy: str = "xs_momentum", status: str = "open") -> CrossSecti
         cost_rate=0.001,
         frozen_at=_NOW,
         status=status,  # type: ignore[arg-type]
+        retired_at=_NOW if retired else None,
+        exit_reasons=["edge decayed"] if retired else [],
     )
 
 

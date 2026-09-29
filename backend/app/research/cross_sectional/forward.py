@@ -10,13 +10,16 @@ injectable panels -- no network, no look-ahead (weights at t use prices <= t).
 
 from collections.abc import Callable, Mapping
 from datetime import datetime
+from itertools import pairwise
+from math import isclose, isfinite
 from types import MappingProxyType
-from typing import Literal
+from typing import Literal, cast
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, field_serializer, model_validator
 
 from app.research.backtesting.metrics import max_drawdown, sharpe_ratio
+from app.research.claim_graph import FrozenClaimList, freeze_claim_model
 from app.research.cross_sectional.engine import asset_returns, portfolio_returns
 from app.research.cross_sectional.hunt import price_panel_from_frames
 from app.research.cross_sectional.registry import default_strategies
@@ -90,7 +93,84 @@ class CrossSectionalPosition(BaseModel):
         return dict(parameters)
 
     @model_validator(mode="after")
-    def _freeze_fundamental_snapshots(self) -> "CrossSectionalPosition":
+    def _validate_and_freeze_claim(self) -> "CrossSectionalPosition":
+        if not isfinite(self.cost_rate) or self.cost_rate < 0.0:
+            raise ValueError("cost_rate must be finite and non-negative")
+        normalized_symbols = [symbol.strip().upper() for symbol in self.universe_symbols]
+        if not normalized_symbols or any(not symbol for symbol in normalized_symbols):
+            raise ValueError("frozen universe must be non-empty")
+        if len(normalized_symbols) != len(set(normalized_symbols)):
+            raise ValueError("frozen universe symbols must be unique")
+
+        if self.status == "open":
+            if self.retired_at is not None or self.exit_reasons:
+                raise ValueError("open factor cannot have retirement metadata")
+        else:
+            if self.retired_at is None:
+                raise ValueError("retired factor requires retired_at")
+            if not self.exit_reasons:
+                raise ValueError("retired factor requires exit reasons")
+
+        score = self.score
+        if score is not None:
+            if score.forward_bars < 0:
+                raise ValueError("forward_bars must be non-negative")
+            statistics = (
+                score.forward_return,
+                score.forward_sharpe,
+                score.benchmark_return,
+                score.benchmark_sharpe,
+            )
+            if not all(isfinite(value) for value in statistics):
+                raise ValueError("forward statistics must be finite")
+            if score.evidence is not None:
+                evidence_symbols = [
+                    item.quality_report.symbol.strip().upper() for item in score.evidence
+                ]
+                if evidence_symbols != normalized_symbols:
+                    raise ValueError("score evidence symbols must match frozen universe order")
+                if len({item.git_commit_hash for item in score.evidence}) != 1:
+                    raise ValueError("score evidence must name one git revision")
+
+            curve = score.forward_equity
+            if curve:
+                if len(curve) != score.forward_bars:
+                    raise ValueError("forward equity length must match forward_bars")
+                try:
+                    if any(
+                        current.timestamp <= previous.timestamp
+                        for previous, current in pairwise(curve)
+                    ):
+                        raise ValueError("forward equity timestamps must be strictly increasing")
+                    if any(point.timestamp <= self.frozen_at for point in curve):
+                        raise ValueError("forward equity timestamps must follow frozen_at")
+                except TypeError as exc:
+                    raise ValueError(
+                        "forward equity timestamps must use compatible timezones"
+                    ) from exc
+                if any(
+                    not isfinite(value) or value <= 0.0
+                    for point in curve
+                    for value in (point.strategy_equity, point.benchmark_equity)
+                ):
+                    raise ValueError("forward equity values must be finite and positive")
+                terminal = curve[-1]
+                if not (
+                    isclose(
+                        terminal.strategy_equity,
+                        1.0 + score.forward_return,
+                        rel_tol=1e-9,
+                        abs_tol=1e-9,
+                    )
+                    and isclose(
+                        terminal.benchmark_equity,
+                        1.0 + score.benchmark_return,
+                        rel_tol=1e-9,
+                        abs_tol=1e-9,
+                    )
+                ):
+                    raise ValueError("forward equity terminal values must match score returns")
+
         object.__setattr__(self, "parameters", MappingProxyType(dict(self.parameters)))
         object.__setattr__(
             self, "value_scores", freeze_score_snapshot(self.value_scores, self.universe_symbols)
@@ -100,10 +180,25 @@ class CrossSectionalPosition(BaseModel):
             "quality_scores",
             freeze_score_snapshot(self.quality_scores, self.universe_symbols),
         )
+        object.__setattr__(self, "exit_reasons", FrozenClaimList(self.exit_reasons))
+        if score is not None:
+            object.__setattr__(
+                self,
+                "score",
+                cast(CrossSectionalForwardScore, freeze_claim_model(score)),
+            )
         return self
 
 
 PanelDatasetProvider = Callable[[CrossSectionalPosition], Mapping[str, ResearchDataset]]
+
+
+def _replace_position(
+    position: CrossSectionalPosition, **updates: object
+) -> CrossSectionalPosition:
+    payload = position.model_dump(round_trip=True)
+    payload.update(updates)
+    return CrossSectionalPosition.model_validate(payload)
 
 
 def _factor_returns(position: CrossSectionalPosition, panel: pd.DataFrame) -> pd.Series:
@@ -380,15 +475,14 @@ def manage_cross_sectional_book(
             continue
         if decision.action == "retire":
             updated.append(
-                position.model_copy(
-                    update={
-                        "status": "retired",
-                        "retired_at": now,
-                        "exit_reasons": decision.reasons,
-                        "score": score,
-                    }
+                _replace_position(
+                    position,
+                    status="retired",
+                    retired_at=now,
+                    exit_reasons=decision.reasons,
+                    score=score,
                 )
             )
         else:
-            updated.append(position.model_copy(update={"score": score}))
+            updated.append(_replace_position(position, score=score))
     return updated
