@@ -116,6 +116,150 @@ TradingMarkets Publishing Group.
   agreement rule (vs. a two-MA crossover) means fewer trades, longer holds, and an
   explicit flat state during chop. No look-ahead via trailing rolling means.
 
+**Wilder, J. Welles (1978)** — *New Concepts in Technical Trading Systems*. Trend Research.
+- ADX / DMI, traded as a regime signal: +DI/-DI (Wilder-smoothed directional movement over ATR)
+  give direction, ADX (Wilder-smoothed DX) gives trend strength. Long when +DI > -DI AND ADX >
+  `threshold`, short the symmetric case, flat when the trend is weak. All inputs are shifted/
+  Wilder-smoothed — no look-ahead. Used by `ADXStrategy`.
+
+**Lambert, Donald R. (1980)** — "Commodity Channel Index: Tools for Trading Cyclic Trends".
+*Commodities* magazine.
+- CCI, traded as mean reversion: (typical price - its rolling mean) / (0.015 * mean absolute
+  deviation) — Lambert's 0.015 scaling puts ~70-80% of values in [-100, 100]. Long below
+  -`threshold` (oversold), short above +`threshold`, flat between. Used by `CCIStrategy`.
+
+**Chande, Tushar S. (1995)** — "Aroon". *Technical Analysis of Stocks & Commodities*.
+- Aroon trend: Aroon-Up/-Down measure how recently the trailing window's high/low was made. Long
+  when Aroon-Up > Aroon-Down (highs fresher than lows), short the reverse, flat when equal. Used
+  by `AroonStrategy`.
+
+**Kaufman, Perry J. (2013)** — *Trading Systems and Methods*. 5th ed. Wiley.
+**Wilder, J. Welles (1978)** — *New Concepts in Technical Trading Systems*. Trend Research.
+- ATR-channel breakout: an SMA midline +/- multiplier * Wilder ATR, trend-following like Donchian
+  (position carries forward between breakouts) but volatility-scaled rather than fixed-width, so
+  it widens in high-vol regimes and whipsaws less in chop. Used by `ATRChannelBreakoutStrategy`.
+
+**Chande, Tushar S. & Kroll, Stanley (1994)** — *The New Technical Trader*. Wiley.
+- Chande Momentum Oscillator, traded as mean reversion: like RSI but unsmoothed and symmetric in
+  [-100, 100], so it swings to extremes faster. Long when CMO < -`threshold`, short when CMO >
+  +`threshold`, flat between. Used by `ChandeMomentumStrategy`.
+
+**Antonacci, Gary (2014)** — *Dual Momentum Investing: An Innovative Strategy for Higher Returns
+with Lower Risk*. McGraw-Hill.
+- Dual momentum, single-name proxy: long-only, requires BOTH absolute momentum (trailing return >
+  0, i.e. beats cash) AND relative momentum (proxied here as close above its own longer trend SMA,
+  since the original's cross-sectional ranking needs multiple names). The absolute-momentum gate
+  is what sidesteps deep momentum drawdowns per Antonacci. Used by `DualMomentumStrategy`.
+
+**Chaikin, Marc (1980s)** — Chaikin Money Flow; see Achelis, Steven B. *Technical Analysis A to
+Z*. 2nd ed. McGraw-Hill, 2000.
+- CMF: volume-weighted buying vs. selling pressure via the money-flow multiplier
+  ((close-low)-(high-close))/(high-low), summed against volume over a trailing window. Long when
+  CMF > `threshold` (net buying), short when CMF < -`threshold`, flat between. Used by
+  `ChaikinMoneyFlowStrategy`.
+
+**Coppock, Edwin S. (1962)** — "Practical Relative Strength Charting". *Barron's*.
+- Coppock Curve: a linearly-weighted MA of two summed rate-of-change series, a slow momentum
+  oscillator originally built to time major market bottoms (long-only, classic monthly params
+  14/11/10). Generalized here to a symmetric trend sign: long above zero, short below. Used by
+  `CoppockCurveStrategy`.
+
+**Connors, Larry & Alvarez, Cesar (2009)** — *Short Term Trading Strategies That Work*.
+TradingMarkets Publishing Group.
+- Connors RSI: a very short (2-period) Wilder RSI traded at extreme thresholds (long below ~10,
+  short above ~90) — a faster, more aggressive mean-reversion entry than the standard-window RSI
+  strategy above. Used by `ConnorsRSIStrategy`.
+
+**Faith, Curtis M. (2007)** — *Way of the Turtle*. McGraw-Hill.
+**LeBeau, Charles & Lucas, David W. (1992)** — *Technical Traders Guide to Computer Analysis of
+the Futures Markets*. Business One Irwin.
+- Donchian channel entry with a Chandelier (ATR trailing-stop) exit rather than the opposite
+  channel: while long, exit when close falls below the trailing high minus a multiple of ATR
+  (and the mirror while short). The trailing stop lets a winner run while capping give-back —
+  the Turtle system's edge over a symmetric-channel exit. Used by `DonchianATRTrailStrategy`.
+
+**George, Thomas J. & Hwang, Chuan-Yang (2004)** — "The 52-Week High and Momentum Investing".
+*Journal of Finance* 59(5), pp. 2145–2176.
+- Proximity to the 52-week high (close / trailing window high) as a standalone momentum signal —
+  stocks near their high keep outperforming because anchoring makes traders under-react to good
+  news. Long near the high, short deep below it, flat in the band between. Used by
+  `FiftyTwoWeekHighStrategy`.
+
+**Crabel, Toby (1990)** — *Day Trading with Short Term Price Patterns and Opening Range
+Breakout*. Traders Press. (Narrow-range / NR7, popularized by Linda Raschke.)
+- Volatility-contraction breakout: after the narrowest-range bar in a trailing window, trade the
+  direction it breaks (above the narrow bar's high → long, below its low → short). The only
+  catalog strategy that trades a low→high volatility transition rather than a price level or
+  moving average. Used by `NarrowRangeBreakoutStrategy`.
+
+**Wilder, J. Welles (1978)** — *New Concepts in Technical Trading Systems*. Trend Research.
+- A 2-signal COMBINATION: a classic fast/slow SMA crossover for direction, taken only when
+  Wilder's ADX confirms a strong trend regime (ADX > `adx_threshold`); otherwise flat. The point
+  is that an MA cross whipsaws in a range-bound (low-ADX) market — gating on trend strength sits
+  those periods out. Used by `RegimeFilteredTrendStrategy`.
+
+**Blitz, David, Huij, Joop & Martens, Martin (2011)** — "Residual Momentum". *Journal of
+Empirical Finance* 18(3), pp. 506–521.
+- Momentum computed on the part of returns NOT explained by systematic exposure is steadier and
+  less crash-prone than raw price momentum. Single-name proxy (no market series available): the
+  residual return is daily return minus its own trailing mean; signal is the sign of the summed
+  residual over a lookback ending `skip` bars ago (skip avoids short-term reversal). Documented
+  proxy — removes own-drift, not a true market beta. Used by `ResidualMomentumStrategy`.
+
+**Lou, Dong, Polk, Christopher & Skouras, Spyros (2019)** — "A Tug of War: Overnight Versus
+Intraday Expected Returns". *Journal of Financial Economics* 134(1).
+- Overnight opens tend to partially reverse — fade the gap: short large up-gaps, long large
+  down-gaps, flat for small gaps. Used by `OvernightGapStrategy`.
+
+**Carter, John F. (2005)** — *Mastering the Trade*. McGraw-Hill.
+- TTM squeeze: a "squeeze" is on when Bollinger Bands sit entirely inside Keltner Channels
+  (range-based vol exceeds deviation-based vol — the coiled-spring compression); stand aside
+  while it's on, and on release trade the direction of momentum (close vs. the shared midline)
+  until the squeeze re-engages. Used by `SqueezeBreakoutStrategy`.
+
+**Lane, George C. (1984)** — "Lane's Stochastics". *Technical Analysis of Stocks & Commodities*.
+- Stochastic oscillator, traded as mean reversion: %K = position of close within the trailing
+  high-low range; the smoothed %D crossing `oversold`/`overbought` thresholds triggers long/
+  short, flat between. Used by `StochasticOscillatorStrategy`.
+
+**Blau, William (1991)** — "True Strength Index". *Technical Analysis of Stocks & Commodities*;
+also *Momentum, Direction, and Divergence*. Wiley, 1995.
+- TSI: a double-smoothed (two chained EMAs) momentum oscillator scaled to [-100, 100] by the same
+  double smoothing of absolute price change. The double pass strips most single-EMA noise, so the
+  sign alone is traded — long when positive, short when negative. Used by
+  `TrueStrengthIndexStrategy`.
+
+**Williams, Larry (1979)** — *How I Made One Million Dollars Last Year Trading Commodities*.
+Windsor Books.
+- Williams %R, traded as mean reversion: position of close within the trailing high-low range,
+  scaled to [-100, 0]. Long when %R < `oversold` (near the low), short when %R > `overbought`
+  (near the high), flat between. Used by `WilliamsRStrategy`.
+
+**Williams, Larry (1976)** — "The Ultimate Oscillator". *Technical Analysis of Stocks &
+Commodities*.
+- A three-timeframe (7/14/28) blend of buying-pressure-over-true-range averages, weighted 4:2:1,
+  designed to cut the false divergences a single-window oscillator throws. Traded as mean
+  reversion: long when oversold, short when overbought. Used by `UltimateOscillatorStrategy`.
+
+**Berkowitz, Stephen A., Logue, Dennis E. & Noser, Eugene A. (1988)** — "The Total Cost of
+Transactions on the NYSE". *Journal of Finance* 43(1).
+- VWAP as an execution/fair-value benchmark, adapted here as a mean-reversion signal: long when
+  close sits `threshold` below the rolling volume-weighted average price, short when above, flat
+  between. Used by `VWAPReversionStrategy`.
+
+**Moreira, Alan & Muir, Tyler (2017)** — "Volatility-Managed Portfolios". *Journal of Finance*
+72(4), pp. 1611–1644.
+- Scaling exposure by inverse realized VARIANCE (not volatility) raises a factor's risk-adjusted
+  return: de-risk after variance spikes, lean in when calm. Direction is time-series momentum
+  (sign of trailing return); size is `target_variance / realized_variance`, clipped to [0, 1] so
+  the strategy can only de-risk, never lever up — the variance-exponent cousin of
+  `VolTargetedSMAStrategy`'s inverse-volatility scaling. Used by `VolManagedMomentumStrategy`.
+
+**Hutson, Jack K. (1983)** — "Good TRIX". *Technical Analysis of Stocks & Commodities* 1(5).
+- TRIX: triple-smoothed (three chained EMAs) rate of change of the close, then signal-smoothed
+  with one more EMA. The triple pass strips most short-cycle noise before the sign is traded —
+  long when positive, short when negative, flat at zero. Used by `TRIXStrategy`.
+
 > The authoritative *list* of implemented strategies lives in `STRATEGY_CATALOG`
 > (`backend/app/research/strategies/catalog.py`) and is served by `GET /api/v1/strategies`.
 > This section is the *why* and the science — what each paper says and how we translated it
