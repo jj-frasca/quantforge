@@ -26,6 +26,8 @@ make migrate      → run alembic migrations
 make check        → backend gate: lint + test + coverage (run before every backend commit)
 make frontend-check → frontend gate: eslint + tsc + vitest coverage (>=75%); run before frontend commits
 make check-all    → backend + frontend gates together
+make e2e          → Playwright browser smoke (real backend + dev server); local only, NOT a CI/coverage gate
+make e2e-install  → one-time: install the Playwright Chromium browser
 
 ## Architecture (one paragraph)
 FastAPI backend (Python 3.12) in /backend. React 19 + TypeScript in /frontend (Vite + Vitest).
