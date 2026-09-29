@@ -1,6 +1,7 @@
 # ADR-046: Price the whole searched hypothesis family in DSR and MinTRL
 
-- **Status**: Accepted
+- **Status**: Accepted; decision 6 is superseded in part by ADR-104 (2026-09-22, prices the whole
+  searched procedure in PBO). Decisions 1-5 stand unchanged.
 - **Date**: 2026-08-19
 - **Deciders**: Codex adversarial validator under `.claude/CODEX_CHARTER.md`
 - **Extends**: ADR-014/015/016 (search, lifetime trials, gate), ADR-044 (calibration identity)

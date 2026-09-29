@@ -1,6 +1,8 @@
 # ADR-109: Report a confidence interval on a single backtest's Sharpe estimate
 
-- **Status**: Accepted
+- **Status**: Accepted; the unqualified confidence-interval presentation is superseded in part by
+  ADR-111 (2026-09-23, labels the iid-normal assumption). The interval's construction itself
+  stands unchanged.
 - **Date**: 2026-09-23
 - **Deciders**: Autonomous session (authority delegated by Joe, `.claude/AUTONOMY_CHARTER.md` §1)
 

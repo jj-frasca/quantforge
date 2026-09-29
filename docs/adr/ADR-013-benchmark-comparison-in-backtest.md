@@ -1,6 +1,8 @@
 # ADR-013: Surface benchmark comparison (alpha/beta/IR) in the BacktestResponse
 
-- **Status**: Accepted
+- **Status**: Accepted; the overlap handling is superseded in part by ADR-112 (2026-09-23,
+  validates benchmark-comparison evidence and baseline). The alpha/beta/IR surfacing itself
+  stands unchanged.
 - **Date**: 2026-06-30
 - **Deciders**: Joe Frasca
 

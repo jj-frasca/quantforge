@@ -1,6 +1,8 @@
 # ADR-108: Add the Calmar ratio to backtest metrics
 
-- **Status**: Accepted
+- **Status**: Accepted; the use of arithmetic annualization as Calmar's numerator is superseded in
+  part by ADR-110 (2026-09-23, compounds return metrics from complete net wealth). Calmar's
+  addition to `BacktestMetrics` itself stands unchanged.
 - **Date**: 2026-09-23
 - **Deciders**: Autonomous session (authority delegated by Joe, `.claude/AUTONOMY_CHARTER.md` §1)
 

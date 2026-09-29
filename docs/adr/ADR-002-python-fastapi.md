@@ -1,6 +1,8 @@
 # ADR-002: Python 3.12 + FastAPI backend
 
-- **Status**: Accepted
+- **Status**: Accepted; the "async I/O" detail is superseded by ADR-009 (2026-05-28, sync
+  SQLAlchemy on psycopg3 — this project's actual workload doesn't benefit from async). The
+  Python 3.12 + FastAPI choice itself stands unchanged.
 - **Date**: 2026-05-27
 - **Deciders**: Joe Frasca
 
