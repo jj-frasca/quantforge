@@ -1,5 +1,15 @@
 # QuantForge — Parallel Work Breakdown (for multiple agents on separate worktrees)
 
+> **This is a historical record of the July 2026 `/orchestrate-agents` sprint.** Every work
+> package below (A through L, across all 3 rounds) is long since merged into `master` — verified
+> directly: `app/execution/{alpaca_broker,sizing,equity_curve}.py` (WP-B/G),
+> `app/research/valuation/{multiples,intrinsic_value,price_join,score}.py` (WP-C), the `/api/v1`
+> lab endpoints + frontend `features/lab/` (WP-D/E), `.github/workflows/{hunt,paper-broker}.yml`
+> (WP-F/G), the ADR-023 value pre-screen wired into `universe.py` (WP-H/J), 34 strategies in the
+> catalog (WP-K), and `app/research/cross_sectional/` (WP-L) all exist and are active. Nothing
+> here is an open TODO — do not re-spawn any of these. Kept for the historical detail (contracts,
+> gotchas) in case a future WP needs the same pattern.
+
 **Purpose:** hand each work package (WP) below to a *separate* agent on its *own* git worktree.
 Each WP is self-contained — goal, files it OWNS, the contract with the rest of the system, tests,
 acceptance criteria, and gotchas — so a fresh agent can start cold. Front-loaded on purpose.
