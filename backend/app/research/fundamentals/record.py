@@ -45,16 +45,24 @@ class FundamentalRecord(BaseModel):
     # (submissions, not companyfacts). None for every row swept before ADR-095 and for any company
     # whose submissions record omits it — absent is not a claim about the company's industry.
     sic_description: str | None = None
+    # ADR-146: the raw numeric SIC code from the same submissions response, kept as EDGAR returns
+    # it (a string, e.g. "3571") rather than parsed to int — every consumer so far wants prefix
+    # matching against the SIC major-group/division scheme, not arithmetic.
+    sic_code: str | None = None
 
 
 def compute_fundamental_record(
-    history: FundamentalsHistory, price: float | None = None, sic_description: str | None = None
+    history: FundamentalsHistory,
+    price: float | None = None,
+    sic_description: str | None = None,
+    sic_code: str | None = None,
 ) -> FundamentalRecord:
     """Compute a FundamentalRecord from a company's history (and optionally its latest price and SIC
     classification). Quality is always computed from EDGAR alone; value is added only when `price` is
     supplied, and `combined` only when both quality and value are present. Empty history yields an
     all-None record that still records the company's identity (and flags why nothing was computable).
-    `sic_description` is passed through as-is (ADR-095) — this function stays network-free."""
+    `sic_description`/`sic_code` are passed through as-is (ADR-095/146) — this function stays
+    network-free."""
     q = quality_score(history)
     flags = list(q.flags)
 
@@ -80,6 +88,7 @@ def compute_fundamental_record(
         gross_profitability=q.gross_profitability,
         flags=flags,
         sic_description=sic_description,
+        sic_code=sic_code,
     )
 
 

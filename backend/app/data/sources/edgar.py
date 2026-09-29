@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, NamedTuple
 
 from app.data.fundamentals import (
     FundamentalsHistory,
@@ -7,6 +7,16 @@ from app.data.fundamentals import (
     parse_company_facts,
     parse_company_facts_history,
 )
+
+
+class SicClassification(NamedTuple):
+    """SEC's SIC industry classification (ADR-095/146): the numeric code and its free-text
+    description, both from the one submissions call -- either can be absent independently
+    (some shell/ETF filers omit one or the other)."""
+
+    code: str | None
+    description: str | None
+
 
 JsonFetcher = Callable[[str], dict[str, Any]]
 
@@ -41,13 +51,18 @@ class SecEdgarFundamentalsSource:
         facts = self._fetch_json(_COMPANY_FACTS_URL.format(cik=cik))
         return parse_company_facts_history(facts, symbol.upper())
 
-    def fetch_sic(self, symbol: str) -> str | None:
-        """The company's SEC SIC industry classification description (ADR-095), or None when the
-        submissions record omits it (some shell/ETF filers do)."""
+    def fetch_sic(self, symbol: str) -> SicClassification:
+        """The company's SEC SIC industry classification -- numeric code and description (ADR-095/
+        146) -- from one submissions call. Either field is None when that key is absent (some
+        shell/ETF filers omit one or the other)."""
         cik = self._cik_for(symbol)
         submission = self._fetch_json(_SUBMISSIONS_URL.format(cik=cik))
+        code = submission.get("sic")
         description = submission.get("sicDescription")
-        return str(description) if description else None
+        return SicClassification(
+            code=str(code) if code else None,
+            description=str(description) if description else None,
+        )
 
     def all_tickers(self) -> list[str]:
         """Every ticker in SEC's company_tickers map — the CIK universe the fundamental discovery

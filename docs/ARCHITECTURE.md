@@ -671,6 +671,21 @@ this, the shape of the decision is closer to ADR-034's ("decide and record `Stat
 leave it a standing `Proposed`") than a quick add — it would need its own full-budget session, per
 this project's established discipline for new statistical machinery.
 
+**ADR-146 (2026-09-28) closes the `sic_description`-coverage blocker named above, and reports a
+directional lead without claiming to have tested it.** `sic_description` coverage reached 98.7% of
+the fundamentals pool (4,190/4,244 rows) — enough to join against the 7,400-bar and 9,247-bar
+null-calibration cohorts for the first time (58/91 and 227/276 symbols matched). The 7,400-bar
+cohort's single largest sector by that join is Real Estate Investment Trusts at 13.8% (8/58, more
+than 2.5x its next-largest category); the 9,247-bar cohort has no comparably dominant category (its
+largest is 4.0%). **This is recorded as a lead, not a result**: the categories were inspected before
+any bucketing scheme existed, so any grouping designed after that look cannot be trusted not to have
+been shaped by it — precisely ADR-063/070's meta-lesson (state the criterion before you can see its
+answer) applied to a composition question instead of a threshold. ADR-146 instead captures the raw
+numeric SIC code (same EDGAR response, no extra network call) so a future session can run the actual
+test against the SIC classification's own externally-defined division boundaries once `sic_code`
+coverage builds on the two cohorts — that session should pre-register the division mapping and the
+statistic BEFORE looking at either cohort's distribution under it, not after.
+
 **ADR-063 is measured, and its own criterion failed while power rose.** At `n_bars=7400`: Type-I
 error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_bar` 1.343 against
 1.722), and AR(1) detection moved **34/22/0/0/14/64% → 40/36/0/0/24/66%** for φ = −0.3…+0.3 — four

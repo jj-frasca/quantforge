@@ -37,8 +37,12 @@ def _facts() -> dict[str, Any]:
     }
 
 
-def _submission(sic_description: str | None = "Electronic Computers") -> dict[str, Any]:
-    payload: dict[str, Any] = {"cik": "0000320193", "sic": "3571", "name": "Apple Inc."}
+def _submission(
+    sic_description: str | None = "Electronic Computers", sic_code: str | None = "3571"
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"cik": "0000320193", "name": "Apple Inc."}
+    if sic_code is not None:
+        payload["sic"] = sic_code
     if sic_description is not None:
         payload["sicDescription"] = sic_description
     return payload
@@ -117,16 +121,25 @@ def test_fetch_history_resolves_cik_and_returns_multi_year_history() -> None:
 
 
 # ---- ADR-095: SIC classification, a separate endpoint from companyfacts ---------------------
+# ---- ADR-146: the raw numeric code travels alongside the description, same one call ----------
 
 
 def test_fetch_sic_resolves_cik_and_returns_the_description() -> None:
     calls: list[str] = []
-    assert _source(calls).fetch_sic("AAPL") == "Electronic Computers"
+    assert _source(calls).fetch_sic("AAPL").description == "Electronic Computers"
     assert any("submissions/CIK0000320193.json" in url for url in calls)
 
 
+def test_fetch_sic_also_returns_the_raw_code_from_the_same_response() -> None:
+    calls: list[str] = []
+    result = _source(calls).fetch_sic("AAPL")
+    assert result.code == "3571"
+    # One EDGAR call serves both fields (ADR-146) -- not a second submissions fetch.
+    assert sum("submissions" in url for url in calls) == 1
+
+
 def test_fetch_sic_is_case_insensitive_on_ticker() -> None:
-    assert _source([]).fetch_sic("aapl") == "Electronic Computers"
+    assert _source([]).fetch_sic("aapl").description == "Electronic Computers"
 
 
 def test_fetch_sic_unknown_ticker_raises() -> None:
@@ -134,14 +147,24 @@ def test_fetch_sic_unknown_ticker_raises() -> None:
         _source([]).fetch_sic("NOPE")
 
 
-def test_fetch_sic_returns_none_when_the_response_omits_it() -> None:
-    assert _source([], submission=_submission(sic_description=None)).fetch_sic("AAPL") is None
+def test_fetch_sic_returns_none_description_when_the_response_omits_it() -> None:
+    result = _source([], submission=_submission(sic_description=None)).fetch_sic("AAPL")
+    assert result.description is None
+    assert result.code == "3571"  # the two fields fail independently
+
+
+def test_fetch_sic_returns_none_code_when_the_response_omits_it() -> None:
+    result = _source([], submission=_submission(sic_code=None)).fetch_sic("AAPL")
+    assert result.code is None
+    assert result.description == "Electronic Computers"
 
 
 @pytest.mark.live
 def test_live_edgar_fetch_sic_for_a_real_symbol() -> None:
     source = SecEdgarFundamentalsSource(user_agent="QuantForge research jjfrasca10@gmail.com")
-    assert source.fetch_sic("AAPL") == "Electronic Computers"
+    result = source.fetch_sic("AAPL")
+    assert result.description == "Electronic Computers"
+    assert result.code == "3571"
 
 
 @pytest.mark.live

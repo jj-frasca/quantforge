@@ -135,6 +135,20 @@ def test_compute_attaches_the_given_sic_description() -> None:
     assert rec.sic_description == "Electronic Computers"
 
 
+def test_compute_defaults_sic_code_to_none() -> None:
+    hist = _history("AAA", 1, _year(2023))
+    assert compute_fundamental_record(hist).sic_code is None
+
+
+def test_compute_attaches_the_given_sic_code_independently_of_description() -> None:
+    """ADR-146: the two fields travel together but are set independently -- a caller passing only
+    the code (or only the description) must not accidentally clobber the other."""
+    hist = _history("AAA", 1, _year(2023))
+    rec = compute_fundamental_record(hist, sic_code="3571")
+    assert rec.sic_code == "3571"
+    assert rec.sic_description is None
+
+
 # ---- merge_fundamental_records -------------------------------------------------------------------
 
 

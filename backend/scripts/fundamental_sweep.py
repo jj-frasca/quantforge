@@ -21,7 +21,7 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from app.data.fundamentals import FundamentalsHistory
-from app.data.sources.edgar import SecEdgarFundamentalsSource
+from app.data.sources.edgar import SecEdgarFundamentalsSource, SicClassification
 from app.data.sources.retry import CLOUD
 from app.data.sources.yfinance import YFinanceAdapter
 from app.research.fundamentals.record import FundamentalRecord, compute_fundamental_record
@@ -70,13 +70,14 @@ def _join_prices(
     return attach_fiscal_year_prices(history, closes), closes[-1][1]
 
 
-def _sic_description(edgar: SecEdgarFundamentalsSource, symbol: str) -> str | None:
-    """Best-effort SIC classification (ADR-095). Any failure -> None, same degrade-not-crash shape
-    as `_price_series` — a missing classification is not worth losing the whole record over."""
+def _sic_classification(edgar: SecEdgarFundamentalsSource, symbol: str) -> SicClassification:
+    """Best-effort SIC classification, code + description (ADR-095/146). Any failure -> both None,
+    same degrade-not-crash shape as `_price_series` — a missing classification is not worth losing
+    the whole record over."""
     try:
         return edgar.fetch_sic(symbol)
     except (ValueError, OSError, KeyError):
-        return None
+        return SicClassification(code=None, description=None)
 
 
 def main() -> None:
@@ -106,10 +107,10 @@ def main() -> None:
             continue  # no annual fundamentals (ETF/index) -> nothing to score
         joined_history, price = _join_prices(adapter, symbol, history, now)
         try:
-            sic = _sic_description(edgar, symbol)
+            sic = _sic_classification(edgar, symbol)
         finally:
             time.sleep(_EDGAR_MIN_INTERVAL_S)  # a second EDGAR call per symbol (ADR-095)
-        records.append(compute_fundamental_record(joined_history, price, sic))
+        records.append(compute_fundamental_record(joined_history, price, sic.description, sic.code))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"fundamentals_shard_{shard_index}.json"
