@@ -798,6 +798,14 @@ hold strategy parameters in an immutable mapping and their ordered universe in a
 Both are defensively materialized at construction and retain their existing JSON object/array
 shapes, so scoring and evidence checks cannot drift under the same position identity.
 
+**Cross-sectional experiment claims are deeply frozen (ADR-145).** The originating experiment now
+defensively reconstructs and recursively freezes its ordered universe and strategy names, finalist
+trials and parameters, selected graduate, gate verdicts and reasons, panel manifest, and embedded
+quality reports including issue context. Construction and JSON reload also bind the ordered trial
+names plus any graduate to the selected trial and exact best gate result. The durable JSON schema
+remains object/array compatible, but a validated claim can no longer drift in memory under the same
+experiment UUID and lineage hashes.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

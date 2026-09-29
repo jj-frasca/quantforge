@@ -134,6 +134,10 @@ object shape. Absent keys remain deliberate score missingness; `None` remains le
 ADR-144 makes a cross-sectional forward position's parameters and ordered universe defensive
 immutable values as well, while preserving their JSON object/array representations. These fields
 are reconstruction identity, not mutable lifecycle state.
+ADR-145 deep-freezes the complete originating cross-sectional experiment graph, including its
+ordered panel identity, trials, selected graduate, gate verdict, manifest components, reports,
+issues, and issue context. The same JSON object/array schema remains durable, but already-validated
+quality lineage cannot be mutated in place before a later store write or forward promotion.
 
 ---
 

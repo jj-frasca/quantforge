@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_valid
 from app.data.models import DataQualityReport
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.backtesting.metrics import ReturnMoments, return_moments, sharpe_ratio
+from app.research.cross_sectional.claim_graph import FrozenClaimList, freeze_claim_model
 from app.research.cross_sectional.engine import (
     asset_returns,
     portfolio_returns,
@@ -87,6 +88,35 @@ class CrossSectionalExperiment(BaseModel):
 
     @model_validator(mode="after")
     def _validate_panel_lineage(self) -> "CrossSectionalExperiment":
+        # Pydantic's frozen models block attribute assignment but do not recursively freeze their
+        # lists and dictionaries. Reconstruct every nested record before freezing it so a caller
+        # retaining the original Trial/Graduate/report cannot mutate this persisted claim later.
+        object.__setattr__(self, "universe_symbols", FrozenClaimList(self.universe_symbols))
+        object.__setattr__(self, "strategy_names", FrozenClaimList(self.strategy_names))
+        object.__setattr__(
+            self,
+            "gate_config",
+            freeze_claim_model(self.gate_config),
+        )
+        object.__setattr__(
+            self,
+            "trials",
+            FrozenClaimList([freeze_claim_model(trial) for trial in self.trials]),
+        )
+        if self.best_gate_result is not None:
+            object.__setattr__(self, "best_gate_result", freeze_claim_model(self.best_gate_result))
+        if self.graduate is not None:
+            object.__setattr__(self, "graduate", freeze_claim_model(self.graduate))
+        if self.panel_manifest is not None:
+            object.__setattr__(self, "panel_manifest", freeze_claim_model(self.panel_manifest))
+        if self.data_quality_reports is not None:
+            object.__setattr__(
+                self,
+                "data_quality_reports",
+                FrozenClaimList(
+                    [freeze_claim_model(report) for report in self.data_quality_reports]
+                ),
+            )
         object.__setattr__(
             self, "value_scores", freeze_score_snapshot(self.value_scores, self.universe_symbols)
         )
@@ -95,6 +125,39 @@ class CrossSectionalExperiment(BaseModel):
             "quality_scores",
             freeze_score_snapshot(self.quality_scores, self.universe_symbols),
         )
+
+        if self.trials:
+            trial_names = [trial.strategy_name for trial in self.trials]
+            if list(self.strategy_names) != trial_names:
+                raise ValueError("strategy_names must exactly match trials in order")
+        selected = next(
+            (trial for trial in self.trials if trial.strategy_name == self.best_strategy_name), None
+        )
+        if self.best_strategy_name is not None and selected is None:
+            raise ValueError("best_strategy_name must identify a persisted trial")
+        if self.graduate is not None:
+            if selected is None:
+                raise ValueError("graduate requires the selected strategy trial")
+            if self.best_gate_result is None:
+                raise ValueError("graduate requires the best gate result")
+            if self.graduate.strategy_name != selected.strategy_name:
+                raise ValueError("graduate strategy must match the selected trial")
+            if dict(self.graduate.parameters) != dict(selected.parameters):
+                raise ValueError("graduate parameters must match the selected trial")
+            if self.graduate.gate_result != self.best_gate_result:
+                raise ValueError("graduate gate result must match the best gate result")
+            if not self.best_gate_result.passed:
+                raise ValueError("graduate requires a passing best gate result")
+            if (
+                self.best_gate_result.holdout_sharpe is not None
+                and self.graduate.holdout_sharpe != self.best_gate_result.holdout_sharpe
+            ):
+                raise ValueError("graduate holdout Sharpe must match the best gate result")
+            if (
+                self.best_gate_result.holdout_n_bars is not None
+                and self.graduate.holdout_n_bars != self.best_gate_result.holdout_n_bars
+            ):
+                raise ValueError("graduate holdout length must match the best gate result")
         if self.panel_manifest is None and self.data_quality_reports is None:
             return self
         if self.panel_manifest is None or self.data_quality_reports is None:
@@ -126,9 +189,6 @@ class CrossSectionalExperiment(BaseModel):
                 raise ValueError("panel component report id must match embedded report")
             if component.data_source != report.source:
                 raise ValueError("panel component source must match embedded report")
-        selected = next(
-            (trial for trial in self.trials if trial.strategy_name == self.best_strategy_name), None
-        )
         if selected is None:
             raise ValueError("panel lineage requires the selected strategy trial")
         if manifest.strategy_name != selected.strategy_name:

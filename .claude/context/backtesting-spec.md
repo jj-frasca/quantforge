@@ -197,6 +197,11 @@ order, while JSON remains an object and retains `None` plus absent-key semantics
 ADR-144 also deep-freezes the forward position's reconstruction parameters and ordered universe.
 Their JSON shapes remain object and array, but in-place mutation can no longer redirect factor
 scoring, lifecycle evaluation, or panel evidence validation under an existing position identity.
+ADR-145 applies the corresponding complete boundary to `CrossSectionalExperiment`: ordered
+universe/strategy collections, trials and parameter maps, graduate, gate verdicts, panel manifest,
+and embedded quality evidence are defensively reconstructed and recursively immutable. JSON keeps
+the existing object/array schema, while reload revalidates selected-trial, graduate, gate, and
+lineage relationships as one claim.
 
 ---
 
