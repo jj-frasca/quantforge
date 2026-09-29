@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from app.data.models import DataQualityIssue, DataQualityReport
 from app.research.backtesting.manifest import compute_parameter_hash
-from app.research.cross_sectional.claim_graph import FrozenClaimDict, FrozenClaimList
+from app.research.claim_graph import FrozenClaimDict, FrozenClaimList
 from app.research.cross_sectional.manifest import (
     CrossSectionalManifest,
     PanelComponentManifest,

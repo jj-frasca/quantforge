@@ -10,7 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.data.fundamentals import FundamentalScreen, FundamentalSnapshot
 from app.data.models import DataQualityReport
-from app.research.backtesting.manifest import ExperimentManifest
+from app.research.backtesting.manifest import ExperimentManifest, compute_parameter_hash
+from app.research.claim_graph import FrozenClaimList, freeze_claim_model
 from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.valuation import UndervaluationScore
@@ -130,12 +131,83 @@ class Experiment(BaseModel):
 
     @model_validator(mode="after")
     def _validate_quality_lineage(self) -> "Experiment":
+        # `frozen=True` prevents field reassignment but not mutation of nested lists/dictionaries.
+        # Reconstruct nested models first so caller-owned references cannot alter this durable claim.
+        object.__setattr__(self, "strategy_names", FrozenClaimList(self.strategy_names))
+        object.__setattr__(self, "gate_config", freeze_claim_model(self.gate_config))
+        object.__setattr__(
+            self,
+            "trials",
+            FrozenClaimList([freeze_claim_model(trial) for trial in self.trials]),
+        )
+        for field_name in (
+            "best_gate_result",
+            "fundamentals",
+            "fundamental_screen",
+            "distress_screen",
+            "undervaluation_score",
+            "graduate",
+            "manifest",
+            "data_quality_report",
+        ):
+            value = getattr(self, field_name)
+            if value is not None:
+                object.__setattr__(self, field_name, freeze_claim_model(value))
+
+        selected: Trial | None = None
+        if self.trials:
+            trial_names = [trial.strategy_name for trial in self.trials]
+            if list(self.strategy_names) != trial_names:
+                raise ValueError("strategy_names must exactly match trials in order")
+            selected = selected_trial(self)
+        elif self.best_strategy_name is not None or self.selected_trial_index is not None:
+            raise ValueError("selected strategy requires at least one persisted trial")
+
+        if self.graduate is not None:
+            if selected is None:
+                raise ValueError("graduate requires the selected strategy trial")
+            if self.best_gate_result is None:
+                raise ValueError("graduate requires the best gate result")
+            if self.graduate.strategy_name != selected.strategy_name:
+                raise ValueError("graduate strategy must match the selected trial")
+            if dict(self.graduate.parameters) != dict(selected.parameters):
+                raise ValueError("graduate parameters must match the selected trial")
+            if self.graduate.gate_result != self.best_gate_result:
+                raise ValueError("graduate gate result must match the best gate result")
+            if not self.best_gate_result.passed:
+                raise ValueError("graduate requires a passing best gate result")
+            if (
+                self.best_gate_result.holdout_sharpe is not None
+                and self.graduate.holdout_sharpe != self.best_gate_result.holdout_sharpe
+            ):
+                raise ValueError("graduate holdout Sharpe must match the best gate result")
+            if (
+                self.best_gate_result.holdout_n_bars is not None
+                and self.graduate.holdout_n_bars != self.best_gate_result.holdout_n_bars
+            ):
+                raise ValueError("graduate holdout length must match the best gate result")
+
+        if self.fundamentals is not None and self.fundamentals.symbol != self.symbol:
+            raise ValueError("fundamentals symbol must match experiment")
+        if (
+            self.undervaluation_score is not None
+            and self.undervaluation_score.symbol != self.symbol
+        ):
+            raise ValueError("undervaluation_score symbol must match experiment")
+        if self.graduate is not None:
+            if self.fundamental_screen is not None and not self.fundamental_screen.passed:
+                raise ValueError("graduate cannot retain a failed fundamental screen")
+            if self.distress_screen is not None and self.distress_screen.distressed:
+                raise ValueError("graduate cannot retain a distressed symbol")
+
         if self.manifest is None and self.data_quality_report is None:
             return self
         if self.manifest is None or self.data_quality_report is None:
             raise ValueError("manifest and data_quality_report must be present together")
         if self.manifest.experiment_id != self.experiment_id:
             raise ValueError("manifest experiment_id must match experiment")
+        if self.manifest.created_at != self.created_at:
+            raise ValueError("manifest created_at must match experiment")
         if self.manifest.data_quality_report_id != self.data_quality_report.id:
             raise ValueError("manifest data_quality_report_id must match embedded report")
         if self.manifest.symbol != self.symbol:
@@ -148,6 +220,14 @@ class Experiment(BaseModel):
             raise ValueError("experiment quality report must identify its source")
         if self.manifest.data_source != self.data_quality_report.source:
             raise ValueError("manifest data source must match quality report")
+        if selected is None:
+            raise ValueError("manifest requires the selected strategy trial")
+        if self.manifest.strategy_name != selected.strategy_name:
+            raise ValueError("manifest strategy must match selected trial")
+        if self.manifest.parameter_hash != compute_parameter_hash(selected.parameters):
+            raise ValueError("manifest parameter hash must match selected trial")
+        if self.manifest.validation_config_hash != self.gate_config.version_hash:
+            raise ValueError("manifest validation config must match experiment")
         return self
 
 

@@ -72,6 +72,9 @@ def _graduate_exp(symbol: str) -> Experiment:
             )
         ],
         lifetime_trials=1,
+        best_strategy_name="sma",
+        selected_trial_index=0,
+        best_gate_result=gr,
         graduate=Graduate(
             strategy_name="sma",
             parameters={"fast": 10, "slow": 30},

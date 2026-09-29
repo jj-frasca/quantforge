@@ -179,7 +179,12 @@ def run_universe_hunt(
             errors[symbol] = f"{type(exc).__name__}: {exc}"
             continue
         if value_score is not None:
-            exp = exp.model_copy(update={"undervaluation_score": value_score})
+            exp = Experiment.model_validate(
+                {
+                    **exp.model_dump(),
+                    "undervaluation_score": value_score,
+                }
+            )
         if store is not None:
             store.add(exp)
         experiments.append(exp)

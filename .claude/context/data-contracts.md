@@ -138,6 +138,11 @@ ADR-145 deep-freezes the complete originating cross-sectional experiment graph, 
 ordered panel identity, trials, selected graduate, gate verdict, manifest components, reports,
 issues, and issue context. The same JSON object/array schema remains durable, but already-validated
 quality lineage cannot be mutated in place before a later store write or forward promotion.
+ADR-147 deep-freezes the corresponding single-name experiment graph, including trial order and
+parameters, selected graduate and gate verdict, fundamental screens, valuation flags, manifest,
+quality issues, and nested context. Reload binds all evidence to one selected trial and symbol;
+production valuation enrichment must re-enter validation rather than inject an unchecked model
+copy. Legacy selected-index absence and the existing JSON schema remain unchanged.
 
 ---
 

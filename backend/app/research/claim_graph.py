@@ -1,4 +1,4 @@
-"""Defensive deep-freeze helpers for persisted cross-sectional claims (ADR-145)."""
+"""Defensive deep-freeze helpers for persisted research claims (ADRs 145/147)."""
 
 from collections.abc import Mapping
 from typing import Never, SupportsIndex
@@ -11,7 +11,7 @@ class FrozenClaimList(list[object]):
 
     @staticmethod
     def _immutable() -> Never:
-        raise AttributeError("cross-sectional experiment claim graph is immutable")
+        raise AttributeError("experiment claim graph is immutable")
 
     def __setitem__(self, key: object, value: object) -> Never:
         self._immutable()
@@ -55,7 +55,7 @@ class FrozenClaimDict(dict[object, object]):
 
     @staticmethod
     def _immutable() -> Never:
-        raise TypeError("cross-sectional experiment claim graph is immutable")
+        raise TypeError("experiment claim graph is immutable")
 
     def __setitem__(self, key: object, value: object) -> Never:
         self._immutable()

@@ -29,6 +29,7 @@ def _dated(symbol: str, day: int, *, lifetime: int = 1, graduated: bool = False)
         parameter_stability_score=0.8,
     )
     graduate = None
+    gr = None
     if graduated:
         gr = GateResult(
             passed=True,
@@ -55,6 +56,9 @@ def _dated(symbol: str, day: int, *, lifetime: int = 1, graduated: bool = False)
         gate_config=GateConfig(),
         trials=[trial],
         lifetime_trials=lifetime,
+        best_strategy_name="sma" if graduated else None,
+        selected_trial_index=0 if graduated else None,
+        best_gate_result=gr,
         graduate=graduate,
     )
 

@@ -31,20 +31,22 @@ def _trial(name: str, dsr: float) -> Trial:
 def _experiment(symbol: str, n_trials: int, prior: int = 0, graduated: bool = False) -> Experiment:
     trials = [_trial(f"s{i}", 0.5 + i * 0.1) for i in range(n_trials)]
     graduate = None
+    gate_result = None
     if graduated:
+        gate_result = GateResult(
+            passed=True,
+            dsr_ok=True,
+            pbo_ok=True,
+            stability_ok=True,
+            mintrl_ok=True,
+            holdout_ok=True,
+            required_track_record_years=9.2,
+            gate_config_version="v",
+        )
         graduate = Graduate(
             strategy_name="s0",
             parameters={"fast": 5, "slow": 20},
-            gate_result=GateResult(
-                passed=True,
-                dsr_ok=True,
-                pbo_ok=True,
-                stability_ok=True,
-                mintrl_ok=True,
-                holdout_ok=True,
-                required_track_record_years=9.2,
-                gate_config_version="v",
-            ),
+            gate_result=gate_result,
             holdout_sharpe=0.8,
             holdout_total_return=0.15,
         )
@@ -54,6 +56,9 @@ def _experiment(symbol: str, n_trials: int, prior: int = 0, graduated: bool = Fa
         gate_config=GateConfig(),
         trials=trials,
         lifetime_trials=prior + n_trials,
+        best_strategy_name="s0" if graduated else None,
+        selected_trial_index=0 if graduated else None,
+        best_gate_result=gate_result,
         graduate=graduate,
         rationale="test run",
     )

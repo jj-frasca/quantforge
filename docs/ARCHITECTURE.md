@@ -821,6 +821,14 @@ names plus any graduate to the selected trial and exact best gate result. The du
 remains object/array compatible, but a validated claim can no longer drift in memory under the same
 experiment UUID and lineage hashes.
 
+**Single-name experiment claims are deeply frozen (ADR-147).** The `Experiment` boundary now applies
+the same defensive reconstruction to strategy/trial order, parameters, graduate, gate, fundamental,
+valuation, manifest, and quality evidence. Construction and JSON reload bind ADR-079's selected
+trial to the graduate and manifest, reject symbol or veto evidence drift, and preserve the legacy
+max-DSR fallback when no selected index was historically recorded. Production valuation enrichment
+returns through this validated boundary rather than using an unchecked model copy. JSON arrays and
+objects retain their existing durable shapes.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

@@ -26,9 +26,9 @@ from app.research.lab.pool_report import (
 _NOW = datetime(2026, 8, 18, tzinfo=UTC)
 
 
-def _trial(dsr: float = 0.5) -> Trial:
+def _trial(dsr: float = 0.5, strategy: str = "sma") -> Trial:
     return Trial(
-        strategy_name="sma",
+        strategy_name=strategy,
         parameters={"fast": 5, "slow": 20},
         observed_sharpe=1.0,
         deflated_sharpe=dsr,
@@ -45,20 +45,22 @@ def _exp(
     strategy: str = "sma",
 ) -> Experiment:
     graduate = None
+    gate_result = None
     if holdout_sharpe is not None:
+        gate_result = GateResult(
+            passed=True,
+            dsr_ok=True,
+            pbo_ok=True,
+            stability_ok=True,
+            mintrl_ok=True,
+            holdout_ok=True,
+            required_track_record_years=1.0,
+            gate_config_version="v",
+        )
         graduate = Graduate(
             strategy_name=strategy,
             parameters={"fast": 5, "slow": 20},
-            gate_result=GateResult(
-                passed=True,
-                dsr_ok=True,
-                pbo_ok=True,
-                stability_ok=True,
-                mintrl_ok=True,
-                holdout_ok=True,
-                required_track_record_years=1.0,
-                gate_config_version="v",
-            ),
+            gate_result=gate_result,
             holdout_sharpe=holdout_sharpe,
             holdout_total_return=0.1,
             holdout_n_bars=holdout_n_bars,
@@ -67,8 +69,11 @@ def _exp(
         symbol=symbol,
         strategy_names=[strategy],
         gate_config=GateConfig(),
-        trials=[_trial()],
+        trials=[_trial(strategy=strategy)],
         lifetime_trials=10,
+        best_strategy_name=strategy if graduate is not None else None,
+        selected_trial_index=0 if graduate is not None else None,
+        best_gate_result=gate_result,
         graduate=graduate,
     )
 

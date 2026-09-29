@@ -202,6 +202,11 @@ universe/strategy collections, trials and parameter maps, graduate, gate verdict
 and embedded quality evidence are defensively reconstructed and recursively immutable. JSON keeps
 the existing object/array schema, while reload revalidates selected-trial, graduate, gate, and
 lineage relationships as one claim.
+ADR-147 applies that complete boundary to the single-name `Experiment` as well. Ordered trials,
+parameters, graduate and gate verdict, fundamental and valuation evidence, manifest, and embedded
+quality report are defensive immutable copies. Construction and reload bind the selected trial to
+the graduate and manifest, preserve ADR-079's legacy max-DSR fallback, and reject mismatched symbol
+or veto evidence without changing JSON object/array shapes.
 
 ---
 

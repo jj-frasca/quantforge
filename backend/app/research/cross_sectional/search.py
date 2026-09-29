@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_valid
 from app.data.models import DataQualityReport
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.backtesting.metrics import ReturnMoments, return_moments, sharpe_ratio
-from app.research.cross_sectional.claim_graph import FrozenClaimList, freeze_claim_model
+from app.research.claim_graph import FrozenClaimList, freeze_claim_model
 from app.research.cross_sectional.engine import (
     asset_returns,
     portfolio_returns,

@@ -32,6 +32,7 @@ def _experiment(
     holdout_sharpe: float = 0.5,
     undervaluation: float | None = None,
 ) -> Experiment:
+    gate_result = _gate_result() if graduated else None
     trial = Trial(
         strategy_name="sma",
         parameters={"fast": 10, "slow": 30},
@@ -44,7 +45,7 @@ def _experiment(
         Graduate(
             strategy_name="sma",
             parameters={"fast": 10, "slow": 30},
-            gate_result=_gate_result(),
+            gate_result=gate_result,
             holdout_sharpe=holdout_sharpe,
             holdout_total_return=0.1,
             holdout_n_bars=252,
@@ -82,6 +83,9 @@ def _experiment(
         gate_config=GateConfig(),
         trials=[trial],
         lifetime_trials=1,
+        best_strategy_name="sma" if graduated else None,
+        selected_trial_index=0 if graduated else None,
+        best_gate_result=gate_result,
         graduate=graduate,
         undervaluation_score=score,
     )

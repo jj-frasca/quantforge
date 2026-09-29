@@ -127,7 +127,7 @@ def test_freeze_graduate_builds_a_position_from_a_graduated_experiment() -> None
         trials=[
             Trial(
                 strategy_name="trend_filtered_mean_reversion",
-                parameters={"z_window": 51},
+                parameters={"z_window": 51, "z_threshold": 2.25, "trend_window": 350},
                 observed_sharpe=1.0,
                 deflated_sharpe=0.5,
                 pbo=0.1,
@@ -135,6 +135,9 @@ def test_freeze_graduate_builds_a_position_from_a_graduated_experiment() -> None
             )
         ],
         lifetime_trials=1,
+        best_strategy_name="trend_filtered_mean_reversion",
+        selected_trial_index=0,
+        best_gate_result=gr,
         graduate=Graduate(
             strategy_name="trend_filtered_mean_reversion",
             parameters={"z_window": 51, "z_threshold": 2.25, "trend_window": 350},
@@ -302,6 +305,16 @@ def test_evaluate_lifecycle_runs_on_a_real_frame() -> None:
 
 
 def _graduated_experiment(holdout_sharpe: float = 0.44, holdout_n_bars: int = 1000) -> Experiment:
+    gate_result = GateResult(
+        passed=True,
+        dsr_ok=True,
+        pbo_ok=True,
+        stability_ok=True,
+        mintrl_ok=True,
+        holdout_ok=True,
+        required_track_record_years=1.0,
+        gate_config_version="v",
+    )
     return Experiment(
         symbol="CRM",
         strategy_names=["rsi_mean_reversion"],
@@ -317,19 +330,13 @@ def _graduated_experiment(holdout_sharpe: float = 0.44, holdout_n_bars: int = 10
             )
         ],
         lifetime_trials=1,
+        best_strategy_name="rsi_mean_reversion",
+        selected_trial_index=0,
+        best_gate_result=gate_result,
         graduate=Graduate(
             strategy_name="rsi_mean_reversion",
             parameters={"window": 14},
-            gate_result=GateResult(
-                passed=True,
-                dsr_ok=True,
-                pbo_ok=True,
-                stability_ok=True,
-                mintrl_ok=True,
-                holdout_ok=True,
-                required_track_record_years=1.0,
-                gate_config_version="v",
-            ),
+            gate_result=gate_result,
             holdout_sharpe=holdout_sharpe,
             holdout_total_return=0.08,
             holdout_n_bars=holdout_n_bars,

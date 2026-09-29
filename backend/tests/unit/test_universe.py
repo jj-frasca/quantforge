@@ -269,6 +269,9 @@ def _graduated_exp(symbol: str, holdout_sharpe: float, holdout_years: float) -> 
         gate_config=GateConfig(),
         trials=[trial],
         lifetime_trials=1,
+        best_strategy_name="sma",
+        selected_trial_index=0,
+        best_gate_result=gr,
         graduate=graduate,
     )
 
