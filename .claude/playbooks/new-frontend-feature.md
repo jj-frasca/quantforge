@@ -13,8 +13,9 @@
 Implement [FEATURE/PAGE NAME] under frontend/src/features/[feature]/.
 
 [2–4 sentences: what the user sees/does, which API data it renders]
-Note: ValidationReport is the highest-priority page (~70% of frontend effort) — match that
-bar for data density and clarity. Dark mode, professional, data-dense.
+Note: `lab` is now the largest, fastest-growing feature area (not ValidationReport — check
+`ls src/features/` rather than trusting a fixed priority order). Match its bar for data
+density and clarity. Dark mode, professional, data-dense.
 
 **Files to read first**:
 - an existing feature under frontend/src/features/ for the pattern

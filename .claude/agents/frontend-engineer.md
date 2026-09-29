@@ -3,7 +3,8 @@ name: frontend-engineer
 description: >
   Domain expert for the React/TypeScript dashboard (Phase 5+). Use when working on anything
   under frontend/ — pages, components, API client, state, charts, or frontend tests. Knows the
-  stack conventions, the API contracts, and that the ValidationReport page is the priority.
+  stack conventions, the API contracts, and that `lab` (not ValidationReport) is now the
+  largest, fastest-growing feature area.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 memory: project
