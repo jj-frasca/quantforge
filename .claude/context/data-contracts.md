@@ -143,6 +143,11 @@ parameters, selected graduate and gate verdict, fundamental screens, valuation f
 quality issues, and nested context. Reload binds all evidence to one selected trial and symbol;
 production valuation enrichment must re-enter validation rather than inject an unchecked model
 copy. Legacy selected-index absence and the existing JSON schema remain unchanged.
+ADR-148 applies that complete durable boundary to single-name paper positions. Parameters, exit
+reasons, score curves, and embedded evidence are defensive immutable copies; lifecycle state,
+evidence symbol, counts, finite statistics, and non-empty curve geometry are validated on
+construction, managed replacement, reload, and store write. Empty legacy curves and absent legacy
+evidence remain explicit supported states.
 
 ---
 

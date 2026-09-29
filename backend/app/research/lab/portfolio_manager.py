@@ -16,6 +16,12 @@ from app.research.lab.paper import (
 DatasetProvider = Callable[[str], ResearchDataset]
 
 
+def _replace_position(position: PaperPosition, **updates: object) -> PaperPosition:
+    payload = position.model_dump(round_trip=True)
+    payload.update(updates)
+    return PaperPosition.model_validate(payload)
+
+
 def newly_promoted(before: list[PaperPosition], after: list[PaperPosition]) -> list[PaperPosition]:
     """The positions in `after` whose (symbol, strategy_name) was not in `before` — i.e. the
     graduates freshly promoted into the managed book this step. Lets the discovery consolidation
@@ -114,15 +120,14 @@ def manage_portfolio(
         decision = evaluate_lifecycle(position, dataset.frame, policy)
         if decision.action == "exit":
             updated.append(
-                position.model_copy(
-                    update={
-                        "status": "closed",
-                        "closed_at": now,
-                        "exit_reasons": decision.reasons,
-                        "score": score,
-                    }
+                _replace_position(
+                    position,
+                    status="closed",
+                    closed_at=now,
+                    exit_reasons=decision.reasons,
+                    score=score,
                 )
             )
         else:
-            updated.append(position.model_copy(update={"score": score}))
+            updated.append(_replace_position(position, score=score))
     return updated

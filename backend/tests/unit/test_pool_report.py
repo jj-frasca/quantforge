@@ -160,6 +160,7 @@ def test_report_ignores_closed_positions_in_the_book_summary() -> None:
         frozen_at=_NOW,
         status="closed",
         closed_at=_NOW,
+        exit_reasons=["edge decayed"],
         survives_universe_deflation=True,
     )
     report = summarize_pool([_exp("A", holdout_sharpe=0.2)], [closed])

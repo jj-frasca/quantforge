@@ -829,6 +829,13 @@ max-DSR fallback when no selected index was historically recorded. Production va
 returns through this validated boundary rather than using an unchecked model copy. JSON arrays and
 objects retain their existing durable shapes.
 
+**Paper-position claims are deeply frozen and internally coherent (ADR-148).** Construction, JSON
+reload, managed lifecycle updates, and store writes validate one position boundary before a durable
+claim can change. Parameters, close reasons, forward curves, and nested quality evidence are
+defensive immutable copies. Lifecycle metadata, score evidence, counts, finite statistics, and any
+non-empty equity curve must agree with the position identity and terminal returns. Legacy empty
+curves and absent evidence remain readable without inventing history.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

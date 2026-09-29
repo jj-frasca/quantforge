@@ -1,14 +1,17 @@
 import json
 from datetime import datetime
+from itertools import pairwise
+from math import isclose, isfinite
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.backtesting.metrics import max_drawdown, sharpe_ratio
+from app.research.claim_graph import FrozenClaimDict, FrozenClaimList, freeze_claim_model
 from app.research.dataset import ResearchDataset, ResearchDatasetEvidence
 from app.research.lab.experiment import Experiment
 from app.research.lab.universe import expected_max_sharpe_under_null
@@ -79,6 +82,86 @@ class PaperPosition(BaseModel):
     survives_universe_deflation: bool | None = None
     universe_deflation_bar: float | None = None
     universe_n_symbols: int | None = None
+
+    @model_validator(mode="after")
+    def validate_and_freeze_claim(self) -> "PaperPosition":
+        """Enforce one coherent durable claim, then detach and freeze its nested graph."""
+        if self.status == "open":
+            if self.closed_at is not None or self.exit_reasons:
+                raise ValueError("open position cannot have close metadata")
+        else:
+            if self.closed_at is None:
+                raise ValueError("closed position requires closed_at")
+            if not self.exit_reasons:
+                raise ValueError("closed position requires exit reasons")
+
+        score = self.score
+        if score is not None:
+            if score.forward_bars < 0:
+                raise ValueError("forward_bars must be non-negative")
+            if score.forward_trades < 0:
+                raise ValueError("forward_trades must be non-negative")
+            if score.forward_trades > score.forward_bars:
+                raise ValueError("forward_trades cannot exceed forward_bars")
+            statistics = (
+                score.forward_return,
+                score.forward_sharpe,
+                score.buy_and_hold_return,
+                score.buy_and_hold_sharpe,
+            )
+            if not all(isfinite(value) for value in statistics):
+                raise ValueError("forward statistics must be finite")
+            if (
+                score.evidence is not None
+                and score.evidence.quality_report.symbol.strip().upper()
+                != self.symbol.strip().upper()
+            ):
+                raise ValueError("score evidence symbol must match paper position")
+
+            curve = score.forward_equity
+            if curve:
+                if len(curve) != score.forward_bars:
+                    raise ValueError("forward equity length must match forward_bars")
+                try:
+                    if any(
+                        current.timestamp <= previous.timestamp
+                        for previous, current in pairwise(curve)
+                    ):
+                        raise ValueError("forward equity timestamps must be strictly increasing")
+                    if any(point.timestamp <= self.frozen_at for point in curve):
+                        raise ValueError("forward equity timestamps must follow frozen_at")
+                except TypeError as exc:
+                    raise ValueError(
+                        "forward equity timestamps must use compatible timezones"
+                    ) from exc
+                if any(
+                    not isfinite(value) or value <= 0.0
+                    for point in curve
+                    for value in (point.strategy_equity, point.buy_and_hold_equity)
+                ):
+                    raise ValueError("forward equity values must be finite and positive")
+                terminal = curve[-1]
+                if not (
+                    isclose(
+                        terminal.strategy_equity,
+                        1.0 + score.forward_return,
+                        rel_tol=1e-9,
+                        abs_tol=1e-9,
+                    )
+                    and isclose(
+                        terminal.buy_and_hold_equity,
+                        1.0 + score.buy_and_hold_return,
+                        rel_tol=1e-9,
+                        abs_tol=1e-9,
+                    )
+                ):
+                    raise ValueError("forward equity terminal values must match score returns")
+
+        object.__setattr__(self, "parameters", FrozenClaimDict(self.parameters))
+        object.__setattr__(self, "exit_reasons", FrozenClaimList(self.exit_reasons))
+        if score is not None:
+            object.__setattr__(self, "score", cast(ForwardScore, freeze_claim_model(score)))
+        return self
 
 
 class ExitPolicy(BaseModel):
@@ -319,8 +402,12 @@ class JsonFilePaperPortfolio:
         return [PaperPosition.model_validate(item) for item in json.loads(self._path.read_text())]
 
     def save(self, positions: list[PaperPosition]) -> None:
+        validated = [
+            PaperPosition.model_validate(position.model_dump(round_trip=True))
+            for position in positions
+        ]
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        payload = [p.model_dump(mode="json") for p in positions]
+        payload = [position.model_dump(mode="json") for position in validated]
         # Trailing newline (end-of-file-fixer), same as the experiment store.
         self._path.write_text(json.dumps(payload, indent=2) + "\n")
 

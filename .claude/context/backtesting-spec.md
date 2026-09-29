@@ -207,6 +207,11 @@ parameters, graduate and gate verdict, fundamental and valuation evidence, manif
 quality report are defensive immutable copies. Construction and reload bind the selected trial to
 the graduate and manifest, preserve ADR-079's legacy max-DSR fallback, and reject mismatched symbol
 or veto evidence without changing JSON object/array shapes.
+ADR-148 extends the boundary to `PaperPosition`: parameters, lifecycle reasons, forward curves, and
+nested score evidence are defensive immutable copies. Construction, managed updates, reload, and
+store writes validate lifecycle identity, evidence symbol, count/finite constraints, and any
+non-empty curve's ordering and terminal returns. Legacy empty curves and evidence-null scores remain
+readable.
 
 ---
 
