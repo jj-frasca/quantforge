@@ -30,14 +30,14 @@ test('switches to Validation and runs the suite', async () => {
   server.use(http.post('/api/v1/validate', () => HttpResponse.json(passingReport)))
   renderWithClient(<App />)
   await userEvent.click(screen.getByRole('button', { name: 'Validation' }))
-  await userEvent.click(screen.getByRole('button', { name: /run validation/i }))
+  await userEvent.click(await screen.findByRole('button', { name: /run validation/i }))
   expect(await screen.findByRole('status')).toHaveTextContent(/passes validation/i)
 })
 
 test('switches to Backtest Results from the nav', async () => {
   renderWithClient(<App />)
   await userEvent.click(screen.getByRole('button', { name: 'Backtest Results' }))
-  expect(screen.getByRole('button', { name: /run backtest/i })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: /run backtest/i })).toBeInTheDocument()
   expect(
     screen.getByRole('button', { name: 'Backtest Results', current: 'page' }),
   ).toBeInTheDocument()
