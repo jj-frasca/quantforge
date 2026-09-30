@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { lazy, Suspense, useState, type FormEvent } from 'react'
 
 import { Field } from '../../components/ui/Field'
 import { defaultDateRange } from '../../lib/defaultDateRange'
@@ -7,9 +7,16 @@ import { isValidDateRange } from '../../lib/dateRangeValidity'
 import type { BarsQuery } from '../../types/bars'
 import type { IngestRequest } from '../../types/ingest'
 import { IngestResultView } from './IngestResultView'
-import { PriceChart } from './PriceChart'
 import { useIngest } from './useIngest'
 import { usePriceBars } from './usePriceBars'
+
+// Data Explorer itself is eagerly loaded (it's the default page, see App.tsx), but Recharts
+// (pulled in by PriceChart) is a large dependency that's only needed once a query actually
+// returns bars — lazy-loading just the chart keeps Recharts out of the initial bundle for
+// every visitor who never gets past the ingest form.
+const PriceChart = lazy(() =>
+  import('./PriceChart').then((m) => ({ default: m.PriceChart })),
+)
 
 // Data Explorer is just for previewing — 1 trailing year (~252 bars) keeps the price
 // chart legible and the ingestion fast. Anchored to "today" so the defaults follow
@@ -94,7 +101,11 @@ export function DataExplorerPage() {
         <p role="alert">Ingest failed — {(ingest.error as Error).message}</p>
       )}
       {ingest.data && <IngestResultView result={ingest.data} />}
-      {priceBars.data && <PriceChart data={priceBars.data} />}
+      {priceBars.data && (
+        <Suspense fallback={<p>Loading…</p>}>
+          <PriceChart data={priceBars.data} />
+        </Suspense>
+      )}
     </section>
   )
 }
