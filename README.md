@@ -153,7 +153,7 @@ still zero graduates.
 
 ## What's shipped
 
-End-to-end, all gates green (backend 98.62% coverage, 1,673 tests; frontend 97.68%, 337 tests):
+End-to-end, all gates green (backend 98.02% coverage, 1,809 tests; frontend 97.57%, 349 tests):
 
 - **18 HTTP endpoints**: health, strategy catalog (single source of truth per ADR-010), ingest,
   bars, backtest, validate, Monte Carlo, plus the research-lab surface — leaderboard, graduates,
@@ -193,7 +193,7 @@ The engine is calibrated to be honest: a random walk yields PBO ≈ 0.9 and does
 - **Frontend**: React 19 + TypeScript strict, Vite, Tanstack Query 5, Zustand 5,
   Recharts 3, Zod 4
 - **Testing**: pytest + Hypothesis (backend); Vitest + React Testing Library + MSW
-  (frontend); coverage gates 85% backend / 75% frontend, currently 98.62% / 97.68%
+  (frontend); coverage gates 85% backend / 75% frontend, currently 98.02% / 97.57%
 - **Tooling**: uv (Python env), ruff (lint + format), mypy (strict), pre-commit, GitHub
   Actions CI (backend + frontend + pre-commit, gating every commit)
 
