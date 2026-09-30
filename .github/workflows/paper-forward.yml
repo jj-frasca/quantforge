@@ -41,7 +41,7 @@ jobs:
         run: PYTHONPATH=. uv run python scripts/paper.py | tee "$GITHUB_WORKSPACE/paper_out.txt"
 
       - name: Slack the scoreboard
-        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
