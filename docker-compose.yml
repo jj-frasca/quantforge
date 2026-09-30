@@ -3,7 +3,11 @@
 
 services:
   timescaledb:
-    image: timescale/timescaledb:latest-pg16   # TODO(phase2): pin exact version once the schema lands
+    image: timescale/timescaledb:2.30.2-pg16   # pinned (was a TODO since Phase 1); the Alembic
+      # hypertable migration has been stable for months, so a floating `latest-pg16` tag buys
+      # nothing but a reproducibility risk. Verified this tag exists and was published at the
+      # exact same instant as `latest-pg16` (2026-09-29, hub.docker.com API), so it is the
+      # identical image, not a downgrade.
     environment:
       POSTGRES_USER: quantforge
       POSTGRES_PASSWORD: password
