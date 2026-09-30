@@ -5,6 +5,10 @@ on:
     branches: [master]
   pull_request:
 
+# Least privilege: this workflow only reads the repo and runs hooks, never writes back.
+permissions:
+  contents: read
+
 jobs:
   pre-commit:
     name: pre-commit hooks
