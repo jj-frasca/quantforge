@@ -18,6 +18,11 @@ concurrency:
 jobs:
   accrue:
     runs-on: ubuntu-latest
+    # cancel-in-progress is false above (never cancel an in-flight accrual), so a hung run has no
+    # other backstop — without this, it would block every subsequent day's queued run for up to
+    # the 6h default. Typical run is ~30-45s; 15m is generous headroom for a slow Alpaca API call,
+    # not a normal-case budget.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
