@@ -170,8 +170,9 @@ End-to-end, all gates green (backend 98.02% coverage, 1,809 tests; frontend 97.5
   wording — never "guarantees"); SEC EDGAR fundamentals; **sync TimescaleDB repository on
   psycopg3** with Alembic migration (hypertable + index), Docker-gated integration tests.
 - **Research engine**: vectorized pandas/numpy backtester (ADR-007 — vectorbt rejected: fails on
-  Python 3.12); **34 single-name strategies** and **10 cross-sectional factors**, each with its
-  paper citation in `.claude/context/research-papers.md`; adding a strategy is a single backend
+  Python 3.12); **34 single-name strategies** and **13 cross-sectional factors** (16 when
+  fundamentals scores are available), each with its paper citation in
+  `.claude/context/research-papers.md`; adding a strategy is a single backend
   diff (ADR-010); benchmark comparator; Monte Carlo simulator; experiment manifest.
 - **Validation engine**: PBO via CSCV (Bailey 2015), a multiple-testing-adjusted Sharpe margin,
   **scored** walk-forward with Pardo efficiency (ADR-038) and **scored** purged K-fold CV whose

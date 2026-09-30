@@ -268,6 +268,89 @@ Transactions on the NYSE". *Journal of Finance* 43(1).
 
 ---
 
+## Cross-Sectional Factors
+
+Rank the whole universe each period into dollar-neutral long/short legs (ADR-024/025), judged by
+the SAME DSR/PBO/holdout gate as every single-name strategy above. The authoritative *list* lives
+in `default_strategies()` (`backend/app/research/cross_sectional/registry.py`); implementations
+are in `backend/app/research/cross_sectional/strategies.py`. 13 price-only factors are always
+present; `xs_value`/`xs_quality`/`xs_quality_value` are added only when a fundamentals score map
+is supplied (16 max).
+
+**Jegadeesh & Titman (1993)** — "Returns to Buying Winners and Selling Losers".
+*Journal of Finance* 48(1), pp. 65–91.
+- Cross-sectional momentum: trailing return over a `lookback` window ending `skip` bars ago
+  (`skip` sidesteps short-term reversal contaminating the signal). Used by `xs_momentum`.
+
+**Lehmann, Bruce N. (1990)** — "Fads, Martingales, and Market Efficiency".
+*Quarterly Journal of Economics* 105(1), pp. 1–28. **Jegadeesh, Narasimhan (1990)** — "Evidence of
+Predictable Behavior of Security Returns". *Journal of Finance* 45(3), pp. 881–898.
+- Cross-sectional reversal: negated trailing return over `lookback` bars — long recent losers,
+  short recent winners. A short `lookback` (~5 bars) is weekly reversal (`xs_reversal`); ~21–63
+  bars is Jegadeesh's monthly reversal (`xs_short_term_reversal_1m`). Used by `xs_reversal`,
+  `xs_short_term_reversal_1m`.
+
+**Baker, Bradley & Wurgler (2011)** — "Benchmarks as Limits to Arbitrage: Understanding the
+Low-Volatility Anomaly". *Financial Analysts Journal* 67(1), pp. 40–54. **Ang, Hodrick, Xing &
+Zhang (2006)** — "The Cross-Section of Volatility and Expected Returns". *Journal of Finance*
+61(1), pp. 259–299.
+- Low-volatility anomaly: rank by NEGATED trailing realized volatility of returns over
+  `vol_window` — long the calmest names, short the most volatile. Used by `xs_low_volatility`.
+
+**George, Thomas J. & Hwang, Chuan-Yang (2004)** — "The 52-Week High and Momentum Investing".
+*Journal of Finance* 59(5), pp. 2145–2176.
+- 52-week-high factor: rank by proximity to the trailing `window`-bar high (`price /
+  rolling_max`) — long names near their running high, short names far below theirs. Used by
+  `xs_52w_high`.
+
+**Blitz, Huij & Martens (2011)** — "Residual Momentum". *Journal of Empirical Finance* 18(3),
+pp. 506–521.
+- Residual momentum: momentum of returns net of each name's own trailing-mean drift over
+  `mean_window`, summed over `lookback` bars ending `skip` bars ago — steadier and less
+  crash-prone than raw price momentum. Used by `xs_residual_momentum`.
+
+**Moskowitz, Ooi & Pedersen (2012)** — "Time Series Momentum". *Journal of Financial Economics*
+104(2), pp. 228–250.
+- Risk-adjusted (volatility-scaled) momentum: trailing mean return divided by trailing return
+  volatility over `lookback` — a Sharpe-like trend score, distinct from raw cumulative-return
+  momentum. Used by `xs_risk_adjusted_momentum`.
+
+**ADR-028** (this project) — multi-factor z-score composite.
+- Cross-sectionally standardize (`cs_zscore`) momentum, low-volatility, 52-week-high, and
+  residual momentum each date, then rank on their mean z-score — the dependency-free precursor
+  to learning-to-rank; averaging orthogonal, standardized factors is more robust than any single
+  sort. Used by `xs_composite`.
+
+**Kakushadze, Zura (2016)** — "101 Formulaic Alphas". *Wilmott* 2016(84), pp. 72–81 (WorldQuant).
+- Alpha#34: declining-volatility + mild 1-bar reversal, summed. Used by `xs_alpha34`.
+- Alpha#19: fades the recent `change_lag`-bar move, weighted up for strong long-horizon
+  cumulative return. Used by `xs_alpha19`.
+- Alpha#4: negated time-series rank of close over `window` — short-horizon in-range reversal.
+  Used by `xs_alpha4`.
+- `decay_linear` operator applied to 1-bar returns, negated — decay-weighted short-term
+  reversal. Used by `xs_decay_reversal`.
+- Alpha#9: conditional trend-continue-or-reverse on the 1-bar price change, gated by the
+  trailing `window`'s min/max sign. Used by `xs_alpha9`.
+
+**Fama, Eugene F. & French, Kenneth R. (1992)** — "The Cross-Section of Expected Stock Returns".
+*Journal of Finance* 47(2), pp. 427–465. **Asness, Moskowitz & Pedersen (2013)** — "Value and
+Momentum Everywhere". *Journal of Finance* 68(3), pp. 929–985.
+- Cross-sectional value: rank on each symbol's UndervaluationScore (ADR-022), a static as-of
+  snapshot broadcast across every date (point-in-time value history deferred, ADR-024). Used by
+  `xs_value`.
+
+**Piotroski, Joseph D. (2000)** — "Value Investing: The Use of Historical Financial Statement
+Information to Separate Winners from Losers". *Journal of Accounting Research* 38, pp. 1–41.
+**Novy-Marx, Robert (2013)** — "The Other Side of Value: The Gross Profitability Premium".
+*Journal of Financial Economics* 108(1), pp. 1–28.
+- Cross-sectional quality: rank on each symbol's fundamental quality_score, a static as-of
+  snapshot broadcast across every date (ADR-029) — judged by the same DSR/PBO/holdout gate as
+  every technical factor, fundamentals earn their place rather than being assumed. Used by
+  `xs_quality`. Multiplied with the value snapshot over the symbols scored on both ("good AND
+  cheap") when both score maps are supplied: `xs_quality_value`.
+
+---
+
 ## Simulation
 
 **Black & Scholes (1973)** — "The Pricing of Options and Corporate Liabilities".
