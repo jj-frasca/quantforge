@@ -65,9 +65,11 @@ def _select_by() -> SelectBy:
     """ADR-069: which arm of the selection rule this calibration measures. A typo is refused rather
     than defaulted — the rule is part of the artifact's identity."""
     value = _flag("--select-by") or "observed"
-    if value not in ("observed", "walk_forward"):
-        raise SystemExit(f"--select-by must be observed or walk_forward, got {value!r}")
-    return value
+    if value == "observed":
+        return "observed"
+    if value == "walk_forward":
+        return "walk_forward"
+    raise SystemExit(f"--select-by must be observed or walk_forward, got {value!r}")
 
 
 def _report(result: NullCalibration) -> None:

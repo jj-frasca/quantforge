@@ -39,7 +39,7 @@ coverage: ## Coverage report (synthetic only), HTML + terminal
 	$(BE) pytest -m "not live" --cov=app --cov-report=term-missing --cov-report=html
 
 lint: ## Backend lint: ruff lint + format check + mypy
-	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app
+	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app scripts
 
 format: ## Auto-format with ruff
 	cd backend && uv run ruff format . && uv run ruff check --fix .

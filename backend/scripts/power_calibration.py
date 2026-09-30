@@ -41,9 +41,11 @@ def _select_by() -> SelectBy:
     on a typo — the rule is part of the artifact's identity, so a silent fallback would publish a
     sweep labelled as the arm it did not run."""
     value = _flag("--select-by") or "observed"
-    if value not in ("observed", "walk_forward"):
-        raise SystemExit(f"--select-by must be observed or walk_forward, got {value!r}")
-    return value
+    if value == "observed":
+        return "observed"
+    if value == "walk_forward":
+        return "walk_forward"
+    raise SystemExit(f"--select-by must be observed or walk_forward, got {value!r}")
 
 
 def _report(result: PowerCalibration) -> None:
