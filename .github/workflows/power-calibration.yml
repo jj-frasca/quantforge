@@ -71,17 +71,25 @@ jobs:
         run: uv sync
       - name: Measure power at phi=${{ matrix.phi }}
         working-directory: backend
+        # Dispatch inputs go through env, not straight into the script text: a `${{ }}` spliced
+        # directly into `run:` is textually substituted before bash ever sees it, so an input
+        # containing shell metacharacters would execute rather than pass through as a value.
+        env:
+          N_BARS: ${{ github.event.inputs.n_bars }}
+          N_SYMBOLS: ${{ github.event.inputs.n_symbols || '50' }}
+          SEED: ${{ github.event.inputs.seed || '0' }}
+          SELECT_BY: ${{ github.event.inputs.select_by || 'observed' }}
         run: |
           set -e
           OUT="$GITHUB_WORKSPACE/power_${{ matrix.phi }}.json"
           BARS=""
-          if [ -n "${{ github.event.inputs.n_bars }}" ]; then
-            BARS="--n-bars ${{ github.event.inputs.n_bars }}"
+          if [ -n "$N_BARS" ]; then
+            BARS="--n-bars $N_BARS"
           fi
           PYTHONPATH=. uv run python scripts/power_calibration.py \
-            "${{ github.event.inputs.n_symbols || '50' }}" "${{ github.event.inputs.seed || '0' }}" \
+            "$N_SYMBOLS" "$SEED" \
             --phi "${{ matrix.phi }}" $BARS \
-            --select-by "${{ github.event.inputs.select_by || 'observed' }}" \
+            --select-by "$SELECT_BY" \
             --out "$OUT" | tee "$GITHUB_WORKSPACE/power_${{ matrix.phi }}.txt"
       - name: Upload the measurement
         if: ${{ always() && hashFiles(format('power_{0}.json', matrix.phi)) != '' }}
