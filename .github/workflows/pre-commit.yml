@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# Cancel superseded runs on the same ref (matches ci.yml's policy).
+concurrency:
+  group: pre-commit-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pre-commit:
     name: pre-commit hooks
