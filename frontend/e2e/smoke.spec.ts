@@ -25,6 +25,11 @@ test.beforeEach(async ({ page }) => {
   }, ONBOARDING_DISMISSED_KEY)
 })
 
+test('document title identifies the app, not the Vite scaffold default', async ({ page }) => {
+  await page.goto('/')
+  await expect(page).toHaveTitle(/QuantForge/)
+})
+
 test('every page mounts with no console/page errors', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`))
