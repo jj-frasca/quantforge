@@ -4,9 +4,10 @@ version = "0.1.0"
 description = "QuantForge backend — quantitative research and validation platform"
 requires-python = ">=3.12"
 
-# Phase 1 keeps runtime deps minimal. The scientific stack (numpy, pandas, scipy,
-# statsmodels, scikit-learn) is added in Phase 2/3, and vectorbt only once its
-# Python 3.12 / numpy 2.x resolution is verified (ARCHITECTURE.md §0.5, §5).
+# numpy/pandas/scipy below are the full scientific stack this project ended up needing;
+# statsmodels/scikit-learn were never added (not used). vectorbt was evaluated and permanently
+# rejected — ADR-007: it doesn't build on Python 3.12/numpy 2.x here — in favor of the vectorized
+# pandas/numpy backtester actually shipped (ARCHITECTURE.md §0.5).
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
