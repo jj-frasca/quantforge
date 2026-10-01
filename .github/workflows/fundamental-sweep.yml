@@ -61,7 +61,7 @@ jobs:
           exit "$status"
       - name: Upload shard records
         if: ${{ always() && hashFiles(format('sweep_shards/fundamentals_shard_{0}.json', matrix.shard)) != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fundamentals-shard-${{ matrix.shard }}
           path: sweep_shards/fundamentals_shard_${{ matrix.shard }}.json

@@ -101,7 +101,7 @@ jobs:
             $BARS --out "$OUT" | tee "$GITHUB_WORKSPACE/horizon_${{ matrix.half_life }}.txt"
       - name: Upload the measurement
         if: ${{ always() && hashFiles(format('horizon_{0}.json', matrix.half_life)) != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: horizon-${{ matrix.half_life }}
           path: |
