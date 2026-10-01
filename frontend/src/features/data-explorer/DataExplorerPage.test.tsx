@@ -57,7 +57,10 @@ test('submitting fires /ingest + /bars and renders both result + chart', async (
   await userEvent.click(screen.getByRole('button', { name: /ingest data/i }))
 
   expect(await screen.findByRole('status')).toHaveTextContent(/stored 30 bars/i)
-  expect(await screen.findByLabelText('price chart')).toBeInTheDocument()
+  // PriceChart is React.lazy()-loaded (perf: keeps Recharts out of the eager bundle — see
+  // c7c1efd2); a longer timeout than the 1000ms default avoids the same CI flake App.test.tsx
+  // hit once under machine load (2026-10-01, session #134).
+  expect(await screen.findByLabelText('price chart', {}, { timeout: 5000 })).toBeInTheDocument()
   expect(screen.getByText(/last close 100\.50/)).toBeInTheDocument()
   // Dates come from defaultDateRange(1) anchored to "today" — covered by
   // defaultDateRange.test.ts; here we just assert the rest of the body and the shape.

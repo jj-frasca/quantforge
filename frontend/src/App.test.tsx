@@ -1,6 +1,13 @@
 // App: renders the shell + 7-page nav (Data Explorer / Backtest Results /
 // Compare Configs / Validation / Live / Discoveries / About); default page is Data Explorer
 // (natural flow: ingest first, then backtest or validate). Backend mocked with MSW.
+//
+// The 6 non-default pages are React.lazy()-loaded (perf: keeps the eager bundle small — see
+// cb256e74). A findByRole right after a nav click is waiting on that dynamic import to resolve,
+// not just a render; the default findByRole timeout (1000ms) flaked once in CI under machine
+// load (2026-10-01, session #134) even though the chunk loads in well under 1s locally. Every
+// such wait below uses an explicit, longer timeout rather than the default.
+const LAZY_PAGE_TIMEOUT = { timeout: 5000 }
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -30,14 +37,18 @@ test('switches to Validation and runs the suite', async () => {
   server.use(http.post('/api/v1/validate', () => HttpResponse.json(passingReport)))
   renderWithClient(<App />)
   await userEvent.click(screen.getByRole('button', { name: 'Validation' }))
-  await userEvent.click(await screen.findByRole('button', { name: /run validation/i }))
+  await userEvent.click(
+    await screen.findByRole('button', { name: /run validation/i }, LAZY_PAGE_TIMEOUT),
+  )
   expect(await screen.findByRole('status')).toHaveTextContent(/passes validation/i)
 })
 
 test('switches to Backtest Results from the nav', async () => {
   renderWithClient(<App />)
   await userEvent.click(screen.getByRole('button', { name: 'Backtest Results' }))
-  expect(await screen.findByRole('button', { name: /run backtest/i })).toBeInTheDocument()
+  expect(
+    await screen.findByRole('button', { name: /run backtest/i }, LAZY_PAGE_TIMEOUT),
+  ).toBeInTheDocument()
   expect(
     screen.getByRole('button', { name: 'Backtest Results', current: 'page' }),
   ).toBeInTheDocument()
@@ -47,7 +58,7 @@ test('switches to Compare Configs from the nav', async () => {
   renderWithClient(<App />)
   await userEvent.click(screen.getByRole('button', { name: 'Compare Configs' }))
   expect(
-    await screen.findByRole('heading', { name: 'Compare Configurations' }),
+    await screen.findByRole('heading', { name: 'Compare Configurations' }, LAZY_PAGE_TIMEOUT),
   ).toBeInTheDocument()
   expect(
     screen.getByRole('button', { name: 'Compare Configs', current: 'page' }),
@@ -58,7 +69,7 @@ test('switches to the Live dashboard from the nav', async () => {
   renderWithClient(<App />)
   await userEvent.click(screen.getByRole('button', { name: 'Live' }))
   expect(
-    await screen.findByRole('heading', { name: 'Live' }),
+    await screen.findByRole('heading', { name: 'Live' }, LAZY_PAGE_TIMEOUT),
   ).toBeInTheDocument()
   expect(
     screen.getByRole('button', { name: 'Live', current: 'page' }),
@@ -68,7 +79,9 @@ test('switches to the Live dashboard from the nav', async () => {
 test('switches to the Discoveries page from the nav', async () => {
   renderWithClient(<App />)
   await userEvent.click(screen.getByRole('button', { name: 'Discoveries' }))
-  expect(await screen.findByRole('heading', { name: 'Discoveries' })).toBeInTheDocument()
+  expect(
+    await screen.findByRole('heading', { name: 'Discoveries' }, LAZY_PAGE_TIMEOUT),
+  ).toBeInTheDocument()
   expect(
     screen.getByRole('button', { name: 'Discoveries', current: 'page' }),
   ).toBeInTheDocument()
@@ -80,6 +93,6 @@ test('switches to About and renders the static page', async () => {
   renderWithClient(<App />)
   await userEvent.click(screen.getByRole('button', { name: 'About' }))
   expect(
-    await screen.findByRole('heading', { name: /about quantforge/i }),
+    await screen.findByRole('heading', { name: /about quantforge/i }, LAZY_PAGE_TIMEOUT),
   ).toBeInTheDocument()
 })
