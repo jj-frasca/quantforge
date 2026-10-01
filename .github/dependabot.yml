@@ -4,6 +4,14 @@
 # dependabot-alerts check (session #127) found GitHub's security-alert API disabled for this
 # repo (403, needs an interactive `gh auth refresh`) — version updates are a separate feature
 # and need no extra scope, so this file is independently actionable.
+# Major-version bumps are ignored on all three ecosystems: this project has already, by hand,
+# repeatedly declined exactly these (session #127 kept GH Actions on their current majors absent
+# a real driving reason; session #131 left every frontend major-version jump — typescript 7,
+# msw 3, vitest 5 — alone as "outside the declared ranges, no concrete reason to force
+# speculatively"). A major bump to numpy/pandas/pydantic risks the vectorized backtest engine
+# (ADR-007) and the sync SQLAlchemy stack (ADR-009) in ways only a human or a dedicated session
+# should sign off on. Patch/minor updates are exactly the "boring freshness" work prior sessions
+# already verified safe to automate; majors stay a deliberate, hand-reviewed decision.
 version: 2
 updates:
   - package-ecosystem: "uv"
@@ -12,6 +20,9 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -19,6 +30,9 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -26,3 +40,6 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
