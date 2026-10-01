@@ -1,0 +1,28 @@
+# Dependabot version updates — opens PRs for review, never commits directly to a branch.
+# Added 2026-10-01 (autonomous session #134) to replace the manual `uv tree`/`npm outdated`/
+# GH-Actions-version sweeps that sessions #127/131/132 ran by hand; those sessions' own
+# dependabot-alerts check (session #127) found GitHub's security-alert API disabled for this
+# repo (403, needs an interactive `gh auth refresh`) — version updates are a separate feature
+# and need no extra scope, so this file is independently actionable.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
