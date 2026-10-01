@@ -129,7 +129,7 @@ jobs:
         working-directory: backend
         run: uv sync
       - name: Download the immutable input pair
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: panel-null-frozen-inputs-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/frozen
@@ -166,7 +166,7 @@ jobs:
         working-directory: backend
         run: uv sync
       - name: Download every complete-panel shard
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: panel-null-shard-${{ github.run_id }}-${{ github.run_attempt }}-*
           path: shards
@@ -234,7 +234,7 @@ jobs:
             "repos/$GITHUB_REPOSITORY/actions/runs/$RECOVERY_RUN_ID/attempts/$RECOVERY_RUN_ATTEMPT" \
             > "$RUNNER_TEMP/recovery-run.json"
       - name: Download the already completed measurement
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: panel-null-measurement-${{ inputs.recovery_run_id }}-${{ inputs.recovery_run_attempt }}
           path: recovered
