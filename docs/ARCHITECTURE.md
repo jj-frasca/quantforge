@@ -849,6 +849,12 @@ through ADR-145/147's authoritative boundaries before creating directories or wr
 unchecked Pydantic copy can no longer persist a contradictory selected-trial, gate, graduate, or
 panel claim and make the pool fail on its next load; batch validation precedes all partition writes.
 
+**Queued paper accrual refreshes generated state at job start (ADR-151).** GitHub concurrency
+serializes paper-forward runs but does not refresh a queued run's creation-time event SHA. The
+accrual job therefore checks out current `master` only after it receives the non-cancelling
+concurrency group, before reading or changing `paper_portfolio.json`. A delayed scheduled run
+cannot recompute from the stale base just published by a preceding manual run.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

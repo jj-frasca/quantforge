@@ -25,6 +25,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
+        # Resolve master when this job actually starts. A queued run's event SHA can predate a
+        # serialized predecessor's generated-state commit (ADR-151).
+        with:
+          ref: master
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.2.0
