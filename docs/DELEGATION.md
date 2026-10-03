@@ -184,7 +184,8 @@ where equity = `AlpacaBroker.account().equity`, then `reconcile(broker, targets)
 **Extract the pure orchestration** (open positions + frame-provider + equity → `list[TargetPosition]`)
 into a testable function so `make check` stays 100%; the broker HTTP round-trip is the `@live` part.
 **Depends on:** WP-B (merged). **Gotchas:** OPEN positions only; run daily after close; reconcile is
-idempotent (safe to re-run); market-closed → orders queue (don't crash); paper endpoint only.
+idempotent (safe to re-run); automatic runs follow successful paper-forward completion (ADR-153),
+not an independent clock; market-closed → orders queue (don't crash); paper endpoint only.
 
 ## WP-H — Wire valuation into the hunt: combine algo + undervalued companies (uses merged WP-C)
 **Goal:** Joe's core want — combine the algo with GENUINELY undervalued companies. Two moves per the

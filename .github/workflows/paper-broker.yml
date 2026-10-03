@@ -1,12 +1,14 @@
 name: Paper broker (real fills)
 
 # Token-free (no Claude): mirror the OPEN managed paper book into REAL orders on the free Alpaca
-# paper account daily in the cloud, so P&L shows in the Alpaca dashboard (ADR-021). Runs after the
-# forward-accrual step so the book it mirrors reflects the day's promote/monitor/exit decisions.
+# paper account in the cloud, so P&L shows in the Alpaca dashboard (ADR-021). Runs only after a
+# successful forward-accrual workflow so the book reflects that run's promote/monitor/exit decisions
+# (ADR-153).
 # Idempotent (reconcile places only the diff); market-closed simply queues the orders. Paper only.
 on:
-  schedule:
-    - cron: "45 1 * * 2-6" # 01:45 UTC Tue–Sat = shortly after paper-forward's 01:30 accrual
+  workflow_run:
+    workflows: [Paper forward accrual]
+    types: [completed]
   workflow_dispatch: {}
 
 permissions:
@@ -18,6 +20,9 @@ concurrency:
 
 jobs:
   broker:
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     # cancel-in-progress is false above (never cancel an in-flight real-order placement), so a
     # hung run has no other backstop — without this, it would block every subsequent day's queued
@@ -26,6 +31,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
+        # workflow_run resolves on the default branch, and manual recovery follows the same rule.
+        # Read the exact book most recently published on master before placing paper orders.
+        with:
+          ref: master
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.2.0

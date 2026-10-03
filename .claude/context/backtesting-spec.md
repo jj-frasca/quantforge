@@ -228,6 +228,11 @@ loads the complete committed pool and idempotently promotes all eligible graduat
 daily run before updating open-position lifecycle evidence. Do not restore portfolio staging to a
 search workflow or try to serialize unrelated workflows with one lossy GitHub concurrency group.
 
+ADR-153 causally orders broker reconciliation after that writer. Automatic paper-broker runs are
+triggered only by successful completion of `Paper forward accrual`, then explicitly read current
+`master`; a clock offset is not a dependency. Manual broker recovery follows the same checkout
+rule. Failed accruals must not place automatic paper orders.
+
 ---
 
 ## 8. Oracle tests (must pass before any Phase 4 validation)

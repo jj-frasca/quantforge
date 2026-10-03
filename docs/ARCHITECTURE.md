@@ -863,6 +863,14 @@ stale checkouts, while one shared group would not be lossless because GitHub ret
 pending run. ADR-151's current-master checkout and non-cancelling paper-forward group remain the
 single serialized book boundary.
 
+**Paper-broker runs after successful accrual (ADR-153).** Its former independent 01:45 UTC schedule
+did not prove the 01:30 accrual had finished and could place Alpaca paper orders from a stale book
+during delayed or manual runs. A `workflow_run` completion trigger now orders automatic broker
+reconciliation after a successful `Paper forward accrual`; failed accruals do not trade. Manual
+broker recovery remains available, and both paths explicitly check out current `master` before
+reading the book. Sizing, idempotent reconciliation, equity-curve ownership, and the paper-only
+endpoint guard are unchanged.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,
