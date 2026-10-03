@@ -135,8 +135,8 @@ cloud, for free:
   quality (Piotroski F-score, Novy-Marx gross profitability), valuation scoring, a financial-distress
   screen, and a weekly sweep over ~10.4k SEC filers.
 - **`.github/workflows/`** — the loop runs itself: `daily-discovery.yml` (10 sharded jobs over a
-  610-name universe, weekdays), `hunt.yml` (weekly), `cross-sectional-hunt.yml`, `paper-forward.yml`,
-  `paper-broker.yml` (Alpaca **paper only**, ADR-021), `fundamental-sweep.yml`. Public repo =
+  610-name universe, weekdays), `cross-sectional-hunt.yml`, `paper-forward.yml`, `paper-broker.yml`
+  (Alpaca **paper only**, ADR-021), `fundamental-sweep.yml`. Public repo =
   unlimited Actions minutes, so discovery is token-free (ADR-026).
 
 **Data files under `data/` are generated state and part of the record** — `research_pool/` (per-symbol
@@ -855,13 +855,12 @@ accrual job therefore checks out current `master` only after it receives the non
 concurrency group, before reading or changing `paper_portfolio.json`. A delayed scheduled run
 cannot recompute from the stale base just published by a preceding manual run.
 
-**Paper-forward is the sole paper-portfolio workflow writer (ADR-152).** Daily discovery and the
-weekly hunt publish only research-pool evidence; the next paper-forward run reads the complete
-committed pool and idempotently promotes every eligible graduate while updating existing position
-lifecycle state. Their formerly independent concurrency groups could regenerate the same JSON from
-stale checkouts, while one shared group would not be lossless because GitHub retains only one
-pending run. ADR-151's current-master checkout and non-cancelling paper-forward group remain the
-single serialized book boundary.
+**Paper-forward is the sole paper-portfolio workflow writer (ADR-152).** Discovery publishes only
+research-pool evidence; the next paper-forward run reads the complete committed pool and
+idempotently promotes every eligible graduate while updating existing position lifecycle state.
+The formerly independent writer groups could regenerate the same JSON from stale checkouts, while
+one shared group would not be lossless because GitHub retains only one pending run. ADR-151's
+current-master checkout and non-cancelling paper-forward group remain the serialized book boundary.
 
 **Paper-broker runs after successful accrual (ADR-153).** Its former independent 01:45 UTC schedule
 did not prove the 01:30 accrual had finished and could place Alpaca paper orders from a stale book
@@ -870,6 +869,14 @@ reconciliation after a successful `Paper forward accrual`; failed accruals do no
 broker recovery remains available, and both paths explicitly check out current `master` before
 reading the book. Sizing, idempotent reconciliation, equity-curve ownership, and the paper-only
 endpoint guard are unchanged.
+
+**Daily discovery is the sole automated research-pool publisher (ADR-154).** The former weekly
+scheduled hunt searched only the S&P subset already contained in the weekday discovery universe,
+while its separate stale-base commit path could conflict on overlapping generated JSON partitions.
+Its local fallback could also leave a divergent generated-data commit after a bare push rejection.
+Both redundant publishers are retired. Custom and recovery sweeps use daily discovery's manual
+universe input and therefore share its one publication boundary; the local Python hunt driver
+remains available for deliberate research but has no automated commit/push wrapper.
 
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct

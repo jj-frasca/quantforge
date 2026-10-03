@@ -233,6 +233,12 @@ triggered only by successful completion of `Paper forward accrual`, then explici
 `master`; a clock offset is not a dependency. Manual broker recovery follows the same checkout
 rule. Failed accruals must not place automatic paper orders.
 
+ADR-154 makes daily discovery the sole automated publisher of `data/research_pool`. The retired
+weekly workflow searched only a subset of the weekday discovery universe and could conflict on the
+same generated symbol partitions from a stale base; its local fallback could leave a divergent
+commit after push rejection. Custom/recovery sweeps use daily discovery's manual universe input.
+Do not restore another automated commit/push path for the research pool.
+
 ---
 
 ## 8. Oracle tests (must pass before any Phase 4 validation)

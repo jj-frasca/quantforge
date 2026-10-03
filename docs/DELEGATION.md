@@ -142,19 +142,20 @@ constraints (feedback-frontend-shadow-validators); assert on what the user sees.
 ## WP-F — Scheduled mass-testing + deferred promotion (cloud)   [depends on WP-A]
 **Goal:** run the hunt on a big universe on a schedule and let paper-forward promote committed
 graduates into the managed book (WP-A) — the hands-off "mass test to find winners" loop.
-**Owns:** `backend/scripts/cron_hunt.sh`, `.github/workflows/hunt.yml`,
-`data/universes/sp500.txt` (bigger universe); wires `run_universe_hunt` into the persistent pool.
-**Contract:** scheduled (weekly) cloud job: run hunt → commit the pool only. Paper-forward is the
-sole portfolio writer (ADR-152) and reconciles committed graduates on its next daily run. Uses
-yfinance for the long search history. **Depends on WP-A** (promotion path).
+**Owns:** `.github/workflows/daily-discovery.yml`, `backend/scripts/shard_hunt.py`, and
+`backend/scripts/consolidate_pool.py`; wires `run_universe_hunt` into the persistent pool.
+**Contract:** the weekday sharded discovery job is the sole automated pool publisher (ADR-154).
+Paper-forward is the sole portfolio writer (ADR-152) and reconciles committed graduates on its next
+daily run. Uses yfinance for the long search history. **Depends on WP-A** (promotion path).
 **Tests:** the sole-writer workflow/script contract is unit-tested; promotion wiring is unit-tested
 via WP-A. **Acceptance:** a manual `workflow_dispatch` run is green. **Gotchas:** GitHub
 Actions job time limits (chunk the universe or raise timeout); commit large JSON with a trailing
-newline (store already does this). **DATA SOURCE TENSION:** the hunt needs 15–20yr history for
+newline (store already does this). Do not restore the retired weekly workflow or local committing
+fallback: both competed with daily discovery for the same pool partitions. **DATA SOURCE TENSION:**
+the hunt needs 15–20yr history for
 MinTRL → **use yfinance for the hunt** (Alpaca's free IEX feed only goes back a few years). Alpaca
 is for the recent-only forward/paper loop. So WP-F's hunt should force `YFinanceAdapter()` (not
-`build_data_adapter`), and accept yfinance's cloud flakiness (retry) OR run the hunt on the local
-cron where yfinance is reliable, and only the paper loop in the cloud.
+`build_data_adapter`) and accept yfinance's cloud flakiness with bounded retries.
 
 ---
 
