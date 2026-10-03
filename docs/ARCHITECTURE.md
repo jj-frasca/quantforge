@@ -849,6 +849,13 @@ through ADR-145/147's authoritative boundaries before creating directories or wr
 unchecked Pydantic copy can no longer persist a contradictory selected-trial, gate, graduate, or
 panel claim and make the pool fail on its next load; batch validation precedes all partition writes.
 
+**Fundamental-pool claims are immutable and score-coherent (ADR-155).** `FundamentalRecord` now
+defensively freezes its diagnostic flags, rejects non-finite or out-of-range factor scores, requires
+F-score in `[0, 9]`, and binds the combined score to the exact quality/value product. JSON retains
+the existing array/object shape. The merge boundary reconstructs every existing and incoming row
+before deduplication, so an unchecked model copy cannot silently change factor membership or reach
+the canonical pool through consolidation.
+
 **Queued paper accrual refreshes generated state at job start (ADR-151).** GitHub concurrency
 serializes paper-forward runs but does not refresh a queued run's creation-time event SHA. The
 accrual job therefore checks out current `master` only after it receives the non-cancelling

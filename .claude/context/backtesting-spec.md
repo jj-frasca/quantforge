@@ -222,6 +222,13 @@ single-name writers and the cross-sectional writer reconstruct all incoming mode
 ADR-145/147 boundaries before any filesystem mutation. Retention, deduplication, and lifetime-trial
 accounting are unchanged.
 
+ADR-155 applies the same durable-boundary rule to the independent fundamentals pool that supplies
+cross-sectional value and quality inputs. `FundamentalRecord` flags are defensive immutable copies;
+quality/value/combined scores are finite in `[0, 1]`, F-score is in `[0, 9]`, and combined equals
+quality times value exactly when both legs exist. Merge reconstructs every input record before
+newest-filing deduplication, closing unchecked-copy writes without changing factor formulas or JSON
+array/object shapes.
+
 ADR-152 makes `paper-forward.yml` the sole production workflow writer of the single-name paper
 portfolio. Discovery and hunt workflows persist research-pool evidence only; `scripts/paper.py`
 loads the complete committed pool and idempotently promotes all eligible graduates on its next

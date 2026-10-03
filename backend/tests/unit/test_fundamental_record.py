@@ -4,7 +4,11 @@ dedups by CIK keeping the newest filing (bounding the pool to one row per compan
 ranks the "genuinely good, reasonably priced" companies. All pure — the network lives in the script."""
 
 import json
+import math
 from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
 
 from app.data.fundamentals import AnnualFundamentals, FundamentalsHistory
 from app.research.fundamentals.record import (
@@ -60,6 +64,11 @@ def _record(
     value: float | None = None,
     combined: float | None = None,
 ) -> FundamentalRecord:
+    if combined is not None and value is None:
+        quality = combined
+        value = 1.0
+    elif combined is None and quality is not None and value is not None:
+        combined = quality * value
     return FundamentalRecord(
         symbol=symbol,
         cik=cik,
@@ -149,6 +158,74 @@ def test_compute_attaches_the_given_sic_code_independently_of_description() -> N
     assert rec.sic_description is None
 
 
+def test_record_defensively_freezes_flags_and_preserves_json_shape() -> None:
+    flags = ["source warning"]
+    record = FundamentalRecord(
+        symbol="AAA",
+        cik=1,
+        fiscal_year=2024,
+        quality_score=0.5,
+        value_score=0.4,
+        combined_score=0.2,
+        f_score=5,
+        gross_profitability=0.2,
+        flags=flags,
+    )
+
+    flags.append("caller mutation")
+    assert record.flags == ("source warning",)
+    with pytest.raises(AttributeError):
+        record.flags.append("public mutation")  # type: ignore[attr-defined]
+    assert record.model_dump(mode="json")["flags"] == ["source warning"]
+    assert FundamentalRecord.model_validate_json(record.model_dump_json()) == record
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("quality_score", math.nan),
+        ("value_score", math.inf),
+        ("combined_score", -math.inf),
+        ("gross_profitability", math.nan),
+        ("quality_score", -0.01),
+        ("value_score", 1.01),
+        ("combined_score", 1.01),
+        ("f_score", -1),
+        ("f_score", 10),
+    ],
+)
+def test_record_rejects_invalid_score_values(field: str, value: float) -> None:
+    payload = _record("AAA", 1, 2024).model_dump(round_trip=True)
+    payload[field] = value
+    with pytest.raises(ValidationError):
+        FundamentalRecord.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("quality", "value", "combined"),
+    [
+        (0.5, 0.4, 0.3),
+        (0.5, 0.4, None),
+        (None, 0.4, 0.0),
+        (0.5, None, 0.0),
+    ],
+)
+def test_record_rejects_incoherent_combined_score(
+    quality: float | None, value: float | None, combined: float | None
+) -> None:
+    with pytest.raises(ValidationError):
+        FundamentalRecord(
+            symbol="AAA",
+            cik=1,
+            fiscal_year=2024,
+            quality_score=quality,
+            value_score=value,
+            combined_score=combined,
+            f_score=5,
+            gross_profitability=0.2,
+        )
+
+
 # ---- merge_fundamental_records -------------------------------------------------------------------
 
 
@@ -176,6 +253,18 @@ def test_merge_incoming_wins_on_equal_fiscal_year() -> None:
 def test_merge_unions_distinct_ciks() -> None:
     merged = merge_fundamental_records([_record("AAA", 1, 2024)], [_record("BBB", 2, 2024)])
     assert {r.cik for r in merged} == {1, 2}
+
+
+@pytest.mark.parametrize("side", ["existing", "incoming"])
+def test_merge_revalidates_unchecked_record_copies(side: str) -> None:
+    valid = _record("AAA", 1, 2024, quality=0.5, value=0.4, combined=0.2)
+    unchecked = valid.model_copy(update={"combined_score": 0.9})
+
+    with pytest.raises(ValidationError):
+        merge_fundamental_records(
+            [unchecked] if side == "existing" else [],
+            [unchecked] if side == "incoming" else [],
+        )
 
 
 # ---- rank_fundamentals (leaderboard) -------------------------------------------------------------

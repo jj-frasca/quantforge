@@ -157,6 +157,12 @@ ADR-150 requires every persistent experiment-pool writer to revalidate incoming 
 any filesystem mutation. This applies to monolithic and partitioned single-name pools and the
 cross-sectional pool, preventing unchecked model copies from bypassing ADR-145/147 at write time.
 
+ADR-155 hardens `data/fundamentals_pool.json`, the separate ADR-029 company-score record that feeds
+cross-sectional factors. Each `FundamentalRecord` defensively freezes its flags, rejects non-finite
+or out-of-range scores, constrains F-score to `[0, 9]`, and requires the combined score to equal the
+quality/value product exactly when both legs exist. Merge revalidates existing and incoming rows
+before deduplication; the durable JSON keeps flags as arrays and all prior field shapes unchanged.
+
 ---
 
 ## 5. The 8 quality checks (formal definitions)

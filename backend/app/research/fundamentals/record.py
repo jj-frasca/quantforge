@@ -9,9 +9,17 @@ is the leaderboard: the genuinely good, reasonably priced companies. All network
 lives in the sweep script); every score cites its filing and flags potential, never guarantees."""
 
 import json
+import math
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_serializer,
+    model_validator,
+)
 
 from app.data.fundamentals import FundamentalsHistory
 from app.research.fundamentals.quality import quality_score
@@ -30,17 +38,17 @@ class FundamentalRecord(BaseModel):
     available); `combined_score` = quality * value when BOTH exist (good AND cheap), else None.
     Raw legs (`f_score`, `gross_profitability`) and `flags` travel with the row for legibility."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     symbol: str
     cik: int
     fiscal_year: int  # the as-of year of the latest filing this record summarizes
-    quality_score: float | None
-    value_score: float | None
-    combined_score: float | None
-    f_score: int
+    quality_score: float | None = Field(ge=0.0, le=1.0)
+    value_score: float | None = Field(ge=0.0, le=1.0)
+    combined_score: float | None = Field(ge=0.0, le=1.0)
+    f_score: int = Field(ge=0, le=9)
     gross_profitability: float | None
-    flags: list[str] = []
+    flags: tuple[str, ...] = ()
     # ADR-095: the SEC SIC industry classification description, from a separate EDGAR endpoint
     # (submissions, not companyfacts). None for every row swept before ADR-095 and for any company
     # whose submissions record omits it — absent is not a claim about the company's industry.
@@ -49,6 +57,23 @@ class FundamentalRecord(BaseModel):
     # it (a string, e.g. "3571") rather than parsed to int — every consumer so far wants prefix
     # matching against the SIC major-group/division scheme, not arithmetic.
     sic_code: str | None = None
+
+    @model_validator(mode="after")
+    def validate_combined_score(self) -> "FundamentalRecord":
+        if self.quality_score is None or self.value_score is None:
+            if self.combined_score is not None:
+                raise ValueError("combined_score requires both quality_score and value_score")
+            return self
+        expected = self.quality_score * self.value_score
+        if self.combined_score is None or not math.isclose(
+            self.combined_score, expected, rel_tol=1e-12, abs_tol=1e-12
+        ):
+            raise ValueError("combined_score must equal quality_score * value_score")
+        return self
+
+    @field_serializer("flags")
+    def serialize_flags(self, flags: tuple[str, ...]) -> list[str]:
+        return list(flags)
 
 
 def compute_fundamental_record(
@@ -86,7 +111,7 @@ def compute_fundamental_record(
         combined_score=combined,
         f_score=q.f_score.score,
         gross_profitability=q.gross_profitability,
-        flags=flags,
+        flags=tuple(flags),
         sic_description=sic_description,
         sic_code=sic_code,
     )
@@ -98,8 +123,14 @@ def merge_fundamental_records(
     """Fold `incoming` into `existing`, deduping by CIK: keep whichever record has the newer filing
     year, and on a tie let `incoming` win (so a re-run of a shard refreshes in place — idempotent).
     Deduping by CIK bounds the pool to one row per company (ADR-029 / ADR-026 bounding)."""
-    by_cik: dict[int, FundamentalRecord] = {r.cik: r for r in existing}
-    for rec in incoming:
+    validated_existing = [
+        FundamentalRecord.model_validate(record.model_dump(round_trip=True)) for record in existing
+    ]
+    validated_incoming = [
+        FundamentalRecord.model_validate(record.model_dump(round_trip=True)) for record in incoming
+    ]
+    by_cik: dict[int, FundamentalRecord] = {r.cik: r for r in validated_existing}
+    for rec in validated_incoming:
         current = by_cik.get(rec.cik)
         if current is None or rec.fiscal_year >= current.fiscal_year:
             by_cik[rec.cik] = rec
