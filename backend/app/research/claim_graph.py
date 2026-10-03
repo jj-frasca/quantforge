@@ -87,7 +87,9 @@ def _freeze_value(value: object) -> object:
         return freeze_claim_model(value)
     if isinstance(value, Mapping):
         return FrozenClaimDict({key: _freeze_value(item) for key, item in value.items()})
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, tuple):
+        return tuple(_freeze_value(item) for item in value)
+    if isinstance(value, list):
         return FrozenClaimList([_freeze_value(item) for item in value])
     return value
 

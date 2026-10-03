@@ -92,13 +92,19 @@ class DataQualityReport:
     symbol: str
     source: Source | None          # adapter checked; None = legacy/direct unknown provenance
     checked_at: datetime          # tz-aware UTC
-    issues: list[DataQualityIssue]
+    issues: tuple[DataQualityIssue, ...] # immutable in memory; serialized as a JSON array
     passed: bool                  # downstream MUST verify passed is True (ADR-006)
 ```
 `passed` is `False` if any issue has severity `"error"`. `warning`/`info` do not fail the gate
 but are recorded. The report creates its UUID before persistence; TimescaleDB stores that exact
 value so `ExperimentManifest.data_quality_report_id` can identify the checked snapshot (ADR-136).
 Wording is always "flags potential X" (CLAUDE.md rule 6).
+
+ADR-156 makes this complete claim defensive rather than only model-level frozen. Issue order is an
+immutable tuple; every context mapping/sequence is recursively copied and frozen; and context accepts
+only JSON-compatible leaves, string object keys, and finite floats. Both repository implementations
+reconstruct incoming model dumps before retaining state or opening a database transaction. Existing
+JSON arrays/objects, UUID/source lineage, checks, severities, wording, and thresholds are unchanged.
 
 Single-name StrategyLab acquisition runs the same engine before search and embeds the complete
 passed report in each new `Experiment`; its `ExperimentManifest.data_quality_report_id` points to
@@ -162,6 +168,10 @@ cross-sectional factors. Each `FundamentalRecord` defensively freezes its flags,
 or out-of-range scores, constrains F-score to `[0, 9]`, and requires the combined score to equal the
 quality/value product exactly when both legs exist. Merge revalidates existing and incoming rows
 before deduplication; the durable JSON keeps flags as arrays and all prior field shapes unchanged.
+
+ADR-156 independently hardens the quality reports embedded by those research and forward claims.
+Their issue/context graphs cannot drift under a stable report UUID, unsupported Python or non-finite
+context leaves fail at validation, and memory/TimescaleDB writes revalidate unchecked copies.
 
 ---
 

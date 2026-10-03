@@ -122,7 +122,8 @@ def test_experiment_claim_graph_is_defensive_immutable_and_round_trips() -> None
     graduate.parameters["quantile"] = 0.49
     manifest.components.append(manifest.components[0])
     assert report.issues[0].context is not None
-    report.issues[0].context["observed"] = [999.0]
+    with pytest.raises(TypeError, match="immutable"):
+        report.issues[0].context["observed"] = [999.0]
     assert experiment.model_dump(mode="json") == before
 
     # The public graph itself must expose no in-place mutation surface.

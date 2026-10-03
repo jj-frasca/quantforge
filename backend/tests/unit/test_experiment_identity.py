@@ -159,7 +159,8 @@ def test_experiment_claim_graph_is_defensive_immutable_and_round_trips() -> None
     trial.parameters["fast"] = 999
     gate.reasons.append("caller mutation")
     graduate.parameters["slow"] = 999
-    report.issues[0].context["observed"] = [999.0]  # type: ignore[index]
+    with pytest.raises(TypeError, match="immutable"):
+        report.issues[0].context["observed"] = [999.0]  # type: ignore[index]
     fundamental.reasons.append("caller mutation")
     distress.reasons.append("caller mutation")
     valuation.flags.append("caller mutation")

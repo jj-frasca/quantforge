@@ -856,6 +856,13 @@ the existing array/object shape. The merge boundary reconstructs every existing 
 before deduplication, so an unchecked model copy cannot silently change factor membership or reach
 the canonical pool through consolidation.
 
+**Quality-report claims are deeply immutable and JSON-safe (ADR-156).** `DataQualityReport` freezes
+issue order and each `DataQualityIssue` recursively copies and freezes its context while accepting
+only JSON-compatible values, string object keys, and finite floats. JSON retains the existing
+array/object shape. Both in-memory and TimescaleDB writers reconstruct incoming reports before
+retaining state or opening a transaction, so unchecked copies cannot change verdict or provenance
+under an existing report UUID.
+
 **Queued paper accrual refreshes generated state at job start (ADR-151).** GitHub concurrency
 serializes paper-forward runs but does not refresh a queued run's creation-time event SHA. The
 accrual job therefore checks out current `master` only after it receives the non-cancelling

@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime, timedelta, timezone
 
+import pytest
+from pydantic import ValidationError
 from tests.fixtures.synthetic import builders
 
 from app.data.models import DataQualityReport
@@ -100,3 +102,13 @@ def test_save_quality_report_is_retained() -> None:
     report = DataQualityReport(symbol="AAPL", checked_at=datetime(2024, 1, 2, tzinfo=UTC))
     repo.save_quality_report(report)
     assert repo.quality_reports == [report]
+
+
+def test_save_quality_report_revalidates_before_retaining() -> None:
+    repo = InMemoryPriceBarRepository()
+    report = DataQualityReport(symbol="AAPL", checked_at=datetime(2024, 1, 2, tzinfo=UTC))
+    invalid = report.model_copy(update={"symbol": " "})
+
+    with pytest.raises(ValidationError):
+        repo.save_quality_report(invalid)
+    assert repo.quality_reports == []

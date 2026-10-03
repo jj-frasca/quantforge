@@ -142,7 +142,7 @@ class DataQualityEngine:
                 symbol=normalized_symbol,
                 source=report_source,
                 checked_at=datetime.now(UTC),
-                issues=issues,
+                issues=tuple(issues),
             )
 
         if len(ordered) < self._config.min_bars:
@@ -158,7 +158,7 @@ class DataQualityEngine:
                 symbol=normalized_symbol,
                 source=report_source,
                 checked_at=datetime.now(UTC),
-                issues=issues,
+                issues=tuple(issues),
             )
 
         if self._config.flag_survivorship:
@@ -183,7 +183,7 @@ class DataQualityEngine:
             symbol=normalized_symbol,
             source=report_source,
             checked_at=datetime.now(UTC),
-            issues=issues,
+            issues=tuple(issues),
         )
 
     def _missing_bars(self, bars: list[PriceBar]) -> list[DataQualityIssue]:

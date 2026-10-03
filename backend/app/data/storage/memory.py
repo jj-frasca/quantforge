@@ -23,7 +23,8 @@ class InMemoryPriceBarRepository:
         return len(bars)
 
     def save_quality_report(self, report: DataQualityReport) -> None:
-        self._reports.append(report)
+        validated = DataQualityReport.model_validate(report.model_dump(round_trip=True))
+        self._reports.append(validated)
 
     def get_bars(
         self, symbol: str, start: datetime, end: datetime, *, source: Source

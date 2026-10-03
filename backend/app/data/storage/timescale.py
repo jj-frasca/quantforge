@@ -27,15 +27,16 @@ class TimescaleDBPriceBarRepository:
         return len(bars)
 
     def save_quality_report(self, report: DataQualityReport) -> None:
+        validated = DataQualityReport.model_validate(report.model_dump(round_trip=True))
         with self._session_factory() as session:
             session.add(
                 DataQualityReportORM(
-                    id=report.id,
-                    symbol=report.symbol,
-                    source=report.source,
-                    checked_at=report.checked_at,
-                    passed=report.passed,
-                    issues=[issue.model_dump() for issue in report.issues],
+                    id=validated.id,
+                    symbol=validated.symbol,
+                    source=validated.source,
+                    checked_at=validated.checked_at,
+                    passed=validated.passed,
+                    issues=[issue.model_dump(mode="json") for issue in validated.issues],
                 )
             )
             session.commit()

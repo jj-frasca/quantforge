@@ -229,6 +229,11 @@ quality times value exactly when both legs exist. Merge reconstructs every input
 newest-filing deduplication, closing unchecked-copy writes without changing factor formulas or JSON
 array/object shapes.
 
+ADR-156 closes the equivalent root-boundary gap in `DataQualityReport` itself. Issue order and nested
+context evidence are defensive immutable copies, context is finite JSON data, and both repository
+writers reconstruct unchecked model copies before retaining or transacting. Embedded reports thus
+keep one verdict and provenance under one UUID without changing checks, thresholds, or JSON shapes.
+
 ADR-152 makes `paper-forward.yml` the sole production workflow writer of the single-name paper
 portfolio. Discovery and hunt workflows persist research-pool evidence only; `scripts/paper.py`
 loads the complete committed pool and idempotently promotes all eligible graduates on its next

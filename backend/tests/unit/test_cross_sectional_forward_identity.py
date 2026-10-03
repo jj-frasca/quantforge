@@ -92,7 +92,10 @@ def test_cross_sectional_forward_claim_is_defensive_immutable_and_round_trips() 
     reasons.append("caller mutation")
     score.forward_equity.append(score.forward_equity[0])
     assert score.evidence is not None
-    score.evidence[0].quality_report.issues[0].context["observed"] = [999.0]  # type: ignore[index]
+    with pytest.raises(TypeError, match="immutable"):
+        score.evidence[0].quality_report.issues[0].context["observed"] = [  # type: ignore[index]
+            999.0
+        ]
     assert position.model_dump(mode="json") == before
 
     with pytest.raises(AttributeError, match="immutable"):
