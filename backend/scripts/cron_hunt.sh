@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Scheduled mass-test + auto-promotion (WP-F). TOKEN-FREE: pure Python + git, no `claude -p`, so it
-# runs regardless of Claude usage. Runs the universe hunt on max-history yfinance data, auto-promotes
-# graduates into the managed paper book, commits the updated pool + portfolio, and Slacks a summary.
+# Scheduled mass-test (WP-F). TOKEN-FREE: pure Python + git, no `claude -p`, so it
+# runs regardless of Claude usage. Runs the universe hunt on max-history yfinance data, commits the
+# updated pool, and Slacks a summary. Paper-forward alone reconciles promotions (ADR-152).
 # Local/launchd fallback for .github/workflows/hunt.yml (the primary, always-on cloud runner).
 set -uo pipefail
 export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -17,15 +17,15 @@ cd "$REPO/backend" || { echo "no backend dir"; exit 1; }
 OUTPUT=$(PYTHONPATH=. uv run python scripts/hunt.py "$REPO/$UNIVERSE" 2>&1)
 echo "$OUTPUT"
 
-# Persist the pool + managed book in git (scoped to the two data files; token-free).
+# Persist the pool in git. The managed paper book has one workflow writer (ADR-152).
 cd "$REPO" || exit 1
-if ! git diff --quiet -- data/research_pool data/paper_portfolio.json 2>/dev/null; then
-  git add data/research_pool data/paper_portfolio.json
-  if git commit -q -m "chore(hunt): scheduled mass-test + auto-promotion $(date +%F)"; then
+if ! git diff --quiet -- data/research_pool 2>/dev/null; then
+  git add data/research_pool
+  if git commit -q -m "chore(hunt): scheduled mass-test $(date +%F)"; then
     git push -q origin master || echo "push failed (network?)"
   fi
 else
-  echo "no pool/portfolio change"
+  echo "no pool change"
 fi
 
 # Slack the summary (best-effort).

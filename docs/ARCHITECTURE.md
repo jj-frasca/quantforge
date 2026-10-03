@@ -855,6 +855,14 @@ accrual job therefore checks out current `master` only after it receives the non
 concurrency group, before reading or changing `paper_portfolio.json`. A delayed scheduled run
 cannot recompute from the stale base just published by a preceding manual run.
 
+**Paper-forward is the sole paper-portfolio workflow writer (ADR-152).** Daily discovery and the
+weekly hunt publish only research-pool evidence; the next paper-forward run reads the complete
+committed pool and idempotently promotes every eligible graduate while updating existing position
+lifecycle state. Their formerly independent concurrency groups could regenerate the same JSON from
+stale checkouts, while one shared group would not be lossless because GitHub retains only one
+pending run. ADR-151's current-master checkout and non-cancelling paper-forward group remain the
+single serialized book boundary.
+
 **Ingestion requests are valid intervals before adapter access (ADR-132).** Both bounds must be
 timezone-aware and strictly ordered (`start < end`). The pipeline enforces the invariant for direct
 callers and the ingest request model returns `422` for malformed HTTP input, so naive, zero-width,

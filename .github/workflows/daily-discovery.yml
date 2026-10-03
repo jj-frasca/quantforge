@@ -3,8 +3,8 @@ name: Daily discovery (sharded)
 # Token-free (no Claude): ADR-026 maximum discovery. A matrix of N parallel shard jobs each hunts a
 # round-robin slice of the universe with the FULL strategy catalog on max-history daily data and
 # uploads its experiments as an artifact; a single consolidation job merges them into the research
-# pool (dedup by experiment_id) and promotes graduates into the managed paper book — one commit, no
-# shared-pool write race. Public repo => unlimited Actions minutes, so this runs DAILY.
+# pool (dedup by experiment_id). Paper-forward alone reconciles graduates into the managed paper
+# book (ADR-152). Public repo => unlimited Actions minutes, so this runs DAILY.
 #
 # Honesty (ADR-026): the DSR/PBO/MinTRL + universe-deflation gate RAISES the bar as trials grow —
 # more searching self-penalizes and cannot manufacture false graduates.
@@ -87,15 +87,14 @@ jobs:
           pattern: pool-shard-*
           path: shards
           merge-multiple: true
-      - name: Consolidate + promote (yfinance, retried)
+      - name: Consolidate pool
         working-directory: backend
         run: |
           set +e
           for attempt in 1 2; do
             PYTHONPATH=. uv run python scripts/consolidate_pool.py \
               "$GITHUB_WORKSPACE/shards" \
-              "$GITHUB_WORKSPACE/data/research_pool" \
-              "$GITHUB_WORKSPACE/data/paper_portfolio.json" | tee "$GITHUB_WORKSPACE/consolidate_out.txt"
+              "$GITHUB_WORKSPACE/data/research_pool" | tee "$GITHUB_WORKSPACE/consolidate_out.txt"
             status=${PIPESTATUS[0]}
             [ "$status" -eq 0 ] && break
             echo "attempt $attempt failed ($status); retrying..." && sleep 30
@@ -108,11 +107,11 @@ jobs:
         run: |
           jq -Rs '{text: ("*QuantForge daily discovery (cloud)*\n```" + . + "```")}' consolidate_out.txt \
             | curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' -d @- >/dev/null || true
-      - name: Commit pool + portfolio (if changed)
+      - name: Commit pool (if changed)
         run: |
-          git add data/research_pool data/paper_portfolio.json
+          git add data/research_pool
           if git diff --cached --quiet; then
-            echo "no pool/portfolio change"
+            echo "no pool change"
             exit 0
           fi
           git config user.name "quantforge-discovery-bot"

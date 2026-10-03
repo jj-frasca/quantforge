@@ -139,15 +139,16 @@ strict TS (no `any`). **Tests:** renders leaderboard + portfolio; open vs closed
 state. **Acceptance:** `make frontend-check` green. **Gotchas:** don't re-validate backend-owned
 constraints (feedback-frontend-shadow-validators); assert on what the user sees.
 
-## WP-F — Scheduled mass-testing + auto-promotion (cloud)   [depends on WP-A]
-**Goal:** run the hunt on a big universe on a schedule and auto-promote graduates into the managed
-book (WP-A) — the hands-off "mass test to find winners" loop.
+## WP-F — Scheduled mass-testing + deferred promotion (cloud)   [depends on WP-A]
+**Goal:** run the hunt on a big universe on a schedule and let paper-forward promote committed
+graduates into the managed book (WP-A) — the hands-off "mass test to find winners" loop.
 **Owns:** `backend/scripts/cron_hunt.sh`, `.github/workflows/hunt.yml`,
-`data/universes/sp500.txt` (bigger universe); wires `run_universe_hunt` + the WP-A manager.
-**Contract:** scheduled (weekly) cloud job: run hunt → new graduates auto-frozen as OPEN positions
-→ commit pool + portfolio. Uses Alpaca data in cloud. **Depends on WP-A** (promotion path).
-**Tests:** the promotion wiring is unit-tested via WP-A; the workflow is ops (no unit test, like
-the other scripts). **Acceptance:** a manual `workflow_dispatch` run is green. **Gotchas:** GitHub
+`data/universes/sp500.txt` (bigger universe); wires `run_universe_hunt` into the persistent pool.
+**Contract:** scheduled (weekly) cloud job: run hunt → commit the pool only. Paper-forward is the
+sole portfolio writer (ADR-152) and reconciles committed graduates on its next daily run. Uses
+yfinance for the long search history. **Depends on WP-A** (promotion path).
+**Tests:** the sole-writer workflow/script contract is unit-tested; promotion wiring is unit-tested
+via WP-A. **Acceptance:** a manual `workflow_dispatch` run is green. **Gotchas:** GitHub
 Actions job time limits (chunk the universe or raise timeout); commit large JSON with a trailing
 newline (store already does this). **DATA SOURCE TENSION:** the hunt needs 15–20yr history for
 MinTRL → **use yfinance for the hunt** (Alpaca's free IEX feed only goes back a few years). Alpaca

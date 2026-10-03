@@ -1,44 +1,28 @@
 """Consolidate the daily discovery matrix (ADR-026).
 
-Usage: PYTHONPATH=. uv run python scripts/consolidate_pool.py SHARD_DIR POOL_DIR PORTFOLIO
+Usage: PYTHONPATH=. uv run python scripts/consolidate_pool.py SHARD_DIR POOL_DIR
 
 Merges every shard pool JSON in SHARD_DIR into the per-symbol pool POOL_DIR (dedup by
-experiment_id — idempotent, ADR-032), then
-promotes the merged pool's graduates into the managed paper book PORTFOLIO once (ADR-020). Committed
-by the workflow in a single commit, so N parallel shards never race to write the pool. Local-only /
-cloud (live network for promotion's position monitoring); never in CI.
+experiment_id — idempotent, ADR-032). The paper-forward workflow is the sole production writer of
+the managed paper book and promotes committed graduates on its next run (ADR-152). Committed by the
+workflow in a single commit, so N parallel shards never race to write the pool. Local-only / cloud;
+never in CI.
 """
 
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 
-from app.data.sources.retry import CLOUD
-from app.data.sources.yfinance import YFinanceAdapter
-from app.research.dataset import ResearchDataset, current_git_revision, fetch_research_dataset
 from app.research.lab.experiment import (
     Experiment,
     JsonFileExperimentStore,
     PartitionedExperimentStore,
 )
-from app.research.lab.history import RECENT_HISTORY_START
-from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.pool_merge import merge_experiments
-from app.research.lab.portfolio_manager import (
-    deflation_cohorts,
-    manage_portfolio,
-    newly_promoted,
-)
-
-
-def _fmt(value: float | None) -> str:
-    return f"{value:.2f}" if value is not None else "n/a"
 
 
 def main() -> None:
     shard_dir = Path(sys.argv[1])
     pool_dir = Path(sys.argv[2])
-    portfolio_path = Path(sys.argv[3])
 
     pool = PartitionedExperimentStore(pool_dir)
     incoming: list[Experiment] = []
@@ -49,50 +33,12 @@ def main() -> None:
     # pool stays bounded no matter which writer got here.
     pool.extend(incoming)
     merged = pool.all()
-
-    portfolio = JsonFilePaperPortfolio(portfolio_path)
-    adapter = YFinanceAdapter(retry=CLOUD)
-    now = datetime.now(UTC)
-    git_commit_hash = current_git_revision()
-
-    def frame_provider(symbol: str) -> ResearchDataset:
-        return fetch_research_dataset(
-            adapter,
-            symbol,
-            RECENT_HISTORY_START,
-            now,
-            git_commit_hash=git_commit_hash,
-        )
-
     graduates = [e for e in merged if e.graduate is not None]
-    before = portfolio.positions()
-    # ADR-033: the universe a graduate was selected from IS the deflation denominator.
-    universe_n_symbols = len({e.symbol for e in merged})
-    positions = manage_portfolio(
-        before, graduates, frame_provider, now=now, universe_n_symbols=universe_n_symbols
-    )
-    portfolio.save(positions)
-
-    n_open = sum(1 for p in positions if p.status == "open")
-    promoted = newly_promoted(before, positions)
     print(
         f"consolidated {len(shard_files)} shard(s) -> {len(merged)} experiments "
-        f"({len(incoming)} incoming), {len(graduates)} graduate(s); managed book: {n_open} open"
+        f"({len(incoming)} incoming), {len(graduates)} graduate(s); "
+        "paper-forward will reconcile promotions"
     )
-    cohorts = deflation_cohorts([p for p in positions if p.status == "open"])
-    surv = _fmt(cohorts.survivor_mean_forward_sharpe)
-    non = _fmt(cohorts.non_survivor_mean_forward_sharpe)
-    print(
-        f"universe deflation (ADR-033, N={universe_n_symbols}): "
-        f"{cohorts.n_survivors} clear the best-of-N bar (mean fwd Sharpe {surv}), "
-        f"{cohorts.n_non_survivors} do not ({non}), {cohorts.n_unknown} unknown"
-    )
-    if promoted:
-        print(f"NEW this run ({len(promoted)} promoted — what just cleared the gate):")
-        for p in promoted:
-            print(f"  + {p.symbol:<7} {p.strategy_name}")
-    else:
-        print("no new promotions this run.")
 
 
 if __name__ == "__main__":

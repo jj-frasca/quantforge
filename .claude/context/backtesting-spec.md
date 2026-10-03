@@ -222,6 +222,12 @@ single-name writers and the cross-sectional writer reconstruct all incoming mode
 ADR-145/147 boundaries before any filesystem mutation. Retention, deduplication, and lifetime-trial
 accounting are unchanged.
 
+ADR-152 makes `paper-forward.yml` the sole production workflow writer of the single-name paper
+portfolio. Discovery and hunt workflows persist research-pool evidence only; `scripts/paper.py`
+loads the complete committed pool and idempotently promotes all eligible graduates on its next
+daily run before updating open-position lifecycle evidence. Do not restore portfolio staging to a
+search workflow or try to serialize unrelated workflows with one lossy GitHub concurrency group.
+
 ---
 
 ## 8. Oracle tests (must pass before any Phase 4 validation)

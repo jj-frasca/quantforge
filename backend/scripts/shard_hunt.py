@@ -5,9 +5,9 @@ Usage: PYTHONPATH=. uv run python scripts/shard_hunt.py SHARD_INDEX N_SHARDS UNI
 Hunts shard `SHARD_INDEX` of `N_SHARDS` (a deterministic round-robin slice of UNIVERSE_FILE) with
 the FULL current strategy catalog on max-history daily data, and writes THIS shard's experiments to
 OUT_POOL (its own file — no shared-pool write race). The consolidation job merges every shard's
-OUT_POOL into the research pool and promotes once. The committed pool at data/research_pool/ is
-read as a prior for the lifetime trial count (ADR-062), never written here. Local-only / cloud
-matrix (live network); never in CI.
+OUT_POOL into the research pool; paper-forward reconciles promotions from the committed pool on its
+next run (ADR-152). The committed pool at data/research_pool/ is read as a prior for the lifetime
+trial count (ADR-062), never written here. Local-only / cloud matrix (live network); never in CI.
 
 DATA SOURCE: forces YFinanceAdapter (the search window starts 1990-01-01 per ADR-063 and
 MinTRL needs every year of it; Alpaca IEX is far too short — ADR-015).

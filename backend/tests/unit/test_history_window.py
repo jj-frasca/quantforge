@@ -23,7 +23,6 @@ SEARCH_SIDE = {
 RECENT_SIDE = {
     "paper.py",
     "paper_broker.py",
-    "consolidate_pool.py",
     "cross_sectional_hunt.py",
     "cross_sectional_forward.py",
 }

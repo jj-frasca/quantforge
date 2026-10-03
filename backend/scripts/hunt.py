@@ -1,12 +1,12 @@
-"""Scheduled mass-test → auto-promotion driver (WP-F, ADR-014/015/020).
+"""Scheduled mass-test driver (WP-F, ADR-014/015/020/152).
 
 Usage: PYTHONPATH=. uv run python scripts/hunt.py [SYMBOLS_OR_UNIVERSE.txt]
        (default universe: data/universes/sp500.txt)
 
-Runs the StrategyLab universe hunt on the longest available daily history, then hands every pool
-graduate to the managed paper book: new winners are auto-frozen as OPEN positions; open ones are
-monitored/exited by the ADR-020 lifecycle. Findings persist in data/research_pool/ and the book
-in data/paper_portfolio.json — commit both. Local-only / cloud cron (live network); never in CI.
+Runs the StrategyLab universe hunt on the longest available daily history and persists findings in
+data/research_pool/. The paper-forward workflow is the sole production paper-book writer and
+promotes committed graduates on its next run (ADR-152). Local-only / cloud cron (live network);
+never in CI.
 
 DATA SOURCE (load-bearing): the HUNT forces YFinanceAdapter — the search window starts 1990-01-01
 (ADR-063), MinTRL needs every year of it, and Alpaca's free IEX feed only reaches back a few
@@ -30,10 +30,8 @@ from app.research.fundamentals.record import load_fundamentals_pool
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.gate import GateConfig
 from app.research.lab.history import SEARCH_HISTORY_START
-from app.research.lab.paper import JsonFilePaperPortfolio
 from app.research.lab.quality_filter import make_quality_provider, parse_quality_screen
-from app.research.lab.scheduled_hunt import hunt_and_promote
-from app.research.lab.universe import rank_experiments
+from app.research.lab.universe import rank_experiments, run_universe_hunt
 from app.research.lab.value_wiring import (
     cached_frame_provider,
     make_hunt_value_provider,
@@ -43,7 +41,6 @@ from app.research.strategies.catalog import STRATEGY_CATALOG
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 POOL = DATA / "research_pool"  # per-symbol partitions (ADR-032)
-PORTFOLIO = DATA / "paper_portfolio.json"
 FUNDAMENTALS_POOL = DATA / "fundamentals_pool.json"
 DEFAULT_UNIVERSE = DATA / "universes" / "sp500.txt"
 USER_AGENT = "QuantForge research jjfrasca10@gmail.com"
@@ -69,7 +66,6 @@ def main() -> None:
     adapter = YFinanceAdapter(retry=CLOUD)
     edgar = SecEdgarFundamentalsSource(user_agent=USER_AGENT)
     pool = PartitionedExperimentStore(POOL)
-    portfolio = JsonFilePaperPortfolio(PORTFOLIO)
     now = datetime.now(UTC)
     git_commit_hash = current_git_revision()
 
@@ -112,12 +108,11 @@ def main() -> None:
         f"Hunting {len(symbols)} symbols x {len(names)} strategies "
         f"(yfinance max history){screen_note}...\n"
     )
-    result = hunt_and_promote(
+    result = run_universe_hunt(
         symbols,
         names,
         dataset_provider,
-        pool=pool,
-        portfolio=portfolio,
+        store=pool,
         fundamentals_provider=fundamentals_provider,
         config=GateConfig(),
         fundamental_criteria=FundamentalCriteria(),
@@ -126,15 +121,11 @@ def main() -> None:
         value_config=value_config,
         quality_provider=quality_provider,
         quality_config=quality_config,
-        now=now,
         refine=True,
         rationale="scheduled universe hunt (WP-F)",
     )
 
-    for position in result.promoted:
-        print(f"PROMOTED {position.symbol} / {position.strategy_name} (frozen {now.date()})")
-
-    rows = rank_experiments(result.hunt.experiments)
+    rows = rank_experiments(result.experiments)
     print(f"\n{'=' * 72}\nCROSS-SYMBOL LEADERBOARD (top 15)\n{'=' * 72}")
     print(f"{'symbol':<7}{'strategy':<30}{'DSR':>7}{'holdout':>9}  graduated  univ-survivor")
     for row in rows[:15]:
@@ -145,21 +136,18 @@ def main() -> None:
             f"{'YES' if row.graduated else 'no':<9}  {univ}"
         )
 
-    graduates = [e for e in result.hunt.experiments if e.graduate is not None]
-    n_open = sum(1 for p in result.positions if p.status == "open")
-    n_closed = sum(1 for p in result.positions if p.status == "closed")
+    graduates = [e for e in result.experiments if e.graduate is not None]
     print(
-        f"\n{len(graduates)} graduate(s) out of {len(result.hunt.experiments)} symbols "
-        f"({len(result.hunt.errors)} errors); {len(result.promoted)} promoted this run. "
-        f"Managed book: {n_open} open, {n_closed} closed."
+        f"\n{len(graduates)} graduate(s) out of {len(result.experiments)} symbols "
+        f"({len(result.errors)} errors); paper-forward will reconcile promotions."
     )
-    if result.hunt.errors:
-        shown = list(result.hunt.errors.items())[:10]
+    if result.errors:
+        shown = list(result.errors.items())[:10]
         print("errors:", ", ".join(f"{s} ({e})" for s, e in shown))
-    if result.hunt.filtered:
-        shown_f = list(result.hunt.filtered.items())[:10]
+    if result.filtered:
+        shown_f = list(result.filtered.items())[:10]
         print(
-            f"value-screened out {len(result.hunt.filtered)}: "
+            f"value-screened out {len(result.filtered)}: "
             + ", ".join(f"{s} ({why})" for s, why in shown_f)
         )
 
