@@ -965,6 +965,12 @@ excess row only when both arrays are complete for every `n_symbols`; partial leg
 remain valid as raw evidence but are not a paired measurement. The committed 2026-09-01 7,400-bar
 artifacts are complete and their published values are unaffected.
 
+**Calibration artifacts are deeply immutable and revalidated (ADR-158).** Null calibrations,
+power cells, and power sweeps defensively reconstruct and freeze their complete nested evidence
+graphs while retaining existing JSON arrays/objects and legacy empty-field semantics. Shard/sweep
+consolidation and probability-DSR inference reconstruct inputs again, so an unchecked model copy
+cannot alter pairing, attribution, or verdict evidence before publication or interpretation.
+
 **Unattended operation.** `.claude/AUTONOMY_CHARTER.md` is the standing authority for autonomous
 sessions and `.claude/RUNNING_STATE.md` is the ledger. Read both before touching anything.
 

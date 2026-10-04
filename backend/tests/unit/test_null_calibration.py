@@ -24,6 +24,7 @@ from app.research.lab.calibration import (
     NullGraduate,
     NullSymbolDiagnostics,
     PowerCalibration,
+    PowerSweep,
     _finalist,
     autocorrelated_edge,
     bootstrap_null,
@@ -296,6 +297,17 @@ def _graduate(symbol: str, holdout_sharpe: float) -> NullGraduate:
     return NullGraduate(
         symbol=symbol, holdout_sharpe=holdout_sharpe, holdout_n_bars=1008, deflated_sharpe=0.2
     )
+
+
+def test_null_calibration_deeply_freezes_durable_evidence() -> None:
+    artifact = _shard(graduates=[_graduate("NULL0001", 1.9)], errors={"MISS": "failed"})
+
+    with pytest.raises(AttributeError, match="immutable"):
+        artifact.graduates.append(_graduate("NULL0002", 2.0))
+    with pytest.raises(TypeError, match="immutable"):
+        artifact.errors["OTHER"] = "changed"
+
+    assert NullCalibration.model_validate_json(artifact.model_dump_json()) == artifact
 
 
 def test_merge_sums_the_denominators_and_recomputes_the_rate() -> None:
@@ -1014,6 +1026,19 @@ def _power(
 def test_a_power_sweep_sorts_ar1_cells_by_phi() -> None:
     sweep = collect_power_sweep([_power(phi=0.3), _power(phi=-0.3), _power(phi=0.1)])
     assert [c.phi for c in sweep.cells] == [-0.3, 0.1, 0.3]
+
+
+def test_power_calibration_and_sweep_deeply_freeze_durable_evidence() -> None:
+    sweep = collect_power_sweep([_power(phi=-0.3), _power(phi=0.3)])
+
+    with pytest.raises(AttributeError, match="immutable"):
+        sweep.cells.append(_power(phi=0.1))
+    with pytest.raises(AttributeError, match="immutable"):
+        sweep.cells[0].oracle_sharpes.append(99.0)
+    with pytest.raises(TypeError, match="immutable"):
+        sweep.cells[0].errors["OTHER"] = "changed"
+
+    assert PowerSweep.model_validate_json(sweep.model_dump_json()) == sweep
 
 
 def test_a_power_sweep_sorts_band_cells_by_half_life() -> None:

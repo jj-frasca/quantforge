@@ -130,6 +130,17 @@ def test_preregistered_probability_gate_accepts_only_the_fixed_joint_improvement
     assert result.mcnemar_pvalue < 0.05
 
 
+def test_probability_gate_revalidates_unchecked_artifact_copies() -> None:
+    invalid_cell = _cell(-0.30).model_copy(update={"finalist_deflated_sharpe_probabilities": []})
+    invalid_sweep = _sweep().model_copy(update={"cells": [invalid_cell, _cell(+0.30)]})
+
+    with pytest.raises(ValueError, match="does not match symbol_verdicts"):
+        compare_probability_dsr_gate(
+            [_null("iid_normal"), _null("bootstrap:SPY")],
+            invalid_sweep,
+        )
+
+
 def test_probability_gate_refuses_no_improvement_even_when_type_i_is_zero() -> None:
     result = compare_probability_dsr_gate(
         [_null("iid_normal"), _null("bootstrap:SPY")],

@@ -783,6 +783,10 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   and missing strong-edge cells. ADR-103 extends that refusal through every nested power cell and
   embedded gate verdict and rejects duplicate strong-edge cells, so a wrapper cannot mislabel the
   records actually counted. No qualifying artifact has been read or dispatched yet.
+  ADR-158 makes those complete null/power claims defensive after validation: all nested arrays,
+  maps, diagnostics, verdicts, and sweep cells are immutable without changing their JSON shapes,
+  and consolidation plus probability-DSR inference reconstruct inputs before use. An unchecked
+  in-process model copy can no longer change the evidence that is published or interpreted.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

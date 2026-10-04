@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validat
 
 from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.backtesting.manifest import compute_parameter_hash
+from app.research.claim_graph import FrozenClaimDict, FrozenClaimList, freeze_claim_model
 from app.research.lab.candidate_budget import allocate_catalog_candidate_budget
 from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.frontier import sharpe_standard_error
@@ -162,54 +163,74 @@ class NullCalibration(BaseModel):
     @model_validator(mode="after")
     def _validate_symbol_diagnostics(self) -> "NullCalibration":
         """Keep additive list projections honest whenever the paired ADR-080 schema is present."""
-        if not self.symbol_diagnostics:
-            return self
-        if len(self.symbol_diagnostics) != self.n_symbols:
-            raise ValueError("symbol_diagnostics must carry one record per searched symbol")
-        symbols = [d.symbol for d in self.symbol_diagnostics]
-        if len(set(symbols)) != len(symbols):
-            raise ValueError("symbol_diagnostics contains a duplicate null symbol")
-        verdict_presence = [d.calibration_verdict is not None for d in self.symbol_diagnostics]
-        if any(verdict_presence) and not all(verdict_presence):
-            raise ValueError("symbol_diagnostics mixes joint-verdict and probability-only rows")
-        for diagnostic in self.symbol_diagnostics:
-            verdict = diagnostic.calibration_verdict
-            if verdict is None:
-                continue
-            if verdict.symbol != diagnostic.symbol:
-                raise ValueError("calibration_verdict symbol does not match symbol_diagnostics")
-            if verdict.deflated_sharpe_probability != diagnostic.deflated_sharpe_probability:
-                raise ValueError(
-                    "calibration_verdict probability does not match symbol_diagnostics"
-                )
+        if self.symbol_diagnostics:
+            if len(self.symbol_diagnostics) != self.n_symbols:
+                raise ValueError("symbol_diagnostics must carry one record per searched symbol")
+            symbols = [d.symbol for d in self.symbol_diagnostics]
+            if len(set(symbols)) != len(symbols):
+                raise ValueError("symbol_diagnostics contains a duplicate null symbol")
+            verdict_presence = [d.calibration_verdict is not None for d in self.symbol_diagnostics]
+            if any(verdict_presence) and not all(verdict_presence):
+                raise ValueError("symbol_diagnostics mixes joint-verdict and probability-only rows")
+            for diagnostic in self.symbol_diagnostics:
+                verdict = diagnostic.calibration_verdict
+                if verdict is None:
+                    continue
+                if verdict.symbol != diagnostic.symbol:
+                    raise ValueError("calibration_verdict symbol does not match symbol_diagnostics")
+                if verdict.deflated_sharpe_probability != diagnostic.deflated_sharpe_probability:
+                    raise ValueError(
+                        "calibration_verdict probability does not match symbol_diagnostics"
+                    )
 
-        expected: dict[str, list[float] | list[int]] = {
-            "holdout_years": [d.holdout_years for d in self.symbol_diagnostics],
-            "n_bars": [d.n_bars for d in self.symbol_diagnostics],
-            "walk_forward_oos_sharpes": [
-                d.walk_forward_oos_sharpe
-                for d in self.symbol_diagnostics
-                if d.walk_forward_oos_sharpe is not None
-            ],
-            "walk_forward_hold_sharpes": [
-                d.walk_forward_hold_sharpe
-                for d in self.symbol_diagnostics
-                if d.walk_forward_hold_sharpe is not None
-            ],
-            "purged_cv_oos_sharpes": [
-                d.purged_cv_oos_sharpe
-                for d in self.symbol_diagnostics
-                if d.purged_cv_oos_sharpe is not None
-            ],
-            "purged_cv_hold_sharpes": [
-                d.purged_cv_hold_sharpe
-                for d in self.symbol_diagnostics
-                if d.purged_cv_hold_sharpe is not None
-            ],
-        }
-        for field, projection in expected.items():
-            if getattr(self, field) != projection:
-                raise ValueError(f"{field} does not match symbol_diagnostics")
+            expected: dict[str, list[float] | list[int]] = {
+                "holdout_years": [d.holdout_years for d in self.symbol_diagnostics],
+                "n_bars": [d.n_bars for d in self.symbol_diagnostics],
+                "walk_forward_oos_sharpes": [
+                    d.walk_forward_oos_sharpe
+                    for d in self.symbol_diagnostics
+                    if d.walk_forward_oos_sharpe is not None
+                ],
+                "walk_forward_hold_sharpes": [
+                    d.walk_forward_hold_sharpe
+                    for d in self.symbol_diagnostics
+                    if d.walk_forward_hold_sharpe is not None
+                ],
+                "purged_cv_oos_sharpes": [
+                    d.purged_cv_oos_sharpe
+                    for d in self.symbol_diagnostics
+                    if d.purged_cv_oos_sharpe is not None
+                ],
+                "purged_cv_hold_sharpes": [
+                    d.purged_cv_hold_sharpe
+                    for d in self.symbol_diagnostics
+                    if d.purged_cv_hold_sharpe is not None
+                ],
+            }
+            for field, projection in expected.items():
+                if getattr(self, field) != projection:
+                    raise ValueError(f"{field} does not match symbol_diagnostics")
+
+        for field in (
+            "holdout_years",
+            "n_bars",
+            "walk_forward_oos_sharpes",
+            "purged_cv_oos_sharpes",
+            "walk_forward_hold_sharpes",
+            "purged_cv_hold_sharpes",
+        ):
+            object.__setattr__(self, field, FrozenClaimList(getattr(self, field)))
+        object.__setattr__(
+            self,
+            "graduates",
+            FrozenClaimList([freeze_claim_model(item) for item in self.graduates]),
+        )
+        object.__setattr__(
+            self,
+            "symbol_diagnostics",
+            FrozenClaimList([freeze_claim_model(item) for item in self.symbol_diagnostics]),
+        )
+        object.__setattr__(self, "errors", FrozenClaimDict(self.errors))
         return self
 
     def paired_excess(self, oos_field: str, hold_field: str) -> list[float] | None:
@@ -477,18 +498,46 @@ class PowerCalibration(BaseModel):
 
     @model_validator(mode="after")
     def _validate_symbol_verdicts(self) -> "PowerCalibration":
-        if not self.symbol_verdicts:
-            return self
-        if len(self.symbol_verdicts) != self.n_symbols:
-            raise ValueError("symbol_verdicts must carry one record per searched symbol")
-        symbols = [verdict.symbol for verdict in self.symbol_verdicts]
-        if len(set(symbols)) != len(symbols):
-            raise ValueError("symbol_verdicts contains a duplicate symbol")
-        projection = [verdict.deflated_sharpe_probability for verdict in self.symbol_verdicts]
-        if projection != self.finalist_deflated_sharpe_probabilities:
-            raise ValueError(
-                "finalist_deflated_sharpe_probabilities does not match symbol_verdicts"
-            )
+        if self.symbol_verdicts:
+            if len(self.symbol_verdicts) != self.n_symbols:
+                raise ValueError("symbol_verdicts must carry one record per searched symbol")
+            symbols = [verdict.symbol for verdict in self.symbol_verdicts]
+            if len(set(symbols)) != len(symbols):
+                raise ValueError("symbol_verdicts contains a duplicate symbol")
+            projection = [verdict.deflated_sharpe_probability for verdict in self.symbol_verdicts]
+            if projection != self.finalist_deflated_sharpe_probabilities:
+                raise ValueError(
+                    "finalist_deflated_sharpe_probabilities does not match symbol_verdicts"
+                )
+
+        for field in (
+            "oracle_sharpes",
+            "net_oracle_sharpes",
+            "achievable_oracle_sharpes",
+            "finalist_observed_sharpes",
+            "finalist_deflated_sharpe_probabilities",
+            "finalist_strategy_names",
+            "holdout_years",
+            "n_bars",
+        ):
+            object.__setattr__(self, field, FrozenClaimList(getattr(self, field)))
+        object.__setattr__(
+            self,
+            "symbol_verdicts",
+            FrozenClaimList([freeze_claim_model(item) for item in self.symbol_verdicts]),
+        )
+        object.__setattr__(
+            self,
+            "finalist_sharpes_by_category",
+            FrozenClaimDict(
+                {
+                    key: FrozenClaimList(values)
+                    for key, values in self.finalist_sharpes_by_category.items()
+                }
+            ),
+        )
+        object.__setattr__(self, "gate_pass_counts", FrozenClaimDict(self.gate_pass_counts))
+        object.__setattr__(self, "errors", FrozenClaimDict(self.errors))
         return self
 
     @property
@@ -1181,6 +1230,15 @@ class PowerSweep(BaseModel):
     n_bars: int
     cells: list[PowerCalibration]
 
+    @model_validator(mode="after")
+    def _freeze_cells(self) -> "PowerSweep":
+        object.__setattr__(
+            self,
+            "cells",
+            FrozenClaimList([freeze_claim_model(cell) for cell in self.cells]),
+        )
+        return self
+
 
 def collect_power_sweep(cells: Sequence[PowerCalibration]) -> PowerSweep:
     """Order one process's power cells into a committed record, refusing incoherent sweeps.
@@ -1190,6 +1248,7 @@ def collect_power_sweep(cells: Sequence[PowerCalibration]) -> PowerSweep:
         different resolved procedures, or different history lengths are not points on one curve,
         and a file that silently held them would be read as if they were.
     """
+    cells = [PowerCalibration.model_validate(cell.model_dump(round_trip=True)) for cell in cells]
     if not cells:
         raise ValueError("need at least one power cell to collect a sweep")
     edges = {c.edge for c in cells}
@@ -1256,6 +1315,8 @@ def compare_power_sweeps(before: PowerSweep, after: PowerSweep) -> list[PowerSwe
         Refuses an IDENTICAL `search_config_version` too, for the opposite reason: with the same
         search family there is no catalog change to read and any delta is noise.
     """
+    before = PowerSweep.model_validate(before.model_dump(round_trip=True))
+    after = PowerSweep.model_validate(after.model_dump(round_trip=True))
     if before.edge != after.edge:
         raise ValueError(f"cannot compare sweeps of different edge: {before.edge} vs {after.edge}")
     if before.n_bars != after.n_bars:
@@ -1346,6 +1407,7 @@ def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
         rate describes one gate applied to one kind of null, and silently pooling two of them would
         produce a number that describes neither.
     """
+    shards = [NullCalibration.model_validate(shard.model_dump(round_trip=True)) for shard in shards]
     if not shards:
         raise ValueError("need at least one shard to merge")
     versions = {s.gate_config_version for s in shards}

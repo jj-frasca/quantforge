@@ -145,6 +145,11 @@ def compare_probability_dsr_gate(
     nulls: Sequence[NullCalibration], power: PowerSweep
 ) -> ProbabilityDsrGateComparison:
     """Apply ADR-102's fixed threshold, sample floors, pairing test, and acceptance criterion."""
+    nulls = [
+        NullCalibration.model_validate(calibration.model_dump(round_trip=True))
+        for calibration in nulls
+    ]
+    power = PowerSweep.model_validate(power.model_dump(round_trip=True))
     _validate_identity(nulls, power)
 
     null_graduates: dict[str, int] = {}
