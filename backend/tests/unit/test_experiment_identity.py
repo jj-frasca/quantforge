@@ -157,7 +157,8 @@ def test_experiment_claim_graph_is_defensive_immutable_and_round_trips() -> None
     before = experiment.model_dump(mode="json")
 
     trial.parameters["fast"] = 999
-    gate.reasons.append("caller mutation")
+    with pytest.raises((AttributeError, TypeError)):
+        gate.reasons.append("caller mutation")
     graduate.parameters["slow"] = 999
     with pytest.raises(TypeError, match="immutable"):
         report.issues[0].context["observed"] = [999.0]  # type: ignore[index]
@@ -276,7 +277,9 @@ def test_experiment_rejects_every_graduate_relationship_drift() -> None:
 
     payload = deepcopy(original)
     payload["best_gate_result"]["passed"] = False
+    payload["best_gate_result"]["dsr_ok"] = False
     payload["graduate"]["gate_result"]["passed"] = False
+    payload["graduate"]["gate_result"]["dsr_ok"] = False
     with pytest.raises(ValidationError, match="graduate requires a passing"):
         Experiment.model_validate(payload)
 

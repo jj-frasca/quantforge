@@ -185,6 +185,13 @@ present diagnostic counts agree with the report headline. The graduation gate an
 response reconstruct the report before use, so an unchecked in-process copy cannot change the
 verdict or published evidence. No estimator, diagnostic, pass formula, or threshold changed.
 
+**The deterministic gate verdict is one coherent claim (ADR-160).** `GateResult.passed` must equal
+the conjunction of its six component verdicts, its reasons are immutable JSON-shaped evidence,
+and its MinTRL/config/structured-holdout fields reject invalid or partial identity. Positive
+infinity remains the intentional MinTRL requirement for a non-positive observed Sharpe. The
+probability-DSR comparison reconstructs its enclosing artifacts before inference, so unchecked
+gate copies fail closed. No component predicate, threshold, reason text, or MinTRL formula changed.
+
 **Their revisit trigger has now fired, and the answer is no separation (ADR-051, 2026-08-20).**
 The diagnostics were read only off gate passers while the null artifacts record the finalist of
 every searched symbol — two different statistics — and ADR-046's repaired denominator then emptied

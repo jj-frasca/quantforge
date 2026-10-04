@@ -212,6 +212,11 @@ parameters, graduate and gate verdict, fundamental and valuation evidence, manif
 quality report are defensive immutable copies. Construction and reload bind the selected trial to
 the graduate and manifest, preserve ADR-079's legacy max-DSR fallback, and reject mismatched symbol
 or veto evidence without changing JSON object/array shapes.
+ADR-160 hardens the shared `GateResult` before it reaches either experiment graph. Its persisted
+`passed` value must equal the six-component conjunction, reasons are immutable JSON-shaped evidence,
+MinTRL/config identity is valid, and structured holdout fields are paired. Positive infinity remains
+the defined requirement for a non-positive observed Sharpe. The probability-DSR comparison's
+artifact reconstruction closes unchecked-copy inference without changing gate policy.
 ADR-148 extends the boundary to `PaperPosition`: parameters, lifecycle reasons, forward curves, and
 nested score evidence are defensive immutable copies. Construction, managed updates, reload, and
 store writes validate lifecycle identity, evidence symbol, count/finite constraints, and any

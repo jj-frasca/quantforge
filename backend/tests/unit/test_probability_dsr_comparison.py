@@ -1,6 +1,7 @@
 """ADR-102's pre-registered probability-DSR gate comparison, before any data are read."""
 
 import pytest
+from pydantic import ValidationError
 
 from app.research.lab.calibration import (
     CalibrationSymbolVerdict,
@@ -138,6 +139,23 @@ def test_probability_gate_revalidates_unchecked_artifact_copies() -> None:
         compare_probability_dsr_gate(
             [_null("iid_normal"), _null("bootstrap:SPY")],
             invalid_sweep,
+        )
+
+
+def test_probability_gate_revalidates_an_unchecked_embedded_gate_result() -> None:
+    iid = _null("iid_normal")
+    diagnostics = list(iid.symbol_diagnostics)
+    first = diagnostics[0]
+    assert first.calibration_verdict is not None
+    unchecked_gate = first.calibration_verdict.gate_result.model_copy(update={"passed": True})
+    unchecked_verdict = first.calibration_verdict.model_copy(update={"gate_result": unchecked_gate})
+    diagnostics[0] = first.model_copy(update={"calibration_verdict": unchecked_verdict})
+    unchecked_null = iid.model_copy(update={"symbol_diagnostics": diagnostics})
+
+    with pytest.raises(ValidationError, match="passed"):
+        compare_probability_dsr_gate(
+            [unchecked_null, _null("bootstrap:SPY")],
+            _sweep(),
         )
 
 

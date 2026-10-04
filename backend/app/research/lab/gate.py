@@ -1,8 +1,9 @@
 import math
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.research.backtesting.manifest import compute_parameter_hash
+from app.research.claim_graph import FrozenClaimList
 from app.research.lab.holdout import HoldoutScore
 from app.validation.report import ValidationReport, revalidate_validation_report
 
@@ -28,7 +29,7 @@ class GateConfig(BaseModel):
     a result is reproducible against the exact rubric that judged it, and the calibration loop
     can compare outcomes across versions."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     dsr_min: float = 0.0
     pbo_max: float = 0.5
@@ -60,14 +61,31 @@ class GateResult(BaseModel):
     mintrl_ok: bool
     holdout_ok: bool
     beats_buy_and_hold_ok: bool = True
-    required_track_record_years: float
-    gate_config_version: str
+    required_track_record_years: float = Field(ge=0.0)
+    gate_config_version: str = Field(min_length=1)
     reasons: list[str] = Field(default_factory=list)
     # ADR-102: rejected candidates need the same structured locked-holdout inputs graduates carry.
     # Without them calibration cannot re-judge ADR-018 survival under a counterfactual DSR rule.
     # Defaults preserve the historical experiment pool, whose reason strings are not a safe schema.
     holdout_sharpe: float | None = Field(default=None, allow_inf_nan=False)
     holdout_n_bars: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def _validate_and_freeze_claim(self) -> "GateResult":
+        expected = (
+            self.dsr_ok
+            and self.pbo_ok
+            and self.stability_ok
+            and self.mintrl_ok
+            and self.holdout_ok
+            and self.beats_buy_and_hold_ok
+        )
+        if self.passed != expected:
+            raise ValueError("passed must equal the conjunction of gate component verdicts")
+        if (self.holdout_sharpe is None) != (self.holdout_n_bars is None):
+            raise ValueError("holdout_sharpe and holdout_n_bars must be present together")
+        object.__setattr__(self, "reasons", FrozenClaimList(list(self.reasons)))
+        return self
 
 
 class GraduationGate:

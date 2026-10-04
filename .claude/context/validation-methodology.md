@@ -203,6 +203,13 @@ are defensively copied into immutable JSON-compatible containers. The graduation
 publication boundary reconstruct the authoritative model before use, closing unchecked Pydantic
 copy bypasses without changing any diagnostic calculation, pass formula, or threshold.
 
+ADR-160 applies the same identity rule to the deterministic graduation output. `GateResult.passed`
+must equal all six component booleans, reasons are defensively immutable, required MinTRL is
+non-negative and non-NaN (positive infinity remains meaningful), the gate version is non-empty,
+and structured holdout Sharpe/length are paired. All 4,055 committed JSON occurrences satisfied
+these invariants at the compatibility audit. Probability-DSR counterfactual inference reconstructs
+its complete artifacts before reading the embedded result; no gate predicate or threshold changed.
+
 `app/validation/report.py` — Pydantic model aggregating the above for one strategy:
 `strategy_name`, `observed_sharpe`, `deflated_sharpe`, `pbo`, `n_walk_forward_splits`,
 `n_purged_folds`, `walk_forward` (ADR-038) and `purged_cv` (ADR-039) — both nullable, where

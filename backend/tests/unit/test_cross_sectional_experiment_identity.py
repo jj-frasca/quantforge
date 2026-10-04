@@ -118,7 +118,8 @@ def test_experiment_claim_graph_is_defensive_immutable_and_round_trips() -> None
 
     # Mutating caller-owned nested models after construction must not alter the durable claim.
     trial.parameters["lookback"] = 999
-    gate_result.reasons.append("caller mutation")
+    with pytest.raises((AttributeError, TypeError)):
+        gate_result.reasons.append("caller mutation")
     graduate.parameters["quantile"] = 0.49
     manifest.components.append(manifest.components[0])
     assert report.issues[0].context is not None
@@ -213,7 +214,9 @@ def test_experiment_rejects_every_selected_graduate_relationship_drift() -> None
 
     payload = deepcopy(original)
     payload["best_gate_result"]["passed"] = False
+    payload["best_gate_result"]["dsr_ok"] = False
     payload["graduate"]["gate_result"]["passed"] = False
+    payload["graduate"]["gate_result"]["dsr_ok"] = False
     with pytest.raises(ValidationError, match="graduate requires a passing"):
         CrossSectionalExperiment.model_validate(payload)
 
