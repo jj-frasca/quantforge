@@ -91,6 +91,27 @@ def test_relative_drawdown_survives_common_wealth_overflow() -> None:
     assert comparison.benchmark_relative_drawdown == pytest.approx(0.8 / 1.2 - 1)
 
 
+@pytest.mark.parametrize("side", ["strategy", "benchmark", "both"])
+@pytest.mark.parametrize("labels", [[0, 0, 1], [2, 1, 0], [0, 2, 1]])
+def test_comparison_rejects_ambiguous_calendar_identity(side: str, labels: list[int]) -> None:
+    ordered = pd.Series([0.01, 0.02, 0.03], index=[0, 1, 2])
+    malformed = pd.Series([0.01, 0.02, 0.03], index=labels)
+    strategy = malformed if side in {"strategy", "both"} else ordered
+    benchmark = malformed if side in {"benchmark", "both"} else ordered
+    with pytest.raises(ValueError, match=r"index.*unique.*ascending"):
+        BenchmarkComparator().compare(strategy, benchmark)
+
+
+@pytest.mark.parametrize("timezone", [None, "UTC"])
+def test_comparison_preserves_valid_partial_date_overlap(timezone: str | None) -> None:
+    index = pd.date_range("2026-01-01", periods=4, tz=timezone)
+    strategy = pd.Series([0.1, -0.2, 0.25], index=index[:3])
+    benchmark = pd.Series([0.0, 0.0, 0.0], index=index[1:])
+    comparison = BenchmarkComparator().compare(strategy, benchmark)
+    pd.testing.assert_series_equal(comparison.excess_returns, strategy.iloc[1:])
+    assert comparison.benchmark_relative_drawdown == pytest.approx(-0.2)
+
+
 def test_relative_drawdown_survives_common_wealth_underflow() -> None:
     comparison = BenchmarkComparator().compare(
         pd.Series([-0.5] * 2000 + [-0.2]), pd.Series([-0.5] * 2000 + [0.2])

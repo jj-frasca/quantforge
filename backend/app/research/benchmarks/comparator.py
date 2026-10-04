@@ -30,6 +30,9 @@ class BenchmarkComparator:
     def compare(
         self, strategy_returns: pd.Series, benchmark_returns: pd.Series
     ) -> BenchmarkComparison:
+        for returns in (strategy_returns, benchmark_returns):
+            if not returns.index.is_unique or not returns.index.is_monotonic_increasing:
+                raise ValueError("returns index must be unique and ascending")
         strat, bench = strategy_returns.align(benchmark_returns, join="inner")
         if len(strat) < 2:
             raise ValueError("returns must have at least two aligned observations")

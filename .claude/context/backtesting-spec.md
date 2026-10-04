@@ -133,6 +133,10 @@ flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 and `benchmark` returns (aligned), requires at least two finite overlapping observations and each
 return greater than -1 (ADR-112):
 
+ADR-172 also requires each source index to be unique and ascending before inner alignment. It
+preserves valid partial overlap and generic/naive ordered indexes; malformed calendars raise rather
+than being sorted or deduplicated. Calendar identity is intrinsic and does not certify acquisition.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)
