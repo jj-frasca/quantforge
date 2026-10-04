@@ -324,3 +324,12 @@ diagnostic configs. Pure lifecycle functions require exactly aligned, unique asc
 numeric returns, finite and greater than -1, plus a valid single-name trade count. Aligned empty
 history and naive/generic indexes remain valid. Input validation does not certify arbitrary extreme
 floating-point compounding/variance arithmetic.
+
+ADR-169 gives the separate broker account ledger (`execution/equity_curve.py`) an intrinsic point
+and chronological-batch boundary. Points require aware UTC times, finite scalars, strict
+nonnegative integer counts, and jointly measured/absent benchmark-alpha fields. Load/save/append
+reconstruct all points and enforce increasing times; writers validate and serialize before filesystem
+changes. Nominal/inception denominators must be positive where measured. Actual zero/negative equity
+and negative cash remain honest account observations; historical alpha formulas and custom nominal
+baselines are never guessed or restated. This ledger is distinct from positive normalized research
+wealth curves and does not authorize broker access or generated-data edits.

@@ -4,14 +4,22 @@ series, so account performance is watchable and the honest "are we making money?
 answered against the $100k paper starting equity as forward time accumulates."""
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
+from itertools import pairwise
+from math import isfinite
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.execution.alpaca_broker import AlpacaAccount
 
 _PAPER_STARTING_EQUITY = 100_000.0
+
+
+def _snapshot_utc(value: datetime) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError("equity snapshot timestamp must be timezone-aware")
+    return value.astimezone(UTC)
 
 
 class EquityPoint(BaseModel):
@@ -30,18 +38,37 @@ class EquityPoint(BaseModel):
     was) minus the benchmark's return over that same window — so alpha is never distorted by
     however far the book had already drifted from the nominal start before tracking began."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False, revalidate_instances="always")
 
     timestamp: datetime
     equity: float
     cash: float
-    n_positions: int
+    n_positions: int = Field(ge=0, strict=True)
     return_since_start: float
     # Cumulative return of the market benchmark since `history[0]` (see append_equity_point), and
     # the book's excess over it measured across that SAME window (ADR-141) — not
     # return_since_start - benchmark_return_since_start, which would compare two different windows.
     benchmark_return_since_start: float | None = None
     alpha_since_start: float | None = None
+
+    @field_validator("timestamp")
+    @classmethod
+    def _timestamp_utc(cls, value: datetime) -> datetime:
+        return _snapshot_utc(value)
+
+    @model_validator(mode="after")
+    def _validate_benchmark_pair(self) -> "EquityPoint":
+        if (self.benchmark_return_since_start is None) != (self.alpha_since_start is None):
+            raise ValueError("benchmark return and alpha must be jointly present or absent")
+        return self
+
+
+def _validate_points(points: list[EquityPoint]) -> list[EquityPoint]:
+    """Reconstruct the complete observed ledger before arithmetic or filesystem changes."""
+    validated = [EquityPoint.model_validate(point) for point in points]
+    if any(current.timestamp <= previous.timestamp for previous, current in pairwise(validated)):
+        raise ValueError("equity snapshot timestamps must be strictly increasing")
+    return validated
 
 
 def append_equity_point(
@@ -58,12 +85,20 @@ def append_equity_point(
     `history[0]`, i.e. the benchmark's own inception point) is supplied — the excess return (alpha)
     over it, measured across that same window (ADR-141). Pure and additive — order preserved,
     existing points untouched."""
+    history = _validate_points(history)
+    now = _snapshot_utc(now)
+    if history and now <= history[-1].timestamp:
+        raise ValueError("equity snapshot timestamps must be strictly increasing")
+    if not isfinite(starting_equity) or starting_equity <= 0.0:
+        raise ValueError("starting_equity must be finite and positive")
     equity = float(account.equity)
     return_since_start = equity / starting_equity - 1.0
     if benchmark_return is None:
         alpha = None
     else:
         inception_equity = history[0].equity if history else equity
+        if not isfinite(inception_equity) or inception_equity <= 0.0:
+            raise ValueError("measured alpha requires finite positive inception equity")
         book_return_since_inception = equity / inception_equity - 1.0
         alpha = book_return_since_inception - benchmark_return
     point = EquityPoint(
@@ -88,9 +123,11 @@ class JsonFileEquityCurve:
     def all(self) -> list[EquityPoint]:
         if not self._path.exists():
             return []
-        return [EquityPoint.model_validate(item) for item in json.loads(self._path.read_text())]
+        return _validate_points(json.loads(self._path.read_text()))
 
     def save(self, points: list[EquityPoint]) -> None:
+        validated = _validate_points(points)
+        payload = [p.model_dump(mode="json") for p in validated]
+        serialized = json.dumps(payload, indent=2) + "\n"
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        payload = [p.model_dump(mode="json") for p in points]
-        self._path.write_text(json.dumps(payload, indent=2) + "\n")
+        self._path.write_text(serialized)
