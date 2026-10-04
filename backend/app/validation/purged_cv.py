@@ -1,11 +1,13 @@
+import math
 from collections.abc import Sequence
 
 import numpy as np
 import numpy.typing as npt
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.research.backtesting.metrics import TRADING_DAYS
 from app.research.strategies.base import BaseStrategy
+from app.validation.result_graph import FrozenResultList
 
 IntArray = npt.NDArray[np.intp]
 FloatArray = npt.NDArray[np.float64]
@@ -49,12 +51,12 @@ def purged_kfold_splits(
 class PurgedCVFoldResult(BaseModel):
     """One purged fold: the config chosen on the purged train rows, and its score on the fold."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
-    selected_config: int
-    oos_sharpe: float
-    n_train: int
-    n_test: int
+    selected_config: int = Field(ge=0)
+    oos_sharpe: float = Field(allow_inf_nan=False)
+    n_train: int = Field(ge=1)
+    n_test: int = Field(ge=1)
 
 
 class PurgedCVResult(BaseModel):
@@ -68,21 +70,43 @@ class PurgedCVResult(BaseModel):
         metrics.sharpe_ratio. Diagnostic only — nothing gates on it.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
-    n_folds: int
-    embargo: int
+    n_folds: int = Field(ge=1)
+    embargo: int = Field(ge=0)
     folds: list[PurgedCVFoldResult]
-    mean_oos_sharpe: float
-    oos_sharpe_std: float
-    consistency: float
+    mean_oos_sharpe: float = Field(allow_inf_nan=False)
+    oos_sharpe_std: float = Field(ge=0.0, allow_inf_nan=False)
+    consistency: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
     # ADR-078: buy-and-hold scored across the SAME folds, averaged over the folds that were KEPT.
     # `mean_oos_sharpe` is denominated in the drift of the series it was computed on exactly as the
     # walk-forward statistic is (ADR-068), so the two are only interpretable together. Purged CV
     # tests every index once, so this control covers the whole searched window rather than a
     # suffix of it. None means no benchmark was supplied, which is not a benchmark of zero
     # (ADR-067).
-    mean_oos_hold_sharpe: float | None = None
+    mean_oos_hold_sharpe: float | None = Field(default=None, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def _bind_summary_to_folds(self) -> "PurgedCVResult":
+        if len(self.folds) != self.n_folds:
+            raise ValueError("n_folds must equal len(folds)")
+        scores = [fold.oos_sharpe for fold in self.folds]
+        mean = sum(scores) / self.n_folds
+        std = (
+            math.sqrt(sum((score - mean) ** 2 for score in scores) / (self.n_folds - 1))
+            if self.n_folds > 1
+            else 0.0
+        )
+        consistency = sum(score > 0.0 for score in scores) / self.n_folds
+        for name, actual, expected in (
+            ("mean_oos_sharpe", self.mean_oos_sharpe, mean),
+            ("oos_sharpe_std", self.oos_sharpe_std, std),
+            ("consistency", self.consistency, consistency),
+        ):
+            if not math.isclose(actual, expected, rel_tol=1e-12, abs_tol=1e-12):
+                raise ValueError(f"{name} must agree with folds")
+        object.__setattr__(self, "folds", FrozenResultList(list(self.folds)))
+        return self
 
 
 def lookback_embargo(configs: Sequence[BaseStrategy], floor: int) -> int:

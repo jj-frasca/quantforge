@@ -1,8 +1,11 @@
+import math
+
 import numpy as np
 import numpy.typing as npt
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.research.backtesting.metrics import TRADING_DAYS
+from app.validation.result_graph import FrozenResultList
 
 IntArray = npt.NDArray[np.intp]
 FloatArray = npt.NDArray[np.float64]
@@ -46,13 +49,13 @@ def walk_forward_splits(
 class WalkForwardSplitResult(BaseModel):
     """One walk-forward window: what was selected on the train block, and how it then did."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
-    selected_config: int
-    is_sharpe: float
-    oos_sharpe: float
-    n_train: int
-    n_test: int
+    selected_config: int = Field(ge=0)
+    is_sharpe: float = Field(allow_inf_nan=False)
+    oos_sharpe: float = Field(allow_inf_nan=False)
+    n_train: int = Field(ge=1)
+    n_test: int = Field(ge=1)
 
 
 class WalkForwardResult(BaseModel):
@@ -67,19 +70,46 @@ class WalkForwardResult(BaseModel):
         lost money. Diagnostic only — nothing gates on it (ADR-038 §"Why not a gate — yet").
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
-    n_splits: int
+    n_splits: int = Field(ge=1)
     splits: list[WalkForwardSplitResult]
-    mean_is_sharpe: float
-    mean_oos_sharpe: float
-    consistency: float
-    efficiency: float | None = None
+    mean_is_sharpe: float = Field(allow_inf_nan=False)
+    mean_oos_sharpe: float = Field(allow_inf_nan=False)
+    consistency: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    efficiency: float | None = Field(default=None, allow_inf_nan=False)
     # ADR-068: buy-and-hold scored across the SAME test blocks. `mean_oos_sharpe` is denominated in
     # the drift of the series it was computed on — on data with no edge by construction it comes
     # out at the underlying's own buy-and-hold Sharpe — so the two are only interpretable together.
     # None means no benchmark was supplied, which is not a benchmark of zero (ADR-067).
-    mean_oos_hold_sharpe: float | None = None
+    mean_oos_hold_sharpe: float | None = Field(default=None, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def _bind_summary_to_splits(self) -> "WalkForwardResult":
+        if len(self.splits) != self.n_splits:
+            raise ValueError("n_splits must equal len(splits)")
+        mean_is = sum(split.is_sharpe for split in self.splits) / self.n_splits
+        mean_oos = sum(split.oos_sharpe for split in self.splits) / self.n_splits
+        consistency = sum(split.oos_sharpe > 0.0 for split in self.splits) / self.n_splits
+        expected_efficiency = mean_oos / mean_is if mean_is > 0.0 else None
+        for name, actual, expected in (
+            ("mean_is_sharpe", self.mean_is_sharpe, mean_is),
+            ("mean_oos_sharpe", self.mean_oos_sharpe, mean_oos),
+            ("consistency", self.consistency, consistency),
+        ):
+            if not math.isclose(actual, expected, rel_tol=1e-12, abs_tol=1e-12):
+                raise ValueError(f"{name} must agree with splits")
+        if expected_efficiency is None:
+            if self.efficiency is not None:
+                raise ValueError(
+                    "efficiency must be null when mean in-sample Sharpe is not positive"
+                )
+        elif self.efficiency is None or not math.isclose(
+            self.efficiency, expected_efficiency, rel_tol=1e-12, abs_tol=1e-12
+        ):
+            raise ValueError("efficiency must agree with split means")
+        object.__setattr__(self, "splits", FrozenResultList(list(self.splits)))
+        return self
 
 
 def _sharpe(returns: FloatArray) -> float:

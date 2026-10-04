@@ -11,7 +11,7 @@ from app.data.storage.repository import PriceBarRepository
 from app.dependencies import get_data_adapter, get_repository
 from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
 from app.validation.engine import ValidationEngine
-from app.validation.report import ValidationReport
+from app.validation.report import ValidationReport, revalidate_validation_report
 
 router = APIRouter(tags=["validation"])
 
@@ -70,4 +70,6 @@ def validate(
                 f"{request.strategy!r}; need >= {_MIN_CONFIGS_FOR_PBO} for PBO"
             ),
         )
-    return ValidationEngine().validate(request.strategy, configs, frame)
+    return revalidate_validation_report(
+        ValidationEngine().validate(request.strategy, configs, frame)
+    )

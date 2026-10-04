@@ -178,6 +178,13 @@ folds with an embargo sized from the grid's longest lookback instead of a fixed 
 because its selection sees the future — read them side by side, never averaged. Details:
 `.claude/context/validation-methodology.md` §3–§5.
 
+**Those validation claims are now durable after construction (ADR-159).** The report, split/fold
+records, flags, interpretations, and regime map are defensively copied into immutable JSON-shaped
+containers. Every scalar is finite, split/fold summaries are bound to their nested evidence, and
+present diagnostic counts agree with the report headline. The graduation gate and `/validate`
+response reconstruct the report before use, so an unchecked in-process copy cannot change the
+verdict or published evidence. No estimator, diagnostic, pass formula, or threshold changed.
+
 **Their revisit trigger has now fired, and the answer is no separation (ADR-051, 2026-08-20).**
 The diagnostics were read only off gate passers while the null artifacts record the finalist of
 every searched symbol — two different statistics — and ADR-046's repaired denominator then emptied

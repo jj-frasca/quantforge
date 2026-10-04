@@ -196,6 +196,13 @@ raw distribution or gate; it prevents complementary missingness from becoming cr
 
 ## 5. ValidationReport
 
+ADR-159 makes the report a durable claim rather than a shallowly frozen object. All headline and
+nested diagnostic scalars must be finite; split/fold counts and derived summaries must agree with
+their records; present diagnostic counts must agree with the top-level counts; and list/map fields
+are defensively copied into immutable JSON-compatible containers. The graduation gate and API
+publication boundary reconstruct the authoritative model before use, closing unchecked Pydantic
+copy bypasses without changing any diagnostic calculation, pass formula, or threshold.
+
 `app/validation/report.py` — Pydantic model aggregating the above for one strategy:
 `strategy_name`, `observed_sharpe`, `deflated_sharpe`, `pbo`, `n_walk_forward_splits`,
 `n_purged_folds`, `walk_forward` (ADR-038) and `purged_cv` (ADR-039) — both nullable, where

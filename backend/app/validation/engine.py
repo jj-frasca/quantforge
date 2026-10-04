@@ -211,7 +211,9 @@ class ValidationEngine:
             pbo=pbo,
             parameter_stability_score=stability,
             n_walk_forward_splits=len(wf_splits),
-            n_purged_folds=len(cv_splits),
+            # ADR-159: report the folds that produced evidence, not the requested geometry.
+            # A fold purged away cannot honestly remain in the diagnostic headline.
+            n_purged_folds=purged_cv.n_folds if purged_cv is not None else 0,
             flags=flags,
             interpretations=_interpret(pbo, deflated, stability),
             regime_breakdown=regime_breakdown,

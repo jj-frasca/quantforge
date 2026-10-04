@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.lab.holdout import HoldoutScore
-from app.validation.report import ValidationReport
+from app.validation.report import ValidationReport, revalidate_validation_report
 
 
 def minbtl_years(n_trials: int, annualized_sharpe: float) -> float:
@@ -82,6 +82,7 @@ class GraduationGate:
         holdout: HoldoutScore,
         config: GateConfig,
     ) -> GateResult:
+        report = revalidate_validation_report(report)
         required = minbtl_years(n_trials, report.observed_sharpe)
 
         dsr_ok = report.deflated_sharpe > config.dsr_min

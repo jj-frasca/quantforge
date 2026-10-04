@@ -1,8 +1,9 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from app.validation.purged_cv import PurgedCVResult
+from app.validation.result_graph import FrozenResultDict, FrozenResultList
 from app.validation.walk_forward import WalkForwardResult
 
 Verdict = Literal["good", "warning", "bad"]
@@ -16,7 +17,7 @@ class Interpretation(BaseModel):
         without knowing the methodology by heart. Verdict drives color in the frontend.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     metric: str
     message: str
@@ -33,11 +34,11 @@ class RegimeBreakdownEntry(BaseModel):
         edge (validation-methodology.md §5).
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
-    n_bars: int
-    total_return: float
-    sharpe: float
+    n_bars: int = Field(ge=1)
+    total_return: float = Field(allow_inf_nan=False)
+    sharpe: float = Field(allow_inf_nan=False)
 
 
 class ValidationReport(BaseModel):
@@ -49,15 +50,15 @@ class ValidationReport(BaseModel):
         report (Phase 5). validation-methodology.md §5.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
-    strategy_name: str
-    observed_sharpe: float
-    deflated_sharpe: float
-    pbo: float
-    parameter_stability_score: float
-    n_walk_forward_splits: int
-    n_purged_folds: int
+    strategy_name: str = Field(min_length=1)
+    observed_sharpe: float = Field(allow_inf_nan=False)
+    deflated_sharpe: float = Field(allow_inf_nan=False)
+    pbo: float = Field(allow_inf_nan=False)
+    parameter_stability_score: float = Field(allow_inf_nan=False)
+    n_walk_forward_splits: int = Field(ge=0)
+    n_purged_folds: int = Field(ge=0)
     # ADR-038: the walk-forward splits now judge something instead of only being counted.
     # Nullable + defaulted so the experiments already in the pool deserialize unchanged, and
     # so a producer with no per-config return matrix can honestly report "not measured".
@@ -80,7 +81,26 @@ class ValidationReport(BaseModel):
             raise ValueError("must be in [0, 1]")
         return v
 
+    @model_validator(mode="after")
+    def _bind_and_freeze_diagnostics(self) -> "ValidationReport":
+        if (
+            self.walk_forward is not None
+            and self.n_walk_forward_splits != self.walk_forward.n_splits
+        ):
+            raise ValueError("n_walk_forward_splits must agree with walk_forward")
+        if self.purged_cv is not None and self.n_purged_folds != self.purged_cv.n_folds:
+            raise ValueError("n_purged_folds must agree with purged_cv")
+        object.__setattr__(self, "flags", FrozenResultList(list(self.flags)))
+        object.__setattr__(self, "interpretations", FrozenResultList(list(self.interpretations)))
+        object.__setattr__(self, "regime_breakdown", FrozenResultDict(dict(self.regime_breakdown)))
+        return self
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def passed(self) -> bool:
         return self.pbo < 0.5 and self.deflated_sharpe > 0.0
+
+
+def revalidate_validation_report(report: ValidationReport) -> ValidationReport:
+    """Reconstruct an untrusted report before a verdict or API publication (ADR-159)."""
+    return ValidationReport.model_validate(report.model_dump(round_trip=True))
