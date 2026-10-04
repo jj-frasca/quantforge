@@ -315,3 +315,12 @@ request range. Close-only frames, complete nullable numeric columns, aware offse
 finite signed auxiliary features remain valid. Object/complex/string payloads are rejected rather
 than coerced. These structural guards do not prove a direct frame/report pair underwent quality
 checks; production acquisition must still use checked PriceBars through preparation.
+
+ADR-168 validates lifecycle inputs before grace/no-trade/no-forward holds. Both exit policies
+revalidate instantiated inputs and reject nonfinite scalars, negative grace/drawdown, and nonpositive
+rolling windows; the single-name no-trade horizon is positive. All defaults and predicates remain
+unchanged, including support for finite negative Sharpe floors and drawdown limits above one in
+diagnostic configs. Pure lifecycle functions require exactly aligned, unique ascending paired
+numeric returns, finite and greater than -1, plus a valid single-name trade count. Aligned empty
+history and naive/generic indexes remain valid. Input validation does not certify arbitrary extreme
+floating-point compounding/variance arithmetic.

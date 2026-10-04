@@ -4,6 +4,36 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from itertools import pairwise
 from math import isclose, isfinite
+from numbers import Integral
+
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
+
+
+def validate_forward_trade_count(value: object, forward_bars: int) -> None:
+    """Validate direct runtime counts, including numpy integers, without treating booleans as trades."""
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError("forward trade count must be an integer between zero and forward bars")
+    if not 0 <= int(value) <= forward_bars:
+        raise ValueError("forward trade count must be an integer between zero and forward bars")
+
+
+def validate_lifecycle_returns(forward: pd.Series, benchmark: pd.Series) -> None:
+    """Reject malformed paired evidence before any grace/no-trade lifecycle hold."""
+    if not forward.index.equals(benchmark.index):
+        raise ValueError("lifecycle returns must have exactly aligned indexes")
+    if not forward.index.is_unique or not forward.index.is_monotonic_increasing:
+        raise ValueError("lifecycle return indexes must be unique and ascending")
+    if forward.empty:
+        return
+    for series in (forward, benchmark):
+        dtype = series.dtype
+        if not is_numeric_dtype(dtype) or is_bool_dtype(dtype) or is_complex_dtype(dtype):
+            raise ValueError("lifecycle returns must be real numeric values")
+        values = series.to_numpy(dtype=float, na_value=np.nan)
+        if not np.isfinite(values).all() or (values <= -1.0).any():
+            raise ValueError("lifecycle returns must be finite and greater than -1")
 
 
 def forward_timestamp_utc(value: datetime) -> datetime:

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal, cast
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.manifest import compute_parameter_hash
@@ -18,6 +18,8 @@ from app.research.forward_claims import (
     validate_forward_curve,
     validate_forward_equities,
     validate_forward_statistics,
+    validate_forward_trade_count,
+    validate_lifecycle_returns,
 )
 from app.research.lab.experiment import Experiment
 from app.research.lab.universe import expected_max_sharpe_under_null
@@ -218,17 +220,17 @@ class ExitPolicy(BaseModel):
     """Tunable, versioned exit rules (ADR-020) — the risk discipline that cuts a decaying strategy.
     Same calibration philosophy as GateConfig (ADR-015)."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False, revalidate_instances="always")
 
-    min_forward_bars_before_exit: int = 21  # ~1mo grace: don't cut on entry noise
-    rolling_window_bars: int = 63  # ~3mo trailing window for "recent" performance
+    min_forward_bars_before_exit: int = Field(default=21, ge=0)  # ~1mo grace
+    rolling_window_bars: int = Field(default=63, gt=0)  # ~3mo trailing window
     min_rolling_sharpe: float = 0.0
-    max_forward_drawdown: float = 0.25
+    max_forward_drawdown: float = Field(default=0.25, ge=0.0)
     require_beat_buy_and_hold_forward: bool = True
     # ADR-073: how long a position that has NEVER traded is held before it is retired as
     # unevaluable. Not a performance bar — the Sharpe rules cannot run on zero trades at all.
     # ASSUMPTION, not a measurement: calibrate against observed time-to-first-trade.
-    max_bars_without_trade: int = 126
+    max_bars_without_trade: int = Field(default=126, gt=0)
 
     @property
     def version_hash(self) -> str:
@@ -260,7 +262,10 @@ def lifecycle_from_returns(
     reads "no evidence" as "failing grade" and cut 18 of the book's 27 closed positions before they
     ever took a position.
     """
+    policy = ExitPolicy.model_validate(policy)
+    validate_lifecycle_returns(forward_returns, buy_and_hold_returns)
     n = len(forward_returns)
+    validate_forward_trade_count(n_forward_trades, n)
     if n < policy.min_forward_bars_before_exit:
         return LifecycleDecision(
             action="hold",
@@ -324,6 +329,7 @@ def evaluate_lifecycle(
     position: PaperPosition, frame: pd.DataFrame, policy: ExitPolicy
 ) -> LifecycleDecision:
     """Run the strategy over `frame` and decide hold/exit on its post-freeze forward slice."""
+    policy = ExitPolicy.model_validate(policy)
     forward_mask = frame.index > pd.Timestamp(position.frozen_at)
     if not bool(forward_mask.any()):
         return LifecycleDecision(

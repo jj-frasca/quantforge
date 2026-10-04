@@ -16,7 +16,14 @@ from types import MappingProxyType
 from typing import Literal, cast
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, field_serializer, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from app.research.backtesting.metrics import max_drawdown, sharpe_ratio
 from app.research.claim_graph import FrozenClaimList, freeze_claim_model
@@ -31,6 +38,7 @@ from app.research.forward_claims import (
     validate_forward_curve,
     validate_forward_equities,
     validate_forward_statistics,
+    validate_lifecycle_returns,
 )
 
 
@@ -359,12 +367,12 @@ class CrossSectionalExitPolicy(BaseModel):
     portfolio-level analog of the single-name ExitPolicy (ADR-020). A grace period avoids cutting on
     entry noise; a rolling trailing window measures RECENT decay so it isn't masked by early gains."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False, revalidate_instances="always")
 
-    min_forward_bars_before_exit: int = 21  # ~1mo grace
-    rolling_window_bars: int = 63  # ~3mo trailing window
+    min_forward_bars_before_exit: int = Field(default=21, ge=0)  # ~1mo grace
+    rolling_window_bars: int = Field(default=63, gt=0)  # ~3mo trailing window
     min_rolling_sharpe: float = 0.0
-    max_forward_drawdown: float = 0.30
+    max_forward_drawdown: float = Field(default=0.30, ge=0.0)
     require_beat_benchmark_forward: bool = True
 
 
@@ -386,6 +394,8 @@ def lifecycle_from_forward_returns(
     """Decide hold/retire from a factor's FORWARD returns vs the equal-weight benchmark (ADR-025).
     Retire when recent (rolling-window) risk-adjusted performance decays below the floor, the forward
     drawdown breaches the risk limit, or it stops beating the benchmark. Pure -- no engine/network."""
+    policy = CrossSectionalExitPolicy.model_validate(policy)
+    validate_lifecycle_returns(forward_returns, benchmark_returns)
     n = len(forward_returns)
     if n < policy.min_forward_bars_before_exit:
         return CrossSectionalLifecycleDecision(
@@ -432,6 +442,7 @@ def evaluate_cross_sectional_lifecycle(
     """Recompute the frozen factor's post-freeze forward returns + the equal-weight benchmark on
     `panel` and decide hold/retire (ADR-025). Holds during the grace period / before any forward
     data has accrued."""
+    policy = CrossSectionalExitPolicy.model_validate(policy)
     forward_mask = panel.index > pd.Timestamp(position.frozen_at)
     if not bool(forward_mask.any()):
         return CrossSectionalLifecycleDecision(
