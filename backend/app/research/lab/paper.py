@@ -6,13 +6,19 @@ from pathlib import Path
 from typing import Literal, cast
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.backtesting.metrics import max_drawdown, sharpe_ratio
 from app.research.claim_graph import FrozenClaimDict, FrozenClaimList, freeze_claim_model
 from app.research.dataset import ResearchDataset, ResearchDatasetEvidence
+from app.research.forward_claims import (
+    forward_timestamp_utc,
+    validate_forward_curve,
+    validate_forward_equities,
+    validate_forward_statistics,
+)
 from app.research.lab.experiment import Experiment
 from app.research.lab.universe import expected_max_sharpe_under_null
 from app.research.strategies.builder import build_strategy_from_dict
@@ -24,11 +30,21 @@ class ForwardEquityPoint(BaseModel):
     """One bar of the forward equity curve (ADR-023): a normalized index (base 1.0 at the freeze
     boundary) that compounds each post-freeze bar. Floats — a derived stat, not a price."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     timestamp: datetime
     strategy_equity: float
     buy_and_hold_equity: float
+
+    @field_validator("timestamp")
+    @classmethod
+    def _timestamp_utc(cls, value: datetime) -> datetime:
+        return forward_timestamp_utc(value)
+
+    @model_validator(mode="after")
+    def _validate_equities(self) -> "ForwardEquityPoint":
+        validate_forward_equities((self.strategy_equity, self.buy_and_hold_equity))
+        return self
 
 
 class ForwardScore(BaseModel):
@@ -40,7 +56,7 @@ class ForwardScore(BaseModel):
     additive + defaulted so scores persisted before ADR-023 still validate (they carry an empty
     series until the next accrual repopulates them)."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     forward_bars: int
     forward_return: float
@@ -56,6 +72,40 @@ class ForwardScore(BaseModel):
     # ADR-139: absent only on legacy persisted scores. New production scores retain the exact
     # checked vendor evidence that supported their lifecycle decision.
     evidence: ResearchDatasetEvidence | None = None
+
+    @field_validator("as_of")
+    @classmethod
+    def _as_of_utc(cls, value: datetime) -> datetime:
+        return forward_timestamp_utc(value)
+
+    @model_validator(mode="after")
+    def _validate_and_freeze_score(self) -> "ForwardScore":
+        validate_forward_statistics(
+            self.forward_bars,
+            (
+                self.forward_return,
+                self.forward_sharpe,
+                self.buy_and_hold_return,
+                self.buy_and_hold_sharpe,
+            ),
+        )
+        if self.forward_trades < 0:
+            raise ValueError("forward_trades must be non-negative")
+        if self.forward_trades > self.forward_bars:
+            raise ValueError("forward_trades cannot exceed forward_bars")
+        validate_forward_curve(
+            [
+                (point.timestamp, point.strategy_equity, point.buy_and_hold_equity)
+                for point in self.forward_equity
+            ],
+            forward_bars=self.forward_bars,
+            forward_return=self.forward_return,
+            benchmark_return=self.buy_and_hold_return,
+            as_of=self.as_of,
+        )
+        # Nested points/evidence revalidate instances before this validator runs.
+        object.__setattr__(self, "forward_equity", FrozenClaimList(self.forward_equity))
+        return self
 
 
 class PaperPosition(BaseModel):

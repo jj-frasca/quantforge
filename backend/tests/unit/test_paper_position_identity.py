@@ -92,7 +92,8 @@ def test_paper_position_claim_graph_is_defensive_immutable_and_round_trips() -> 
 
     parameters["fast"] = 999
     reasons.append("caller mutation")
-    score.forward_equity.append(score.forward_equity[0])
+    with pytest.raises(AttributeError, match="immutable"):
+        score.forward_equity.append(score.forward_equity[0])
     assert score.evidence is not None
     with pytest.raises(TypeError, match="immutable"):
         score.evidence.quality_report.issues[0].context["observed"] = [  # type: ignore[index]

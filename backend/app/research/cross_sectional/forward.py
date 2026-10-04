@@ -16,7 +16,7 @@ from types import MappingProxyType
 from typing import Literal, cast
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, field_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, field_serializer, field_validator, model_validator
 
 from app.research.backtesting.metrics import max_drawdown, sharpe_ratio
 from app.research.claim_graph import FrozenClaimList, freeze_claim_model
@@ -26,17 +26,33 @@ from app.research.cross_sectional.registry import default_strategies
 from app.research.cross_sectional.search import CrossSectionalExperiment
 from app.research.cross_sectional.snapshots import freeze_score_snapshot
 from app.research.dataset import ResearchDataset, ResearchDatasetEvidence
+from app.research.forward_claims import (
+    forward_timestamp_utc,
+    validate_forward_curve,
+    validate_forward_equities,
+    validate_forward_statistics,
+)
 
 
 class CrossSectionalForwardEquityPoint(BaseModel):
     """One bar of the forward equity curve (ADR-023 analog): normalized indices (base 1.0 at the
     freeze boundary) that compound each post-freeze bar -- the factor vs the equal-weight benchmark."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     timestamp: datetime
     strategy_equity: float
     benchmark_equity: float
+
+    @field_validator("timestamp")
+    @classmethod
+    def _timestamp_utc(cls, value: datetime) -> datetime:
+        return forward_timestamp_utc(value)
+
+    @model_validator(mode="after")
+    def _validate_equities(self) -> "CrossSectionalForwardEquityPoint":
+        validate_forward_equities((self.strategy_equity, self.benchmark_equity))
+        return self
 
 
 class CrossSectionalForwardScore(BaseModel):
@@ -45,7 +61,7 @@ class CrossSectionalForwardScore(BaseModel):
     benchmark); `beats_benchmark` is the honest bar: did the dollar-neutral factor out-earn holding
     the whole universe, risk-adjusted, going forward?"""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     forward_bars: int
     forward_return: float
@@ -57,6 +73,42 @@ class CrossSectionalForwardScore(BaseModel):
     forward_equity: list[CrossSectionalForwardEquityPoint] = []
     # ADR-140: absent only for legacy rows and direct synthetic scoring.
     evidence: list[ResearchDatasetEvidence] | None = None
+
+    @field_validator("as_of")
+    @classmethod
+    def _as_of_utc(cls, value: datetime) -> datetime:
+        return forward_timestamp_utc(value)
+
+    @model_validator(mode="after")
+    def _validate_and_freeze_score(self) -> "CrossSectionalForwardScore":
+        validate_forward_statistics(
+            self.forward_bars,
+            (
+                self.forward_return,
+                self.forward_sharpe,
+                self.benchmark_return,
+                self.benchmark_sharpe,
+            ),
+        )
+        validate_forward_curve(
+            [
+                (point.timestamp, point.strategy_equity, point.benchmark_equity)
+                for point in self.forward_equity
+            ],
+            forward_bars=self.forward_bars,
+            forward_return=self.forward_return,
+            benchmark_return=self.benchmark_return,
+            as_of=self.as_of,
+        )
+        object.__setattr__(self, "forward_equity", FrozenClaimList(self.forward_equity))
+        if self.evidence is not None:
+            symbols = [item.quality_report.symbol.strip().upper() for item in self.evidence]
+            if not symbols or len(symbols) != len(set(symbols)):
+                raise ValueError("score evidence symbols must be non-empty and unique")
+            if len({item.git_commit_hash for item in self.evidence}) != 1:
+                raise ValueError("score evidence must name one git revision")
+            object.__setattr__(self, "evidence", FrozenClaimList(self.evidence))
+        return self
 
 
 class CrossSectionalPosition(BaseModel):

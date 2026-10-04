@@ -299,3 +299,11 @@ edits cannot change the retained observations under the same quality identity. C
 `frame=` and `dataclasses.replace` remain supported. Arbitrary mutable object-valued cells are
 outside the canonical numeric frame contract; direct supplied report/frame correspondence is not
 certified by this ownership boundary.
+
+ADR-166 makes standalone forward points/scores authoritative intrinsic evidence boundaries.
+Both point families require aware UTC timestamps and finite positive equities. Both score families
+revalidate instances, require aware UTC cutoffs, finite statistics and valid counts, freeze curve
+lists, and bind nonempty curves to length, chronological order, terminal returns, and `as_of`.
+Single-name trades cannot exceed bars; present panel evidence is immutable, nonempty, symbol-unique,
+and at one revision. Position boundaries still bind symbol/universe and freeze-date identity.
+Legacy empty curves, absent evidence, and historical beats flags remain supported.
