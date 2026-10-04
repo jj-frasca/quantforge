@@ -19,12 +19,13 @@ class TimescaleDBPriceBarRepository:
         self._session_factory = session_factory
 
     def save_bars(self, bars: list[PriceBar]) -> int:
+        validated = [PriceBar.model_validate(bar.model_dump(round_trip=True)) for bar in bars]
         with self._session_factory() as session:
-            for bar in bars:
+            for bar in validated:
                 # merge = upsert by PK (symbol, timestamp_utc, source) -> idempotent ingestion
                 session.merge(_to_orm(bar))
             session.commit()
-        return len(bars)
+        return len(validated)
 
     def save_quality_report(self, report: DataQualityReport) -> None:
         validated = DataQualityReport.model_validate(report.model_dump(round_trip=True))

@@ -17,6 +17,11 @@ Strategies and the engine operate on a pandas DataFrame, not raw PriceBars:
 `float` is used inside the engine (vectorized numpy math); `Decimal` is the storage/contract
 type (PriceBar). The conversion happens once at `bars_to_frame`.
 
+ADR-157 hardens each canonical `PriceBar` before that conversion: optional `quality_flags` are
+defensive finite-JSON copies, and both repositories revalidate an entire incoming batch before any
+state or transaction access. Unchecked model copies therefore cannot inject invalid OHLC/identity
+or partially overwrite cached evidence; frame construction and adjustment semantics are unchanged.
+
 ---
 
 ## 2. BaseStrategy contract

@@ -37,7 +37,7 @@ timestamp from one source. Already split/dividend-adjusted at ingestion (ADR-004
 | `volume` | `int` | >= 0 |
 | `adj_factor` | `Decimal` | finite, > 0. Cumulative split/dividend factor **already applied** to OHLC |
 | `source` | `Source` | `"yfinance" \| "polygon" \| "alpaca"` |
-| `quality_flags` | `dict \| None` | `None` means clean (no issues). Populated by the quality gate |
+| `quality_flags` | `dict \| None` | `None` means clean. Defensive finite JSON with string keys; immutable in memory (ADR-157) |
 
 **Decimal precision**: stored as `NUMERIC(18,6)` (price), `NUMERIC(10,6)` (adj_factor). Use
 `Decimal`, never `float`, so values round-trip exactly.
@@ -50,6 +50,12 @@ prices that are `adj_factor`× wrong — a bug, not a feature.
 2. all four prices finite and > 0 (§8 invariant #1).
 3. OHLC ordering: `low <= open,close <= high` and `low <= high`.
 4. `volume >= 0`; `adj_factor > 0`.
+
+ADR-157 makes the complete canonical observation defensive. `quality_flags` mappings/sequences are
+recursively copied and frozen and accept only JSON-compatible leaves, string object keys, and finite
+floats. Both repository implementations reconstruct the complete incoming batch before retaining
+state or opening a database transaction; invalid unchecked copies reject atomically. Existing JSON
+objects, primary-key overwrite/upsert semantics, OHLC rules, and SQL schema are unchanged.
 
 ---
 

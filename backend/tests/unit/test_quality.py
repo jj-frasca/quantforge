@@ -107,7 +107,7 @@ def test_quality_issue_context_rejects_every_list_mutation(
     values = issue.context["values"]
     assert isinstance(values, list)
 
-    with pytest.raises(AttributeError, match="quality report evidence is immutable"):
+    with pytest.raises(AttributeError, match="immutable"):
         mutate(values)
 
 
@@ -135,7 +135,7 @@ def test_quality_issue_context_rejects_every_mapping_mutation(
     )
     assert issue.context is not None
 
-    with pytest.raises(TypeError, match="quality report evidence is immutable"):
+    with pytest.raises(TypeError, match="immutable"):
         mutate(issue.context)
 
 

@@ -15,12 +15,13 @@ class InMemoryPriceBarRepository:
         self._reports: list[DataQualityReport] = []
 
     def save_bars(self, bars: list[PriceBar]) -> int:
+        validated = [PriceBar.model_validate(bar.model_dump(round_trip=True)) for bar in bars]
         # Keyed by (timestamp_utc, source) per symbol, mirroring the production repository's
         # (symbol, timestamp_utc, source) upsert PK (FINDING-050/ADR-122) — re-saving the same
         # bar (e.g. an overlapping-range cache-aside re-ingest) must overwrite, not duplicate.
-        for bar in bars:
+        for bar in validated:
             self._bars.setdefault(bar.symbol, {})[(bar.timestamp_utc, bar.source)] = bar
-        return len(bars)
+        return len(validated)
 
     def save_quality_report(self, report: DataQualityReport) -> None:
         validated = DataQualityReport.model_validate(report.model_dump(round_trip=True))

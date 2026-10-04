@@ -97,6 +97,23 @@ def test_save_bars_is_idempotent() -> None:
     assert len(out) == 10
 
 
+def test_save_bars_revalidates_complete_batch_before_retaining() -> None:
+    repo = InMemoryPriceBarRepository()
+    original = builders.clean_series(n=1)[0]
+    repo.save_bars([original])
+    replacement = original.model_copy(update={"close": original.open})
+    invalid = original.model_copy(update={"volume": -1})
+
+    with pytest.raises(ValidationError):
+        repo.save_bars([replacement, invalid])
+    assert repo.get_bars(
+        original.symbol,
+        original.timestamp_utc - timedelta(days=1),
+        original.timestamp_utc + timedelta(days=1),
+        source=original.source,
+    ) == [original]
+
+
 def test_save_quality_report_is_retained() -> None:
     repo = InMemoryPriceBarRepository()
     report = DataQualityReport(symbol="AAPL", checked_at=datetime(2024, 1, 2, tzinfo=UTC))

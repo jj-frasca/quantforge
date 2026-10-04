@@ -863,6 +863,13 @@ array/object shape. Both in-memory and TimescaleDB writers reconstruct incoming 
 retaining state or opening a transaction, so unchecked copies cannot change verdict or provenance
 under an existing report UUID.
 
+**Canonical price-bar claims are deeply immutable and atomically prevalidated (ADR-157).** A
+`PriceBar` recursively copies/freezes `quality_flags` and accepts only string-keyed finite JSON
+evidence while retaining its existing JSON object shape. Both in-memory and TimescaleDB writers
+reconstruct the complete incoming batch before retained state or a transaction, so an unchecked
+copy cannot bypass symbol, time, OHLC, volume, source, or flag validation and a rejected batch
+cannot partially overwrite existing bars.
+
 **Queued paper accrual refreshes generated state at job start (ADR-151).** GitHub concurrency
 serializes paper-forward runs but does not refresh a queued run's creation-time event SHA. The
 accrual job therefore checks out current `master` only after it receives the non-cancelling

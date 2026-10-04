@@ -33,6 +33,35 @@ def test_price_bar_valid_bar_constructs() -> None:
     assert bar.quality_flags is None
 
 
+def test_price_bar_defensively_freezes_quality_flags_and_preserves_json_shape() -> None:
+    flags: dict[str, object] = {"vendor": {"codes": ["late"]}}
+    bar = _bar(quality_flags=flags)
+
+    flags["vendor"]["codes"].append("caller mutation")  # type: ignore[index,union-attr]
+    assert bar.quality_flags == {"vendor": {"codes": ["late"]}}
+    with pytest.raises(TypeError, match="immutable"):
+        bar.quality_flags["new"] = True  # type: ignore[index]
+    with pytest.raises(AttributeError, match="immutable"):
+        bar.quality_flags["vendor"]["codes"].append("public mutation")  # type: ignore[index,union-attr]
+
+    assert bar.model_dump(mode="json")["quality_flags"] == {"vendor": {"codes": ["late"]}}
+    assert PriceBar.model_validate_json(bar.model_dump_json()) == bar
+
+
+@pytest.mark.parametrize(
+    "quality_flags",
+    [
+        {"value": float("nan")},
+        {"value": float("inf")},
+        {"value": object()},
+        {1: "non-string key"},
+    ],
+)
+def test_price_bar_rejects_non_json_quality_flags(quality_flags: object) -> None:
+    with pytest.raises(ValidationError):
+        _bar(quality_flags=quality_flags)
+
+
 def test_price_bar_symbol_is_uppercased_and_stripped() -> None:
     assert _bar(symbol="  aapl ").symbol == "AAPL"
 

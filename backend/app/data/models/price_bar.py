@@ -4,6 +4,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
+from app.data.models.json_value import freeze_json
 from app.data.models.types import Source
 
 
@@ -16,7 +17,7 @@ class PriceBar(BaseModel):
         downstream makes prices adj_factor x wrong.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     symbol: str
     timestamp_utc: datetime
@@ -28,6 +29,15 @@ class PriceBar(BaseModel):
     adj_factor: Decimal
     source: Source
     quality_flags: dict[str, object] | None = None
+
+    @field_validator("quality_flags")
+    @classmethod
+    def _freeze_quality_flags(cls, value: dict[str, object] | None) -> dict[str, object] | None:
+        if value is None:
+            return None
+        frozen = freeze_json(value)
+        assert isinstance(frozen, dict)
+        return frozen
 
     @field_validator("symbol")
     @classmethod
