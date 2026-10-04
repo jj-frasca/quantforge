@@ -36,7 +36,9 @@ class EquityPoint(BaseModel):
     the former is against the nominal paper starting equity (a fixed target), the latter is the
     book's return since the benchmark's own inception point (`history[0]`, whatever it actually
     was) minus the benchmark's return over that same window — so alpha is never distorted by
-    however far the book had already drifted from the nominal start before tracking began."""
+    however far the book had already drifted from the nominal start before tracking began.
+    The broker caller uses associated completed regular closes (ADR-170), a daily-close proxy
+    rather than exact attribution to the account's intraday or after-hours marks."""
 
     model_config = ConfigDict(frozen=True, allow_inf_nan=False, revalidate_instances="always")
 

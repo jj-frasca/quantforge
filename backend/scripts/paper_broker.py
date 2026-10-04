@@ -14,10 +14,13 @@ wiring (broker + adapter), smoke-covered by the `@pytest.mark.live` test.
 """
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time, timedelta
+from math import isfinite
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from app.config import get_settings
+from app.data.sources.base import DataSourceAdapter
 from app.dependencies import build_data_adapter
 from app.execution.alpaca_broker import AlpacaBroker, AlpacaOrder, reconcile
 from app.execution.equity_curve import JsonFileEquityCurve, append_equity_point
@@ -30,6 +33,64 @@ DATA = Path(__file__).resolve().parents[2] / "data"
 PORTFOLIO = DATA / "paper_portfolio.json"
 EQUITY_CURVE = DATA / "equity_curve.json"
 PAPER_URL = "https://paper-api.alpaca.markets"
+_NEW_YORK = ZoneInfo("America/New_York")
+
+
+def _completed_close_date(snapshot: datetime) -> date | None:
+    if snapshot.tzinfo is None or snapshot.utcoffset() is None:
+        raise ValueError("benchmark snapshots must be timezone-aware")
+    local = snapshot.astimezone(_NEW_YORK)
+    day = local.date()
+    if local.weekday() < 5:
+        if time(9, 30) <= local.time() < time(16):
+            return None
+        if local.time() < time(9, 30):
+            day -= timedelta(days=1)
+    while day.weekday() >= 5:
+        day -= timedelta(days=1)
+    return day
+
+
+def fetch_benchmark_return(
+    adapter: DataSourceAdapter,
+    inception: datetime,
+    now: datetime,
+    *,
+    git_commit_hash: str,
+) -> float | None:
+    """Best-effort completed regular daily-close proxy, never an intraday valuation claim.
+
+    Missing expected weekday anchors (including holidays) remain unmeasured. Both observations
+    must be outside regular hours; an intraday inception cannot establish this proxy's baseline.
+    """
+    try:
+        first_date = _completed_close_date(inception)
+        last_date = _completed_close_date(now)
+        if first_date is None or last_date is None or inception > now:
+            return None
+        start = datetime.combine(
+            inception.astimezone(_NEW_YORK).date() - timedelta(days=14),
+            time(),
+            tzinfo=_NEW_YORK,
+        )
+        dataset = fetch_research_dataset(
+            adapter,
+            "SPY",
+            start,
+            now,
+            git_commit_hash=git_commit_hash,
+        )
+        frame = dataset.frame
+        labels = frame.index.tz_convert(_NEW_YORK)
+        if not labels.equals(labels.normalize()):
+            return None
+        closes = dict(zip(labels.date, frame["close"], strict=True))
+        if first_date not in closes or last_date not in closes:
+            return None
+        result = float(closes[last_date]) / float(closes[first_date]) - 1.0
+        return result if isfinite(result) and result > -1.0 else None
+    except (ValueError, OSError, ArithmeticError):
+        return None
 
 
 def compute_targets(
@@ -82,19 +143,21 @@ def main() -> None:  # pragma: no cover - live wiring, exercised by the @live sm
     orders = reconcile(broker, targets)
 
     # Snapshot the real account onto the committed equity curve so performance is watchable over
-    # time. Benchmark it against SPY over the SAME since-inception window so the curve records ALPHA
-    # — the only honest "are we beating the market?" number, not an absolute return a rising tide
-    # would flatter. Best-effort: a benchmark fetch failure leaves alpha unmeasured, not the snapshot.
+    # time. SPY uses completed regular closes associated with the account observations (ADR-170),
+    # a daily-close proxy rather than exact intraday/after-hours mark attribution. A missing or
+    # ambiguous benchmark leaves alpha unmeasured while preserving the account snapshot.
     curve = JsonFileEquityCurve(EQUITY_CURVE)
     history = curve.all()
-    inception = history[0].timestamp if history else now
-    benchmark_return: float | None = None
-    try:
-        spy = adapter.fetch_price_bars("SPY", inception, now)
-        if len(spy) >= 2:
-            benchmark_return = float(spy[-1].close) / float(spy[0].close) - 1.0
-    except (ValueError, OSError):
-        benchmark_return = None
+    benchmark_return = (
+        fetch_benchmark_return(
+            adapter,
+            history[0].timestamp,
+            now,
+            git_commit_hash=git_commit_hash,
+        )
+        if history
+        else None
+    )
     curve.save(
         append_equity_point(
             history,

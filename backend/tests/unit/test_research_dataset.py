@@ -414,7 +414,9 @@ def test_research_dataset_acquisition_replacement_cannot_exclude_observations(fi
 
 @given(price=st.floats(min_value=1e-6, max_value=1e6, allow_nan=False, allow_infinity=False))
 def test_research_dataset_finite_positive_flat_ohlc_and_zero_volume_are_valid(price: float) -> None:
-    bars = builders.clean_series(symbol="AAPL", n=120)
+    # Two checked bars suffice for this intrinsic OHLC property; avoid repeating an unrelated
+    # 120-bar acquisition check for each generated scalar under parallel coverage instrumentation.
+    bars = builders.clean_series(symbol="AAPL", n=2)
     dataset = prepare_research_dataset(
         bars,
         symbol="AAPL",

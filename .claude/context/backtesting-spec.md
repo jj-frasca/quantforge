@@ -333,3 +333,14 @@ changes. Nominal/inception denominators must be positive where measured. Actual 
 and negative cash remain honest account observations; historical alpha formulas and custom nominal
 baselines are never guessed or restated. This ledger is distinct from positive normalized research
 wealth curves and does not authorize broker access or generated-data edits.
+
+ADR-170 anchors prospective broker SPY benchmarks to completed New York regular daily closes
+associated with each observed account endpoint, fetching fourteen calendar days before inception
+through ResearchDataset quality gates. Midnight session labels alone do not prove close availability.
+Weekday regular-hour snapshots are unmeasured; before open use the preceding weekday, after 16:00
+use today, and weekends use Friday. Exact expected date anchors are required: holidays/missing bars,
+unsupported labels, failed quality/fetches, and unrepresentable float ratios produce absent benchmark
+and alpha. Early closes are conservatively unavailable until 16:00; an intraday inception cannot
+establish this proxy at all. The first snapshot is unmeasured; identical completed-close endpoints
+yield zero. Account endpoints remain observed marks, so this proxy is not exact intraday/after-hours
+attribution. Existing ledger values and ADR-141's account denominator are not restated.
