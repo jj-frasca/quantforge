@@ -3,6 +3,7 @@
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta, timezone
 
+import pandas as pd
 import pytest
 from tests.fixtures.synthetic import builders
 
@@ -232,3 +233,69 @@ def test_prepare_research_dataset_rejects_noncanonical_code_revision(revision: s
             end=bars[-1].timestamp_utc + timedelta(days=1),
             git_commit_hash=revision,
         )
+
+
+@pytest.mark.parametrize("origin", ["source", "exposed"])
+@pytest.mark.parametrize("mutation", ["price", "values", "calendar", "columns", "attrs"])
+def test_research_dataset_frame_mutation_preserves_checked_snapshot(
+    origin: str, mutation: str
+) -> None:
+    bars = builders.clean_series(symbol="AAPL", n=120)
+    original = prepare_research_dataset(
+        bars,
+        symbol="AAPL",
+        source="yfinance",
+        adapter_version="test-1",
+        start=bars[0].timestamp_utc - timedelta(days=1),
+        end=bars[-1].timestamp_utc + timedelta(days=1),
+        git_commit_hash="a" * 40,
+    )
+    source = original.frame
+    source.attrs["acquisition"] = {"checked": True}
+    expected = source.copy(deep=True)
+    expected.index = source.index.copy(deep=True)
+    expected.columns = source.columns.copy(deep=True)
+    dataset = replace(original, frame=source)
+    evidence = dataset.evidence()
+    target = source if origin == "source" else dataset.frame
+
+    if mutation == "price":
+        target.iloc[0, 0] = 999.0
+    elif mutation == "values":
+        values = target.to_numpy(copy=False)
+        values.flags.writeable = True
+        values[0, 3] = 999.0
+    elif mutation == "calendar":
+        timestamps = target.index.values
+        timestamps.flags.writeable = True
+        timestamps[0] += 1
+    elif mutation == "columns":
+        target.columns.values[0] = "unchecked"
+    else:
+        target.attrs["acquisition"]["checked"] = False
+
+    pd.testing.assert_frame_equal(dataset.frame, expected)
+    assert dataset.frame.attrs == expected.attrs
+    assert dataset.evidence() == evidence
+
+
+def test_research_dataset_frame_access_is_independent_and_replacement_compatible() -> None:
+    bars = builders.clean_series(symbol="AAPL", n=120)
+    dataset = prepare_research_dataset(
+        bars,
+        symbol="AAPL",
+        source="yfinance",
+        adapter_version="test-1",
+        start=bars[0].timestamp_utc - timedelta(days=1),
+        end=bars[-1].timestamp_utc + timedelta(days=1),
+        git_commit_hash="a" * 40,
+    )
+    first, second = dataset.frame, dataset.frame
+    assert first is not second
+    replacement = replace(dataset, adapter_version="test-2")
+    assert replacement.adapter_version == "test-2"
+    assert replacement.frame.equals(first)
+    first["close"] = 999.0
+    assert replacement.frame.equals(second)
+    with pytest.raises(AttributeError):
+        dataset.frame = first  # type: ignore[misc]

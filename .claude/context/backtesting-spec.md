@@ -291,3 +291,11 @@ A sophisticated statistic on a buggy engine is worthless. All in `tests/`:
 - `symmetric_long_short_neutrality`: +1/−1 alternating in a trend nets ≈ 0 (costs only).
 - `transaction_cost_reduces_returns_monotonically`: costs=[0,.001,.005,.01] → returns non-increasing.
 - `benchmark_comparator_spx_baseline`: SPY vs SPY → excess≈0, IR≈0, alpha≈0, beta≈1.
+
+ADR-165 gives `ResearchDataset.frame` defensive ownership. Construction captures a private numeric
+OHLCV snapshot; each access returns an independent working frame, explicitly copying both axes
+because ordinary pandas deep copies can share datetime-index storage. Source and returned-frame
+edits cannot change the retained observations under the same quality identity. Constructor
+`frame=` and `dataclasses.replace` remain supported. Arbitrary mutable object-valued cells are
+outside the canonical numeric frame contract; direct supplied report/frame correspondence is not
+certified by this ownership boundary.

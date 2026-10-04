@@ -2,10 +2,11 @@
 
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from os import environ
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
@@ -16,6 +17,29 @@ from app.data.sources.base import DataSourceAdapter
 from app.research.frames import bars_to_frame
 
 _FULL_GIT_SHA = re.compile(r"[0-9a-f]{40}")
+
+
+def _copy_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    """Isolate canonical numeric data and axes, including pandas' shared index storage."""
+    copied = frame.copy(deep=True)
+    copied.index = frame.index.copy(deep=True)
+    copied.columns = frame.columns.copy(deep=True)
+    return copied
+
+
+class _DatasetFrame:
+    """Required dataclass field with private capture and writable copy-on-read (ADR-165)."""
+
+    def __get__(
+        self, instance: "ResearchDataset | None", owner: "type[ResearchDataset] | None" = None
+    ) -> pd.DataFrame:
+        if instance is None:
+            # No class-level frame exists; callers must supply an instance.
+            raise AttributeError("frame requires an explicit value")
+        return _copy_frame(instance._frame)
+
+    def __set__(self, instance: "ResearchDataset", value: pd.DataFrame) -> None:
+        object.__setattr__(instance, "_frame", _copy_frame(value))
 
 
 class ResearchDatasetEvidence(BaseModel):
@@ -63,19 +87,21 @@ class ResearchDataset:
     start: datetime
     end: datetime
     git_commit_hash: str
+    _frame: pd.DataFrame = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         identity = self.evidence()
         object.__setattr__(self, "quality_report", identity.quality_report)
         object.__setattr__(self, "start", identity.start)
         object.__setattr__(self, "end", identity.end)
-        if self.frame.empty:
+        frame = self._frame
+        if frame.empty:
             raise ValueError("research dataset frame must be non-empty")
-        if not isinstance(self.frame.index, pd.DatetimeIndex):
+        if not isinstance(frame.index, pd.DatetimeIndex):
             raise ValueError("research dataset frame requires a DatetimeIndex")
-        if self.frame.index.tz is None:
+        if frame.index.tz is None:
             raise ValueError("research dataset frame index must be timezone-aware")
-        if not self.frame.index.is_monotonic_increasing or not self.frame.index.is_unique:
+        if not frame.index.is_monotonic_increasing or not frame.index.is_unique:
             raise ValueError("research dataset frame index must be unique and ascending")
 
     def evidence(self) -> ResearchDatasetEvidence:
@@ -88,6 +114,11 @@ class ResearchDataset:
             end=self.end,
             git_commit_hash=self.git_commit_hash,
         )
+
+
+# Install after decoration so both dataclasses and static typing retain a required init field.
+# The generated frozen initializer still calls the descriptor through object.__setattr__.
+ResearchDataset.frame = cast(pd.DataFrame, _DatasetFrame())
 
 
 def prepare_research_dataset(
