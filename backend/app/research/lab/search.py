@@ -18,7 +18,7 @@ from app.research.lab.candidate_budget import (
     allocate_catalog_candidate_budget,
     select_space_filling_candidates,
 )
-from app.research.lab.experiment import Experiment, Graduate, Trial
+from app.research.lab.experiment import Experiment, Graduate, Trial, validated_trial_update
 from app.research.lab.gate import GateConfig, GraduationGate
 from app.research.lab.holdout import score_on_holdout, split_holdout
 from app.research.lab.trial_accounting import (
@@ -227,12 +227,13 @@ def run_search(
     )
     whole_search_pbo = probability_of_backtest_overfitting(np.column_stack(candidate_returns))
     trials = [
-        trial.model_copy(
-            update={
+        validated_trial_update(
+            trial,
+            {
                 "deflated_sharpe": dsr,
                 "deflated_sharpe_probability": psr,
                 "pbo": whole_search_pbo,
-            }
+            },
         )
         for trial, dsr, psr in zip(trials, repriced, probabilities, strict=True)
     ]

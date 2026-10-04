@@ -156,10 +156,12 @@ def test_experiment_claim_graph_is_defensive_immutable_and_round_trips() -> None
     experiment, trial, gate, graduate, report, fundamental, distress, valuation = _claim()
     before = experiment.model_dump(mode="json")
 
-    trial.parameters["fast"] = 999
+    with pytest.raises(TypeError, match="immutable"):
+        trial.parameters["fast"] = 999
     with pytest.raises((AttributeError, TypeError)):
         gate.reasons.append("caller mutation")
-    graduate.parameters["slow"] = 999
+    with pytest.raises(TypeError, match="immutable"):
+        graduate.parameters["slow"] = 999
     with pytest.raises(TypeError, match="immutable"):
         report.issues[0].context["observed"] = [999.0]  # type: ignore[index]
     fundamental.reasons.append("caller mutation")
@@ -222,7 +224,7 @@ def test_experiment_rejects_selected_graduate_and_manifest_identity_drift() -> N
 
     payload = deepcopy(original)
     payload["graduate"]["gate_result"]["holdout_sharpe"] = 2.0
-    with pytest.raises(ValidationError, match="graduate gate result must match"):
+    with pytest.raises(ValidationError, match="holdout Sharpe must match"):
         Experiment.model_validate(payload)
 
     payload = deepcopy(original)

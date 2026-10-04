@@ -1,6 +1,8 @@
 import json
+import math
 import string
 from collections import defaultdict
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
@@ -11,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.data.fundamentals import FundamentalScreen, FundamentalSnapshot
 from app.data.models import DataQualityReport
 from app.research.backtesting.manifest import ExperimentManifest, compute_parameter_hash
-from app.research.claim_graph import FrozenClaimList, freeze_claim_model
+from app.research.claim_graph import FrozenClaimDict, FrozenClaimList, freeze_claim_model
 from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.valuation import UndervaluationScore
@@ -27,14 +29,14 @@ class Trial(BaseModel):
     family-local meaning under their historical search identity.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
-    strategy_name: str
+    strategy_name: str = Field(min_length=1)
     parameters: dict[str, float | int]
-    observed_sharpe: float
-    deflated_sharpe: float
-    pbo: float
-    parameter_stability_score: float
+    observed_sharpe: float = Field(allow_inf_nan=False)
+    deflated_sharpe: float = Field(allow_inf_nan=False)
+    pbo: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    parameter_stability_score: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
     # Legacy records predate candidate-level accounting and cannot be reconstructed against a
     # changed catalog. One is the honest lower bound for their one persisted family finalist.
     n_evaluated_configs: int = Field(default=1, ge=1)
@@ -42,31 +44,71 @@ class Trial(BaseModel):
     # of the SELECTION procedure, independent of the locked holdout. Nullable + defaulted so the
     # experiments already in the pool deserialize, and so a producer that computed no
     # walk-forward (the cross-sectional search) reports "not measured" rather than 0.0.
-    walk_forward_oos_sharpe: float | None = None
+    walk_forward_oos_sharpe: float | None = Field(default=None, allow_inf_nan=False)
     # ADR-039: mean out-of-sample Sharpe across the PURGED folds. Kept separate from
     # walk_forward_oos_sharpe on purpose — the two answer different questions (causal
     # prequential vs leakage-controlled dispersion) and the GAP between them is diagnostic.
-    purged_cv_oos_sharpe: float | None = None
+    purged_cv_oos_sharpe: float | None = Field(default=None, allow_inf_nan=False)
     # ADR-054 decision 3: the PAPER's Deflated Sharpe Ratio — a PROBABILITY in [0, 1] that the
     # true Sharpe exceeds the multiple-testing threshold, using this trial's track-record length,
     # skewness and kurtosis. `deflated_sharpe` above is the selection-adjusted Sharpe MARGIN and
     # the two are not comparable. Nullable so the rows written before the field, and the
     # cross-sectional producer that computes no per-period moments, read as "not measured"
     # rather than as a probability of zero.
-    deflated_sharpe_probability: float | None = None
+    deflated_sharpe_probability: float | None = Field(
+        default=None, ge=0.0, le=1.0, allow_inf_nan=False
+    )
+
+    @model_validator(mode="after")
+    def _validate_and_freeze_claim(self) -> "Trial":
+        for name, value in self.parameters.items():
+            if not math.isfinite(float(value)):
+                raise ValueError(f"parameters[{name!r}] must be finite")
+        object.__setattr__(self, "parameters", FrozenClaimDict(dict(self.parameters)))
+        return self
 
 
 class Graduate(BaseModel):
     """A candidate that passed the graduation gate, with its locked-holdout score."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
-    strategy_name: str
+    strategy_name: str = Field(min_length=1)
     parameters: dict[str, float | int]
     gate_result: GateResult
-    holdout_sharpe: float
-    holdout_total_return: float
-    holdout_n_bars: int = 0  # holdout length -> track-record years for universe deflation (ADR-018)
+    holdout_sharpe: float = Field(allow_inf_nan=False)
+    holdout_total_return: float = Field(gt=-1.0, allow_inf_nan=False)
+    holdout_n_bars: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def _validate_and_freeze_claim(self) -> "Graduate":
+        for name, value in self.parameters.items():
+            if not math.isfinite(float(value)):
+                raise ValueError(f"parameters[{name!r}] must be finite")
+        object.__setattr__(self, "parameters", FrozenClaimDict(dict(self.parameters)))
+
+        gate_result = GateResult.model_validate(self.gate_result.model_dump(round_trip=True))
+        object.__setattr__(self, "gate_result", gate_result)
+        if not gate_result.passed:
+            raise ValueError("graduate requires a passing gate")
+        if (
+            gate_result.holdout_sharpe is not None
+            and self.holdout_sharpe != gate_result.holdout_sharpe
+        ):
+            raise ValueError("graduate holdout Sharpe must match the gate result")
+        if (
+            gate_result.holdout_n_bars is not None
+            and self.holdout_n_bars != gate_result.holdout_n_bars
+        ):
+            raise ValueError("graduate holdout length must match the gate result")
+        return self
+
+
+def validated_trial_update[TrialT: Trial](trial: TrialT, updates: Mapping[str, object]) -> TrialT:
+    """Reprice a trial through its concrete subtype's full validation contract."""
+    payload = trial.model_dump(round_trip=True)
+    payload.update(updates)
+    return type(trial).model_validate(payload)
 
 
 class Experiment(BaseModel):

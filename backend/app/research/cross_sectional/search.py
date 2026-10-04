@@ -25,7 +25,7 @@ from app.research.cross_sectional.registry import (
 )
 from app.research.cross_sectional.snapshots import freeze_score_snapshot
 from app.research.lab.candidate_budget import allocate_candidate_budget
-from app.research.lab.experiment import Graduate, Trial
+from app.research.lab.experiment import Graduate, Trial, validated_trial_update
 from app.research.lab.gate import GateConfig, GateResult, GraduationGate
 from app.research.lab.holdout import HoldoutScore
 from app.research.lab.trial_accounting import (
@@ -390,12 +390,13 @@ def run_cross_sectional_search(
         np.column_stack(candidate_returns), pbo_splits
     )
     trials = [
-        trial.model_copy(
-            update={
+        validated_trial_update(
+            trial,
+            {
                 "deflated_sharpe": dsr,
                 "deflated_sharpe_probability": psr,
                 "pbo": whole_search_pbo,
-            }
+            },
         )
         for trial, dsr, psr in zip(trials, repriced, probabilities, strict=True)
     ]

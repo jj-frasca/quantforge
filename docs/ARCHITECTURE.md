@@ -192,6 +192,13 @@ infinity remains the intentional MinTRL requirement for a non-positive observed 
 probability-DSR comparison reconstructs its enclosing artifacts before inference, so unchecked
 gate copies fail closed. No component predicate, threshold, reason text, or MinTRL formula changed.
 
+**Trial and graduate leaves enforce their own evidence contracts (ADR-162).** Strategy parameters
+are defensive immutable JSON mappings; statistics are finite and bounded where mathematically
+required; and a graduate carries a passing gate, positive holdout length, wealth-preserving return,
+and the same structured holdout evidence as that gate. Both search paths revalidate the concrete
+trial subtype after whole-search repricing. This changes no statistic, selector, gate predicate,
+threshold, candidate budget, or persisted JSON shape.
+
 **Their revisit trigger has now fired, and the answer is no separation (ADR-051, 2026-08-20).**
 The diagnostics were read only off gate passers while the null artifacts record the finalist of
 every searched symbol — two different statistics — and ADR-046's repaired denominator then emptied

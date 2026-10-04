@@ -217,6 +217,12 @@ ADR-160 hardens the shared `GateResult` before it reaches either experiment grap
 MinTRL/config identity is valid, and structured holdout fields are paired. Positive infinity remains
 the defined requirement for a non-positive observed Sharpe. The probability-DSR comparison's
 artifact reconstruction closes unchecked-copy inference without changing gate policy.
+ADR-162 applies the same standalone boundary to the shared `Trial` and `Graduate` leaves. Parameters
+are immutable JSON mappings, scalar evidence is finite and range-valid, and a graduate must carry a
+passing gate plus positive, matching structured holdout geometry. Longitudinal and cross-sectional
+whole-search repricing reconstructs the concrete trial subtype through validation instead of an
+unchecked model copy. No statistic, selector, gate predicate, threshold, or persisted JSON shape
+changes.
 ADR-148 extends the boundary to `PaperPosition`: parameters, lifecycle reasons, forward curves, and
 nested score evidence are defensive immutable copies. Construction, managed updates, reload, and
 store writes validate lifecycle identity, evidence symbol, count/finite constraints, and any

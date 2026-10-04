@@ -49,6 +49,7 @@ def _experiment(symbol: str, n_trials: int, prior: int = 0, graduated: bool = Fa
             gate_result=gate_result,
             holdout_sharpe=0.8,
             holdout_total_return=0.15,
+            holdout_n_bars=252,
         )
     return Experiment(
         symbol=symbol,

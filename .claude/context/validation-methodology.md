@@ -210,6 +210,14 @@ and structured holdout Sharpe/length are paired. All 4,055 committed JSON occurr
 these invariants at the compatibility audit. Probability-DSR counterfactual inference reconstructs
 its complete artifacts before reading the embedded result; no gate predicate or threshold changed.
 
+ADR-162 makes the shared trial and graduate leaves authoritative outside an enclosing experiment as
+well. Trial parameters cannot mutate, every statistic is finite, PBO/stability/probability DSR stay
+within `[0, 1]`, and nullable diagnostics still mean not measured. A graduate requires a passing
+gate, finite wealth-preserving holdout evidence, positive length, and exact agreement with the
+gate's structured holdout fields when present. Search repricing revalidates the concrete trial
+subtype. All 116,919 committed trial-shaped records and 250 graduates passed the compatibility
+audit; no estimator, selector, predicate, threshold, or JSON shape changed.
+
 `app/validation/report.py` — Pydantic model aggregating the above for one strategy:
 `strategy_name`, `observed_sharpe`, `deflated_sharpe`, `pbo`, `n_walk_forward_splits`,
 `n_purged_folds`, `walk_forward` (ADR-038) and `purged_cv` (ADR-039) — both nullable, where
