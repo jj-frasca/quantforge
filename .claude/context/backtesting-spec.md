@@ -141,6 +141,10 @@ return greater than -1 (ADR-112):
   `(1+strat).cumprod() / (1+bench).cumprod()` from a prepended unit baseline (a ratio — always
   positive). Do NOT compound the
   return *difference* (`strat - bench`); it can fall ≤ −1 and produce a meaningless curve.
+  ADR-171 evaluates this same definition with per-period `log1p(strat) - log1p(bench)`, cumulative
+  log wealth from a zero baseline, running log peaks, and `expm1(min(log_drawdown))`. Common
+  growth cancels before accumulation, so overflowing standalone wealth cannot hide a later relative
+  loss. No standalone/relative wealth curve needs to be exponentiated; extreme loss may round to -1.
 
 **Oracle**: SPY vs SPY → excess≈0, IR≈0, alpha≈0, beta≈1.0 (ARCHITECTURE.md §8).
 Never report an absolute Sharpe without benchmark context.

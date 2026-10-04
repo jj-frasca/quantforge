@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from app.research.backtesting.metrics import TRADING_DAYS, max_drawdown
+from app.research.backtesting.metrics import TRADING_DAYS
 
 
 @dataclass(frozen=True)
@@ -52,10 +52,13 @@ class BenchmarkComparator:
         # Relative drawdown = drawdown of the strategy's equity RELATIVE to the benchmark's
         # (a ratio of compounded curves, always positive). Compounding the return *difference*
         # (strat - bench) is invalid — it can fall to <= -1 and yield a meaningless curve.
-        relative_equity = (1.0 + strat).cumprod() / (1.0 + bench).cumprod()
-        relative_equity_with_baseline = pd.Series(
-            np.concatenate(([1.0], relative_equity.to_numpy(dtype=np.float64)))
+        # Shared growth must cancel before compounding: standalone wealth can overflow or
+        # underflow even when its ratio is representable. Running log peaks avoid materializing
+        # large relative wealth too (ADR-171); zero is the pre-return unit-wealth baseline.
+        relative_log_wealth = np.concatenate(
+            ([0.0], np.cumsum(np.log1p(strat_values) - np.log1p(bench_values)))
         )
+        log_drawdown = relative_log_wealth - np.maximum.accumulate(relative_log_wealth)
 
         return BenchmarkComparison(
             excess_returns=excess,
@@ -63,5 +66,5 @@ class BenchmarkComparator:
             alpha=alpha,
             beta=beta,
             tracking_error=tracking_error,
-            benchmark_relative_drawdown=max_drawdown(relative_equity_with_baseline),
+            benchmark_relative_drawdown=float(np.expm1(log_drawdown.min())),
         )

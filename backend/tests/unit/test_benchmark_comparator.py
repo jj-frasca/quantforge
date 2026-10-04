@@ -3,6 +3,8 @@
 import numpy as np
 import pandas as pd
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from app.research.benchmarks.comparator import BenchmarkComparator
 
@@ -80,3 +82,60 @@ def test_constant_benchmark_does_not_divide_by_zero() -> None:
 
 def test_default_benchmark_symbol_is_spy() -> None:
     assert BenchmarkComparator().benchmark_symbol == "SPY"
+
+
+def test_relative_drawdown_survives_common_wealth_overflow() -> None:
+    comparison = BenchmarkComparator().compare(
+        pd.Series([0.5] * 2000 + [-0.2]), pd.Series([0.5] * 2000 + [0.2])
+    )
+    assert comparison.benchmark_relative_drawdown == pytest.approx(0.8 / 1.2 - 1)
+
+
+def test_relative_drawdown_survives_common_wealth_underflow() -> None:
+    comparison = BenchmarkComparator().compare(
+        pd.Series([-0.5] * 2000 + [-0.2]), pd.Series([-0.5] * 2000 + [0.2])
+    )
+    assert comparison.benchmark_relative_drawdown == pytest.approx(0.8 / 1.2 - 1)
+
+
+def test_relative_drawdown_survives_relative_wealth_overflow() -> None:
+    comparison = BenchmarkComparator().compare(
+        pd.Series([0.5] * 2000 + [-0.2]), pd.Series([0.0] * 2001)
+    )
+    assert comparison.benchmark_relative_drawdown == pytest.approx(-0.2)
+
+
+def test_relative_drawdown_extreme_loss_remains_bounded() -> None:
+    comparison = BenchmarkComparator().compare(pd.Series([-0.5] * 2000), pd.Series([0.0] * 2000))
+    assert comparison.benchmark_relative_drawdown == -1.0
+
+
+@given(
+    st.lists(
+        st.tuples(
+            st.floats(min_value=-0.2, max_value=0.2, allow_nan=False, allow_infinity=False),
+            st.floats(min_value=-0.2, max_value=0.2, allow_nan=False, allow_infinity=False),
+        ),
+        min_size=2,
+        max_size=30,
+    )
+)
+def test_relative_drawdown_matches_independent_product_ratio_oracle(
+    pairs: list[tuple[float, float]],
+) -> None:
+    strategy = pd.Series([pair[0] for pair in pairs])
+    benchmark = pd.Series([pair[1] for pair in pairs])
+    wealth = np.concatenate(
+        ([1.0], np.cumprod(1 + strategy.to_numpy()) / np.cumprod(1 + benchmark.to_numpy()))
+    )
+    expected = float((wealth / np.maximum.accumulate(wealth) - 1).min())
+    comparator = BenchmarkComparator()
+    actual = comparator.compare(strategy, benchmark).benchmark_relative_drawdown
+    assert -1 <= actual <= 0
+    assert actual == pytest.approx(expected, abs=1e-12)
+    # Matched common growth contributes no relative movement, regardless of standalone scale.
+    prefixed = comparator.compare(
+        pd.Series([0.5] * 2000 + strategy.tolist()),
+        pd.Series([0.5] * 2000 + benchmark.tolist()),
+    ).benchmark_relative_drawdown
+    assert prefixed == pytest.approx(actual, abs=1e-12)
