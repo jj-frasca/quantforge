@@ -307,3 +307,11 @@ lists, and bind nonempty curves to length, chronological order, terminal returns
 Single-name trades cannot exceed bars; present panel evidence is immutable, nonempty, symbol-unique,
 and at one revision. Position boundaries still bind symbol/universe and freeze-date identity.
 Legacy empty curves, absent evidence, and historical beats flags remain supported.
+
+ADR-167 validates direct `ResearchDataset` capture as canonical numeric research input: unique flat
+columns including `close`, real nonboolean numeric finite values, positive present OHLC with
+pairwise low/high bounds, nonnegative optional volume, and timestamps in the evidence's half-open
+request range. Close-only frames, complete nullable numeric columns, aware offset calendars, and
+finite signed auxiliary features remain valid. Object/complex/string payloads are rejected rather
+than coerced. These structural guards do not prove a direct frame/report pair underwent quality
+checks; production acquisition must still use checked PriceBars through preparation.

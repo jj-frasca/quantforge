@@ -8,7 +8,9 @@ from os import environ
 from pathlib import Path
 from typing import cast
 
+import numpy as np
 import pandas as pd
+from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from app.data.models import DataQualityReport, PriceBar, Source
@@ -103,6 +105,34 @@ class ResearchDataset:
             raise ValueError("research dataset frame index must be timezone-aware")
         if not frame.index.is_monotonic_increasing or not frame.index.is_unique:
             raise ValueError("research dataset frame index must be unique and ascending")
+        if frame.index[0] < self.start or frame.index[-1] >= self.end:
+            raise ValueError("research dataset frame timestamps must lie within [start, end)")
+        if (
+            isinstance(frame.columns, pd.MultiIndex)
+            or not frame.columns.is_unique
+            or "close" not in frame.columns
+        ):
+            raise ValueError("research dataset frame requires unique flat columns including close")
+        if any(
+            not is_numeric_dtype(dtype) or is_bool_dtype(dtype) or is_complex_dtype(dtype)
+            for dtype in frame.dtypes
+        ):
+            raise ValueError("research dataset frame columns must contain real numeric values")
+        if not np.isfinite(frame.to_numpy(dtype=float, na_value=np.nan)).all():
+            raise ValueError("research dataset frame values must be finite")
+        price_columns = [name for name in ("open", "high", "low", "close") if name in frame]
+        if (frame[price_columns] <= 0.0).any().any():
+            raise ValueError("research dataset frame prices must be positive")
+        if "high" in frame and any(
+            (frame["high"] < frame[name]).any() for name in price_columns if name != "high"
+        ):
+            raise ValueError("research dataset frame high must bound all present prices")
+        if "low" in frame and any(
+            (frame["low"] > frame[name]).any() for name in price_columns if name != "low"
+        ):
+            raise ValueError("research dataset frame low must bound all present prices")
+        if "volume" in frame and (frame["volume"] < 0.0).any():
+            raise ValueError("research dataset frame volume must be non-negative")
 
     def evidence(self) -> ResearchDatasetEvidence:
         """Freeze the serializable acquisition identity beside a durable derived result."""

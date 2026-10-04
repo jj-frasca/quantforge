@@ -5,6 +5,8 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pandas as pd
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 from tests.fixtures.synthetic import builders
 
 from app.data.models import DataQualityIssue, DataQualityReport
@@ -299,3 +301,148 @@ def test_research_dataset_frame_access_is_independent_and_replacement_compatible
     assert replacement.frame.equals(second)
     with pytest.raises(AttributeError):
         dataset.frame = first  # type: ignore[misc]
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing_close",
+        "duplicate_column",
+        "nan",
+        "infinity",
+        "zero",
+        "negative",
+        "inverted_high",
+        "inverted_low",
+        "negative_volume",
+        "object",
+        "boolean",
+        "complex",
+        "before_start",
+        "at_end",
+    ],
+)
+def test_research_dataset_direct_frame_replacement_rejects_invalid_observations(
+    mutation: str,
+) -> None:
+    bars = builders.clean_series(symbol="AAPL", n=120)
+    dataset = prepare_research_dataset(
+        bars,
+        symbol="AAPL",
+        source="yfinance",
+        adapter_version="test",
+        start=bars[0].timestamp_utc,
+        end=bars[-1].timestamp_utc + timedelta(days=1),
+        git_commit_hash="a" * 40,
+    )
+    frame = dataset.frame
+    if mutation == "missing_close":
+        frame = frame.drop(columns="close")
+    elif mutation == "duplicate_column":
+        frame.columns = ["close", "high", "low", "close", "volume"]
+    elif mutation in {"nan", "infinity", "zero", "negative"}:
+        frame.iloc[0, frame.columns.get_loc("close")] = {
+            "nan": float("nan"),
+            "infinity": float("inf"),
+            "zero": 0.0,
+            "negative": -1.0,
+        }[mutation]
+    elif mutation == "inverted_high":
+        frame.loc[frame.index[0], "high"] = frame.loc[frame.index[0], "close"] / 2
+    elif mutation == "inverted_low":
+        frame.loc[frame.index[0], "low"] = frame.loc[frame.index[0], "close"] * 2
+    elif mutation == "negative_volume":
+        frame.loc[frame.index[0], "volume"] = -1.0
+    elif mutation == "object":
+        frame["payload"] = [[1] for _ in range(len(frame))]
+    elif mutation == "boolean":
+        frame["close"] = True
+    elif mutation == "complex":
+        frame["close"] = frame["close"].astype(complex) + 1j
+    else:
+        index = frame.index.copy(deep=True)
+        values = index.values
+        values.flags.writeable = True
+        if mutation == "before_start":
+            values[0] -= 1
+        else:
+            values[-1] = pd.Timestamp(dataset.end).to_datetime64()
+        frame.index = index
+    with pytest.raises(ValueError, match="research dataset frame"):
+        replace(dataset, frame=frame)
+
+
+@pytest.mark.parametrize("dtype", ["float64", "int64", "Int64"])
+def test_research_dataset_accepts_close_only_real_numeric_frames_and_offset_calendar(
+    dtype: str,
+) -> None:
+    bars = builders.clean_series(symbol="AAPL", n=120)
+    dataset = prepare_research_dataset(
+        bars,
+        symbol="AAPL",
+        source="yfinance",
+        adapter_version="test",
+        start=bars[0].timestamp_utc,
+        end=bars[-1].timestamp_utc + timedelta(days=1),
+        git_commit_hash="a" * 40,
+    )
+    frame = dataset.frame[["close"]].round().astype(dtype)
+    frame.index = frame.index.tz_convert("America/New_York")
+    frame["volume"] = 0.0
+    frame["signed_feature"] = -1.0
+    valid = replace(dataset, frame=frame)
+    pd.testing.assert_frame_equal(valid.frame, frame)
+    assert valid.evidence() == dataset.evidence()
+
+
+@pytest.mark.parametrize("field", ["start", "end"])
+def test_research_dataset_acquisition_replacement_cannot_exclude_observations(field: str) -> None:
+    bars = builders.clean_series(symbol="AAPL", n=120)
+    dataset = prepare_research_dataset(
+        bars,
+        symbol="AAPL",
+        source="yfinance",
+        adapter_version="test",
+        start=bars[0].timestamp_utc,
+        end=bars[-1].timestamp_utc + timedelta(days=1),
+        git_commit_hash="a" * 40,
+    )
+    value = dataset.start + timedelta(days=1) if field == "start" else bars[-1].timestamp_utc
+    with pytest.raises(ValueError, match=r"within \[start, end\)"):
+        replace(dataset, **{field: value})
+
+
+@given(price=st.floats(min_value=1e-6, max_value=1e6, allow_nan=False, allow_infinity=False))
+def test_research_dataset_finite_positive_flat_ohlc_and_zero_volume_are_valid(price: float) -> None:
+    bars = builders.clean_series(symbol="AAPL", n=120)
+    dataset = prepare_research_dataset(
+        bars,
+        symbol="AAPL",
+        source="yfinance",
+        adapter_version="test",
+        start=bars[0].timestamp_utc,
+        end=bars[-1].timestamp_utc + timedelta(days=1),
+        git_commit_hash="a" * 40,
+    )
+    frame = dataset.frame
+    frame[["open", "high", "low", "close"]] = price
+    frame["volume"] = 0.0
+    valid = replace(dataset, frame=frame)
+    pd.testing.assert_frame_equal(valid.frame, frame)
+
+
+def test_research_dataset_multiindex_close_columns_are_rejected() -> None:
+    bars = builders.clean_series(symbol="AAPL", n=120)
+    dataset = prepare_research_dataset(
+        bars,
+        symbol="AAPL",
+        source="yfinance",
+        adapter_version="test",
+        start=bars[0].timestamp_utc,
+        end=bars[-1].timestamp_utc + timedelta(days=1),
+        git_commit_hash="a" * 40,
+    )
+    frame = dataset.frame[["open", "close"]]
+    frame.columns = pd.MultiIndex.from_tuples([("close", "A"), ("close", "B")])
+    with pytest.raises(ValueError, match="research dataset frame"):
+        replace(dataset, frame=frame)
