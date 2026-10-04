@@ -228,7 +228,7 @@ def test_experiment_rejects_selected_graduate_and_manifest_identity_drift() -> N
         Experiment.model_validate(payload)
 
     payload = deepcopy(original)
-    payload["manifest"]["parameter_hash"] = "drift"
+    payload["manifest"]["parameter_hash"] = "0" * 64
     with pytest.raises(ValidationError, match="manifest parameter hash must match"):
         Experiment.model_validate(payload)
 
@@ -320,7 +320,7 @@ def test_experiment_rejects_every_manifest_identity_drift() -> None:
         ("experiment_id", str(uuid4()), "manifest experiment_id must match"),
         ("created_at", "2026-09-27T00:00:00Z", "manifest created_at must match"),
         ("strategy_name", "momentum", "manifest strategy must match"),
-        ("validation_config_hash", "drift", "manifest validation config must match"),
+        ("validation_config_hash", "f" * 64, "manifest validation config must match"),
     )
     for field, value, message in mutations:
         payload = deepcopy(original)

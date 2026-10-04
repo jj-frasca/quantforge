@@ -124,6 +124,12 @@ and persist the complete reports for exactly the columns that survive panel cons
 adapter version, and request range. A skipped or short-history name is not represented as evidence
 for a panel claim it did not enter.
 
+ADR-163 validates those lineage records at their own boundary: manifest timestamps are aware UTC,
+revision/config/parameter hashes have their full hexadecimal identity, shared fields are non-empty,
+symbols are normalized, and acquisition intervals are ordered. Panel component records are
+reconstructed and exposed through an immutable ordered list while retaining the JSON array shape.
+Complete experiment boundaries still relate each manifest to the selected trial and embedded report.
+
 Single-name forward scoring, lifecycle decisions, and paper-order target sizing also consume only
 `ResearchDataset` values (ADR-139). Each new persisted forward score carries a frozen
 `ResearchDatasetEvidence`: the complete passed report, source, adapter version, requested half-open

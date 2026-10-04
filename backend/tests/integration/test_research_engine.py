@@ -38,7 +38,7 @@ def test_strategy_runs_end_to_end_with_benchmark_and_manifest(strategy: BaseStra
 
     # 3. a reproducible ExperimentManifest is produced
     manifest = ExperimentManifest(
-        git_commit_hash="test-commit",
+        git_commit_hash="a" * 40,
         strategy_name=strategy.name,
         parameter_hash=compute_parameter_hash(strategy.parameters),
         data_source="synthetic",

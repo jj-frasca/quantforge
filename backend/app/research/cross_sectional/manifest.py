@@ -4,9 +4,10 @@ import re
 from datetime import UTC, date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator, model_validator
 
 from app.data.models import Source
+from app.research.claim_graph import FrozenClaimList
 
 _FULL_GIT_SHA = re.compile(r"[0-9a-f]{40}")
 
@@ -14,7 +15,7 @@ _FULL_GIT_SHA = re.compile(r"[0-9a-f]{40}")
 class PanelComponentManifest(BaseModel):
     """Lineage for one retained column of a cross-sectional price panel."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     symbol: str
     data_source: Source
@@ -48,7 +49,7 @@ class PanelComponentManifest(BaseModel):
 class CrossSectionalManifest(BaseModel):
     """Shared identity plus ordered per-symbol evidence for one panel search."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     experiment_id: UUID
     created_at: datetime
@@ -58,6 +59,13 @@ class CrossSectionalManifest(BaseModel):
     validation_config_hash: str
     components: list[PanelComponentManifest]
     benchmark: str = "equal_weight_universe"
+
+    @field_validator("strategy_name", "benchmark")
+    @classmethod
+    def _require_identity(cls, value: str, info: ValidationInfo) -> str:
+        if not value.strip():
+            raise ValueError(f"{info.field_name} must be non-empty")
+        return value
 
     @field_validator("created_at")
     @classmethod
@@ -82,9 +90,14 @@ class CrossSectionalManifest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_components(self) -> "CrossSectionalManifest":
-        symbols = [component.symbol for component in self.components]
+        components = [
+            PanelComponentManifest.model_validate(component.model_dump(round_trip=True))
+            for component in self.components
+        ]
+        symbols = [component.symbol for component in components]
         if not symbols:
             raise ValueError("panel manifest requires at least one component")
         if len(symbols) != len(set(symbols)):
             raise ValueError("panel manifest component symbols must be unique")
+        object.__setattr__(self, "components", FrozenClaimList(components))
         return self

@@ -123,7 +123,8 @@ def test_experiment_claim_graph_is_defensive_immutable_and_round_trips() -> None
         gate_result.reasons.append("caller mutation")
     with pytest.raises(TypeError, match="immutable"):
         graduate.parameters["quantile"] = 0.49
-    manifest.components.append(manifest.components[0])
+    with pytest.raises(AttributeError, match="immutable"):
+        manifest.components.append(manifest.components[0])
     assert report.issues[0].context is not None
     with pytest.raises(TypeError, match="immutable"):
         report.issues[0].context["observed"] = [999.0]

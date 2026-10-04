@@ -177,6 +177,12 @@ universe benchmark. Its ordered `PanelComponentManifest` list binds each retaine
 one passed report UUID, source, adapter version, and requested range. The experiment embeds those
 complete reports and validates that their ordered symbols exactly equal `universe_symbols`.
 
+ADR-163 makes both manifest shapes authoritative before outer-experiment attachment. Creation is
+timezone-aware UTC; Git and SHA-256 identities are full lowercase hexadecimal values; shared
+identity is non-empty; symbols are normalized; acquisition ranges are ordered; and panel components
+are defensively reconstructed into an immutable JSON-array-compatible list. Outer selected-trial and
+quality-report links remain unchanged, as do acquisition and methodology.
+
 ADR-139 extends the same real-data boundary to single-name forward testing. `manage_portfolio` and
 paper target sizing require `ResearchDataset`, not a plain frame. Every newly computed
 `ForwardScore` stores its `ResearchDatasetEvidence` (complete report, source, adapter version,

@@ -794,6 +794,13 @@ executed revision, and experiment identity. Fetch/quality failures remain skippa
 frames and mixed code revisions cannot produce a pool row; legacy and synthetic panel rows remain
 explicitly lineage-null.
 
+**Experiment manifests enforce their own lineage identity (ADR-163).** Single-name and panel
+manifests require timezone-aware UTC creation, full Git/SHA-256 identities, non-empty shared fields,
+normalized symbols, and valid acquisition ranges. Panel components are reconstructed into an
+immutable ordered JSON-shaped list, so evidence cannot disappear or reorder after validation.
+Outer experiments still bind the manifest to selected trials and quality reports; no acquisition,
+quality, methodology, threshold, workflow, or JSON shape changed.
+
 **Single-name forward decisions carry fresh quality evidence (ADR-139).** Managed forward scoring,
 lifecycle exits, and Alpaca paper target sizing accept only the same quality-gated
 `ResearchDataset` boundary used by discovery. New durable forward scores embed the complete passed
