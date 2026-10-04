@@ -809,6 +809,12 @@ mislabeled datasets, and failed quality checks cannot update a position or produ
 Legacy scores remain readable with explicitly absent evidence. Cross-sectional forward panels have
 a separate fixed-universe identity and are not covered by this single-name decision.
 
+**Dataset evidence validates instantiated provenance (ADR-164).** Direct dataset construction and
+both forward-score evidence attachments share one identity boundary that revalidates unchecked
+evidence copies and nested quality reports. Acquisition bounds require aware instants and normalize
+to UTC before interval comparison. Existing report freezing, legacy absent evidence, persisted JSON
+shapes, acquisition, and methodology remain unchanged.
+
 **Cross-sectional forward factors keep their frozen universe (ADR-140).** A production update now
 requires one quality-gated `ResearchDataset` for every symbol frozen at promotion, one executed
 revision, and the exact same columns after common-calendar/history alignment. Any missing, failed,

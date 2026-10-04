@@ -190,6 +190,13 @@ request range, and executed revision), and its report symbol must match the froz
 Provider/quality failures leave the prior managed score unchanged and yield no broker target;
 legacy scores without evidence remain valid.
 
+ADR-164 makes `ResearchDatasetEvidence` revalidate instantiated inputs, including unchecked copies,
+before direct validation or attachment to either forward-score model. Acquisition bounds must be
+timezone-aware and normalize to UTC. `ResearchDataset` shares this identity boundary and retains
+the validated report snapshot before its frame checks. Existing JSON shapes, quality rules, and
+legacy absent evidence remain unchanged; mutable frame ownership and outer-score copies are
+separate audit surfaces.
+
 ADR-140 applies panel semantics to cross-sectional forward testing. The managed-book provider must
 return one `ResearchDataset` per frozen universe symbol; exact membership, report symbols, common
 revision, and post-alignment columns are checked before the factor or equal-weight benchmark is

@@ -3,12 +3,12 @@
 import re
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from os import environ
 from pathlib import Path
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from app.data.models import DataQualityReport, PriceBar, Source
 from app.data.quality.engine import DataQualityEngine
@@ -21,7 +21,7 @@ _FULL_GIT_SHA = re.compile(r"[0-9a-f]{40}")
 class ResearchDatasetEvidence(BaseModel):
     """Serializable identity of one exact quality-checked vendor dataset (ADR-139)."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     quality_report: DataQualityReport
     source: Source
@@ -29,6 +29,13 @@ class ResearchDatasetEvidence(BaseModel):
     start: datetime
     end: datetime
     git_commit_hash: str
+
+    @field_validator("start", "end")
+    @classmethod
+    def _coerce_interval_utc(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("dataset evidence interval must be timezone-aware")
+        return value.astimezone(UTC)
 
     @model_validator(mode="after")
     def validate_identity(self) -> "ResearchDatasetEvidence":
@@ -58,16 +65,10 @@ class ResearchDataset:
     git_commit_hash: str
 
     def __post_init__(self) -> None:
-        if not self.quality_report.passed:
-            raise ValueError("research dataset requires a passed quality report")
-        if self.quality_report.source != self.source:
-            raise ValueError("quality report source does not match research dataset source")
-        if not self.adapter_version.strip():
-            raise ValueError("adapter_version must be non-empty")
-        if not _FULL_GIT_SHA.fullmatch(self.git_commit_hash):
-            raise ValueError("git_commit_hash must be a 40-character lowercase hexadecimal SHA")
-        if self.start >= self.end:
-            raise ValueError("research dataset start must be before end")
+        identity = self.evidence()
+        object.__setattr__(self, "quality_report", identity.quality_report)
+        object.__setattr__(self, "start", identity.start)
+        object.__setattr__(self, "end", identity.end)
         if self.frame.empty:
             raise ValueError("research dataset frame must be non-empty")
         if not isinstance(self.frame.index, pd.DatetimeIndex):
