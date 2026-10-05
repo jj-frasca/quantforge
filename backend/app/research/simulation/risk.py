@@ -68,6 +68,14 @@ def analyze_strategy_risk(
     running_max = np.maximum.accumulate(paths, axis=1)
     max_drawdown_per_path = (paths / running_max - 1.0).min(axis=1)  # most-negative per path
 
+    # ADR-175: a finite mean can have an overflowing intermediate sum. Preserve ordinary
+    # results and normalize only on overflow; no terminal observation is clipped or dropped.
+    with np.errstate(over="ignore"):
+        expected_terminal_return = float(np.mean(terminal_return))
+    if not math.isfinite(expected_terminal_return):
+        scale = float(np.max(np.abs(terminal_return)))
+        expected_terminal_return = float(np.mean(terminal_return / scale)) * scale
+
     return MonteCarloRisk(
         horizon_days=horizon_days,
         n_paths=n_paths,
@@ -77,5 +85,5 @@ def analyze_strategy_risk(
         terminal_return_p5=float(np.percentile(terminal_return, 5)),
         terminal_return_p50=float(np.percentile(terminal_return, 50)),
         terminal_return_p95=float(np.percentile(terminal_return, 95)),
-        expected_terminal_return=float(np.mean(terminal_return)),
+        expected_terminal_return=expected_terminal_return,
     )

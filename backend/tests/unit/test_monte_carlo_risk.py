@@ -123,3 +123,41 @@ def test_constant_risk_matches_zero_volatility_gbm_oracle(
     assert result.terminal_return_p5 == pytest.approx(expected, abs=1e-14)
     assert result.terminal_return_p95 == pytest.approx(expected, abs=1e-14)
     assert 0 <= result.prob_terminal_loss <= result.prob_max_drawdown_exceeds <= 1
+
+
+def test_risk_finite_extreme_paths_have_representable_expected_return() -> None:
+    with np.errstate(over="raise"):
+        result = analyze_strategy_risk(
+            pd.Series([709.0, 709.0]),
+            horizon_days=1,
+            n_paths=4,
+            loss_threshold=0.2,
+            seed=1,
+        )
+    assert np.isfinite(result.expected_terminal_return)
+    assert result.expected_terminal_return == result.terminal_return_p50
+
+
+def test_risk_overflowed_mean_keeps_all_unequal_terminal_observations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.research.simulation.monte_carlo import MonteCarloSimulator
+
+    largest = np.finfo(float).max
+    paths = np.array([[1.0, largest], [1.0, largest], [1.0, 1.0]])
+    monkeypatch.setattr(MonteCarloSimulator, "simulate", lambda *args, **kwargs: paths)
+    result = analyze_strategy_risk(pd.Series([0.0, 0.0]), 1, 3, 0.2, seed=1)
+    assert np.isfinite(result.expected_terminal_return)
+    assert result.expected_terminal_return == pytest.approx(largest * (2 / 3))
+
+
+@given(
+    daily_return=st.floats(min_value=680, max_value=709, allow_nan=False, allow_infinity=False),
+    n_paths=st.integers(min_value=2, max_value=16),
+)
+def test_constant_extreme_risk_mean_preserves_finite_terminal_scale(
+    daily_return: float, n_paths: int
+) -> None:
+    result = analyze_strategy_risk(pd.Series([daily_return, daily_return]), 1, n_paths, 0.2, seed=1)
+    assert np.isfinite(result.expected_terminal_return)
+    assert result.expected_terminal_return == pytest.approx(result.terminal_return_p50)

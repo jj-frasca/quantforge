@@ -175,6 +175,11 @@ constant/zero series remain supported. The original complete Series feeds unchan
 standard deviation, seeded GBM and loss comparisons. Index/timezone policy is unchanged; this
 boundary does not certify iid/GBM assumptions or extreme summary-arithmetic stability.
 
+ADR-175 preserves the native expected-terminal-return mean whenever finite and uses a
+scale-normalized arithmetic mean only on intermediate sum overflow. Finite paths therefore
+cannot produce an infinite expected return solely because their representable mean's sum
+overflows. Paths, all observations, percentiles and loss comparisons remain unchanged.
+
 ---
 
 ## 7. ExperimentManifest (lineage)
