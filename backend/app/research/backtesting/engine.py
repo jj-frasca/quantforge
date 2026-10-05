@@ -1,5 +1,7 @@
 from dataclasses import dataclass
+from math import isfinite
 
+import numpy as np
 import pandas as pd
 
 from app.research.backtesting.metrics import BacktestMetrics
@@ -35,10 +37,10 @@ class BacktestEngine:
     def __init__(
         self, initial_capital: float = 100_000.0, cost_rate: float = DEFAULT_COST_RATE
     ) -> None:
-        if initial_capital <= 0:
-            raise ValueError("initial_capital must be > 0")
-        if cost_rate < 0:
-            raise ValueError("cost_rate must be >= 0")
+        if not isfinite(initial_capital) or initial_capital <= 0:
+            raise ValueError("initial_capital must be finite and > 0")
+        if not isfinite(cost_rate) or cost_rate < 0:
+            raise ValueError("cost_rate must be finite and >= 0")
         self.initial_capital = initial_capital
         self.cost_rate = cost_rate
 
@@ -52,7 +54,10 @@ class BacktestEngine:
         turnover = position.diff().abs().fillna(position.abs())
         net = gross - turnover * self.cost_rate
 
-        equity_curve = (1.0 + net).cumprod() * self.initial_capital
+        with np.errstate(over="ignore", under="ignore"):
+            equity_curve = (1.0 + net).cumprod() * self.initial_capital
+        if not np.isfinite(equity_curve.to_numpy(dtype=float)).all() or (equity_curve <= 0).any():
+            raise ValueError("equity curve must be positive and finite")
         n_trades = int((turnover > 0).sum())
 
         return BacktestResult(

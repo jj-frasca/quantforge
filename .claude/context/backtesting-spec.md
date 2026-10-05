@@ -92,6 +92,12 @@ lag on an unordered calendar can use a later signal for an earlier return. Inval
 rather than being sorted/deduplicated; ordered generic/naive indexes and sparse signal reindex/
 clip/fill behavior remain supported. This does not certify actual daily cadence or strategy causality.
 
+ADR-177 requires finite positive initial capital and finite nonnegative cost, then rejects any
+nonfinite/nonpositive capital-scaled equity observation before publishing a result. A finite
+return metric alone cannot establish representable scaled wealth. No capital/cost cap or wealth
+floor is added; ordinary math, empty histories and extreme representable flat curves are retained.
+Observed broker insolvency remains a separate account-ledger contract under ADR-169.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 

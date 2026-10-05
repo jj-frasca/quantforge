@@ -484,3 +484,54 @@ def test_backtest_preserves_empty_and_single_row_calendars(n_rows: int) -> None:
     assert len(result.equity_curve) == n_rows
     assert result.n_trades == 0
     assert result.metrics.total_return == 0
+
+
+@pytest.mark.parametrize("name", ["initial_capital", "cost_rate"])
+@pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
+def test_backtest_rejects_nonfinite_config(name: str, value: float) -> None:
+    with pytest.raises(ValueError, match="finite"):
+        BacktestEngine(**{name: value})
+
+
+@pytest.mark.parametrize(
+    "capital,cost,prices",
+    [
+        (np.finfo(float).max, 0.0, [100.0, 110.0]),
+        (float.fromhex("0x0.0000000000001p-1022"), 0.9, [100.0, 100.0]),
+    ],
+)
+def test_backtest_rejects_unrepresentable_scaled_wealth(
+    capital: float, cost: float, prices: list[float]
+) -> None:
+    price_series = pd.Series(prices)
+    with pytest.raises(ValueError, match="equity"):
+        BacktestEngine(initial_capital=capital, cost_rate=cost).run(
+            price_series, pd.Series(1.0, index=price_series.index)
+        )
+
+
+@pytest.mark.parametrize("capital", [np.finfo(float).max, float.fromhex("0x0.0000000000001p-1022")])
+def test_backtest_preserves_representable_extreme_flat_wealth(capital: float) -> None:
+    result = BacktestEngine(initial_capital=capital, cost_rate=0).run(
+        pd.Series([100.0, 100.0]), pd.Series([1.0, 1.0])
+    )
+    np.testing.assert_array_equal(result.equity_curve, [capital, capital])
+
+
+def test_backtest_declines_nonfinite_curve_after_public_capital_mutation() -> None:
+    engine = BacktestEngine()
+    engine.initial_capital = np.nan
+    with pytest.raises(ValueError, match="equity"):
+        engine.run(pd.Series([100.0, 100.0]), pd.Series([0.0, 0.0]))
+
+
+@given(capital=st.floats(min_value=1e-250, max_value=1e250, allow_nan=False, allow_infinity=False))
+def test_backtest_representable_wealth_preserves_capital_scale(capital: float) -> None:
+    prices = pd.Series([100.0, 101.0, 100.0])
+    signals = pd.Series([1.0, 1.0, 1.0])
+    reference = BacktestEngine(initial_capital=1).run(prices, signals)
+    scaled = BacktestEngine(initial_capital=capital).run(prices, signals)
+    assert np.isfinite(scaled.equity_curve).all()
+    assert (scaled.equity_curve > 0).all()
+    np.testing.assert_allclose(scaled.equity_curve / capital, reference.equity_curve, rtol=1e-14)
+    assert scaled.metrics == reference.metrics
