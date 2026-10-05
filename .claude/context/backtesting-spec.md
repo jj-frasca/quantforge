@@ -87,6 +87,11 @@ equity_curve = (1 + net).cumprod() * initial_capital
 (the clipped/filled position Series — exposed so API callers, e.g. `/backtest`'s
 `trade_markers`, can derive signal-change events without re-running the strategy).
 
+ADR-176 requires a unique ascending price index before returns or signal alignment. A positional
+lag on an unordered calendar can use a later signal for an earlier return. Invalid calendars raise
+rather than being sorted/deduplicated; ordered generic/naive indexes and sparse signal reindex/
+clip/fill behavior remain supported. This does not certify actual daily cadence or strategy causality.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 

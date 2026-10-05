@@ -43,6 +43,8 @@ class BacktestEngine:
         self.cost_rate = cost_rate
 
     def run(self, prices: pd.Series, signals: pd.Series) -> BacktestResult:
+        if not prices.index.is_unique or not prices.index.is_monotonic_increasing:
+            raise ValueError("price calendar must be unique and ascending")
         returns = prices.pct_change().fillna(0.0)
         position = signals.reindex(prices.index).clip(-1.0, 1.0).fillna(0.0)
 

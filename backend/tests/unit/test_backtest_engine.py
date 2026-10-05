@@ -428,3 +428,59 @@ def test_transaction_costs_never_increase_total_return(
     ]
     for earlier, later in pairwise(returns_by_cost):
         assert earlier >= later - 1e-9
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.to_datetime(["2026-01-01", "2026-01-03", "2026-01-02"], utc=True),
+        pd.to_datetime(["2026-01-01", "2026-01-01", "2026-01-02"], utc=True),
+        pd.Index([2, 1, 0]),
+        pd.Index([0, 0, 1]),
+    ],
+)
+def test_backtest_rejects_noncausal_price_calendar(index: pd.Index) -> None:
+    prices = pd.Series([100.0, 121.0, 110.0], index=index)
+    signals = pd.Series([0.0, 1.0, 0.0], index=index)
+    with pytest.raises(ValueError, match="price calendar"):
+        BacktestEngine(cost_rate=0).run(prices, signals)
+
+
+def test_run_strategy_rejects_noncausal_price_calendar() -> None:
+    index = pd.to_datetime(["2026-01-01", "2026-01-03", "2026-01-02"], utc=True)
+    frame = pd.DataFrame({"close": [100.0, 121.0, 110.0]}, index=index)
+    with pytest.raises(ValueError, match="price calendar"):
+        BacktestEngine().run_strategy(frame, SMAStrategy(fast=1, slow=2))
+
+
+@pytest.mark.parametrize("index", [pd.Index([0, 2, 4]), pd.date_range("2026-01-01", periods=3)])
+def test_backtest_preserves_sparse_signal_alignment_on_ordered_generic_calendar(
+    index: pd.Index,
+) -> None:
+    prices = pd.Series([100.0, 110.0, 121.0], index=index)
+    signals = pd.Series([2.0], index=index[:1])
+    result = BacktestEngine(cost_rate=0).run(prices, signals)
+    np.testing.assert_allclose(result.returns, [0, 0.1, 0])
+    np.testing.assert_array_equal(result.position, [1, 0, 0])
+
+
+@given(st.permutations([0, 1, 2]))
+def test_backtest_calendar_order_is_required_for_causal_lag(order: list[int]) -> None:
+    prices = pd.Series([100.0, 110.0, 121.0], index=pd.Index(order))
+    signals = pd.Series(1.0, index=prices.index)
+    if order == [0, 1, 2]:
+        result = BacktestEngine(cost_rate=0).run(prices, signals)
+        assert result.metrics.total_return == pytest.approx(0.21)
+    else:
+        with pytest.raises(ValueError, match="price calendar"):
+            BacktestEngine(cost_rate=0).run(prices, signals)
+
+
+@pytest.mark.parametrize("n_rows", [0, 1])
+def test_backtest_preserves_empty_and_single_row_calendars(n_rows: int) -> None:
+    prices = pd.Series([100.0] * n_rows, dtype=float)
+    signals = pd.Series([0.0] * n_rows, dtype=float)
+    result = BacktestEngine().run(prices, signals)
+    assert len(result.equity_curve) == n_rows
+    assert result.n_trades == 0
+    assert result.metrics.total_return == 0
