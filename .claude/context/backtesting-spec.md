@@ -161,6 +161,13 @@ Never report an absolute Sharpe without benchmark context.
 sigma sqrt(dt) Z)`. Seeded RNG for determinism. **Invariant**: all path values > 0
 (ARCHITECTURE.md §8 #8). Cite Black & Scholes (1973).
 
+ADR-173 requires finite s0/mu/sigma/dt, positive s0/dt, nonnegative sigma, and finite drift/output
+paths; unrepresentable upper arithmetic raises ValueError without a volatility cap. Positive
+underflow flooring remains, at the true smallest float64 subnormal (`nextafter(0,1)`). ADR-123's
+`finfo.tiny` is the smallest NORMAL, not smallest positive float, and overwrote subnormal starts.
+The corrected floor preserves exact initial/flat-path price scale; unit-wealth risk losses below
+either floor round to -1. Seeded GBM/cumulative-product math and loss thresholds are unchanged.
+
 ---
 
 ## 7. ExperimentManifest (lineage)
