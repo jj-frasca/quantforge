@@ -43,14 +43,22 @@ def analyze_strategy_risk(
         raise ValueError("n_paths must be >= 1")
     if not 0.0 < loss_threshold <= 1.0:
         raise ValueError("loss_threshold must be in (0, 1]")
-    clean = returns.dropna()
-    if len(clean) < 2:
+    if (
+        not pd.api.types.is_numeric_dtype(returns.dtype)
+        or pd.api.types.is_bool_dtype(returns.dtype)
+        or pd.api.types.is_complex_dtype(returns.dtype)
+    ):
+        raise ValueError("returns must be real nonboolean numeric observations")
+    values = returns.to_numpy(dtype=float, na_value=np.nan)
+    if not np.isfinite(values).all() or (values <= -1.0).any():
+        raise ValueError("returns must be finite and greater than -1")
+    if len(returns) < 2:
         raise ValueError("need >= 2 return observations to estimate drift/vol")
 
     # Annualize the daily moments for the GBM sim (simulate() expects annualized mu/sigma
     # with dt = 1/252). Sample std uses ddof=1 to match the rest of the metrics layer.
-    mu = float(clean.mean()) * TRADING_DAYS
-    sigma = float(clean.std(ddof=1)) * math.sqrt(TRADING_DAYS)
+    mu = float(returns.mean()) * TRADING_DAYS
+    sigma = float(returns.std(ddof=1)) * math.sqrt(TRADING_DAYS)
 
     paths = MonteCarloSimulator().simulate(
         s0=1.0, mu=mu, sigma=sigma, n_steps=horizon_days, n_paths=n_paths, seed=seed

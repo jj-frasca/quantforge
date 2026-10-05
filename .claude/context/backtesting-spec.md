@@ -168,6 +168,13 @@ underflow flooring remains, at the true smallest float64 subnormal (`nextafter(0
 The corrected floor preserves exact initial/flat-path price scale; unit-wealth risk losses below
 either floor round to -1. Seeded GBM/cumulative-product math and loss thresholds are unchanged.
 
+ADR-174 validates the risk estimator's supplied returns before fitting those same annualized
+moments: at least two real nonboolean numeric observations, each finite and greater than -1.
+Missing rows raise instead of being silently dropped; complete nullable numeric dtypes and
+constant/zero series remain supported. The original complete Series feeds unchanged mean/sample
+standard deviation, seeded GBM and loss comparisons. Index/timezone policy is unchanged; this
+boundary does not certify iid/GBM assumptions or extreme summary-arithmetic stability.
+
 ---
 
 ## 7. ExperimentManifest (lineage)

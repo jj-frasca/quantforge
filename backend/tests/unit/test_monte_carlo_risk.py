@@ -5,6 +5,8 @@ probabilities. Deterministic under a fixed seed; probabilities are genuine invar
 import numpy as np
 import pandas as pd
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from app.research.simulation.risk import MonteCarloRisk, analyze_strategy_risk
 
@@ -68,3 +70,56 @@ def test_analyze_strategy_risk_rejects_bad_inputs() -> None:
         analyze_strategy_risk(
             pd.Series([0.01], dtype=float), horizon_days=10, n_paths=100, loss_threshold=0.2
         )
+
+
+@pytest.mark.parametrize("bad_return", [np.nan, np.inf, -np.inf, -1.0, -1.2])
+def test_risk_rejects_undefined_or_nonpositive_wealth_return(bad_return: float) -> None:
+    returns = pd.Series([0.01, bad_return, 0.01])
+    with pytest.raises(ValueError, match="returns"):
+        analyze_strategy_risk(returns, horizon_days=2, n_paths=10, loss_threshold=0.2, seed=1)
+
+
+@pytest.mark.parametrize(
+    "returns",
+    [
+        pd.Series([True, False]),
+        pd.Series([0.01, 0.02], dtype=object),
+        pd.Series([0.01 + 0.01j, 0.02 + 0.02j]),
+        pd.Series(["0.01", "0.02"]),
+        pd.Series([0.01, pd.NA, 0.02], dtype="Float64"),
+    ],
+)
+def test_risk_rejects_nonreal_or_missing_numeric_evidence(returns: pd.Series) -> None:
+    with pytest.raises(ValueError, match="returns"):
+        analyze_strategy_risk(returns, horizon_days=2, n_paths=10, loss_threshold=0.2, seed=1)
+
+
+@pytest.mark.parametrize("dtype", ["float64", "Float64", "int64", "Int64"])
+def test_risk_accepts_complete_numeric_zero_returns(dtype: str) -> None:
+    result = analyze_strategy_risk(
+        pd.Series([0, 0], dtype=dtype), horizon_days=2, n_paths=10, loss_threshold=0.2, seed=1
+    )
+    assert result.expected_terminal_return == 0
+    assert result.prob_terminal_loss == 0
+    assert result.prob_max_drawdown_exceeds == 0
+
+
+@given(
+    daily_return=st.floats(min_value=-0.1, max_value=0.1, allow_nan=False, allow_infinity=False),
+    horizon=st.integers(min_value=1, max_value=10),
+)
+def test_constant_risk_matches_zero_volatility_gbm_oracle(
+    daily_return: float, horizon: int
+) -> None:
+    result = analyze_strategy_risk(
+        pd.Series([daily_return, daily_return]),
+        horizon_days=horizon,
+        n_paths=4,
+        loss_threshold=0.2,
+        seed=1,
+    )
+    expected = float(np.expm1(daily_return * horizon))
+    assert result.expected_terminal_return == pytest.approx(expected, abs=1e-14)
+    assert result.terminal_return_p5 == pytest.approx(expected, abs=1e-14)
+    assert result.terminal_return_p95 == pytest.approx(expected, abs=1e-14)
+    assert 0 <= result.prob_terminal_loss <= result.prob_max_drawdown_exceeds <= 1
