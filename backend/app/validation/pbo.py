@@ -8,9 +8,22 @@ FloatArray = npt.NDArray[np.float64]
 
 
 def _sharpe_per_config(block: FloatArray) -> FloatArray:
-    mean = block.mean(axis=0)
-    std = block.std(axis=0, ddof=1)
-    sharpe: FloatArray = np.divide(mean, std, out=np.zeros_like(mean), where=std > 0)
+    constant = np.all(block == block[0], axis=0)
+    sharpe: FloatArray = np.zeros(block.shape[1], dtype=np.float64)
+    if constant.all():
+        return sharpe
+    with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
+        mean = block.mean(axis=0)
+        std = block.std(axis=0, ddof=1)
+        if (
+            not np.isfinite(mean[~constant]).all()
+            or not np.isfinite(std[~constant]).all()
+            or np.any(std[~constant] <= 0)
+        ):
+            raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+        np.divide(mean, std, out=sharpe, where=~constant)
+    if not np.isfinite(sharpe).all():
+        raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
     return sharpe
 
 

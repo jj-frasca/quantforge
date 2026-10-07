@@ -165,6 +165,15 @@ observation is missing evidence, even when underlying storage is finite; materia
 must not replace it with that storage. All-false masks preserve exact CSCV and tied-column
 permutation results. Structural precedence, history, ranks and calibration identity remain.
 
+ADR-201 refuses nonconstant native Sharpe moments when means/dispersion/quotients are
+nonfinite or dispersion underflows to zero, under either ordinary or strict error mode.
+Exact constant columns get their defined zero score before moment arithmetic; rounded
+false variance must not manufacture a dominant flat candidate (FINDING-138/139).
+This corrects finite constant-only PBO results, so accounting identity advances to
+`whole-search-budgeted-robust-iqr-pbo-ties-constant-v6`. Old calibration cannot match
+the corrected procedure; new rates are unmeasured until an authorized sole-writer refresh.
+Native representable nonconstant scoring, tie rules and all thresholds are retained.
+
 ---
 
 ## 3. Walk-forward evaluation (ADR-038)

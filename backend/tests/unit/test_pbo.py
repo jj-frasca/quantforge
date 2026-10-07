@@ -73,16 +73,15 @@ def test_each_balanced_half_must_have_two_observations_for_sample_sharpe() -> No
 def _reference_pbo(performance: npt.NDArray[np.float64], n_splits: int) -> float:
     """PBO computed the direct way — slice the rows of each split and take mean/std on the slice.
 
-    This is the definition Bailey et al. (2015) state and the implementation this module used
-    before it precomputed group moments. It is kept as the oracle: an optimisation of a published
-    statistic has to reproduce it exactly, not approximately.
+    Keeps the explicit constant-zero and tied-winner/rank extensions from ADR-201/105.
+    Ranks are counted directly, independently of production's rankdata helper.
     """
     from itertools import combinations
 
     n_obs, n_configs = performance.shape
     groups = np.array_split(np.arange(n_obs), n_splits)
     half = n_splits // 2
-    overfit = 0
+    overfit = 0.0
     total = 0
     for is_groups in combinations(range(n_splits), half):
         is_set = set(is_groups)
@@ -92,13 +91,20 @@ def _reference_pbo(performance: npt.NDArray[np.float64], n_splits: int) -> float
         def sharpe(block: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
             mean = block.mean(axis=0)
             std = block.std(axis=0, ddof=1)
-            return np.divide(mean, std, out=np.zeros_like(mean), where=std > 0)
+            scores = np.divide(mean, std, out=np.zeros_like(mean), where=std > 0)
+            scores[np.all(block == block[0], axis=0)] = 0.0
+            return scores
 
-        best = int(np.argmax(sharpe(performance[is_rows])))
+        is_scores = sharpe(performance[is_rows])
+        best = np.flatnonzero(is_scores == is_scores.max())
         oos = sharpe(performance[oos_rows])
-        rank = int(np.argsort(np.argsort(oos))[best])
-        w = (rank + 1) / (n_configs + 1)
-        overfit += int(np.log(w / (1.0 - w)) <= 0.0)
+        probabilities = []
+        for winner in best:
+            rank = (
+                np.count_nonzero(oos < oos[winner]) + (np.count_nonzero(oos == oos[winner]) + 1) / 2
+            )
+            probabilities.append(rank / (n_configs + 1) <= 0.5)
+        overfit += float(np.mean(probabilities))
         total += 1
     return overfit / total
 
@@ -116,8 +122,7 @@ def test_matches_the_direct_row_slicing_definition(seed: int) -> None:
 
 
 def test_a_config_that_never_moves_is_ranked_as_the_definition_ranks_it() -> None:
-    """A zero-variance column gets Sharpe 0 by the `where=std > 0` guard, and the group-sum form
-    must reproduce that rather than divide by a tiny accumulated variance."""
+    """Exact constant columns get Sharpe zero, including rounded false native variance."""
     rng = np.random.default_rng(3)
     performance = np.column_stack(
         [rng.normal(0.0004, 0.011, 300), np.zeros(300), np.full(300, 0.001)]
@@ -243,3 +248,53 @@ def test_pbo_complete_mask_preserves_ties_and_column_permutations() -> None:
 def test_pbo_mask_does_not_change_structural_error_precedence(values, splits, message) -> None:
     with pytest.raises(ValueError, match=message):
         probability_of_backtest_overfitting(np.ma.array(values, mask=True), splits)
+
+
+@pytest.mark.parametrize("scale", [1e200, 1e-200])
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+def test_pbo_refuses_unmeasurable_nonconstant_dispersion(scale: float, error_mode: str) -> None:
+    positive = np.tile([0.01, 0.02, 0.03, 0.04], 4)
+    values = np.column_stack((positive, -positive)) * scale
+    assert np.isfinite(values).all()
+    with np.errstate(all=error_mode), pytest.raises(ValueError, match="measurable"):
+        probability_of_backtest_overfitting(values, 4)
+
+
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+def test_pbo_refuses_nonconstant_native_mean_overflow(error_mode: str) -> None:
+    values = np.column_stack((np.tile([1e308, 1.5e308], 8), np.zeros(16)))
+    with np.errstate(all=error_mode), pytest.raises(ValueError, match="measurable"):
+        probability_of_backtest_overfitting(values, 4)
+
+
+@pytest.mark.parametrize("constants", [[0.1, 0.3], [1e308, -1e308], [1e-200, -1e-200], [0.0, 0.0]])
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+def test_exact_constant_candidates_keep_zero_scores(
+    constants: list[float], error_mode: str
+) -> None:
+    # Independent definition: all columns have zero Sharpe, average OOS rank is 1.5,
+    # rank/(N+1) == 0.5, hence every tied IS winner has logit zero and counts as overfit.
+    values = np.tile(constants, (16, 1))
+    with np.errstate(all=error_mode):
+        assert probability_of_backtest_overfitting(values, 4) == 1.0
+
+
+@pytest.mark.parametrize("constant", [0.1, 1e308, 1e-200])
+def test_constant_and_nonconstant_candidates_match_defined_zero_score(constant: float) -> None:
+    rng = np.random.default_rng(33)
+    values = rng.normal(size=(24, 3))
+    values[:, 1] = 0.0
+    expected = _reference_pbo(values, 4)
+    values[:, 1] = constant
+    with np.errstate(all="raise"):
+        assert probability_of_backtest_overfitting(values, 4) == expected
+
+
+def test_native_sharpe_preserves_original_reduction_layout() -> None:
+    from app.validation.pbo import _sharpe_per_config
+
+    values = np.column_stack(([1e16, 1, 1, 1, 1, 1, 1, -1e16], np.arange(8)))
+    mean = values.mean(axis=0)
+    std = values.std(axis=0, ddof=1)
+    assert mean[0] == 0.0
+    np.testing.assert_array_equal(_sharpe_per_config(values), mean / std)

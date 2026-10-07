@@ -1463,14 +1463,30 @@ def test_the_search_fingerprint_is_stable_across_code_changes() -> None:
     """ADR-058 decision 2 reuses committed calibration artifacts by matching their recorded
     `search_config_version` to the restored procedure. The hash includes the resolved family and
     explicitly versioned accounting method: unrelated code must not drift it, while ADR-104's PBO
-    scope and ADR-105's tie semantics must. The literal pins that complete identity until another
+    scope, ADR-105's ties and ADR-201's constant convention must. The literal pins that identity until another
     governed procedure or catalog change deliberately updates it."""
     assert (
         calibration_search_version(
             ["sma", "momentum"], n_per_param=3, config=GateConfig(), refine=True, refine_span=0.25
         )
-        == "00737c556d1e0532929e88b07e625ff30a9a0efd58b5b7a80ed204b0a5ede84f"
+        == "816840c5de55b5b4c7ee51c7cac40080a81f61df4928282f9eaee22d615141b5"
     )
+
+
+def test_constant_pbo_correction_cannot_match_previous_calibration_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kwargs = {"n_per_param": 3, "config": GateConfig(), "refine": True, "refine_span": 0.25}
+    current = calibration_search_version(["sma", "momentum"], **kwargs)
+    assert current != "00737c556d1e0532929e88b07e625ff30a9a0efd58b5b7a80ed204b0a5ede84f"
+    monkeypatch.setattr(
+        calibration_module,
+        "_TRIAL_ACCOUNTING_VERSION",
+        "whole-search-budgeted-robust-iqr-pbo-ties-v5",
+    )
+    previous = calibration_search_version(["sma", "momentum"], **kwargs)
+    assert previous == "00737c556d1e0532929e88b07e625ff30a9a0efd58b5b7a80ed204b0a5ede84f"
+    assert previous != current
 
 
 def test_a_power_cell_records_the_best_finalist_in_each_catalog_category() -> None:
