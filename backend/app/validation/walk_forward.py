@@ -155,8 +155,17 @@ def walk_forward_evaluate(
             raise ValueError("benchmark must carry one return per bar of the performance matrix")
     results: list[WalkForwardSplitResult] = []
     for train_idx, test_idx in splits:
-        if int(train_idx.max()) >= n_obs or int(test_idx.max()) >= n_obs:
-            raise ValueError("split index out of range for the performance matrix")
+        train_idx = np.asarray(train_idx)
+        test_idx = np.asarray(test_idx)
+        for rows in (train_idx, test_idx):
+            if rows.ndim != 1 or rows.size == 0 or rows.dtype.kind not in "iu":
+                raise ValueError("split rows must be nonempty one-dimensional integers")
+            if np.any(rows < 0) or np.any(rows >= n_obs):
+                raise ValueError("split index out of range for the performance matrix")
+            if np.any(rows[1:] <= rows[:-1]):
+                raise ValueError("split rows must be unique and ascending")
+        if train_idx[-1] >= test_idx[0]:
+            raise ValueError("train rows must precede test rows")
         train_sharpes = [_sharpe(performance[train_idx, c]) for c in range(performance.shape[1])]
         best = int(np.argmax(train_sharpes))
         results.append(

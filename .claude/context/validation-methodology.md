@@ -180,6 +180,11 @@ causal — so it costs no extra backtests. Sharpes are annualized, like everythi
   train window EXPANDS, so a later split legitimately absorbs an earlier split's test rows.
 - `efficiency` is `None` when mean in-sample Sharpe ≤ 0 — a ratio of two negative Sharpes is
   positive and would read as "efficient" while both halves lost money.
+
+ADR-197 validates caller-supplied split rows at evaluation: nonempty one-dimensional integer
+arrays, nonnegative in-range unique ascending rows, and train entirely before test. Invalid
+geometry is refused without repair. Generated splits, singleton blocks, causal gaps and earlier
+test blocks entering later expanding train windows retain the same selection/score/benchmark.
 - **Measured under the null (2026-08-19, N=200/mode):** median +0.15 (iid) / +0.33 (bootstrap:SPY),
   p95 +0.78 / +1.05. **Below ~1.0 is indistinguishable from noise.** The bootstrap null sits higher
   because the selection earns *drift*, so any future gate on this must be stated against

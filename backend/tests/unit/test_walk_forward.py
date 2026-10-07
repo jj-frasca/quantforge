@@ -16,6 +16,68 @@ def test_returns_requested_number_of_splits() -> None:
     assert len(splits) == 4
 
 
+@pytest.mark.parametrize(
+    ("train", "test"),
+    [
+        ([2, 3], [0, 1]),
+        ([0, 1], [1, 2]),
+        ([-2, -1], [0, 1]),
+        ([0, 1], [-2, -1]),
+        ([0, 0], [2, 3]),
+        ([0, 1], [2, 2]),
+        ([1, 0], [2, 3]),
+        ([0, 1], [3, 2]),
+    ],
+)
+def test_evaluator_rejects_noncausal_or_reweighted_row_geometry(train, test) -> None:
+    performance = np.column_stack((np.arange(1, 5) / 100, -np.arange(1, 5) / 100))
+    with pytest.raises(ValueError):
+        walk_forward_evaluate(performance, [(np.array(train), np.array(test))])
+
+
+@pytest.mark.parametrize(
+    "rows",
+    [
+        np.array([], dtype=np.intp),
+        np.array([0.0, 1.0]),
+        np.array([True, False]),
+        np.array([[0, 1]]),
+    ],
+)
+@pytest.mark.parametrize("side", [0, 1])
+def test_evaluator_rejects_malformed_row_arrays(rows, side) -> None:
+    pair = [np.array([0, 1]), np.array([2, 3])]
+    pair[side] = rows
+    with pytest.raises(ValueError, match="split rows must be nonempty one-dimensional integers"):
+        walk_forward_evaluate(np.column_stack((np.arange(4), -np.arange(4))), [tuple(pair)])
+
+
+@given(boundary=st.integers(min_value=1, max_value=18))
+def test_evaluator_refuses_train_test_overlap(boundary: int) -> None:
+    performance = np.column_stack((np.arange(20) / 100, -np.arange(20) / 100))
+    with pytest.raises(ValueError, match="train rows must precede test rows"):
+        walk_forward_evaluate(performance, [(np.arange(boundary + 1), np.arange(boundary, 20))])
+
+
+def test_evaluator_preserves_causal_gaps_singletons_and_unsigned_rows() -> None:
+    performance = np.column_stack((np.arange(6) / 100, -np.arange(6) / 100))
+    result = walk_forward_evaluate(
+        performance, [(np.array([1], dtype=np.uint64), np.array([4, 5], dtype=np.uint64))]
+    )
+    assert result.splits[0].n_train == 1
+    assert result.splits[0].n_test == 2
+    assert result.splits[0].selected_config == 0
+    assert result.splits[0].is_sharpe == 0
+
+
+def test_evaluator_rejects_descending_unsigned_rows() -> None:
+    with pytest.raises(ValueError, match="split rows must be unique and ascending"):
+        walk_forward_evaluate(
+            np.column_stack((np.arange(4), -np.arange(4))),
+            [(np.array([1, 0], dtype=np.uint64), np.array([2, 3], dtype=np.uint64))],
+        )
+
+
 def test_train_never_overlaps_or_precedes_test() -> None:
     for train_idx, test_idx in walk_forward_splits(n_obs=100, n_splits=4):
         assert len(train_idx) > 0
