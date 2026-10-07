@@ -126,6 +126,10 @@ Sharpe before its shortcuts, preserving valid signed/nullable and numeric degene
 ADR-184 resolves FINDING-118 by evaluating the equivalent Gaussian quantile with
 norm.isf((1-confidence)/2), preserving a representable near-one tail and finite interval bounds.
 
+ADR-186 validates original complete finite real numeric source evidence at the public
+compounded-return helpers before conversion/empty shortcuts; boolean, strings and complex
+observations cannot be reinterpreted as measured returns. Numeric empty and log math remain.
+
 - `sharpe`: `sqrt(252) * mean(net) / std(net)` (daily). 0.0 if std==0 (constant returns).
 - `max_drawdown`: `min(equity/equity.cummax() - 1)` — **in [-1.0, 0.0]**. Positive = bug.
 - `total_return` (ADR-110): `product(1 + net) - 1` over every net observation, including the

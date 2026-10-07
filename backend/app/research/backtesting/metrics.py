@@ -186,6 +186,7 @@ def _compounded_log_growth(returns: pd.Series) -> float:
 
 def total_return(returns: pd.Series) -> float:
     """Complete compounded return, including the first net observation (ADR-110)."""
+    _validate_complete_return_sample(returns)
     if len(returns) == 0:
         return 0.0
     with np.errstate(over="ignore", under="ignore"):
@@ -197,6 +198,7 @@ def total_return(returns: pd.Series) -> float:
 
 def annualized_return(returns: pd.Series) -> float:
     """Geometric annual return over the complete net-return path (ADR-110)."""
+    _validate_complete_return_sample(returns)
     if len(returns) == 0:
         return 0.0
     annual_log_growth = _compounded_log_growth(returns) * TRADING_DAYS / len(returns)

@@ -710,3 +710,38 @@ def test_standalone_sharpe_preserves_valid_signed_and_degenerate_samples(
         else float(np.sqrt(252) * np.mean(values) / np.std(values, ddof=1))
     )
     assert sharpe_ratio(returns) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("metric", [total_return, annualized_return])
+@pytest.mark.parametrize(
+    "returns",
+    [
+        pd.Series([True, False]),
+        pd.Series(["0.01", "-0.02"]),
+        pd.Series([0.01, -0.02], dtype=object),
+        pd.Series([0.01 + 1j, -0.02 + 2j]),
+        pd.Series([], dtype=bool),
+        pd.Series([], dtype=object),
+        pd.Series([], dtype=complex),
+    ],
+)
+def test_compounded_return_rejects_invalid_source_before_conversion(metric, returns) -> None:
+    with pytest.raises(ValueError, match="real nonboolean numeric"):
+        metric(returns)
+
+
+@pytest.mark.parametrize("metric", [total_return, annualized_return])
+@pytest.mark.parametrize("dtype", ["float64", "Float64"])
+def test_compounded_return_preserves_complete_nullable_wealth_oracle(metric, dtype) -> None:
+    values = [-0.01, 0.02, -0.03, 0.04] * 63
+    # Exactly one trading year makes both estimators equal to the independent wealth product.
+    expected = float(np.prod(1.0 + np.asarray(values)) - 1.0)
+    assert metric(pd.Series(values, dtype=dtype)) == pytest.approx(expected, rel=1e-12)
+    assert metric(pd.Series([], dtype=dtype)) == 0.0
+
+
+@pytest.mark.parametrize("metric", [total_return, annualized_return])
+@pytest.mark.parametrize("invalid", [np.nan, np.inf, -np.inf, pd.NA])
+def test_compounded_return_rejects_incomplete_nullable_source(metric, invalid) -> None:
+    with pytest.raises(ValueError):
+        metric(pd.Series([0.01, invalid], dtype="Float64"))
