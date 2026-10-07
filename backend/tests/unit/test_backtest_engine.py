@@ -639,3 +639,31 @@ def test_sharpe_interval_preserves_complete_signed_numeric_evidence(dtype: str) 
 def test_sharpe_interval_validates_confidence_before_return_evidence() -> None:
     with pytest.raises(ValueError, match="confidence"):
         sharpe_confidence_interval(pd.Series([np.nan]), confidence=1)
+
+
+def test_sharpe_interval_nearest_valid_confidence_has_finite_bounds() -> None:
+    confidence = float(np.nextafter(1.0, 0.0))
+    ci = sharpe_confidence_interval(pd.Series([-0.01, 0.01] * 126), confidence=confidence)
+    assert ci is not None
+    assert np.isfinite([ci.lower, ci.upper]).all()
+    assert ci.lower == -ci.upper
+    assert ci.confidence == confidence
+
+
+@given(
+    confidence=st.floats(
+        min_value=0.999,
+        max_value=float(np.nextafter(1.0, 0.0)),
+        allow_nan=False,
+        allow_infinity=False,
+    )
+)
+def test_sharpe_interval_high_confidence_matches_forward_gaussian_tail(confidence: float) -> None:
+    from math import erfc, sqrt
+
+    # Zero Sharpe over exactly one year gives unit standard error; upper is the quantile.
+    ci = sharpe_confidence_interval(pd.Series([-0.01, 0.01] * 126), confidence=confidence)
+    assert ci is not None
+    assert np.isfinite([ci.lower, ci.upper]).all()
+    measured_tail = erfc(ci.upper / sqrt(2)) / 2
+    assert measured_tail == pytest.approx((1 - confidence) / 2, rel=1e-12, abs=0)

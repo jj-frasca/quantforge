@@ -70,7 +70,8 @@ def sharpe_confidence_interval(
         return None
     sharpe = sharpe_ratio(returns)
     standard_error = float(np.sqrt((1.0 + sharpe**2 / (2.0 * TRADING_DAYS)) / years))
-    z = float(norm.ppf(0.5 + confidence / 2.0))
+    # The equivalent upper tail stays representable when the CDF argument rounds to one.
+    z = float(norm.isf((1.0 - confidence) / 2.0))
     return SharpeConfidenceInterval(
         assumption="iid_normal",
         confidence=confidence,
