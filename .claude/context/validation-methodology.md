@@ -65,6 +65,13 @@ Finite primary scores/moment evidence change, so calibration identity advances t
 `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-v8`.
 Historical rates remain attributable; current replacement rates are unmeasured.
 
+ADR-204 refuses native higher-moment underflow through None, consistently under
+ignore/warn/raise caller state; finite kurtosis must not conceal an underflowed
+fourth-moment calculation. Native source checks/estimators/counts and degenerate
+precedence remain. Accounting identity advances to
+`whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-v9` because
+former finite moment evidence becomes unmeasured. No rates are remeasured or claimed.
+
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
 probability; margin/probability delegate to one guard. Valid formulas, counts and gates remain.

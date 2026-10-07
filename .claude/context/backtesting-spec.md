@@ -137,6 +137,13 @@ remain. Finite primary score/moment corrections advance accounting identity to
 `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-v8`; historical calibration is not
 current evidence. Replacement distributions remain unmeasured; no dispatch/data edits.
 
+ADR-204 detects native higher-moment underflow and returns None consistently across
+ambient error modes, instead of finite fabricated kurtosis or FloatingPointError.
+Original source validation and short/exact-constant precedence remain outside the catch;
+native estimators/count remain. Former finite PSR inputs become unmeasured, so identity
+advances to `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-v9`.
+FINDING-145 records the separate unresolved Sortino arithmetic/representation question.
+
 ADR-186 validates original complete finite real numeric source evidence at the public
 compounded-return helpers before conversion/empty shortcuts; boolean, strings and complex
 observations cannot be reinterpreted as measured returns. Numeric empty and log math remain.

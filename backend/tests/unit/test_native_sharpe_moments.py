@@ -25,6 +25,43 @@ def _decimal_sample_sharpe(values) -> float:
         return float(Decimal(252).sqrt() * mean / variance.sqrt())
 
 
+def _decimal_sample_higher_moments(values) -> tuple[float, float]:
+    with localcontext() as context:
+        context.prec = 90
+        observations = [Decimal.from_float(float(value)) for value in values]
+        n = Decimal(len(observations))
+        mean = sum(observations) / n
+        central = [value - mean for value in observations]
+        m2, m3, m4 = [sum(value**order for value in central) / n for order in (2, 3, 4)]
+        skew = (n * (n - 1)).sqrt() / (n - 2) * m3 / (m2 * m2.sqrt())
+        excess = (n - 1) / ((n - 2) * (n - 3)) * ((n + 1) * m4 / m2**2 - 3 * (n - 1))
+        return float(skew), float(excess + 3)
+
+
+@pytest.mark.parametrize("scale", [1e-100, 1e-150, 1e-200])
+@pytest.mark.parametrize("error_mode", ["ignore", "warn", "raise"])
+@pytest.mark.parametrize("dtype", ["float64", "Float64"])
+def test_underflowing_native_higher_moments_are_unmeasured(scale, error_mode, dtype) -> None:
+    returns = pd.Series(np.array([1, 2, 3, 4, 5, 9]) * scale, dtype=dtype)
+    with np.errstate(all=error_mode):
+        assert return_moments(returns) is None
+
+
+@pytest.mark.parametrize("scale", [1.0, 1e-9])
+@pytest.mark.parametrize("dtype", ["float64", "Float64"])
+def test_measurable_native_higher_moments_match_independent_bias_corrected_oracle(
+    scale, dtype
+) -> None:
+    returns = pd.Series(np.array([1, 2, 3, 4, 5, 9]) * scale, dtype=dtype)
+    skew, raw_kurtosis = _decimal_sample_higher_moments(returns)
+    with np.errstate(all="raise"):
+        result = return_moments(returns)
+    assert result is not None
+    assert result.n_returns == 6
+    assert result.skew == pytest.approx(skew, rel=5e-14, abs=0)
+    assert result.kurtosis == pytest.approx(raw_kurtosis, rel=5e-14, abs=0)
+
+
 @pytest.mark.parametrize("scale", [1e200, 1e-200])
 @pytest.mark.parametrize("error_mode", ["ignore", "raise"])
 @pytest.mark.parametrize("interval", [False, True])

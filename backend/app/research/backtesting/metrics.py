@@ -188,12 +188,15 @@ def return_moments(returns: pd.Series) -> ReturnMoments | None:
     _validate_complete_return_sample(returns)
     if len(returns) < 4 or returns.eq(returns.iloc[0]).all():
         return None
-    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
-        std = float(returns.std())
-        if std == 0.0 or not np.isfinite(std):
-            return None
-        skew = float(returns.skew())
-        kurtosis = float(returns.kurt()) + 3.0
+    try:
+        with np.errstate(over="ignore", under="raise", invalid="ignore", divide="ignore"):
+            std = float(returns.std())
+            if std == 0.0 or not np.isfinite(std):
+                return None
+            skew = float(returns.skew())
+            kurtosis = float(returns.kurt()) + 3.0
+    except FloatingPointError:
+        return None
     if not np.isfinite([skew, kurtosis]).all():
         return None
     return ReturnMoments(
