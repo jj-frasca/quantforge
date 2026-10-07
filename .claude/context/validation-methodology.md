@@ -123,6 +123,11 @@ gate-changing PBO. Every balanced half must contain at least two observations fo
 deviation. Finite constant candidates remain valid and retain Sharpe zero. This changes no valid
 finite statistic or threshold, so calibration identity does not advance.
 
+ADR-189 validates original PBO source dtype before float conversion (signed/unsigned integer or
+real floating point only), after matrix-shape precedence. Boolean, complex, string, object and
+temporal matrices cannot be reinterpreted as return evidence. Valid CSCV/tie arithmetic, finite
+constant candidates, strict pbo_max and calibration identity remain unchanged.
+
 ---
 
 ## 3. Walk-forward evaluation (ADR-038)

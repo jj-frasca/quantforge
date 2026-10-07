@@ -27,9 +27,12 @@ def probability_of_backtest_overfitting(
         Fraction of splits where the in-sample-best config lands below the OOS median — the
         probability of backtest overfitting, in [0, 1]. Pure noise -> ~0.5.
     """
-    performance = np.asarray(performance, dtype=np.float64)
-    if performance.ndim != 2:
+    source = np.asarray(performance)
+    if source.ndim != 2:
         raise ValueError("performance must be a two-dimensional matrix")
+    if source.dtype.kind not in {"i", "u", "f"}:
+        raise ValueError("performance must contain real nonboolean numeric returns")
+    performance = np.asarray(source, dtype=np.float64)
     n_obs, n_configs = performance.shape
     if n_configs < 2:
         raise ValueError("need >= 2 configurations")

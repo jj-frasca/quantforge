@@ -175,3 +175,21 @@ def test_pbo_is_invariant_to_candidate_column_permutations(seed: int) -> None:
     assert probability_of_backtest_overfitting(performance, n_splits=4) == pytest.approx(
         probability_of_backtest_overfitting(performance[:, permutation], n_splits=4)
     )
+
+
+@pytest.mark.parametrize("dtype", [bool, str, object, complex, "timedelta64[D]"])
+def test_pbo_rejects_original_nonreal_nonnumeric_matrix_dtype(dtype) -> None:
+    values = np.array([[1, -2], [-2, 3], [3, -1], [4, 2]], dtype=dtype)
+    if dtype is complex:
+        values += 1j
+    with pytest.raises(ValueError, match="real nonboolean numeric"):
+        probability_of_backtest_overfitting(values, n_splits=2)
+
+
+@pytest.mark.parametrize("dtype", ["int32", "uint32", "float32", "float64"])
+def test_pbo_preserves_real_numeric_representation(dtype) -> None:
+    values = np.array([[1, 2], [2, 3], [3, 1], [4, 2]], dtype=dtype)
+    # Direct row-slicing reference; this fixture has no Sharpe ties.
+    expected = _reference_pbo(values.astype(float), n_splits=2)
+    assert probability_of_backtest_overfitting(values, n_splits=2) == expected
+    assert probability_of_backtest_overfitting(values.tolist(), n_splits=2) == expected
