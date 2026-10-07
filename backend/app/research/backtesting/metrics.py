@@ -11,6 +11,17 @@ TRADING_DAYS = 252
 _MIN_YEARS_FOR_SHARPE_CI = 1.0
 
 
+def _validate_complete_return_sample(returns: pd.Series) -> None:
+    if (
+        not is_numeric_dtype(returns.dtype)
+        or is_bool_dtype(returns.dtype)
+        or is_complex_dtype(returns.dtype)
+    ):
+        raise ValueError("returns must be real nonboolean numeric observations")
+    if not np.isfinite(returns.to_numpy(dtype=float, na_value=np.nan)).all():
+        raise ValueError("returns must be finite and complete")
+
+
 def sharpe_ratio(returns: pd.Series) -> float:
     """Annualized Sharpe (sqrt(252)); 0.0 for a constant/degenerate return series."""
     if len(returns) < 2:
@@ -46,9 +57,12 @@ def sharpe_confidence_interval(
         `lab/` in this codebase's layering, so a function here cannot import from there.
         `None` when there are fewer than 2 returns (Sharpe itself is undefined) or fewer than a
         year of data, below which the asymptotic normal approximation is unreliable.
+        ADR-183 requires complete finite real numeric observations before those shortcuts;
+        missing rows cannot add history or narrow the interval.
     """
     if not np.isfinite(confidence) or not 0.0 < confidence < 1.0:
         raise ValueError("confidence must be finite and between 0 and 1")
+    _validate_complete_return_sample(returns)
     if len(returns) < 2:
         return None
     years = len(returns) / TRADING_DAYS
@@ -127,14 +141,7 @@ def return_moments(returns: pd.Series) -> ReturnMoments | None:
         ADR-182 rejects incomplete/nonreal source evidence before those shortcuts. Nonfinite
         native higher moments are unmeasured too; missing rows never inflate the PSR count.
     """
-    if (
-        not is_numeric_dtype(returns.dtype)
-        or is_bool_dtype(returns.dtype)
-        or is_complex_dtype(returns.dtype)
-    ):
-        raise ValueError("returns must be real nonboolean numeric observations")
-    if not np.isfinite(returns.to_numpy(dtype=float, na_value=np.nan)).all():
-        raise ValueError("returns must be finite and complete")
+    _validate_complete_return_sample(returns)
     if len(returns) < 4:
         return None
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):

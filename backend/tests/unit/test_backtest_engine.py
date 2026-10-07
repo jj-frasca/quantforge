@@ -591,3 +591,51 @@ def test_backtest_rejects_nonpositive_price_at_every_position(price: float) -> N
         prices.iloc[row] = price
         with pytest.raises(ValueError, match="prices"):
             BacktestEngine(cost_rate=0).run(prices, pd.Series(1.0, index=prices.index))
+
+
+@pytest.mark.parametrize("padding", [126, 882])
+def test_sharpe_interval_rejects_missing_history_padding(padding: int) -> None:
+    returns = pd.Series(
+        list(np.random.default_rng(123).normal(0.001, 0.01, 126)) + [np.nan] * padding
+    )
+    with pytest.raises(ValueError, match="returns"):
+        sharpe_confidence_interval(returns)
+
+
+@pytest.mark.parametrize(
+    "returns",
+    [
+        pd.Series([np.nan]),
+        pd.Series([np.inf] * 252),
+        pd.Series([True, False] * 126),
+        pd.Series([0.01] * 252, dtype=object),
+        pd.Series([".01"] * 252),
+        pd.Series([0.01 + 1j] * 252),
+        pd.Series([0.01, pd.NA] * 126, dtype="Float64"),
+    ],
+)
+def test_sharpe_interval_rejects_invalid_return_evidence(returns: pd.Series) -> None:
+    with pytest.raises(ValueError, match="returns"):
+        sharpe_confidence_interval(returns)
+
+
+@given(padding=st.integers(min_value=126, max_value=1000))
+def test_sharpe_interval_missing_padding_cannot_manufacture_precision(padding: int) -> None:
+    returns = pd.Series([-0.01, 0.01] * 63 + [np.nan] * padding)
+    with pytest.raises(ValueError, match="returns"):
+        sharpe_confidence_interval(returns)
+
+
+@pytest.mark.parametrize("dtype", ["float64", "int64", "Float64", "Int64"])
+def test_sharpe_interval_preserves_complete_signed_numeric_evidence(dtype: str) -> None:
+    returns = pd.Series([-2, -1, 0, 1, 2] * 60, dtype=dtype)
+    actual = sharpe_confidence_interval(returns)
+    expected = sharpe_confidence_interval(returns.astype(float))
+    assert actual == expected
+    assert actual is not None
+    assert actual.assumption == "iid_normal"
+
+
+def test_sharpe_interval_validates_confidence_before_return_evidence() -> None:
+    with pytest.raises(ValueError, match="confidence"):
+        sharpe_confidence_interval(pd.Series([np.nan]), confidence=1)

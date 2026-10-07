@@ -118,6 +118,11 @@ before degenerate shortcuts (ADR-182). Missing rows cannot inflate PSR counts wh
 them for skew/kurtosis. Finite short/constant or undefined higher-moment arithmetic remains None;
 complete nullable numeric and finite signed samples retain native raw-kurtosis calculations.
 
+ADR-183 applies the same complete-sample validation to the standalone Sharpe interval after
+confidence validation and before length shortcuts. Missing padding cannot cross its one-year
+minimum or narrow its band. The iid-normal estimator and valid short/constant behavior remain
+unchanged; standalone Sharpe and near-one quantile issues are separately FINDING-117/118.
+
 - `sharpe`: `sqrt(252) * mean(net) / std(net)` (daily). 0.0 if std==0 (constant returns).
 - `max_drawdown`: `min(equity/equity.cummax() - 1)` — **in [-1.0, 0.0]**. Positive = bug.
 - `total_return` (ADR-110): `product(1 + net) - 1` over every net observation, including the
