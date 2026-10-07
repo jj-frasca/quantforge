@@ -214,6 +214,11 @@ that gap IS the optimistic bias, and it is why the two are never averaged.
 - A sample too short to hold the folds plus an honest embargo reports `purged_cv=None` plus a
   flag. Shrinking the embargo to fit would emit a leaky number labelled "purged".
 
+ADR-198 verifies the evaluator's declared nonnegative integral embargo against supplied fold
+rows: integer/bounded/unique ascending arrays, contiguous kept test blocks, and no train row
+inside the closed embargo interval. Empty integer folds still drop; before/after training remains
+valid outside that interval. No estimator, lookback sizing, threshold or causal-policy change.
+
 **ADR-078: it carries a drift control, exactly as walk-forward does.** `purged_cv_evaluate` takes
 an optional `benchmark` of per-bar returns and reports `mean_oos_hold_sharpe` — buy-and-hold scored
 on the same folds, averaged over the folds that were KEPT (a fold purged away entirely is dropped,

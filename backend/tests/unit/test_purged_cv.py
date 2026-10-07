@@ -109,11 +109,11 @@ def test_purged_cv_sharpe_is_annualized() -> None:
 def test_a_fold_with_no_surviving_train_rows_is_dropped() -> None:
     """A huge embargo can purge the entire training set; a fold with nothing to select on is not
     a measurement and must not be counted as one."""
-    n = 40
+    n = 240
     performance = _matrix([[0.01] * n, [0.02] * n])
     splits = [
-        (np.array([], dtype=np.intp), np.arange(0, 20, dtype=np.intp)),
-        (np.arange(0, 20, dtype=np.intp), np.arange(20, 40, dtype=np.intp)),
+        (np.array([], dtype=np.intp), np.arange(0, 220, dtype=np.intp)),
+        (np.arange(0, 20, dtype=np.intp), np.arange(220, 240, dtype=np.intp)),
     ]
     result = purged_cv_evaluate(performance, splits, embargo=100)
     assert result.n_folds == 1
@@ -194,14 +194,14 @@ def test_the_benchmark_average_covers_only_the_folds_that_were_kept() -> None:
     """A fold purged away entirely is dropped (ADR-039), so averaging the benchmark over it would
     pair the strategy's score with blocks it was never scored on — the confound ADR-078 removes,
     reintroduced one fold at a time."""
-    n = 40
+    n = 240
     performance = _matrix([[0.01] * n, [0.02] * n])
-    kept = np.arange(20, 40, dtype=np.intp)
+    kept = np.arange(220, 240, dtype=np.intp)
     splits = [
-        (np.array([], dtype=np.intp), np.arange(0, 20, dtype=np.intp)),
+        (np.array([], dtype=np.intp), np.arange(0, 220, dtype=np.intp)),
         (np.arange(0, 20, dtype=np.intp), kept),
     ]
-    hold = np.concatenate([np.full(20, 0.05), np.linspace(0.001, 0.002, 20)])
+    hold = np.concatenate([np.full(220, 0.05), np.linspace(0.001, 0.002, 20)])
 
     result = purged_cv_evaluate(performance, splits, embargo=100, benchmark=hold)
 
@@ -223,3 +223,88 @@ def test_holding_beats_a_strategy_that_only_scales_the_drift() -> None:
 
     assert result.mean_oos_hold_sharpe is not None
     assert result.mean_oos_sharpe - result.mean_oos_hold_sharpe == pytest.approx(0.0, abs=1e-9)
+
+
+@pytest.mark.parametrize(
+    ("train", "test", "embargo"),
+    [
+        ([0, 1], [0, 1], 5),
+        ([0, 1], [2, 3], 2),
+        ([-2, -1], [4, 5], 0),
+        ([0, 1], [-2, -1], 0),
+        ([1, 0], [4, 5], 0),
+        ([0, 0], [4, 5], 0),
+        ([0, 1], [4, 4], 0),
+        ([0, 1], [5, 4], 0),
+        ([0, 1], [3, 5], 0),
+    ],
+)
+def test_purged_evaluator_refuses_unpurged_or_reweighted_rows(train, test, embargo) -> None:
+    performance = np.column_stack((np.arange(1, 7) / 100, -np.arange(1, 7) / 100))
+    with pytest.raises(ValueError):
+        purged_cv_evaluate(performance, [(np.array(train), np.array(test))], embargo=embargo)
+
+
+@pytest.mark.parametrize("embargo", [True, np.bool_(True), 0.5, -1, np.nan, "1"])
+def test_purged_evaluator_requires_original_integer_embargo(embargo) -> None:
+    with pytest.raises(ValueError, match="embargo must be a nonnegative nonboolean integer"):
+        purged_cv_evaluate(
+            np.column_stack((np.arange(6), -np.arange(6))),
+            [(np.array([0, 1]), np.array([4, 5]))],
+            embargo=embargo,
+        )
+
+
+@pytest.mark.parametrize("side", [0, 1])
+@pytest.mark.parametrize(
+    "rows", [np.array([0.0, 1.0]), np.array([True, False]), np.array([[0, 1]])]
+)
+def test_purged_evaluator_requires_integer_one_dimensional_rows(side, rows) -> None:
+    pair = [np.array([0, 1]), np.array([4, 5])]
+    pair[side] = rows
+    with pytest.raises(ValueError, match="fold rows must be one-dimensional integers"):
+        purged_cv_evaluate(np.column_stack((np.arange(6), -np.arange(6))), [tuple(pair)], embargo=0)
+
+
+@pytest.mark.parametrize("row", [3, 8])
+def test_purged_evaluator_refuses_inclusive_embargo_endpoints(row) -> None:
+    with pytest.raises(ValueError, match="train rows violate the declared embargo"):
+        purged_cv_evaluate(
+            np.column_stack((np.arange(10), -np.arange(10))),
+            [(np.array([row]), np.array([5, 6]))],
+            embargo=2,
+        )
+
+
+def test_purged_evaluator_refuses_unsigned_order_and_oversized_rows() -> None:
+    performance = np.column_stack((np.arange(10), -np.arange(10)))
+    with pytest.raises(ValueError, match="fold rows must be unique and ascending"):
+        purged_cv_evaluate(
+            performance, [(np.array([2, 0], dtype=np.uint64), np.array([5, 6]))], embargo=2
+        )
+    with pytest.raises(ValueError, match="fold index out of range"):
+        purged_cv_evaluate(
+            performance, [(np.array([2**64 - 1], dtype=np.uint64), np.array([5, 6]))], embargo=2
+        )
+
+
+def test_purged_evaluator_preserves_training_on_both_sides_outside_embargo() -> None:
+    result = purged_cv_evaluate(
+        np.column_stack((np.arange(10) / 100, -np.arange(10) / 100)),
+        [(np.array([0, 2, 9], dtype=np.uint64), np.array([5, 6], dtype=np.uint64))],
+        embargo=np.int64(2),
+    )
+    assert result.n_folds == 1 and result.embargo == 2
+    assert result.folds[0].n_train == 3 and result.folds[0].n_test == 2
+
+
+@given(embargo=st.integers(min_value=0, max_value=4))
+def test_purged_evaluator_enforces_exclusion_interval(embargo: int) -> None:
+    test_rows = np.arange(5, 7)
+    for train_row in (5 - embargo, 6 + embargo):
+        with pytest.raises(ValueError, match="train rows violate the declared embargo"):
+            purged_cv_evaluate(
+                np.column_stack((np.arange(12), -np.arange(12))),
+                [(np.array([train_row]), test_rows)],
+                embargo=embargo,
+            )

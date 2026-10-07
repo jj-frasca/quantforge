@@ -1,5 +1,6 @@
 import math
 from collections.abc import Sequence
+from numbers import Integral
 
 import numpy as np
 import numpy.typing as npt
@@ -173,11 +174,33 @@ def purged_cv_evaluate(
         if benchmark.shape != (n_obs,):
             raise ValueError("benchmark must carry one return per bar of the performance matrix")
 
+    embargo_evidence: object = embargo
+    if isinstance(embargo_evidence, (bool, np.bool_)) or not isinstance(embargo_evidence, Integral):
+        raise ValueError("embargo must be a nonnegative nonboolean integer")
+    embargo = int(embargo_evidence)
+    if embargo < 0:
+        raise ValueError("embargo must be a nonnegative nonboolean integer")
+
     folds: list[PurgedCVFoldResult] = []
     hold_sharpes: list[float] = []
     for train_idx, test_idx in splits:
+        train_idx = np.asarray(train_idx)
+        test_idx = np.asarray(test_idx)
+        for rows in (train_idx, test_idx):
+            if rows.ndim != 1 or rows.dtype.kind not in "iu":
+                raise ValueError("fold rows must be one-dimensional integers")
+            if np.any(rows < 0) or np.any(rows >= n_obs):
+                raise ValueError("fold index out of range for the performance matrix")
+            if np.any(rows[1:] <= rows[:-1]):
+                raise ValueError("fold rows must be unique and ascending")
         if len(train_idx) == 0 or len(test_idx) == 0:
             continue
+        if np.any(test_idx[1:] != test_idx[:-1] + 1):
+            raise ValueError("test rows must form one contiguous fold")
+        lower = int(test_idx[0]) - embargo
+        upper = int(test_idx[-1]) + embargo
+        if any(lower <= int(row) <= upper for row in train_idx):
+            raise ValueError("train rows violate the declared embargo")
         if benchmark is not None:
             hold_sharpes.append(_sharpe(benchmark[test_idx]))
         train_sharpes = [_sharpe(performance[train_idx, c]) for c in range(performance.shape[1])]
