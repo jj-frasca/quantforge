@@ -162,7 +162,9 @@ def purged_cv_evaluate(
         DROPPED, not scored — counting it would report a selection that never happened. Every
         fold being unusable is an error, not an empty result.
     """
-    performance = np.asarray(performance, dtype=np.float64)
+    performance_source = performance
+    benchmark_source = benchmark
+    performance = np.asarray(performance)
     if performance.ndim != 2 or performance.shape[1] < 2:
         raise ValueError("need >= 2 configurations to select within a fold")
     if not splits:
@@ -170,9 +172,26 @@ def purged_cv_evaluate(
 
     n_obs = performance.shape[0]
     if benchmark is not None:
-        benchmark = np.asarray(benchmark, dtype=np.float64)
+        benchmark = np.asarray(benchmark)
         if benchmark.shape != (n_obs,):
             raise ValueError("benchmark must carry one return per bar of the performance matrix")
+    if performance.dtype.kind not in "iuf":
+        raise ValueError("performance must carry real numeric returns")
+    if benchmark is not None and benchmark.dtype.kind not in "iuf":
+        raise ValueError("benchmark must carry real numeric returns")
+    with np.errstate(over="ignore", invalid="ignore"):
+        performance = np.asarray(performance, dtype=np.float64)
+        if benchmark is not None:
+            benchmark = np.asarray(benchmark, dtype=np.float64)
+    if not np.isfinite(performance).all() or (
+        np.ma.isMaskedArray(performance_source) and np.any(np.ma.getmaskarray(performance_source))
+    ):
+        raise ValueError("performance returns must be finite")
+    if benchmark is not None and (
+        not np.isfinite(benchmark).all()
+        or (np.ma.isMaskedArray(benchmark_source) and np.any(np.ma.getmaskarray(benchmark_source)))
+    ):
+        raise ValueError("benchmark returns must be finite")
 
     embargo_evidence: object = embargo
     if isinstance(embargo_evidence, (bool, np.bool_)) or not isinstance(embargo_evidence, Integral):

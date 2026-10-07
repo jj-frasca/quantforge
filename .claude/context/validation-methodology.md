@@ -185,6 +185,11 @@ ADR-197 validates caller-supplied split rows at evaluation: nonempty one-dimensi
 arrays, nonnegative in-range unique ascending rows, and train entirely before test. Invalid
 geometry is refused without repair. Generated splits, singleton blocks, causal gaps and earlier
 test blocks entering later expanding train windows retain the same selection/score/benchmark.
+
+ADR-199 makes both OOS evaluators validate original i/u/f numeric source dtype and complete
+finite float64 matrix/control evidence before selection or singleton/flat/fold-drop shortcuts.
+Explicitly masked missing observations are refused before masks can disappear on materialization.
+Valid numeric, unmasked, constant/singleton and absent-control behavior and formulas remain.
 - **Measured under the null (2026-08-19, N=200/mode):** median +0.15 (iid) / +0.33 (bootstrap:SPY),
   p95 +0.78 / +1.05. **Below ~1.0 is indistinguishable from noise.** The bootstrap null sits higher
   because the selection earns *drift*, so any future gate on this must be stated against
