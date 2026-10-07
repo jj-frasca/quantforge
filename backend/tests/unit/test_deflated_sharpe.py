@@ -1,7 +1,9 @@
 """Deflated Sharpe: no haircut at n_trials==1, more trials deflate more, invalid params; Hypothesis invariant that DSR ≤ observed Sharpe."""
 
 import math
+from functools import partial
 
+import numpy as np
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
@@ -184,3 +186,58 @@ def test_the_probability_form_is_always_a_probability(
         observed, n_trials=n_trials, sr_std=0.03, n_returns=n_returns, skew=0.0, kurtosis=3.0
     )
     assert 0.0 <= value <= 1.0
+
+
+@pytest.fixture(
+    params=[
+        expected_max_sharpe,
+        partial(deflated_sharpe, observed_sr=0.2),
+        partial(
+            deflated_sharpe_probability,
+            observed_sr=0.2,
+            n_returns=100,
+            skew=0.0,
+            kurtosis=3.0,
+        ),
+    ],
+    ids=["expected_max", "margin", "probability"],
+)
+def accounting_entry(request):
+    return request.param
+
+
+@pytest.mark.parametrize("count", [0, -1, True, np.bool_(True), 1.5, np.nan, np.inf, "1"])
+def test_dsr_accounting_rejects_nonpositive_or_nonintegral_count(accounting_entry, count) -> None:
+    with pytest.raises(ValueError, match="n_trials must be"):
+        accounting_entry(n_trials=count, sr_std=0.2)
+
+
+@pytest.mark.parametrize("count", [1, 10])
+@pytest.mark.parametrize("dispersion", [0.0, -0.2, np.nan, np.inf, -np.inf, True, "0.2", 0.2 + 1j])
+def test_dsr_accounting_rejects_invalid_dispersion_before_shortcut(
+    accounting_entry, count, dispersion
+) -> None:
+    with pytest.raises(ValueError, match="sr_std must be"):
+        accounting_entry(n_trials=count, sr_std=dispersion)
+
+
+def test_dsr_accounting_preserves_numpy_and_fraction_inputs(accounting_entry) -> None:
+    from fractions import Fraction
+
+    expected = accounting_entry(n_trials=5, sr_std=0.2)
+    assert accounting_entry(n_trials=np.int64(5), sr_std=np.float64(0.2)) == expected
+    assert accounting_entry(n_trials=5, sr_std=Fraction(1, 5)) == expected
+
+
+def test_valid_one_trial_probability_matches_unpenalized_psr() -> None:
+    expected = probabilistic_sharpe_ratio(
+        0.2, benchmark_sr=0.0, n_returns=100, skew=0.0, kurtosis=3.0
+    )
+    assert expected_max_sharpe(1, 0.2) == 0.0
+    assert deflated_sharpe(0.2, 1, 0.2) == 0.2
+    assert (
+        deflated_sharpe_probability(
+            0.2, n_trials=1, sr_std=0.2, n_returns=100, skew=0.0, kurtosis=3.0
+        )
+        == expected
+    )

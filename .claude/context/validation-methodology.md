@@ -56,6 +56,11 @@ Missing/object/string/complex/boolean payloads raise; complete nullable numeric 
 observations remain valid. Undefined native skew/raw kurtosis returns None, matching unmeasurable
 variance. Representable estimates, sample counts, PSR formula and gate thresholds are unchanged.
 
+ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
+at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
+probability; margin/probability delegate to one guard. Valid formulas, counts and gates remain.
+Extreme quantile/scaling overflow is separately recorded in FINDING-126.
+
 **The scale trap, which is why this took two attempts.** Everything on a `Trial` is ANNUALIZED; the
 PSR is a function of the PER-PERIOD Sharpe and the per-period moments TOGETHER. Mixing one
 annualized input with two per-period ones silently rescales the probability instead of failing.

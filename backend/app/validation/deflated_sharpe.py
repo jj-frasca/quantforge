@@ -1,5 +1,6 @@
 import math
 from collections.abc import Sequence
+from numbers import Integral, Real
 
 import numpy as np
 from scipy.stats import norm
@@ -32,7 +33,24 @@ def robust_sharpe_dispersion(sharpes: Sequence[float]) -> float:
 
 def expected_max_sharpe(n_trials: int, sr_std: float) -> float:
     """Expected maximum of N iid Sharpe estimates ~N(0, sr_std^2) (Bailey et al. 2015)."""
-    if n_trials <= 1:
+    count_evidence: object = n_trials
+    if isinstance(count_evidence, (bool, np.bool_)) or not isinstance(count_evidence, Integral):
+        raise ValueError("n_trials must be a positive nonboolean integer")
+    n_trials = int(count_evidence)
+    if n_trials < 1:
+        raise ValueError("n_trials must be a positive nonboolean integer")
+    dispersion_evidence: object = sr_std
+    if isinstance(dispersion_evidence, (bool, np.bool_)) or not isinstance(
+        dispersion_evidence, Real
+    ):
+        raise ValueError("sr_std must be a positive finite real nonboolean scalar")
+    try:
+        sr_std = float(dispersion_evidence)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError("sr_std must be a positive finite real nonboolean scalar") from exc
+    if not np.isfinite(sr_std) or sr_std <= 0.0:
+        raise ValueError("sr_std must be a positive finite real nonboolean scalar")
+    if n_trials == 1:
         return 0.0
     a = norm.ppf(1.0 - 1.0 / n_trials)
     b = norm.ppf(1.0 - 1.0 / (n_trials * math.e))
@@ -49,10 +67,6 @@ def deflated_sharpe(observed_sr: float, n_trials: int, sr_std: float = 1.0) -> f
         expected-maximum haircut, and it is in Sharpe units, so `margin <= observed_sr` holds by
         construction (§8 invariant #5). N == 1 means no penalty.
     """
-    if n_trials < 1:
-        raise ValueError("n_trials must be >= 1")
-    if sr_std <= 0:
-        raise ValueError("sr_std must be > 0")
     haircut = max(expected_max_sharpe(n_trials, sr_std), 0.0)
     return observed_sr - haircut
 
