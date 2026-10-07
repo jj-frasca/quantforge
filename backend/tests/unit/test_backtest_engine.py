@@ -667,3 +667,46 @@ def test_sharpe_interval_high_confidence_matches_forward_gaussian_tail(confidenc
     assert np.isfinite([ci.lower, ci.upper]).all()
     measured_tail = erfc(ci.upper / sqrt(2)) / 2
     assert measured_tail == pytest.approx((1 - confidence) / 2, rel=1e-12, abs=0)
+
+
+@pytest.mark.parametrize(
+    "returns",
+    [
+        pd.Series([np.nan]),
+        pd.Series([0.01, np.nan]),
+        pd.Series([0.01, np.inf]),
+        pd.Series([-np.inf]),
+        pd.Series([True, False]),
+        pd.Series([], dtype=bool),
+        pd.Series([], dtype=object),
+        pd.Series([True, pd.NA], dtype="boolean"),
+        pd.Series([0.02, 0.02, np.nan]),
+        pd.Series([0.01 + 1j, 0.02 + 2j]),
+        pd.Series(["0.01", "0.02"]),
+        pd.Series([0.01, pd.NA], dtype="Float64"),
+    ],
+)
+def test_standalone_sharpe_rejects_invalid_source_evidence(returns: pd.Series) -> None:
+    with pytest.raises(ValueError, match="returns must be"):
+        sharpe_ratio(returns)
+
+
+@given(st.integers(min_value=1, max_value=100))
+def test_standalone_sharpe_rejects_missing_padding(padding: int) -> None:
+    returns = pd.Series([0.01, -0.02, 0.03] + [np.nan] * padding)
+    with pytest.raises(ValueError, match="finite and complete"):
+        sharpe_ratio(returns)
+
+
+@pytest.mark.parametrize("values", [[], [0.01], [0.02, 0.02], [-1.5, -1.0, 0.25, 2.0]])
+@pytest.mark.parametrize("dtype", ["float64", "Float64"])
+def test_standalone_sharpe_preserves_valid_signed_and_degenerate_samples(
+    values: list[float], dtype: str
+) -> None:
+    returns = pd.Series(values, dtype=dtype)
+    expected = (
+        0.0
+        if len(values) < 2 or np.std(values, ddof=1) == 0.0
+        else float(np.sqrt(252) * np.mean(values) / np.std(values, ddof=1))
+    )
+    assert sharpe_ratio(returns) == pytest.approx(expected)

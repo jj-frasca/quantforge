@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-07
 - **Severity:** Medium — a public helper silently reinterprets malformed evidence
-- **Status:** Open — separate direct-helper boundary review required
+- **Status:** Resolved — ADR-185
 
 ## Evidence
 
@@ -12,9 +12,11 @@ Research-expert reproduction: sharpe_ratio([0.01,NaN]) returns zero; boolean
 The primitive skips missingness or loses imaginary evidence rather than enforcing real numeric
 complete returns. ADR-183 validates the interval wrapper only, not this public helper.
 
-## Next action and limits
+## Correction and limits
 
-Audit direct Sharpe consumers and specify source validity before its short/constant shortcuts,
-using failing tests first. Preserve complete finite signed samples and existing zero-variance
-conventions; no missing-row repair, threshold change or estimator redesign. Checked engine search
-paths already provide complete returns. No production or generated-data correction is claimed here.
+ADR-185 reuses the complete finite real nonboolean numeric validator before standalone Sharpe
+shortcuts. Thirteen failing malformed-source and missing-padding cases preceded the correction.
+Valid numeric empty/singleton/constant, nullable numeric and finite signed samples retain native
+scores. Direct consumer review found no intended invalid-source contract. No missing-row repair,
+threshold change, estimator redesign or generated-data modification. Extreme finite arithmetic
+remains a separate limitation.

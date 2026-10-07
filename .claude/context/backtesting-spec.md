@@ -121,7 +121,8 @@ complete nullable numeric and finite signed samples retain native raw-kurtosis c
 ADR-183 applies the same complete-sample validation to the standalone Sharpe interval after
 confidence validation and before length shortcuts. Missing padding cannot cross its one-year
 minimum or narrow its band. The iid-normal estimator and valid short/constant behavior remain
-unchanged; standalone Sharpe invalid evidence remains separately recorded in FINDING-117.
+unchanged. ADR-185 resolves FINDING-117 by applying the same source validation to standalone
+Sharpe before its shortcuts, preserving valid signed/nullable and numeric degenerate conventions.
 ADR-184 resolves FINDING-118 by evaluating the equivalent Gaussian quantile with
 norm.isf((1-confidence)/2), preserving a representable near-one tail and finite interval bounds.
 

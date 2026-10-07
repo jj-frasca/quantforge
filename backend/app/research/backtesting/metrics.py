@@ -23,7 +23,8 @@ def _validate_complete_return_sample(returns: pd.Series) -> None:
 
 
 def sharpe_ratio(returns: pd.Series) -> float:
-    """Annualized Sharpe (sqrt(252)); 0.0 for a constant/degenerate return series."""
+    """Annualized Sharpe of complete real returns; zero for valid degenerate samples."""
+    _validate_complete_return_sample(returns)
     if len(returns) < 2:
         return 0.0
     std = float(returns.std())
