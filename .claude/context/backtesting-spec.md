@@ -126,6 +126,17 @@ Sharpe before its shortcuts, preserving valid signed/nullable and numeric degene
 ADR-184 resolves FINDING-118 by evaluating the equivalent Gaussian quantile with
 norm.isf((1-confidence)/2), preserving a representable near-one tail and finite interval bounds.
 
+ADR-203 gives exact constant Sharpe samples zero and exact constant higher moments None
+before native arithmetic. Nonconstant native Sharpe must have finite mean/positive dispersion
+and finite annualized score. Preserve measurable native answers; otherwise recover
+the same sample score on maxabs-normalized returns, or raise ValueError if still
+unmeasurable, consistently under strict NumPy state. Financial cost/sign property
+domains remain intact; Decimal oracles verify tiny/huge/subnormal recovery.
+Original pandas estimator/order, signed/nullable source domains and iid-normal interval math
+remain. Finite primary score/moment corrections advance accounting identity to
+`whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-v8`; historical calibration is not
+current evidence. Replacement distributions remain unmeasured; no dispatch/data edits.
+
 ADR-186 validates original complete finite real numeric source evidence at the public
 compounded-return helpers before conversion/empty shortcuts; boolean, strings and complex
 observations cannot be reinterpreted as measured returns. Numeric empty and log math remain.

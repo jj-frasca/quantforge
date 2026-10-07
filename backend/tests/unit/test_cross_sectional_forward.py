@@ -255,11 +255,19 @@ def test_lifecycle_retires_when_it_stops_beating_the_benchmark() -> None:
 
 def test_lifecycle_holds_a_healthy_factor() -> None:
     policy = CrossSectionalExitPolicy(min_forward_bars_before_exit=10, rolling_window_bars=30)
-    fwd = _returns([0.004] * 40)  # steady gains, low vol
+    fwd = _returns([0.0039, 0.0041] * 20)  # steady gains with genuine low dispersion
     bench = _returns([0.0] * 40)
     decision = lifecycle_from_forward_returns(fwd, bench, policy)
     assert decision.action == "hold"
     assert decision.reasons == []
+
+
+def test_lifecycle_does_not_treat_rounded_constant_sharpe_as_healthy() -> None:
+    policy = CrossSectionalExitPolicy(min_forward_bars_before_exit=10, rolling_window_bars=30)
+    decision = lifecycle_from_forward_returns(_returns([0.004] * 40), _returns([0.0] * 40), policy)
+    assert decision.rolling_sharpe == 0.0
+    assert decision.action == "retire"
+    assert any("rolling Sharpe" in reason for reason in decision.reasons)
 
 
 def test_evaluate_lifecycle_holds_when_no_forward_data_yet() -> None:

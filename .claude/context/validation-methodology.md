@@ -56,6 +56,15 @@ Missing/object/string/complex/boolean payloads raise; complete nullable numeric 
 observations remain valid. Undefined native skew/raw kurtosis returns None, matching unmeasurable
 variance. Representable estimates, sample counts, PSR formula and gate thresholds are unchanged.
 
+ADR-203 recognizes exact constant original observations before native higher moments,
+returning None rather than fabricated Normal PSR inputs from rounded false variance.
+The shared primary Sharpe likewise keeps exact constant zero, preserves measurable
+native answers and recovers failed native moments with maxabs-normalized sample math.
+Unmeasurable recovery raises; original cost/sign properties retain their entire domains.
+Finite primary scores/moment evidence change, so calibration identity advances to
+`whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-v8`.
+Historical rates remain attributable; current replacement rates are unmeasured.
+
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
 probability; margin/probability delegate to one guard. Valid formulas, counts and gates remain.

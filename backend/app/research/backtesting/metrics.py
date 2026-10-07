@@ -26,12 +26,27 @@ def _validate_complete_return_sample(returns: pd.Series) -> None:
 def sharpe_ratio(returns: pd.Series) -> float:
     """Annualized Sharpe of complete real returns; zero for valid degenerate samples."""
     _validate_complete_return_sample(returns)
-    if len(returns) < 2:
+    if len(returns) < 2 or returns.eq(returns.iloc[0]).all():
         return 0.0
-    std = float(returns.std())
-    if std == 0.0 or not np.isfinite(std):
-        return 0.0
-    return float(np.sqrt(TRADING_DAYS) * returns.mean() / std)
+    with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
+        std = float(returns.std())
+        mean = float(returns.mean())
+        if np.isfinite(mean) and np.isfinite(std) and std > 0:
+            score = float(np.sqrt(TRADING_DAYS) * mean / std)
+            if np.isfinite(score):
+                return score
+        scale = float(np.max(np.abs(returns.to_numpy(dtype=float, na_value=np.nan))))
+        if not np.isfinite(scale) or scale <= 0:
+            raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+        normalized = returns / scale
+        std = float(normalized.std())
+        mean = float(normalized.mean())
+        if not np.isfinite(mean) or not np.isfinite(std) or std <= 0:
+            raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+        score = float(np.sqrt(TRADING_DAYS) * mean / std)
+        if not np.isfinite(score):
+            raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+    return score
 
 
 @dataclass(frozen=True)
@@ -171,7 +186,7 @@ def return_moments(returns: pd.Series) -> ReturnMoments | None:
         native higher moments are unmeasured too; missing rows never inflate the PSR count.
     """
     _validate_complete_return_sample(returns)
-    if len(returns) < 4:
+    if len(returns) < 4 or returns.eq(returns.iloc[0]).all():
         return None
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         std = float(returns.std())
