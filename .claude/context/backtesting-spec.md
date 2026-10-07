@@ -162,7 +162,13 @@ Finite/value validation still concerns aligned rows only, preserving partial-ove
 ADR-180 requires every published comparator scalar to be finite. Upper arithmetic failures
 become ValueError rather than NaN/infinite claims, preserving the API's optional comparison.
 Estimator formulas remain unchanged; extreme representable answers may be declined when their
-intermediates overflow. Finite-but-wrong tiny-variance beta remains open in FINDING-113.
+intermediates overflow. Finite outputs alone do not certify arithmetic precision.
+
+ADR-181 recovers beta with a scaled sample covariance ratio only when native benchmark variance
+is zero despite distinct observations. Identical tiny nonconstant returns therefore retain beta
+one; all-zero strategy and true constant benchmark retain beta zero. Native positive-variance
+arithmetic and other statistics remain unchanged. FINDING-113 distinguishes this repaired case
+from positive subnormal variance/covariance underflow and other tiny-moment limitations.
 
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`

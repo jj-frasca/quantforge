@@ -52,8 +52,27 @@ class BenchmarkComparator:
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
             excess = strat - bench
 
-            bench_var = float(bench.var())
-            beta = float(strat.cov(bench) / bench_var) if bench_var > 0 else 0.0
+            with np.errstate(under="ignore"):
+                bench_var = float(bench.var())
+            if bench_var == 0.0 and np.any(bench_values != bench_values[0]):
+                # A nonconstant benchmark is not the constant-series convention: sample
+                # squares can underflow. Scale the same covariance ratio (ADR-181).
+                bench_scale = float(np.abs(bench_values).max())
+                strat_scale = float(np.abs(strat_values).max())
+                if strat_scale == 0.0:
+                    beta = 0.0
+                else:
+                    scaled_bench = bench / bench_scale
+                    scaled_strat = strat / strat_scale
+                    scaled_var = float(scaled_bench.var())
+                    if not np.isfinite(scaled_var) or scaled_var <= 0.0:
+                        raise ValueError(
+                            "normalized benchmark variance must be positive and finite"
+                        )
+                    scaled_beta = float(scaled_strat.cov(scaled_bench) / scaled_var)
+                    beta = scaled_beta * (strat_scale / bench_scale) if scaled_beta != 0.0 else 0.0
+            else:
+                beta = float(strat.cov(bench) / bench_var) if bench_var > 0 else 0.0
             alpha = float((strat.mean() - beta * bench.mean()) * TRADING_DAYS)
 
             excess_std = float(excess.std())

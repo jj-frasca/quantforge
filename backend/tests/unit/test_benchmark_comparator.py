@@ -247,3 +247,68 @@ def test_comparison_declines_overflowing_moments_without_publishing_nan(scale: f
     returns = pd.Series([scale, 2 * scale, 3 * scale])
     with pytest.raises(ValueError, match=r"statistics.*finite"):
         BenchmarkComparator().compare(returns, returns)
+
+
+@pytest.mark.parametrize("strict", [False, True])
+def test_comparison_recovers_same_series_beta_after_variance_underflow(strict: bool) -> None:
+    returns = pd.Series([1e-200, 2e-200, 3e-200])
+    with np.errstate(all="raise" if strict else "ignore"):
+        result = BenchmarkComparator().compare(returns, returns)
+    assert result.beta == pytest.approx(1)
+    assert result.alpha == pytest.approx(0, abs=0)
+
+
+@pytest.mark.parametrize("strategy", [[0.0, 0.0, 0.0], [1e-200, 1e-200, 1e-200]])
+def test_comparison_preserves_constant_strategy_against_tiny_benchmark(
+    strategy: list[float],
+) -> None:
+    result = BenchmarkComparator().compare(pd.Series(strategy), pd.Series([1e-200, 2e-200, 3e-200]))
+    assert result.beta == pytest.approx(0)
+    assert result.alpha == pytest.approx(np.mean(strategy) * 252, abs=0)
+
+
+def test_comparison_preserves_true_constant_tiny_benchmark() -> None:
+    with np.errstate(all="raise"):
+        result = BenchmarkComparator().compare(pd.Series([1e-200] * 3), pd.Series([2e-200] * 3))
+    assert result.beta == 0
+    assert result.alpha == pytest.approx(252e-200, abs=0)
+
+
+@given(
+    scale=st.floats(min_value=1e-260, max_value=1e-180, allow_nan=False, allow_infinity=False),
+    slope=st.sampled_from([-2.0, -0.5, 0.5, 2.0]),
+    intercept=st.sampled_from([-0.25, 0.0, 0.25]),
+)
+def test_comparison_collapsed_variance_beta_matches_decimal_oracle(
+    scale: float, slope: float, intercept: float
+) -> None:
+    from decimal import Decimal, localcontext
+
+    benchmark = pd.Series([scale, 2 * scale, 3 * scale, 4 * scale])
+    strategy = slope * benchmark + intercept * scale
+    with localcontext() as context:
+        context.prec = 80
+        xs = [Decimal.from_float(float(value)) for value in benchmark]
+        ys = [Decimal.from_float(float(value)) for value in strategy]
+        xm, ym = sum(xs) / len(xs), sum(ys) / len(ys)
+        covariance = sum((x - xm) * (y - ym) for x, y in zip(xs, ys, strict=True))
+        variance = sum((x - xm) ** 2 for x in xs)
+        expected_beta = covariance / variance
+        expected_alpha = (ym - expected_beta * xm) * 252
+    result = BenchmarkComparator().compare(strategy, benchmark)
+    assert result.beta == pytest.approx(float(expected_beta), rel=1e-12)
+    assert result.alpha == pytest.approx(float(expected_alpha), rel=1e-12, abs=scale * 1e-12)
+
+
+@pytest.mark.parametrize("constant", [False, True])
+def test_comparison_collapsed_variance_handles_extreme_scale_ratio(constant: bool) -> None:
+    benchmark = pd.Series([1e-250, 2e-250, 3e-250])
+    strategy = pd.Series([1e100] * 3 if constant else [1e100, 2e100, 3e100])
+    with np.errstate(all="raise"):
+        if constant:
+            result = BenchmarkComparator().compare(strategy, benchmark)
+            assert result.beta == 0
+            assert result.alpha == pytest.approx(252e100)
+        else:
+            with pytest.raises(ValueError, match=r"statistics.*finite"):
+                BenchmarkComparator().compare(strategy, benchmark)

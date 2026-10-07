@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-07
 - **Severity:** Medium — finite extreme-scale statistics can be numerically wrong
-- **Status:** Open — requires a separate stable-estimator decision
+- **Status:** Collapsed benchmark variance resolved by ADR-181; other tiny-moment limitations remain
 
 ## Evidence
 
@@ -12,10 +12,15 @@ zero. Sample variance squares underflow to zero, selecting the constant-benchmar
 though the source has distinct observations. Under strict NumPy error settings the variance
 computation raises an underflow FloatingPointError. Research-expert reproduction agrees.
 
-## Scope and next action
+## Correction and remaining scope
 
 ADR-180's finite-output guard does not resolve this: all wrong outputs here are finite.
-A later slice should pre-register scaling/centering moment estimation with an independent
-high-precision covariance oracle and Hypothesis scale invariance, preserving genuinely constant
-benchmark beta zero and ordinary native arithmetic. Do not fix this by a variance epsilon,
-return clipping or threshold changes. No production/data modifications accompany this finding.
+ADR-181 scales the same covariance ratio only when native benchmark variance is zero despite
+distinct observations. Decimal covariance and Hypothesis tiny-scale affine oracles verify beta
+and alpha; true constant benchmarks and native positive-variance arithmetic retain their prior
+semantics. No variance epsilon, clipping or threshold change is introduced.
+
+Positive but subnormal variance quantization and covariance underflow while benchmark variance
+remains positive are not repaired by this branch; neither are other tiny-scale IR/tracking-error
+limitations. A wider numerical audit needs its own stable-moment decision and oracle tests before
+changing those calculations. No generated data was modified.
