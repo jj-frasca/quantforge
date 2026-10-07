@@ -77,7 +77,19 @@ def deflated_sharpe(observed_sr: float, n_trials: int, sr_std: float = 1.0) -> f
         construction (§8 invariant #5). N == 1 means no penalty.
     """
     haircut = max(expected_max_sharpe(n_trials, sr_std), 0.0)
-    return observed_sr - haircut
+    score_evidence: object = observed_sr
+    if isinstance(score_evidence, (bool, np.bool_)) or not isinstance(score_evidence, Real):
+        raise ValueError("observed_sr must be a finite real nonboolean scalar")
+    try:
+        observed_sr = float(score_evidence)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError("observed_sr must be a finite real nonboolean scalar") from exc
+    if not np.isfinite(observed_sr):
+        raise ValueError("observed_sr must be a finite real nonboolean scalar")
+    result = observed_sr - haircut
+    if not np.isfinite(result):
+        raise ValueError("deflated Sharpe margin must be finite")
+    return result
 
 
 def probabilistic_sharpe_ratio(

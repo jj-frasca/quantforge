@@ -337,3 +337,43 @@ def test_psr_preserves_numpy_fraction_and_signed_source_oracle() -> None:
         skew=np.float64(skew),
         kurtosis=Fraction(6),
     ) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("count", [1, 10])
+@pytest.mark.parametrize(
+    "observed", [True, np.bool_(True), np.nan, np.inf, -np.inf, "0.2", 0.2 + 1j]
+)
+def test_margin_dsr_rejects_malformed_observed_score(count, observed) -> None:
+    with pytest.raises(ValueError, match="observed_sr must be"):
+        deflated_sharpe(observed, n_trials=count, sr_std=0.2)
+
+
+def test_margin_dsr_declines_nonfinite_native_difference() -> None:
+    with (
+        np.errstate(all="raise"),
+        pytest.raises(ValueError, match="deflated Sharpe margin must be finite"),
+    ):
+        deflated_sharpe(-1.5e308, n_trials=2, sr_std=1e308)
+
+
+def test_margin_dsr_accounting_errors_precede_invalid_score() -> None:
+    with pytest.raises(ValueError, match="n_trials must be"):
+        deflated_sharpe(np.nan, n_trials=0, sr_std=0.2)
+    with pytest.raises(ValueError, match="sr_std must be"):
+        deflated_sharpe(np.nan, n_trials=1, sr_std=np.nan)
+
+
+@pytest.mark.parametrize("observed", [-0.2, 0.0, 0.2])
+def test_margin_dsr_preserves_signed_fraction_and_numpy_source_oracle(observed) -> None:
+    from fractions import Fraction
+
+    haircut = expected_max_sharpe(5, 0.2)
+    expected = observed - max(haircut, 0.0)
+    assert deflated_sharpe(np.float64(observed), n_trials=5, sr_std=0.2) == expected
+    assert deflated_sharpe(Fraction(str(observed)), n_trials=5, sr_std=0.2) == expected
+    assert deflated_sharpe(observed, n_trials=1, sr_std=0.2) == observed
+
+
+def test_margin_dsr_refuses_unrepresentable_real_observed_score() -> None:
+    with pytest.raises(ValueError, match="observed_sr must be"):
+        deflated_sharpe(10**400, n_trials=1, sr_std=0.2)

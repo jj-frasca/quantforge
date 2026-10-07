@@ -73,6 +73,10 @@ PSR SE squared (`(1-skew*SR + .25*(kurtosis-1)*SR^2)/(n-1)`). Zero slack can des
 genuine two-point distributions; the existing strict domain policy still excludes them. No
 runtime guard, formula, assertion, threshold or legacy error text changes.
 
+ADR-194 validates margin-form observed Sharpe after shared accounting checks, preserving their
+error precedence, then requires a finite native subtraction. Signed/numpy/Fraction scores and
+N=1 behavior remain; invalid observed evidence or overflow cannot be published as a margin.
+
 **The scale trap, which is why this took two attempts.** Everything on a `Trial` is ANNUALIZED; the
 PSR is a function of the PER-PERIOD Sharpe and the per-period moments TOGETHER. Mixing one
 annualized input with two per-period ones silently rescales the probability instead of failing.
