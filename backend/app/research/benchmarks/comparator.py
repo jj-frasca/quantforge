@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 
 from app.research.backtesting.metrics import TRADING_DAYS
 
@@ -33,11 +34,17 @@ class BenchmarkComparator:
         for returns in (strategy_returns, benchmark_returns):
             if not returns.index.is_unique or not returns.index.is_monotonic_increasing:
                 raise ValueError("returns index must be unique and ascending")
+            if (
+                not is_numeric_dtype(returns.dtype)
+                or is_bool_dtype(returns.dtype)
+                or is_complex_dtype(returns.dtype)
+            ):
+                raise ValueError("returns must be real nonboolean numeric observations")
         strat, bench = strategy_returns.align(benchmark_returns, join="inner")
         if len(strat) < 2:
             raise ValueError("returns must have at least two aligned observations")
-        strat_values = strat.to_numpy(dtype=np.float64)
-        bench_values = bench.to_numpy(dtype=np.float64)
+        strat_values = strat.to_numpy(dtype=np.float64, na_value=np.nan)
+        bench_values = bench.to_numpy(dtype=np.float64, na_value=np.nan)
         if not np.isfinite(strat_values).all() or not np.isfinite(bench_values).all():
             raise ValueError("returns must be finite")
         if np.any(strat_values <= -1.0) or np.any(bench_values <= -1.0):

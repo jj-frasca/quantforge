@@ -160,3 +160,63 @@ def test_relative_drawdown_matches_independent_product_ratio_oracle(
         pd.Series([0.5] * 2000 + benchmark.tolist()),
     ).benchmark_relative_drawdown
     assert prefixed == pytest.approx(actual, abs=1e-12)
+
+
+@pytest.mark.parametrize("side", ["strategy", "benchmark"])
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        pd.Series([0.01 + 2j, 0.02 + 3j, 0.03 + 4j]),
+        pd.Series([True, False, True]),
+        pd.Series([True, False, True], dtype="boolean"),
+        pd.Series([0.01, 0.02, 0.03], dtype=object),
+        pd.Series(["0.01", "0.02", "0.03"]),
+    ],
+)
+def test_comparison_rejects_nonreal_return_dtypes(side: str, malformed: pd.Series) -> None:
+    valid = pd.Series([0.01, 0.02, 0.03])
+    strategy = malformed if side == "strategy" else valid
+    benchmark = malformed if side == "benchmark" else valid
+    with pytest.raises(ValueError, match=r"returns.*numeric"):
+        BenchmarkComparator().compare(strategy, benchmark)
+
+
+@pytest.mark.parametrize("side", ["strategy", "benchmark"])
+@pytest.mark.parametrize("dtype", ["Float64", "Int64"])
+def test_comparison_rejects_missing_aligned_nullable_returns(side: str, dtype: str) -> None:
+    missing = pd.Series([0, pd.NA, 1], dtype=dtype)
+    valid = pd.Series([0.01, 0.02, 0.03])
+    strategy = missing if side == "strategy" else valid
+    benchmark = missing if side == "benchmark" else valid
+    with pytest.raises(ValueError, match=r"returns.*finite"):
+        BenchmarkComparator().compare(strategy, benchmark)
+
+
+@pytest.mark.parametrize("dtype", ["float64", "int64", "Float64", "Int64"])
+def test_comparison_preserves_complete_numeric_return_dtypes(dtype: str) -> None:
+    strategy = pd.Series([0, 1, 0], dtype=dtype)
+    benchmark = pd.Series([1, 0, 0], dtype=dtype)
+    actual = BenchmarkComparator().compare(strategy, benchmark)
+    expected = BenchmarkComparator().compare(strategy.astype(float), benchmark.astype(float))
+    np.testing.assert_array_equal(
+        actual.excess_returns.to_numpy(dtype=float), expected.excess_returns
+    )
+    for field in (
+        "alpha",
+        "beta",
+        "information_ratio",
+        "tracking_error",
+        "benchmark_relative_drawdown",
+    ):
+        assert getattr(actual, field) == pytest.approx(getattr(expected, field))
+
+
+@pytest.mark.parametrize("dtype", ["float64", "Float64"])
+def test_comparison_preserves_aligned_only_value_validation(dtype: str) -> None:
+    strategy = pd.Series([np.nan, 0.01, 0.02], index=[0, 1, 2], dtype=dtype)
+    benchmark = pd.Series([0.01, 0.02, -2], index=[1, 2, 3], dtype=dtype)
+    result = BenchmarkComparator().compare(strategy, benchmark)
+    assert result.beta == pytest.approx(1)
+    assert result.alpha == pytest.approx(0)
+    assert result.tracking_error == pytest.approx(0)
+    assert result.benchmark_relative_drawdown == pytest.approx(0)

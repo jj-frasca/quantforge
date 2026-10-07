@@ -154,6 +154,11 @@ ADR-172 also requires each source index to be unique and ascending before inner 
 preserves valid partial overlap and generic/naive ordered indexes; malformed calendars raise rather
 than being sorted or deduplicated. Calendar identity is intrinsic and does not certify acquisition.
 
+ADR-179 requires both source Series to have real nonboolean numeric dtype before alignment.
+Object/string/complex/boolean payloads raise rather than being coerced or partly discarded.
+Complete nullable numeric inputs remain supported; missing overlapping rows fail the finite check.
+Finite/value validation still concerns aligned rows only, preserving partial-overlap semantics.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)
