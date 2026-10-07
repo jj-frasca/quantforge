@@ -801,3 +801,49 @@ def test_sortino_preserves_fraction_and_numpy_scalar_target() -> None:
     expected = sortino_ratio(returns, target=0.01)
     assert sortino_ratio(returns, target=Fraction(1, 100)) == pytest.approx(expected)
     assert sortino_ratio(returns, target=np.float64(0.01)) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("invalid", [np.nan, np.inf, -np.inf, True, "0.1", 0.1 + 1j])
+def test_calmar_rejects_invalid_numerator_before_zero_drawdown(invalid) -> None:
+    with pytest.raises(ValueError, match="Calmar inputs must be"):
+        calmar_ratio(annualized_return=invalid, max_drawdown=0.0)
+
+
+@pytest.mark.parametrize("invalid", [np.nan, np.inf, -np.inf, False, "0.1", 0.1 + 1j])
+def test_calmar_rejects_invalid_drawdown_scalar(invalid) -> None:
+    with pytest.raises(ValueError, match="Calmar inputs must be"):
+        calmar_ratio(annualized_return=0.2, max_drawdown=invalid)
+
+
+@pytest.mark.parametrize("numerator", [1e308, -1e308])
+def test_calmar_refuses_nonfinite_native_quotient(numerator) -> None:
+    with pytest.raises(ValueError, match="Calmar ratio must be finite"):
+        calmar_ratio(annualized_return=numerator, max_drawdown=-1e-308)
+
+
+def test_composed_metrics_refuse_overflowed_calmar() -> None:
+    with pytest.raises(ValueError, match="Calmar ratio must be finite"):
+        BacktestMetrics.from_series(pd.Series([-1e-8, 270.0]))
+
+
+@pytest.mark.parametrize("drawdown", [-0.125, 0.125])
+@pytest.mark.parametrize("numerator", [-0.25, 0.0, 0.25])
+def test_calmar_preserves_exact_finite_ratio_and_zero_convention(numerator, drawdown) -> None:
+    from fractions import Fraction
+
+    expected = float(Fraction(numerator) / abs(Fraction(drawdown)))
+    assert calmar_ratio(numerator, drawdown) == expected
+    assert calmar_ratio(numerator, 0.0) == 0.0
+
+
+def test_calmar_preserves_fraction_and_numpy_scalar_inputs() -> None:
+    from fractions import Fraction
+
+    assert calmar_ratio(Fraction(1, 4), Fraction(-1, 8)) == 2.0
+    assert calmar_ratio(np.float64(0.25), np.float64(-0.125)) == 2.0
+
+
+@pytest.mark.parametrize("invalid", [np.bool_(True), 10**400])
+def test_calmar_rejects_boolean_or_unrepresentable_numerator(invalid) -> None:
+    with pytest.raises(ValueError, match="Calmar inputs must be"):
+        calmar_ratio(invalid, 0.0)

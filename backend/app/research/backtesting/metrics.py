@@ -122,9 +122,25 @@ def calmar_ratio(annualized_return: float, max_drawdown: float) -> float:
         curve), mirroring `sharpe_ratio`/`sortino_ratio`'s degenerate-series convention of
         0.0 rather than +inf.
     """
+    inputs: tuple[object, object] = (annualized_return, max_drawdown)
+    validated: list[float] = []
+    for value in inputs:
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+            raise ValueError("Calmar inputs must be finite real nonboolean scalars")
+        try:
+            scalar = float(value)
+        except (OverflowError, ValueError) as exc:
+            raise ValueError("Calmar inputs must be finite real nonboolean scalars") from exc
+        if not np.isfinite(scalar):
+            raise ValueError("Calmar inputs must be finite real nonboolean scalars")
+        validated.append(scalar)
+    annualized_return, max_drawdown = validated
     if max_drawdown == 0.0:
         return 0.0
-    return float(annualized_return / abs(max_drawdown))
+    result = float(annualized_return / abs(max_drawdown))
+    if not np.isfinite(result):
+        raise ValueError("Calmar ratio must be finite")
+    return result
 
 
 @dataclass(frozen=True)
