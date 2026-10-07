@@ -160,6 +160,11 @@ real floating point only), after matrix-shape precedence. Boolean, complex, stri
 temporal matrices cannot be reinterpreted as return evidence. Valid CSCV/tie arithmetic, finite
 constant candidates, strict pbo_max and calibration identity remain unchanged.
 
+ADR-200 retains the original source mask through PBO's finite-evidence guard. Any masked
+observation is missing evidence, even when underlying storage is finite; materialization
+must not replace it with that storage. All-false masks preserve exact CSCV and tied-column
+permutation results. Structural precedence, history, ranks and calibration identity remain.
+
 ---
 
 ## 3. Walk-forward evaluation (ADR-038)

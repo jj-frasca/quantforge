@@ -193,3 +193,53 @@ def test_pbo_preserves_real_numeric_representation(dtype) -> None:
     expected = _reference_pbo(values.astype(float), n_splits=2)
     assert probability_of_backtest_overfitting(values, n_splits=2) == expected
     assert probability_of_backtest_overfitting(values.tolist(), n_splits=2) == expected
+
+
+@pytest.mark.parametrize("missing", ["single", "row", "column", "all"])
+@pytest.mark.parametrize("flat", [False, True])
+def test_pbo_rejects_masked_observations_in_finite_storage(missing: str, flat: bool) -> None:
+    values = np.column_stack((np.tile([0.01, 0.02, 0.03, 0.04], 4), np.zeros(16)))
+    if flat:
+        values[:] = 0.0
+    mask = np.zeros(values.shape, dtype=bool)
+    if missing == "single":
+        mask[0, 0] = True
+    elif missing == "row":
+        mask[0, :] = True
+    elif missing == "column":
+        mask[:, 0] = True
+    else:
+        mask[:] = True
+    with pytest.raises(ValueError, match="finite"):
+        probability_of_backtest_overfitting(np.ma.array(values, mask=mask), n_splits=4)
+
+
+@pytest.mark.parametrize("mask", [False, np.ma.nomask])
+def test_pbo_complete_mask_preserves_independent_reference(mask) -> None:
+    values = np.random.default_rng(7).normal(size=(16, 3))
+    expected = _reference_pbo(values, n_splits=4)
+    assert probability_of_backtest_overfitting(np.ma.array(values, mask=mask), 4) == expected
+
+
+def test_pbo_complete_mask_preserves_ties_and_column_permutations() -> None:
+    values = np.column_stack((np.tile([0.01, 0.02, 0.03, 0.04], 4), np.zeros((16, 2))))
+    expected = _reference_pbo(values, n_splits=4)
+    for permutation in ([0, 1, 2], [2, 0, 1], [1, 2, 0]):
+        evidence = np.ma.array(values[:, permutation], mask=np.zeros(values.shape, dtype=bool))
+        assert probability_of_backtest_overfitting(evidence, 4) == expected
+
+
+@pytest.mark.parametrize(
+    ("values", "splits", "message"),
+    [
+        (np.zeros(8), 2, "two-dimensional"),
+        (np.zeros((8, 2), dtype=bool), 2, "real nonboolean"),
+        (np.zeros((8, 1)), 2, "config"),
+        (np.zeros((8, 2)), 3, "even"),
+        (np.zeros((4, 2)), 8, "observations"),
+        (np.zeros((2, 2)), 2, "two observations"),
+    ],
+)
+def test_pbo_mask_does_not_change_structural_error_precedence(values, splits, message) -> None:
+    with pytest.raises(ValueError, match=message):
+        probability_of_backtest_overfitting(np.ma.array(values, mask=True), splits)

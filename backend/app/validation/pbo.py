@@ -27,6 +27,7 @@ def probability_of_backtest_overfitting(
         Fraction of splits where the in-sample-best config lands below the OOS median — the
         probability of backtest overfitting, in [0, 1]. Pure noise -> ~0.5.
     """
+    performance_source = performance
     source = np.asarray(performance)
     if source.ndim != 2:
         raise ValueError("performance must be a two-dimensional matrix")
@@ -42,7 +43,9 @@ def probability_of_backtest_overfitting(
         raise ValueError("need at least n_splits observations")
     if n_obs // 2 < 2:
         raise ValueError("each balanced half needs at least two observations")
-    if not np.isfinite(performance).all():
+    if not np.isfinite(performance).all() or (
+        np.ma.isMaskedArray(performance_source) and np.any(np.ma.getmaskarray(performance_source))
+    ):
         raise ValueError("performance must contain only finite returns")
 
     groups = np.array_split(np.arange(n_obs), n_splits)
