@@ -275,3 +275,63 @@ def test_expected_max_declines_unrepresentable_trial_tail() -> None:
 def test_expected_max_declines_nonfinite_scaled_haircut(accounting_entry) -> None:
     with pytest.raises(ValueError, match="expected maximum Sharpe must be finite"):
         accounting_entry(n_trials=100, sr_std=1e308)
+
+
+@pytest.mark.parametrize("count", [2.5, True, np.bool_(True), np.nan, np.inf, "100"])
+def test_psr_rejects_nonintegral_observed_history(count) -> None:
+    with pytest.raises(ValueError, match="n_returns must be"):
+        probabilistic_sharpe_ratio(0.2, benchmark_sr=0.0, n_returns=count, skew=0.0, kurtosis=3.0)
+
+
+@pytest.mark.parametrize("field", ["observed_sr", "benchmark_sr", "skew", "kurtosis"])
+@pytest.mark.parametrize("invalid", [np.nan, np.inf, -np.inf, True, "0.2", 0.2 + 1j])
+def test_psr_rejects_invalid_original_scalar_evidence(field, invalid) -> None:
+    inputs = {
+        "observed_sr": 0.2,
+        "benchmark_sr": 0.0,
+        "n_returns": 100,
+        "skew": 0.0,
+        "kurtosis": 3.0,
+    }
+    inputs[field] = invalid
+    with pytest.raises(ValueError, match=field + " must be"):
+        probabilistic_sharpe_ratio(**inputs)
+
+
+def test_psr_count_precedes_invalid_moment_evidence() -> None:
+    with pytest.raises(ValueError, match="n_returns must be"):
+        probabilistic_sharpe_ratio(
+            0.2, benchmark_sr=0.0, n_returns=2.5, skew=np.nan, kurtosis=np.inf
+        )
+
+
+@pytest.mark.parametrize("field", ["observed_sr", "skew", "kurtosis"])
+def test_probability_dsr_inherits_psr_source_validation(field) -> None:
+    inputs = {
+        "observed_sr": 0.2,
+        "n_trials": 10,
+        "sr_std": 0.2,
+        "n_returns": 100,
+        "skew": 0.0,
+        "kurtosis": 3.0,
+    }
+    inputs[field] = np.inf
+    with pytest.raises(ValueError, match=field + " must be"):
+        deflated_sharpe_probability(**inputs)
+
+
+def test_psr_preserves_numpy_fraction_and_signed_source_oracle() -> None:
+    from fractions import Fraction
+
+    observed, benchmark, n, skew, kurtosis = -0.1, -0.2, 401, -0.4, 6.0
+    standard_error = math.sqrt(
+        (1 - skew * observed + 0.25 * (kurtosis - 1) * observed**2) / (n - 1)
+    )
+    expected = float(norm.cdf((observed - benchmark) / standard_error))
+    assert probabilistic_sharpe_ratio(
+        np.float64(observed),
+        benchmark_sr=Fraction(-1, 5),
+        n_returns=np.int64(n),
+        skew=np.float64(skew),
+        kurtosis=Fraction(6),
+    ) == pytest.approx(expected)

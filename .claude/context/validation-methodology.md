@@ -63,6 +63,11 @@ ADR-191 resolves FINDING-126 with equivalent inverse-survival quantiles from int
 reciprocal tails and finite-tail/final-haircut refusal. Counts beyond float max remain supported
 when both tails are representable; ordinary estimator/threshold/identity stay unchanged.
 
+ADR-192 validates PSR original count/scalars before existing moment/formula checks: nonboolean
+integer history >=2 first, then finite real nonboolean observed/benchmark Sharpe, skew and raw
+kurtosis. Probability DSR inherits the guard; valid signed/numpy/Fraction inputs and estimator
+remain. Native extreme arithmetic and margin observed-score validity stay separate.
+
 **The scale trap, which is why this took two attempts.** Everything on a `Trial` is ANNUALIZED; the
 PSR is a function of the PER-PERIOD Sharpe and the per-period moments TOGETHER. Mixing one
 annualized input with two per-period ones silently rescales the probability instead of failing.

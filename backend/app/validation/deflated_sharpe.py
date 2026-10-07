@@ -100,8 +100,30 @@ def probabilistic_sharpe_ratio(
         combination that drives it to zero is not a distribution, and returning 1.0 there would
         report certainty from a degenerate input.
     """
+    count_evidence: object = n_returns
+    if isinstance(count_evidence, (bool, np.bool_)) or not isinstance(count_evidence, Integral):
+        raise ValueError("n_returns must be a nonboolean integer >= 2")
+    n_returns = int(count_evidence)
     if n_returns < 2:
-        raise ValueError("n_returns must be >= 2")
+        raise ValueError("n_returns must be a nonboolean integer >= 2")
+    source_scalars: tuple[tuple[str, object], ...] = (
+        ("observed_sr", observed_sr),
+        ("benchmark_sr", benchmark_sr),
+        ("skew", skew),
+        ("kurtosis", kurtosis),
+    )
+    validated: list[float] = []
+    for name, value in source_scalars:
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+            raise ValueError(f"{name} must be a finite real nonboolean scalar")
+        try:
+            scalar = float(value)
+        except (OverflowError, ValueError) as exc:
+            raise ValueError(f"{name} must be a finite real nonboolean scalar") from exc
+        if not np.isfinite(scalar):
+            raise ValueError(f"{name} must be a finite real nonboolean scalar")
+        validated.append(scalar)
+    observed_sr, benchmark_sr, skew, kurtosis = validated
     variance = kurtosis - skew**2 - 1.0
     if variance <= 0.0:
         raise ValueError("degenerate Sharpe-estimator variance: kurtosis - skew^2 - 1 must be > 0")
