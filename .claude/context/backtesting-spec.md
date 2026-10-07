@@ -130,6 +130,9 @@ ADR-186 validates original complete finite real numeric source evidence at the p
 compounded-return helpers before conversion/empty shortcuts; boolean, strings and complex
 observations cannot be reinterpreted as measured returns. Numeric empty and log math remain.
 
+ADR-187 validates Sortino's finite real nonboolean target before complete numeric source evidence
+and degenerate shortcuts; native full-sample downside arithmetic and finite signed domain remain.
+
 - `sharpe`: `sqrt(252) * mean(net) / std(net)` (daily). 0.0 if std==0 (constant returns).
 - `max_drawdown`: `min(equity/equity.cummax() - 1)` — **in [-1.0, 0.0]**. Positive = bug.
 - `total_return` (ADR-110): `product(1 + net) - 1` over every net observation, including the

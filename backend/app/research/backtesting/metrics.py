@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from numbers import Real
 from typing import Literal, cast
 
 import numpy as np
@@ -93,6 +94,16 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float:
         fewer than two returns or no observation falls below `target` (downside deviation
         0), mirroring `sharpe_ratio`'s degenerate-series convention rather than +inf.
     """
+    target_evidence: object = target
+    if isinstance(target_evidence, (bool, np.bool_)) or not isinstance(target_evidence, Real):
+        raise ValueError("target must be a finite real nonboolean scalar")
+    try:
+        target = float(target_evidence)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError("target must be a finite real nonboolean scalar") from exc
+    if not np.isfinite(target):
+        raise ValueError("target must be a finite real nonboolean scalar")
+    _validate_complete_return_sample(returns)
     if len(returns) < 2:
         return 0.0
     shortfall = np.minimum(returns.to_numpy(dtype=np.float64) - target, 0.0)

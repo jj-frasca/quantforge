@@ -745,3 +745,59 @@ def test_compounded_return_preserves_complete_nullable_wealth_oracle(metric, dty
 def test_compounded_return_rejects_incomplete_nullable_source(metric, invalid) -> None:
     with pytest.raises(ValueError):
         metric(pd.Series([0.01, invalid], dtype="Float64"))
+
+
+@pytest.mark.parametrize("target", [np.nan, np.inf, -np.inf, True, 0.01 + 1j, "0.01"])
+def test_sortino_rejects_invalid_target_even_without_history(target) -> None:
+    with pytest.raises(ValueError, match="target must be"):
+        sortino_ratio(pd.Series([], dtype=float), target=target)
+
+
+@pytest.mark.parametrize(
+    "returns",
+    [
+        pd.Series([np.nan]),
+        pd.Series([0.01, np.nan, -0.02]),
+        pd.Series([0.01, np.inf]),
+        pd.Series([True, False]),
+        pd.Series([0.01 + 1j, -0.02 + 2j]),
+        pd.Series(["0.01", "-0.02"]),
+        pd.Series([], dtype=object),
+        pd.Series([0.02, pd.NA], dtype="Float64"),
+    ],
+)
+def test_sortino_rejects_malformed_source_before_shortcuts(returns) -> None:
+    with pytest.raises(ValueError, match="returns must be"):
+        sortino_ratio(returns)
+
+
+@pytest.mark.parametrize("dtype", ["float64", "Float64"])
+@pytest.mark.parametrize("target", [-0.5, 0.0, 0.01, 1])
+def test_sortino_preserves_signed_nullable_full_sample_downside_oracle(dtype, target) -> None:
+    from math import sqrt
+
+    values = [-1.5, -1.0, 0.25, 2.0]
+    excess = [value - target for value in values]
+    downside = sqrt(sum(min(value, 0.0) ** 2 for value in excess) / len(values))
+    expected = sqrt(252) * (sum(excess) / len(excess)) / downside
+    assert sortino_ratio(pd.Series(values, dtype=dtype), target=target) == pytest.approx(expected)
+
+
+def test_sortino_invalid_target_precedes_invalid_source() -> None:
+    with pytest.raises(ValueError, match="target must be"):
+        sortino_ratio(pd.Series([np.nan]), target=np.nan)
+
+
+@pytest.mark.parametrize("target", [np.bool_(True), 10**400])
+def test_sortino_refuses_boolean_or_unrepresentable_real_target(target) -> None:
+    with pytest.raises(ValueError, match="target must be"):
+        sortino_ratio(pd.Series([], dtype=float), target=target)
+
+
+def test_sortino_preserves_fraction_and_numpy_scalar_target() -> None:
+    from fractions import Fraction
+
+    returns = pd.Series([0.01, -0.02, 0.03])
+    expected = sortino_ratio(returns, target=0.01)
+    assert sortino_ratio(returns, target=Fraction(1, 100)) == pytest.approx(expected)
+    assert sortino_ratio(returns, target=np.float64(0.01)) == pytest.approx(expected)
