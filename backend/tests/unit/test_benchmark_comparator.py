@@ -220,3 +220,30 @@ def test_comparison_preserves_aligned_only_value_validation(dtype: str) -> None:
     assert result.alpha == pytest.approx(0)
     assert result.tracking_error == pytest.approx(0)
     assert result.benchmark_relative_drawdown == pytest.approx(0)
+
+
+@pytest.mark.parametrize("values", [[1e200, 2e200, 3e200], [1e308, 1e308, 1e308]])
+@pytest.mark.parametrize("strict", [False, True])
+def test_comparison_rejects_nonfinite_statistics(values: list[float], strict: bool) -> None:
+    returns = pd.Series(values)
+    with (
+        np.errstate(all="raise" if strict else "ignore"),
+        pytest.raises(ValueError, match=r"statistics.*finite"),
+    ):
+        BenchmarkComparator().compare(returns, returns)
+
+
+def test_comparison_preserves_large_representable_constant_statistics() -> None:
+    result = BenchmarkComparator().compare(pd.Series([1e100] * 3), pd.Series([1e100] * 3))
+    assert result.beta == 0
+    assert result.alpha == pytest.approx(252e100)
+    assert result.information_ratio == 0
+    assert result.tracking_error == 0
+    assert result.benchmark_relative_drawdown == 0
+
+
+@given(st.floats(min_value=1e160, max_value=1e250, allow_nan=False, allow_infinity=False))
+def test_comparison_declines_overflowing_moments_without_publishing_nan(scale: float) -> None:
+    returns = pd.Series([scale, 2 * scale, 3 * scale])
+    with pytest.raises(ValueError, match=r"statistics.*finite"):
+        BenchmarkComparator().compare(returns, returns)

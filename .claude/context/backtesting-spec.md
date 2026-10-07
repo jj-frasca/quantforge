@@ -159,6 +159,11 @@ Object/string/complex/boolean payloads raise rather than being coerced or partly
 Complete nullable numeric inputs remain supported; missing overlapping rows fail the finite check.
 Finite/value validation still concerns aligned rows only, preserving partial-overlap semantics.
 
+ADR-180 requires every published comparator scalar to be finite. Upper arithmetic failures
+become ValueError rather than NaN/infinite claims, preserving the API's optional comparison.
+Estimator formulas remain unchanged; extreme representable answers may be declined when their
+intermediates overflow. Finite-but-wrong tiny-variance beta remains open in FINDING-113.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

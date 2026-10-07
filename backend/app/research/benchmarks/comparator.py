@@ -49,32 +49,45 @@ class BenchmarkComparator:
             raise ValueError("returns must be finite")
         if np.any(strat_values <= -1.0) or np.any(bench_values <= -1.0):
             raise ValueError("returns must preserve positive wealth")
-        excess = strat - bench
+        with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+            excess = strat - bench
 
-        bench_var = float(bench.var())
-        beta = float(strat.cov(bench) / bench_var) if bench_var > 0 else 0.0
-        alpha = float((strat.mean() - beta * bench.mean()) * TRADING_DAYS)
+            bench_var = float(bench.var())
+            beta = float(strat.cov(bench) / bench_var) if bench_var > 0 else 0.0
+            alpha = float((strat.mean() - beta * bench.mean()) * TRADING_DAYS)
 
-        excess_std = float(excess.std())
-        sqrt_t = np.sqrt(TRADING_DAYS)
-        information_ratio = float(sqrt_t * excess.mean() / excess_std) if excess_std > 0 else 0.0
-        tracking_error = float(sqrt_t * excess_std)
-        # Relative drawdown = drawdown of the strategy's equity RELATIVE to the benchmark's
-        # (a ratio of compounded curves, always positive). Compounding the return *difference*
-        # (strat - bench) is invalid — it can fall to <= -1 and yield a meaningless curve.
-        # Shared growth must cancel before compounding: standalone wealth can overflow or
-        # underflow even when its ratio is representable. Running log peaks avoid materializing
-        # large relative wealth too (ADR-171); zero is the pre-return unit-wealth baseline.
-        relative_log_wealth = np.concatenate(
-            ([0.0], np.cumsum(np.log1p(strat_values) - np.log1p(bench_values)))
+            excess_std = float(excess.std())
+            sqrt_t = np.sqrt(TRADING_DAYS)
+            information_ratio = (
+                float(sqrt_t * excess.mean() / excess_std) if excess_std > 0 else 0.0
+            )
+            tracking_error = float(sqrt_t * excess_std)
+            # Relative drawdown = drawdown of the strategy's equity RELATIVE to the benchmark's
+            # (a ratio of compounded curves, always positive). Compounding the return *difference*
+            # (strat - bench) is invalid — it can fall to <= -1 and yield a meaningless curve.
+            # Shared growth must cancel before compounding: standalone wealth can overflow or
+            # underflow even when its ratio is representable. Running log peaks avoid materializing
+            # large relative wealth too (ADR-171); zero is the pre-return unit-wealth baseline.
+            relative_log_wealth = np.concatenate(
+                ([0.0], np.cumsum(np.log1p(strat_values) - np.log1p(bench_values)))
+            )
+            log_drawdown = relative_log_wealth - np.maximum.accumulate(relative_log_wealth)
+
+            comparison = BenchmarkComparison(
+                excess_returns=excess,
+                information_ratio=information_ratio,
+                alpha=alpha,
+                beta=beta,
+                tracking_error=tracking_error,
+                benchmark_relative_drawdown=float(np.expm1(log_drawdown.min())),
+            )
+        statistics = (
+            comparison.alpha,
+            comparison.beta,
+            comparison.information_ratio,
+            comparison.tracking_error,
+            comparison.benchmark_relative_drawdown,
         )
-        log_drawdown = relative_log_wealth - np.maximum.accumulate(relative_log_wealth)
-
-        return BenchmarkComparison(
-            excess_returns=excess,
-            information_ratio=information_ratio,
-            alpha=alpha,
-            beta=beta,
-            tracking_error=tracking_error,
-            benchmark_relative_drawdown=float(np.expm1(log_drawdown.min())),
-        )
+        if not np.isfinite(statistics).all():
+            raise ValueError("benchmark statistics must be finite")
+        return comparison
