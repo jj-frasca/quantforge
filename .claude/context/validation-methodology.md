@@ -68,6 +68,11 @@ integer history >=2 first, then finite real nonboolean observed/benchmark Sharpe
 kurtosis. Probability DSR inherits the guard; valid signed/numpy/Fraction inputs and estimator
 remain. Native extreme arithmetic and margin observed-score validity stay separate.
 
+ADR-193 distinguishes retained strict Pearson moment slack (`kurtosis-skew^2-1 >0`) from
+PSR SE squared (`(1-skew*SR + .25*(kurtosis-1)*SR^2)/(n-1)`). Zero slack can describe
+genuine two-point distributions; the existing strict domain policy still excludes them. No
+runtime guard, formula, assertion, threshold or legacy error text changes.
+
 **The scale trap, which is why this took two attempts.** Everything on a `Trial` is ANNUALIZED; the
 PSR is a function of the PER-PERIOD Sharpe and the per-period moments TOGETHER. Mixing one
 annualized input with two per-period ones silently rescales the probability instead of failing.

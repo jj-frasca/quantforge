@@ -142,8 +142,10 @@ def test_psr_needs_at_least_two_returns() -> None:
 
 
 def test_psr_rejects_a_degenerate_variance() -> None:
-    """kurtosis - skew^2 - 1 is the variance of the Sharpe estimator; a combination that drives it
-    to zero or below is not a distribution and must not silently return 1.0."""
+    """The retained strict moment-domain policy rejects nonpositive Pearson slack.
+
+    This guard is distinct from the actual Sharpe-dependent standard-error factor (ADR-193).
+    """
     with pytest.raises(ValueError, match="variance"):
         probabilistic_sharpe_ratio(1.5, benchmark_sr=0.5, n_returns=500, skew=0.0, kurtosis=0.5)
 

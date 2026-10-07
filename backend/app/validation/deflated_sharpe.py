@@ -96,9 +96,11 @@ def probabilistic_sharpe_ratio(
     rescales the answer.
 
     Notes:
-        `kurtosis - skew^2 - 1` is the variance of the Sharpe estimator and must be positive. A
-        combination that drives it to zero is not a distribution, and returning 1.0 there would
-        report certainty from a degenerate input.
+        The retained domain policy requires positive `kurtosis - skew^2 - 1`, the slack in
+        Pearson's population-moment inequality. This is distinct from the SE-squared factor
+        `(1 - skew*SR + (kurtosis-1)*SR^2/4)/(n-1)`. Zero slack can describe a genuine two-point
+        distribution even when that factor is positive; the strict policy still excludes it.
+        ADR-193 clarifies the explanation without relaxing the guard or its legacy error label.
     """
     count_evidence: object = n_returns
     if isinstance(count_evidence, (bool, np.bool_)) or not isinstance(count_evidence, Integral):
