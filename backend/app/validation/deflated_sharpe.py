@@ -52,9 +52,18 @@ def expected_max_sharpe(n_trials: int, sr_std: float) -> float:
         raise ValueError("sr_std must be a positive finite real nonboolean scalar")
     if n_trials == 1:
         return 0.0
-    a = norm.ppf(1.0 - 1.0 / n_trials)
-    b = norm.ppf(1.0 - 1.0 / (n_trials * math.e))
-    return float(sr_std * ((1.0 - _EULER_MASCHERONI) * a + _EULER_MASCHERONI * b))
+    # Integer true division preserves representable reciprocals beyond float count range.
+    tail_a = 1 / n_trials
+    tail_b = tail_a / math.e
+    if not np.isfinite([tail_a, tail_b]).all() or tail_a <= 0.0 or tail_b <= 0.0:
+        raise ValueError("trial tails must be positive and finite")
+    a = norm.isf(tail_a)
+    b = norm.isf(tail_b)
+    with np.errstate(over="ignore", invalid="ignore"):
+        result = float(sr_std * ((1.0 - _EULER_MASCHERONI) * a + _EULER_MASCHERONI * b))
+    if not np.isfinite(result):
+        raise ValueError("expected maximum Sharpe must be finite")
+    return result
 
 
 def deflated_sharpe(observed_sr: float, n_trials: int, sr_std: float = 1.0) -> float:

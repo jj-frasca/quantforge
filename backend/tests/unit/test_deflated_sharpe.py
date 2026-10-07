@@ -241,3 +241,37 @@ def test_valid_one_trial_probability_matches_unpenalized_psr() -> None:
         )
         == expected
     )
+
+
+@pytest.mark.parametrize(
+    "count", [10**17, 10**300, 10**309], ids=["large", "extreme", "beyond_float_max"]
+)
+def test_expected_max_large_count_matches_forward_gaussian_tail_oracle(count) -> None:
+    from scipy.optimize import brentq
+
+    # Independently invert the forward Gaussian survival function, without ppf/isf.
+    def quantile(tail):
+        return brentq(
+            lambda z: math.erfc(z / math.sqrt(2.0)) / 2.0 - tail,
+            0.0,
+            40.0,
+            xtol=1e-13,
+        )
+
+    tail = 1 / count
+    a, b = quantile(tail), quantile(tail / math.e)
+    gamma = 0.5772156649015329
+    expected = 0.2 * ((1.0 - gamma) * a + gamma * b)
+    actual = expected_max_sharpe(count, 0.2)
+    assert math.isfinite(actual)
+    assert actual == pytest.approx(expected, rel=1e-13)
+
+
+def test_expected_max_declines_unrepresentable_trial_tail() -> None:
+    with pytest.raises(ValueError, match="trial tails must be positive and finite"):
+        expected_max_sharpe(10**400, 0.2)
+
+
+def test_expected_max_declines_nonfinite_scaled_haircut(accounting_entry) -> None:
+    with pytest.raises(ValueError, match="expected maximum Sharpe must be finite"):
+        accounting_entry(n_trials=100, sr_std=1e308)

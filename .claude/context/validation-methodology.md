@@ -59,7 +59,9 @@ variance. Representable estimates, sample counts, PSR formula and gate threshold
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
 probability; margin/probability delegate to one guard. Valid formulas, counts and gates remain.
-Extreme quantile/scaling overflow is separately recorded in FINDING-126.
+ADR-191 resolves FINDING-126 with equivalent inverse-survival quantiles from integer-divided
+reciprocal tails and finite-tail/final-haircut refusal. Counts beyond float max remain supported
+when both tails are representable; ordinary estimator/threshold/identity stay unchanged.
 
 **The scale trap, which is why this took two attempts.** Everything on a `Trial` is ANNUALIZED; the
 PSR is a function of the PER-PERIOD Sharpe and the per-period moments TOGETHER. Mixing one

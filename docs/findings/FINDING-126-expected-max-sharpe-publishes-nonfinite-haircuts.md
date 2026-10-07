@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-07
 - **Severity:** Low — extreme finite accounting produces a nonfinite derived threshold
-- **Status:** Open — separate numerical/output boundary review required
+- **Status:** Resolved — ADR-191
 
 ## Evidence
 
@@ -11,10 +11,11 @@ both CDF arguments round to one. The corresponding Gaussian quantiles are mathem
 expected_max_sharpe(100,1e308) also returns infinity, this time because the final dispersion scaling
 overflows. Validating positive finite source counts/dispersion alone does not prevent either result.
 
-## Next action and limits
+## Correction and limits
 
-Evaluate Gaussian quantiles from their upper-tail probabilities where representable, then decline
-unrepresentable/nonfinite derived haircuts. Separate numerical evaluation of the same estimator
-from altered multiplicity counts, arbitrary caps or changed thresholds. Use independent forward-tail
-oracles before correction. These are extreme inputs; no production lifetime count at this scale is
+ADR-191 evaluates the same Gaussian quantiles from representable upper tails, using integer
+true division for reciprocal counts; unrepresentable tails or final haircuts raise ValueError.
+Seven failing large-count/direct-wrapper overflow cases preceded correction. Independent brentq
+inversion of forward erfc verifies large-count estimates, including 10**309. Separate numerical evaluation of the same estimator
+from altered multiplicity counts, arbitrary caps or changed thresholds. Ordinary-scale oracles retain the same estimator within floating-point precision. These are extreme inputs; no production lifetime count at this scale is
 claimed. Do not change generated records or calibration procedure.
