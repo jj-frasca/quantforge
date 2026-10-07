@@ -421,3 +421,45 @@ def test_psr_finite_arithmetic_matches_independent_erfc_oracle(observed: float) 
     assert probabilistic_sharpe_ratio(
         observed, benchmark_sr=0.03, n_returns=100, skew=0.0, kurtosis=3.0
     ) == pytest.approx(expected, abs=1e-15)
+
+
+@pytest.mark.parametrize("count", [2, 4])
+@pytest.mark.parametrize("score", [True, np.bool_(False), "0.2", 0.2 + 0j, [0.2, 0.3]])
+def test_dispersion_rejects_original_nonreal_or_nested_scores(count, score) -> None:
+    with pytest.raises(ValueError, match="Sharpe estimates must be finite real nonboolean scalars"):
+        robust_sharpe_dispersion([score, *([0.0] * (count - 1))])
+
+
+def test_dispersion_refuses_unrepresentable_real_source() -> None:
+    with pytest.raises(ValueError, match="Sharpe estimates must be finite real nonboolean scalars"):
+        robust_sharpe_dispersion([0.0, 10**400])
+
+
+@pytest.mark.parametrize("scores", [[-1e308, 1e308], [-1e308, -1e308, 1e308, 1e308]])
+@pytest.mark.parametrize("strict", [False, True])
+def test_dispersion_declines_nonfinite_native_scale(scores, strict) -> None:
+    with (
+        np.errstate(all="raise" if strict else "warn"),
+        pytest.raises(ValueError, match="Sharpe dispersion must be finite"),
+    ):
+        robust_sharpe_dispersion(scores)
+
+
+def test_dispersion_preserves_fraction_numpy_and_flat_family() -> None:
+    from fractions import Fraction
+
+    assert robust_sharpe_dispersion([Fraction(-1), np.float64(1)]) == pytest.approx(math.sqrt(2))
+    assert robust_sharpe_dispersion(
+        [np.int64(-3), Fraction(-1), 1.0, np.float32(3)]
+    ) == pytest.approx(3 / (2 * norm.ppf(0.75)))
+    assert robust_sharpe_dispersion([0.0, 0.0]) == 1e-6
+    assert robust_sharpe_dispersion([-2.0] * 4) == 1e-6
+
+
+@given(
+    first=st.floats(min_value=-10, max_value=10, allow_nan=False, allow_infinity=False),
+    second=st.floats(min_value=-10, max_value=10, allow_nan=False, allow_infinity=False),
+)
+def test_dispersion_two_candidate_closed_form_oracle(first: float, second: float) -> None:
+    expected = max(abs(second - first) / math.sqrt(2), 1e-6)
+    assert robust_sharpe_dispersion([first, second]) == pytest.approx(expected)

@@ -106,6 +106,12 @@ standard deviation. `Trial` is therefore a compact family-finalist summary with
 Historical longitudinal pool counters predate this field and remain a lower bound; generated
 records are never guessed/backfilled against today's catalog.
 
+ADR-196 validates each original candidate Sharpe as finite float-representable real
+nonboolean evidence before array conversion, rejecting nested families and coerced
+strings/booleans. Both native std/IQR branches require finite dispersion before the
+unchanged degenerate floor. It refuses extreme arithmetic without estimator recovery;
+counts, ordinary formulas, thresholds and calibration identity remain unchanged.
+
 **Pool reporting (ADR-066).** `Experiment.lifetime_trials` is already cumulative per symbol. The
 programme-wide trial headline therefore sums the maximum counter once per symbol; summing every
 retained experiment would count the same prior trials repeatedly. The aggregate is the sum of the

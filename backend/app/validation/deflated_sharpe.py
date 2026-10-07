@@ -20,14 +20,27 @@ def robust_sharpe_dispersion(sharpes: Sequence[float]) -> float:
     """
     if len(sharpes) < 2:
         raise ValueError("need at least two Sharpe estimates")
-    values = np.asarray(sharpes, dtype=float)
-    if not np.all(np.isfinite(values)):
-        raise ValueError("Sharpe estimates must be finite")
-    if len(values) < 4:
-        dispersion = float(np.std(values, ddof=1))
-    else:
-        q25, q75 = np.quantile(values, [0.25, 0.75])
-        dispersion = float((q75 - q25) / _NORMAL_IQR)
+    validated: list[float] = []
+    for value in sharpes:
+        score_evidence: object = value
+        if isinstance(score_evidence, (bool, np.bool_)) or not isinstance(score_evidence, Real):
+            raise ValueError("Sharpe estimates must be finite real nonboolean scalars")
+        try:
+            scalar = float(score_evidence)
+        except (OverflowError, ValueError) as exc:
+            raise ValueError("Sharpe estimates must be finite real nonboolean scalars") from exc
+        if not math.isfinite(scalar):
+            raise ValueError("Sharpe estimates must be finite real nonboolean scalars")
+        validated.append(scalar)
+    values = np.asarray(validated, dtype=float)
+    with np.errstate(over="ignore", invalid="ignore"):
+        if len(values) < 4:
+            dispersion = float(np.std(values, ddof=1))
+        else:
+            q25, q75 = np.quantile(values, [0.25, 0.75])
+            dispersion = float((q75 - q25) / _NORMAL_IQR)
+    if not math.isfinite(dispersion):
+        raise ValueError("Sharpe dispersion must be finite")
     return max(dispersion, _MIN_DISPERSION)
 
 

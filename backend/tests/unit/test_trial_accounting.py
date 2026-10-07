@@ -145,3 +145,11 @@ def test_probability_pricing_keeps_overflowed_finalist_unmeasured(score: float) 
     )
     assert priced[0] is None
     assert priced[1] is not None and 0 <= priced[1] <= 1
+
+
+@pytest.mark.parametrize("candidates", [[True, False], ["0", "1"], [[0, 1], [2, 3]]])
+def test_whole_search_forms_refuse_malformed_candidate_evidence(candidates) -> None:
+    with pytest.raises(ValueError, match="Sharpe estimates must be finite real nonboolean scalars"):
+        whole_search_deflated_sharpes([1.0], candidates, 200)
+    with pytest.raises(ValueError, match="Sharpe estimates must be finite real nonboolean scalars"):
+        whole_search_deflated_sharpe_probabilities([1.0], [_normal_moments()], candidates, 200)
