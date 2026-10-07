@@ -535,3 +535,59 @@ def test_backtest_representable_wealth_preserves_capital_scale(capital: float) -
     assert (scaled.equity_curve > 0).all()
     np.testing.assert_allclose(scaled.equity_curve / capital, reference.equity_curve, rtol=1e-14)
     assert scaled.metrics == reference.metrics
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        [100.0, np.nan, 110.0],
+        [np.nan, 100.0, 110.0],
+        [100.0, 110.0, np.nan],
+        [-100.0, -110.0, -121.0],
+        [0.0],
+        [np.inf],
+        [-np.inf],
+        [np.nan],
+    ],
+)
+@pytest.mark.parametrize("exposure", [0.0, 1.0])
+def test_backtest_rejects_invalid_price_observations(values: list[float], exposure: float) -> None:
+    prices = _prices(values)
+    with pytest.raises(ValueError, match="prices"):
+        BacktestEngine(cost_rate=0).run(prices, pd.Series(exposure, index=prices.index))
+
+
+@pytest.mark.parametrize(
+    "prices",
+    [
+        pd.Series([True, True]),
+        pd.Series([100, 110], dtype=object),
+        pd.Series(["100", "110"]),
+        pd.Series([100 + 0j, 110 + 0j]),
+        pd.Series([100, pd.NA, 110], dtype="Float64"),
+        pd.Series([100, pd.NA, 110], dtype="Int64"),
+    ],
+)
+def test_backtest_rejects_nonreal_or_missing_nullable_prices(prices: pd.Series) -> None:
+    with pytest.raises(ValueError, match="prices"):
+        BacktestEngine(cost_rate=0).run(prices, pd.Series(1.0, index=prices.index))
+
+
+@pytest.mark.parametrize("dtype", ["float64", "int64", "Float64", "Int64"])
+def test_backtest_preserves_complete_numeric_prices(dtype: str) -> None:
+    prices = pd.Series([100, 110, 121], dtype=dtype)
+    result = BacktestEngine(initial_capital=100, cost_rate=0).run(
+        prices, pd.Series(1.0, index=prices.index)
+    )
+    np.testing.assert_allclose(result.returns.to_numpy(dtype=float), [0.0, 0.1, 0.1])
+    np.testing.assert_allclose(result.equity_curve.to_numpy(dtype=float), [100, 110, 121])
+    assert result.metrics.total_return == pytest.approx(0.21)
+
+
+@given(st.floats(min_value=-1e100, max_value=0, allow_nan=False, allow_infinity=False))
+def test_backtest_rejects_nonpositive_price_at_every_position(price: float) -> None:
+    for row in range(3):
+        prices = _prices([100, 100, 100])
+        prices.iloc[row] = price
+        with pytest.raises(ValueError, match="prices"):
+            BacktestEngine(cost_rate=0).run(prices, pd.Series(1.0, index=prices.index))

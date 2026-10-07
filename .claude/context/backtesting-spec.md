@@ -98,6 +98,12 @@ return metric alone cannot establish representable scaled wealth. No capital/cos
 floor is added; ordinary math, empty histories and extreme representable flat curves are retained.
 Observed broker insolvency remains a separate account-ledger contract under ADR-169.
 
+ADR-178 requires every supplied price to be real nonboolean numeric, finite and strictly positive
+before pct_change. Missing first/interior/last observations and invalid singleton values raise
+even for zero exposure, rather than becoming zero returns. Object/string/complex payloads are not
+coerced; complete nullable numeric and empty numeric Series retain their existing semantics.
+No observation is filled, dropped or repaired, and lag/cost/metric calculations are unchanged.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 

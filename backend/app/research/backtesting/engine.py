@@ -3,6 +3,7 @@ from math import isfinite
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 
 from app.research.backtesting.metrics import BacktestMetrics
 from app.research.strategies.base import BaseStrategy
@@ -47,6 +48,15 @@ class BacktestEngine:
     def run(self, prices: pd.Series, signals: pd.Series) -> BacktestResult:
         if not prices.index.is_unique or not prices.index.is_monotonic_increasing:
             raise ValueError("price calendar must be unique and ascending")
+        if (
+            not is_numeric_dtype(prices.dtype)
+            or is_bool_dtype(prices.dtype)
+            or is_complex_dtype(prices.dtype)
+        ):
+            raise ValueError("prices must be real nonboolean numeric observations")
+        values = prices.to_numpy(dtype=float, na_value=np.nan)
+        if not np.isfinite(values).all() or (values <= 0).any():
+            raise ValueError("prices must be positive and finite")
         returns = prices.pct_change().fillna(0.0)
         position = signals.reindex(prices.index).clip(-1.0, 1.0).fillna(0.0)
 
