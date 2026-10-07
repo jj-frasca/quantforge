@@ -4,6 +4,7 @@ from typing import Literal, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
+from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 from scipy.stats import norm
 
 TRADING_DAYS = 252
@@ -123,16 +124,31 @@ def return_moments(returns: pd.Series) -> ReturnMoments | None:
         excess kurtosis for a ZERO-VARIANCE series — which would read as a perfectly Normal track
         record rather than as an absent one. Both cases return None so the caller records "not
         measured" instead of a fabricated reading.
+        ADR-182 rejects incomplete/nonreal source evidence before those shortcuts. Nonfinite
+        native higher moments are unmeasured too; missing rows never inflate the PSR count.
     """
+    if (
+        not is_numeric_dtype(returns.dtype)
+        or is_bool_dtype(returns.dtype)
+        or is_complex_dtype(returns.dtype)
+    ):
+        raise ValueError("returns must be real nonboolean numeric observations")
+    if not np.isfinite(returns.to_numpy(dtype=float, na_value=np.nan)).all():
+        raise ValueError("returns must be finite and complete")
     if len(returns) < 4:
         return None
-    std = float(returns.std())
-    if std == 0.0 or not np.isfinite(std):
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        std = float(returns.std())
+        if std == 0.0 or not np.isfinite(std):
+            return None
+        skew = float(returns.skew())
+        kurtosis = float(returns.kurt()) + 3.0
+    if not np.isfinite([skew, kurtosis]).all():
         return None
     return ReturnMoments(
         n_returns=len(returns),
-        skew=float(returns.skew()),
-        kurtosis=float(returns.kurt()) + 3.0,
+        skew=skew,
+        kurtosis=kurtosis,
     )
 
 

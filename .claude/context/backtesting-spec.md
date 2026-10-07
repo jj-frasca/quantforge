@@ -113,6 +113,11 @@ flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 
 `app/research/backtesting/metrics.py` — `BacktestMetrics` (frozen):
 
+The standalone `return_moments` helper validates complete finite real nonboolean numeric input
+before degenerate shortcuts (ADR-182). Missing rows cannot inflate PSR counts while pandas skips
+them for skew/kurtosis. Finite short/constant or undefined higher-moment arithmetic remains None;
+complete nullable numeric and finite signed samples retain native raw-kurtosis calculations.
+
 - `sharpe`: `sqrt(252) * mean(net) / std(net)` (daily). 0.0 if std==0 (constant returns).
 - `max_drawdown`: `min(equity/equity.cummax() - 1)` — **in [-1.0, 0.0]**. Positive = bug.
 - `total_return` (ADR-110): `product(1 + net) - 1` over every net observation, including the

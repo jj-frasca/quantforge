@@ -50,6 +50,12 @@ that probability, and its `> 0` gate asks whether observed Sharpe clears the mul
 - `Trial.deflated_sharpe_probability` records it on every new search, nullable so the ~3,200
   pre-ADR-054 pool rows read as *not measured* rather than as a probability of zero.
 
+ADR-182 requires complete finite real nonboolean numeric input to `return_moments` before
+short/constant shortcuts. pandas must not skip NaNs while the PSR sample count includes them.
+Missing/object/string/complex/boolean payloads raise; complete nullable numeric and finite signed
+observations remain valid. Undefined native skew/raw kurtosis returns None, matching unmeasurable
+variance. Representable estimates, sample counts, PSR formula and gate thresholds are unchanged.
+
 **The scale trap, which is why this took two attempts.** Everything on a `Trial` is ANNUALIZED; the
 PSR is a function of the PER-PERIOD Sharpe and the per-period moments TOGETHER. Mixing one
 annualized input with two per-period ones silently rescales the probability instead of failing.
