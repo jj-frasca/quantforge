@@ -133,3 +133,15 @@ def test_probability_pricing_rejects_a_mismatched_moment_list() -> None:
         whole_search_deflated_sharpe_probabilities(
             [1.0, 0.5], [_normal_moments()], [-0.5, 0.0, 0.5, 1.0], 200
         )
+
+
+@pytest.mark.parametrize("score", [1e153, 1e308])
+def test_probability_pricing_keeps_overflowed_finalist_unmeasured(score: float) -> None:
+    priced = whole_search_deflated_sharpe_probabilities(
+        [score, 0.5],
+        [ReturnMoments(n_returns=100, skew=0.0, kurtosis=1e10), _normal_moments()],
+        [-0.5, 0.0, 0.5, 1.0],
+        200,
+    )
+    assert priced[0] is None
+    assert priced[1] is not None and 0 <= priced[1] <= 1

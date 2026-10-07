@@ -77,6 +77,11 @@ ADR-194 validates margin-form observed Sharpe after shared accounting checks, pr
 error precedence, then requires a finite native subtraction. Signed/numpy/Fraction scores and
 N=1 behavior remain; invalid observed evidence or overflow cannot be published as a margin.
 
+ADR-195 requires finite native Pearson slack and finite positive PSR SE-squared, converting
+native arithmetic overflow to ValueError. Whole-search probability accounting retains its
+unmeasured None for refused arithmetic; the strict moment policy, formula and Gaussian CDF
+tail saturation remain. This refuses extreme arithmetic rather than recovering it numerically.
+
 **The scale trap, which is why this took two attempts.** Everything on a `Trial` is ANNUALIZED; the
 PSR is a function of the PER-PERIOD Sharpe and the per-period moments TOGETHER. Mixing one
 annualized input with two per-period ones silently rescales the probability instead of failing.

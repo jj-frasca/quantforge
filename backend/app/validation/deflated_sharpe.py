@@ -138,12 +138,23 @@ def probabilistic_sharpe_ratio(
             raise ValueError(f"{name} must be a finite real nonboolean scalar")
         validated.append(scalar)
     observed_sr, benchmark_sr, skew, kurtosis = validated
-    variance = kurtosis - skew**2 - 1.0
+    try:
+        variance = kurtosis - skew**2 - 1.0
+    except OverflowError as exc:
+        raise ValueError("PSR arithmetic must be finite and measurable") from exc
+    if not math.isfinite(variance):
+        raise ValueError("PSR arithmetic must be finite and measurable")
     if variance <= 0.0:
         raise ValueError("degenerate Sharpe-estimator variance: kurtosis - skew^2 - 1 must be > 0")
-    standard_error = math.sqrt(
-        (1.0 - skew * observed_sr + 0.25 * (kurtosis - 1.0) * observed_sr**2) / (n_returns - 1)
-    )
+    try:
+        se_squared = (1.0 - skew * observed_sr + 0.25 * (kurtosis - 1.0) * observed_sr**2) / (
+            n_returns - 1
+        )
+    except OverflowError as exc:
+        raise ValueError("PSR arithmetic must be finite and measurable") from exc
+    if not math.isfinite(se_squared) or se_squared <= 0.0:
+        raise ValueError("PSR arithmetic must be finite and measurable")
+    standard_error = math.sqrt(se_squared)
     return float(norm.cdf((observed_sr - benchmark_sr) / standard_error))
 
 

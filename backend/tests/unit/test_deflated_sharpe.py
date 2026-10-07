@@ -377,3 +377,47 @@ def test_margin_dsr_preserves_signed_fraction_and_numpy_source_oracle(observed) 
 def test_margin_dsr_refuses_unrepresentable_real_observed_score() -> None:
     with pytest.raises(ValueError, match="observed_sr must be"):
         deflated_sharpe(10**400, n_trials=1, sr_std=0.2)
+
+
+@pytest.mark.parametrize(
+    ("observed", "skew", "kurtosis", "count"),
+    [
+        (1e153, 0.0, 1e10, 100),
+        (1e308, 0.0, 3.0, 100),
+        (0.2, 1e308, 1e308, 100),
+        (0.2, 0.0, 3.0, 10**400),
+        (1.0, 2.0, math.nextafter(5.0, math.inf), int(1.79e308)),
+    ],
+)
+def test_psr_declines_unmeasurable_native_arithmetic(observed, skew, kurtosis, count) -> None:
+    with pytest.raises(ValueError, match="PSR arithmetic must be finite and measurable"):
+        probabilistic_sharpe_ratio(
+            observed, benchmark_sr=0.0, n_returns=count, skew=skew, kurtosis=kurtosis
+        )
+
+
+def test_probability_dsr_propagates_unmeasurable_standard_error() -> None:
+    with pytest.raises(ValueError, match="PSR arithmetic must be finite and measurable"):
+        deflated_sharpe_probability(
+            1e153, n_trials=1, sr_std=0.2, n_returns=100, skew=0.0, kurtosis=1e10
+        )
+
+
+@pytest.mark.parametrize(("benchmark", "probability"), [(-1e308, 1.0), (1e308, 0.0)])
+def test_psr_preserves_gaussian_tail_saturation(benchmark, probability) -> None:
+    assert (
+        probabilistic_sharpe_ratio(
+            0.2, benchmark_sr=benchmark, n_returns=100, skew=0.0, kurtosis=3.0
+        )
+        == probability
+    )
+
+
+@given(observed=st.floats(min_value=-5, max_value=5, allow_nan=False, allow_infinity=False))
+def test_psr_finite_arithmetic_matches_independent_erfc_oracle(observed: float) -> None:
+    # Normal moments: independently standardize using hypot, then evaluate Gaussian erfc.
+    se = math.hypot(1.0, observed / math.sqrt(2.0)) / math.sqrt(99.0)
+    expected = 0.5 * math.erfc(-(observed - 0.03) / se / math.sqrt(2.0))
+    assert probabilistic_sharpe_ratio(
+        observed, benchmark_sr=0.03, n_returns=100, skew=0.0, kurtosis=3.0
+    ) == pytest.approx(expected, abs=1e-15)
