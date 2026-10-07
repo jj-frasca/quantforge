@@ -15,6 +15,71 @@ def evaluate(request):
     return request.param
 
 
+@pytest.mark.parametrize("role", ["train", "test", "benchmark"])
+@pytest.mark.parametrize("scale", [1e200, 1e-200])
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+def test_oos_refuses_unmeasurable_native_dispersion(evaluate, role, scale, error_mode) -> None:
+    positive = np.tile([0.01, 0.02, 0.03], 4)
+    performance = np.column_stack((positive, -positive))
+    benchmark = positive.copy()
+    if role == "benchmark":
+        benchmark[6:] *= scale
+    elif role == "train":
+        performance[:6] *= scale
+    else:
+        performance[6:] *= scale
+    with np.errstate(all=error_mode), pytest.raises(ValueError, match="measurable"):
+        evaluate(performance, [(np.arange(6), np.arange(6, 12))], benchmark=benchmark)
+
+
+@pytest.mark.parametrize("role", ["train", "test", "benchmark"])
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+def test_oos_refuses_nonconstant_native_mean_overflow(evaluate, role, error_mode) -> None:
+    positive = np.tile([0.01, 0.02, 0.03], 4)
+    performance = np.column_stack((positive, -positive))
+    benchmark = positive.copy()
+    large = np.tile([1e308, 1.5e308], 3)
+    if role == "train":
+        performance[:6, 0] = large
+    elif role == "test":
+        performance[6:, 0] = large
+    else:
+        benchmark[6:] = large
+    with np.errstate(all=error_mode), pytest.raises(ValueError, match="measurable"):
+        evaluate(performance, [(np.arange(6), np.arange(6, 12))], benchmark=benchmark)
+
+
+@pytest.mark.parametrize("constants", [[0.1, 0.3], [1e308, -1e308], [1e-200, -1e-200], [0.0, 0.0]])
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+def test_oos_exact_constant_evidence_retains_defined_zero(evaluate, constants, error_mode) -> None:
+    with np.errstate(all=error_mode):
+        result = evaluate(
+            np.tile(constants, (12, 1)),
+            [(np.arange(6), np.arange(6, 12))],
+            benchmark=np.full(12, constants[0]),
+        )
+    assert result.mean_oos_sharpe == 0.0
+    assert result.mean_oos_hold_sharpe == 0.0
+
+
+def test_oos_exact_constant_selection_matches_independent_score(evaluate) -> None:
+    performance = np.column_stack((np.full(12, 0.1), np.tile([0.01, 0.02, 0.03], 4)))
+    result = evaluate(performance, [(np.arange(6), np.arange(6, 12))])
+    # Correct constant score zero loses to the variable positive IS candidate.
+    expected = math.sqrt(252) * 0.02 / math.sqrt(0.00008)
+    assert result.mean_oos_sharpe == pytest.approx(expected)
+
+
+def test_oos_nearly_constant_evidence_retains_native_arithmetic(evaluate) -> None:
+    positive = np.tile([0.1, np.nextafter(0.1, 1), 0.1], 4)
+    performance = np.column_stack((positive, -positive))
+    expected = float(np.sqrt(252) * positive[6:].mean() / positive[6:].std(ddof=1))
+    assert expected > 0
+    with np.errstate(all="raise"):
+        result = evaluate(performance, [(np.arange(6), np.arange(6, 12))])
+    assert result.mean_oos_sharpe == expected
+
+
 @pytest.mark.parametrize("role", ["performance", "benchmark"])
 @pytest.mark.parametrize("kind", ["boolean", "string", "complex", "object", "temporal"])
 def test_oos_refuses_original_nonreal_numeric_sources(evaluate, role, kind) -> None:

@@ -133,10 +133,17 @@ def lookback_embargo(configs: Sequence[BaseStrategy], floor: int) -> int:
 def _sharpe(returns: FloatArray) -> float:
     """Annualized, matching metrics.sharpe_ratio (ADR-039) so folds are comparable with the
     observed, holdout and walk-forward Sharpes."""
-    if len(returns) < 2:
+    if len(returns) < 2 or np.all(returns == returns[0]):
         return 0.0
-    std = float(returns.std(ddof=1))
-    return float(np.sqrt(TRADING_DAYS) * returns.mean() / std) if std > 0 else 0.0
+    with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
+        std = float(returns.std(ddof=1))
+        mean = float(returns.mean())
+        if not math.isfinite(mean) or not math.isfinite(std) or std <= 0:
+            raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+        score = float(np.sqrt(TRADING_DAYS) * mean / std)
+    if not math.isfinite(score):
+        raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+    return score
 
 
 def purged_cv_evaluate(

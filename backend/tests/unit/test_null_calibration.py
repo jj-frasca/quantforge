@@ -1463,13 +1463,13 @@ def test_the_search_fingerprint_is_stable_across_code_changes() -> None:
     """ADR-058 decision 2 reuses committed calibration artifacts by matching their recorded
     `search_config_version` to the restored procedure. The hash includes the resolved family and
     explicitly versioned accounting method: unrelated code must not drift it, while ADR-104's PBO
-    scope, ADR-105's ties and ADR-201's constant convention must. The literal pins that identity until another
+    scope, ADR-105's ties and ADR-201/202's constant conventions must. The literal pins that identity until another
     governed procedure or catalog change deliberately updates it."""
     assert (
         calibration_search_version(
             ["sma", "momentum"], n_per_param=3, config=GateConfig(), refine=True, refine_span=0.25
         )
-        == "816840c5de55b5b4c7ee51c7cac40080a81f61df4928282f9eaee22d615141b5"
+        == "7922b951990725d97117e1f036e4da496e71e10cffd0dfd38ded774ec859aa99"
     )
 
 
@@ -1486,6 +1486,22 @@ def test_constant_pbo_correction_cannot_match_previous_calibration_identity(
     )
     previous = calibration_search_version(["sma", "momentum"], **kwargs)
     assert previous == "00737c556d1e0532929e88b07e625ff30a9a0efd58b5b7a80ed204b0a5ede84f"
+    assert previous != current
+
+
+def test_oos_constant_correction_cannot_match_pbo_only_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kwargs = {"n_per_param": 3, "config": GateConfig(), "refine": True, "refine_span": 0.25}
+    current = calibration_search_version(["sma", "momentum"], **kwargs)
+    assert current != "816840c5de55b5b4c7ee51c7cac40080a81f61df4928282f9eaee22d615141b5"
+    monkeypatch.setattr(
+        calibration_module,
+        "_TRIAL_ACCOUNTING_VERSION",
+        "whole-search-budgeted-robust-iqr-pbo-ties-constant-v6",
+    )
+    previous = calibration_search_version(["sma", "momentum"], **kwargs)
+    assert previous == "816840c5de55b5b4c7ee51c7cac40080a81f61df4928282f9eaee22d615141b5"
     assert previous != current
 
 

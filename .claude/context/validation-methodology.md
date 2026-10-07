@@ -204,6 +204,14 @@ ADR-199 makes both OOS evaluators validate original i/u/f numeric source dtype a
 finite float64 matrix/control evidence before selection or singleton/flat/fold-drop shortcuts.
 Explicitly masked missing observations are refused before masks can disappear on materialization.
 Valid numeric, unmasked, constant/singleton and absent-control behavior and formulas remain.
+
+ADR-202 assigns exact constant diagnostic blocks their defined zero score before moments,
+and refuses nonconstant unmeasurable mean/dispersion/annualized scores with ValueError.
+The original one-dimensional arithmetic/order and singleton convention are preserved;
+train selection, selected test and controls use the same guard. Rounded constant scores
+change finite diagnostics, so identity advances to `whole-search-budgeted-robust-iqr-pbo-oos-constant-v7`.
+Historical null summaries below describe their recorded earlier procedure; replacement
+diagnostic distributions are unmeasured until an authorized sole-writer refresh. No thresholds change.
 - **Measured under the null (2026-08-19, N=200/mode):** median +0.15 (iid) / +0.33 (bootstrap:SPY),
   p95 +0.78 / +1.05. **Below ~1.0 is indistinguishable from noise.** The bootstrap null sits higher
   because the selection earns *drift*, so any future gate on this must be stated against

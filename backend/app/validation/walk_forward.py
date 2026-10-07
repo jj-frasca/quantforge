@@ -115,10 +115,17 @@ class WalkForwardResult(BaseModel):
 def _sharpe(returns: FloatArray) -> float:
     """Annualized, matching metrics.sharpe_ratio — these numbers sit next to the observed and
     holdout Sharpes, so a per-bar figure would read as a sqrt(252)x weaker result."""
-    if len(returns) < 2:
+    if len(returns) < 2 or np.all(returns == returns[0]):
         return 0.0
-    std = float(returns.std(ddof=1))
-    return float(np.sqrt(TRADING_DAYS) * returns.mean() / std) if std > 0 else 0.0
+    with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
+        std = float(returns.std(ddof=1))
+        mean = float(returns.mean())
+        if not math.isfinite(mean) or not math.isfinite(std) or std <= 0:
+            raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+        score = float(np.sqrt(TRADING_DAYS) * mean / std)
+    if not math.isfinite(score):
+        raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+    return score
 
 
 def walk_forward_evaluate(
