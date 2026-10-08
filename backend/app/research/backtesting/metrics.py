@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from math import fsum
+from math import frexp, fsum, ldexp
 from numbers import Real
 from typing import Literal, cast
 
@@ -168,10 +168,20 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
         if not np.isfinite(semi_scale) or semi_scale <= 0:
             return None
         rms = float(np.sqrt(np.mean((shortfall / semi_scale) ** 2)))
-        excess_mean = fsum(normalized_excess) / len(normalized_excess)
-        if not np.isfinite(rms) or rms <= 0 or not np.isfinite(excess_mean):
+        stable_sum = fsum(normalized_excess)
+        if not np.isfinite(rms) or rms <= 0 or not np.isfinite(stable_sum):
             return None
-        score = float((np.sqrt(TRADING_DAYS) * excess_mean / rms) / semi_scale)
+        if stable_sum == 0:
+            return 0.0
+        sum_mantissa, sum_exponent = frexp(stable_sum)
+        downside_mantissa, downside_exponent = frexp(semi_scale)
+        mantissa_ratio = (
+            np.sqrt(TRADING_DAYS) * sum_mantissa / rms / len(normalized_excess) / downside_mantissa
+        )
+        try:
+            score = ldexp(float(mantissa_ratio), sum_exponent - downside_exponent)
+        except OverflowError:
+            return None
     return score if np.isfinite(score) else None
 
 
@@ -267,7 +277,9 @@ def _validated_log_returns(returns: pd.Series) -> NDArray[np.float64]:
         raise ValueError("returns must be finite")
     if np.any(values <= -1.0):
         raise ValueError("returns must preserve positive compounded wealth")
-    log_returns = np.log1p(values)
+    # Valid subnormal logarithms can emit platform-specific underflow flags.
+    with np.errstate(under="ignore"):
+        log_returns = np.log1p(values)
     return cast(NDArray[np.float64], log_returns)
 
 

@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-07
 - **Severity:** Medium — a representable descriptive score is erased
-- **Status:** Open
+- **Status:** Resolved by ADR-210
 
 ## Evidence
 
@@ -19,3 +19,14 @@ and RED tests must govern rearrangement, including tiny downside scales where
 reordering intermediate divisions can overflow despite a representable final
 score. No correction, universal precision guarantee, threshold change or
 generated-data rewrite is claimed here.
+
+## Resolution and limits
+
+ADR-210 separates stable normalized-sum/downside exponents and computes their
+bounded mantissa ratio before one final ldexp. Forty-nine RED cases (including
+the Hypothesis boundary property) precede correction; eight preserved cases
+protect native arithmetic, finite near-max ratios, true overflow and genuine
+zero. Exact-float Decimal800 oracles verify signed/permuted subnormal sums and
+sample counts. Loss of observations during earlier common-scale normalization
+remains outside this slice. Sortino is descriptive; identity v10, thresholds and
+generated records remain unchanged.

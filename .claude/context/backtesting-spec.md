@@ -167,6 +167,9 @@ Numeric API shape and descriptive-only identity stay; no universal precision pro
 ADR-186 validates original complete finite real numeric source evidence at the public
 compounded-return helpers before conversion/empty shortcuts; boolean, strings and complex
 observations cannot be reinterpreted as measured returns. Numeric empty and log math remain.
+ADR-211 locally ignores only log1p underflow after finite/>-1 checks, preserving
+valid subnormal logs across platform-specific strict-state signals. Original
+native logarithms, caller state and finite-positive wealth checks remain.
 
 ADR-187 validates Sortino's finite real nonboolean target before complete numeric source evidence
 and degenerate shortcuts; native full-sample downside arithmetic and finite signed domain remain.
@@ -185,6 +188,11 @@ targets, retaining exact pandas native mean at target zero. Float64 comparison
 prevents narrow source dtype from rounding away shortfall (FINDING-147). Failed
 native arithmetic normalizes finite excess first; only overflowing subtraction
 normalizes source/target together. fsum stabilizes its fallback numerator.
+ADR-210 resolves F152's recovery mean-first subnormal rounding by evaluating a
+stable normalized sum with frexp-separated numerator/downside exponents and one
+final ldexp. True overflow remains None; genuine tiny zero remains zero. Native
+measurable results and calibration v10 stay. Loss during prior common-scale
+normalization remains an explicit limitation.
 ADR-207 resolves native mean/partial moment underflow (FINDING-148) and lost
 native-zero residuals (FINDING-149): native underflow raises locally into scaled
 recovery; native zero mean requires original float64 excess fsum zero. True
