@@ -5,12 +5,20 @@ from math import isfinite
 from numbers import Integral, Real
 from operator import le
 from statistics import median
-from typing import Any, NamedTuple
+from typing import Annotated, Any, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.backtesting.manifest import compute_parameter_hash
@@ -62,6 +70,18 @@ def _finite_probability_score(value: object) -> float:
     if not (le(0, value) and le(value, 1)):
         raise ValueError("calibration probability must be in [0, 1]")
     return _finite_leaf_score(value)
+
+
+def _positive_holdout_years(value: object) -> float:
+    years = _finite_leaf_score(value)
+    if years <= 0.0:
+        raise ValueError("holdout_years must be strictly positive")
+    return years
+
+
+_FiniteCalibrationScore = Annotated[float, BeforeValidator(_finite_leaf_score)]
+_PositiveCalibrationBars = Annotated[int, BeforeValidator(_positive_leaf_count)]
+_PositiveHoldoutYears = Annotated[float, BeforeValidator(_positive_holdout_years)]
 
 
 class NullGraduate(BaseModel):
@@ -157,10 +177,7 @@ class NullSymbolDiagnostics(BaseModel):
     @field_validator("holdout_years", mode="before")
     @classmethod
     def _validate_years(cls, value: object) -> float:
-        years = _finite_leaf_score(value)
-        if years <= 0.0:
-            raise ValueError("holdout_years must be strictly positive")
-        return years
+        return _positive_holdout_years(value)
 
     @field_validator(
         "walk_forward_oos_sharpe",
@@ -200,27 +217,27 @@ class NullCalibration(BaseModel):
     graduates: list[NullGraduate]
     # One entry per SEARCHED symbol (not per graduate): the merged bar is reported at the median
     # holdout length, which is only exact if the lengths themselves survive sharding (ADR-037).
-    holdout_years: list[float]
+    holdout_years: list[_PositiveHoldoutYears]
     # ADR-051: the total history each null symbol was judged on, one entry per SEARCHED symbol. A
     # null and a real hunt are only comparable at the same length, and an empty list means an
     # artifact predating this field — never that the run saw no bars.
-    n_bars: list[int] = []
+    n_bars: list[_PositiveCalibrationBars] = []
     # ADR-038: the finalist trial's walk-forward mean OOS Sharpe, one per searched symbol. Under a
     # null this is the distribution a walk-forward floor would have to clear, which is the evidence
     # ADR-038 requires before promoting the statistic from a diagnostic to a gate criterion.
-    walk_forward_oos_sharpes: list[float] = []
+    walk_forward_oos_sharpes: list[_FiniteCalibrationScore] = []
     # ADR-039: the same, for the purged folds. Separate list because the two statistics have
     # different null distributions and a floor argued from one says nothing about the other.
-    purged_cv_oos_sharpes: list[float] = []
+    purged_cv_oos_sharpes: list[_FiniteCalibrationScore] = []
     # ADR-068: what buy-and-hold earned across the same walk-forward test blocks, one per searched
     # symbol. `walk_forward_oos_sharpes` above is denominated in the generator's own drift — under
     # a null it lands on this number — so the null's level is only interpretable against it. Empty
     # on artifacts predating the field, which reads as not measured, never as zero excess.
-    walk_forward_hold_sharpes: list[float] = []
+    walk_forward_hold_sharpes: list[_FiniteCalibrationScore] = []
     # ADR-078: the same, for the purged folds. A separate list for the same reason the OOS lists
     # are separate — the two benchmarks cover different index sets, so one cannot stand in for the
     # other. Empty on artifacts predating the field (ADR-067).
-    purged_cv_hold_sharpes: list[float] = []
+    purged_cv_hold_sharpes: list[_FiniteCalibrationScore] = []
     # ADR-080: the canonical pairing identity. The list projections above remain for API and
     # historical compatibility, but an excess observation is derived from this per-symbol record.
     # Empty means a legacy artifact, never a calibration with zero searched symbols.

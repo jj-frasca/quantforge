@@ -1036,6 +1036,13 @@ ratio. Legacy optional arrays, nullable maxima and finite signed scores persist.
 Root maximum/formula recomputation, legacy diagnostic-array validity and other
 arithmetic remain separate; no threshold or methodology identity changes.
 
+ADR-216 / FINDING-165 separately guards each present null-array element before
+coercion: finite real nonboolean scores, positive integral nonboolean bars and
+positive finite years. Empty/partial legacy arrays keep existing raw/unmeasured
+and excess-pairing semantics; canonical projections and merge inherit guards.
+This does not establish new array lengths, power-array contracts or overflow-free
+percentiles. No threshold, formula, identity or generated-data changes.
+
 ## Current v10 fixed AR power (FINDING-162)
 
 The frozen 7,400-bar, 200-symbol arms at phi −0.3/+0.3 completed without
