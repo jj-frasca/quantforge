@@ -1114,3 +1114,13 @@ FINDING-171's coerced/impossible attribution is refused before freezing or sweep
 reconstruction. Empty/partial legacy mappings and existing key semantics remain;
 no missing count is inferred. Composite/joint reconciliation is a separate
 contract. No gate component, threshold, fingerprint, source or data change.
+
+### Modern power joint-count agreement (ADR-222)
+
+Complete symbol_verdicts binds n_detected to incumbent passage, survivors to
+strict ADR-018 comparison at each passed record's own holdout history, and each
+present known component count to its joint sum. FINDING-172's contradictory
+headline/attribution is refused on reconstruction. None candidate probabilities
+retain measured incumbent evidence; absent legacy joint records, partial maps
+and unknown keys remain supported. No median-bar substitution, key/completeness
+policy, null-side reconciliation, threshold, fingerprint or source change.

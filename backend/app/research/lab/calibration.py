@@ -696,6 +696,30 @@ class PowerCalibration(BaseModel):
                 raise ValueError(
                     "finalist_deflated_sharpe_probabilities does not match symbol_verdicts"
                 )
+            incumbent_passers = [v for v in self.symbol_verdicts if v.gate_result.passed]
+            if self.n_detected != len(incumbent_passers):
+                raise ValueError("n_detected does not match symbol_verdicts")
+            survivors = sum(
+                v.holdout_sharpe
+                > expected_max_sharpe_under_null(self.n_symbols, v.holdout_n_bars / _TRADING_DAYS)
+                for v in incumbent_passers
+            )
+            if self.n_clear_deflation_bar != survivors:
+                raise ValueError("n_clear_deflation_bar does not match symbol_verdicts")
+            for component, attribute in (
+                ("dsr", "dsr_ok"),
+                ("pbo", "pbo_ok"),
+                ("stability", "stability_ok"),
+                ("mintrl", "mintrl_ok"),
+                ("holdout", "holdout_ok"),
+                ("beats_buy_and_hold", "beats_buy_and_hold_ok"),
+            ):
+                if component in self.gate_pass_counts and self.gate_pass_counts[component] != sum(
+                    getattr(v.gate_result, attribute) for v in self.symbol_verdicts
+                ):
+                    raise ValueError(
+                        f"gate_pass_counts[{component}] does not match symbol_verdicts"
+                    )
 
         for field in (
             "oracle_sharpes",
