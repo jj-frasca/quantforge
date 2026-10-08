@@ -1074,3 +1074,13 @@ at the unchanged binary virtual index. Empty arrays remain unmeasured; invalid
 sources raise without filtering. This is summary arithmetic, not a power-array
 construction contract or universal finite-native precision guarantee. Search,
 gate, reference strategies, thresholds and fingerprints remain unchanged (F166).
+
+## Power root evidence validity (ADR-218)
+
+PowerCalibration requires original positive integral searched counts, nonnegative
+integral detected/survivor counts, finite real rate in [0,1], and a finite
+nonnegative bar. Counts satisfy survivors <= detected <= searched and rate equals
+detected/searched exactly. Sweep reconstruction inherits these guards. Optional
+legacy arrays and reference/process evidence are unchanged; array lengths,
+component relationships and bar recomputation remain separate (F167). No search,
+gate, threshold, fingerprint or generated record changes.

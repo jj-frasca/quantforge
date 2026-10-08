@@ -635,8 +635,35 @@ class PowerCalibration(BaseModel):
     refine: bool = False
     refine_span: float = 0.25
 
+    @field_validator("n_symbols", mode="before")
+    @classmethod
+    def _validate_searched_count(cls, value: object) -> int:
+        return _positive_leaf_count(value)
+
+    @field_validator("n_detected", "n_clear_deflation_bar", mode="before")
+    @classmethod
+    def _validate_root_counts(cls, value: object) -> int:
+        return _nonnegative_calibration_count(value)
+
+    @field_validator("detection_rate", mode="before")
+    @classmethod
+    def _validate_root_rate(cls, value: object) -> float:
+        return _finite_probability_score(value)
+
+    @field_validator("deflation_bar", mode="before")
+    @classmethod
+    def _validate_root_bar(cls, value: object) -> float:
+        score = _finite_leaf_score(value)
+        if not isinstance(value, Real) or not le(0, value):
+            raise ValueError("calibration deflation bar must be nonnegative")
+        return score
+
     @model_validator(mode="after")
     def _validate_symbol_verdicts(self) -> "PowerCalibration":
+        if not (self.n_clear_deflation_bar <= self.n_detected <= self.n_symbols):
+            raise ValueError("power survivor/detected/searched counts are inconsistent")
+        if self.detection_rate != self.n_detected / self.n_symbols:
+            raise ValueError("detection_rate must match detected/searched counts")
         if self.symbol_verdicts:
             if len(self.symbol_verdicts) != self.n_symbols:
                 raise ValueError("symbol_verdicts must carry one record per searched symbol")
