@@ -142,7 +142,7 @@ ambient error modes, instead of finite fabricated kurtosis or FloatingPointError
 Original source validation and short/exact-constant precedence remain outside the catch;
 native estimators/count remain. Former finite PSR inputs become unmeasured, so identity
 advances to `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-v9`.
-FINDING-145 records the separate unresolved Sortino arithmetic/representation question.
+ADR-205 resolves FINDING-145's separate Sortino arithmetic/representation question.
 
 ADR-186 validates original complete finite real numeric source evidence at the public
 compounded-return helpers before conversion/empty shortcuts; boolean, strings and complex
@@ -150,6 +150,15 @@ observations cannot be reinterpreted as measured returns. Numeric empty and log 
 
 ADR-187 validates Sortino's finite real nonboolean target before complete numeric source evidence
 and degenerate shortcuts; native full-sample downside arithmetic and finite signed domain remain.
+
+ADR-205 keeps native measurable Sortino scores, then normalizes returns/target together
+and negative shortfalls separately to recover overflow/underflow without changing the
+full-sample denominator. Sortino is required nullable in BacktestMetrics and the API:
+None means arithmetic remains unmeasurable, rendered "Not measurable"; measured short/
+no-downside zero remains 0.00. The original engine financial property domains remain;
+within the bounded test domain an absent ratio requires independent Decimal overflow
+justification. Descriptive only, so accounting identity stays v9. General finite-result
+precision/cancellation remains a separate limitation (FINDING-146).
 
 ADR-188 validates both Calmar scalar inputs before zero-drawdown shortcuts and rejects a
 nonfinite native quotient; finite signed ratio semantics and the absolute denominator remain.

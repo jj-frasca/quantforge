@@ -65,7 +65,7 @@ class BacktestMetricsView(BaseModel):
     total_return: float
     annualized_return: float
     annualized_vol: float
-    sortino: float
+    sortino: float | None = Field(allow_inf_nan=False)
     calmar: float
     # None below a year of history — ADR-109's Lo (2002) approximation is unreliable there.
     sharpe_ci: SharpeConfidenceIntervalView | None

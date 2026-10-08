@@ -1755,7 +1755,9 @@ test_ohlcv_normalizer_given_negative_price_raises_validation_error
 8. GBM Monte Carlo paths: always positive
 9. Normalizer: idempotent
 10. ExperimentManifest: round-trips JSON with all fields preserved
-11. Sortino: finite whenever a return falls below target (ADR-107)
+11. Sortino: measurable scores finite; absent scores in the bounded financial-property
+    domain require an independent exact-float oracle exceeding float64 range (ADR-205).
+    Short/no-downside zero remains measured (ADR-107).
 12. Calmar: finite whenever max drawdown is nonzero (ADR-108)
 13. Return accounting: total and geometric annualized return share a sign, and initial-period
     turnover cost is included (ADR-110)

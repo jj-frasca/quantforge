@@ -48,7 +48,7 @@ export function BacktestResultView({ result }: Props) {
         </div>
         <div>
           <dt>Sortino</dt>
-          <dd>{asRatio(result.metrics.sortino)}</dd>
+          <dd>{result.metrics.sortino === null ? 'Not measurable' : asRatio(result.metrics.sortino)}</dd>
           <small className="metric-hint">
             Like Sharpe, but only counts downside swings against you — upside spikes don't
             count as "risk".

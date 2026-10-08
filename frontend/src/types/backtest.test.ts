@@ -92,6 +92,14 @@ test('backtestResponseSchema rejects metrics missing sortino', () => {
   expect(() => backtestResponseSchema.parse(bad)).toThrow()
 })
 
+test('backtestResponseSchema preserves explicitly unmeasured Sortino', () => {
+  const parsed = backtestResponseSchema.parse({
+    ...validResponse,
+    metrics: { ...validResponse.metrics, sortino: null },
+  })
+  expect(parsed.metrics.sortino).toBeNull()
+})
+
 test('backtestResponseSchema rejects metrics missing calmar', () => {
   // ADR-108: calmar is a required field alongside sharpe/sortino, not an optional add-on.
   const metricsWithoutCalmar: Record<string, unknown> = { ...validResponse.metrics }
@@ -155,4 +163,10 @@ test('strategyConfigSchema rejects a missing or empty name', () => {
   // delegated to the backend.
   expect(() => strategyConfigSchema.parse({ name: '', fast: 5 })).toThrow()
   expect(() => strategyConfigSchema.parse({ fast: 5, slow: 20 })).toThrow()
+})
+
+test.each([NaN, Infinity, -Infinity])('rejects nonfinite Sortino %s', (sortino) => {
+  expect(() => backtestResponseSchema.parse({
+    ...validResponse, metrics: { ...validResponse.metrics, sortino },
+  })).toThrow()
 })

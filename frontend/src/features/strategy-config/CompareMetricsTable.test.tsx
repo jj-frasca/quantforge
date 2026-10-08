@@ -17,7 +17,7 @@ const handoffBase: Omit<ValidationHandoff, 'symbol' | 'strategy'> = {
   endDate: '2024-01-01',
 }
 
-const success = (sharpe: number): CompareRow => ({
+const success = (sharpe: number, sortino: number | null = 1.9): CompareRow => ({
   status: 'success',
   data: {
     symbol: 'AAPL',
@@ -31,7 +31,7 @@ const success = (sharpe: number): CompareRow => ({
       total_return: 0.2,
       annualized_return: 0.05,
       annualized_vol: 0.08,
-      sortino: 1.9,
+      sortino,
       calmar: 1.0,
       sharpe_ci: null,
     },
@@ -48,6 +48,25 @@ const success = (sharpe: number): CompareRow => ({
 })
 
 const failure: CompareRow = { status: 'error', error: new Error('insufficient data') }
+
+test('distinguishes unmeasured Sortino from measured zero without losing comparison rows', () => {
+  render(
+    <CompareMetricsTable
+      symbol="AAPL"
+      strategy="sma"
+      startDate="2020-01-01"
+      endDate="2024-01-01"
+      rows={[
+        { label: 'Unmeasured', values: { fast: 10 } },
+        { label: 'Measured', values: { fast: 20 } },
+      ]}
+      results={[success(1, null), success(1, 0)]}
+    />,
+  )
+  expect(screen.getByText('Not measurable')).toBeInTheDocument()
+  expect(screen.getByText('0.00')).toBeInTheDocument()
+  expect(screen.getAllByRole('button', { name: /validate this config/i })).toHaveLength(2)
+})
 
 beforeEach(() => {
   useAppShell.setState({ activePage: 'data-explorer', pendingValidation: null })

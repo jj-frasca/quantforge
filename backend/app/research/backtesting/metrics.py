@@ -97,7 +97,7 @@ def sharpe_confidence_interval(
     )
 
 
-def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float:
+def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
     """Annualized Sortino ratio (Sortino & van der Meer 1991), ADR-107.
 
     Notes:
@@ -108,6 +108,8 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float:
         not just the count of shortfalls — the original definition. 0.0 when there are
         fewer than two returns or no observation falls below `target` (downside deviation
         0), mirroring `sharpe_ratio`'s degenerate-series convention rather than +inf.
+        ADR-205 preserves measurable native scores and recovers failed arithmetic with
+        common-scale normalization; an unrepresentable score is None, never invented zero.
     """
     target_evidence: object = target
     if isinstance(target_evidence, (bool, np.bool_)) or not isinstance(target_evidence, Real):
@@ -121,11 +123,32 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float:
     _validate_complete_return_sample(returns)
     if len(returns) < 2:
         return 0.0
-    shortfall = np.minimum(returns.to_numpy(dtype=np.float64) - target, 0.0)
-    semi_std = float(np.sqrt(np.mean(shortfall**2)))
-    if semi_std == 0.0 or not np.isfinite(semi_std):
+    if not returns.lt(target).any():
         return 0.0
-    return float(np.sqrt(TRADING_DAYS) * (returns.mean() - target) / semi_std)
+    values = returns.to_numpy(dtype=np.float64)
+    with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
+        shortfall = np.minimum(values - target, 0.0)
+        semi_std = float(np.sqrt(np.mean(shortfall**2)))
+        excess_mean = float(returns.mean() - target)
+        if np.isfinite(semi_std) and semi_std > 0 and np.isfinite(excess_mean):
+            score = float(np.sqrt(TRADING_DAYS) * excess_mean / semi_std)
+            if np.isfinite(score):
+                return score
+        scale = max(float(np.max(np.abs(values))), abs(target))
+        if not np.isfinite(scale) or scale <= 0:
+            return None
+        normalized = returns / scale
+        normalized_target = target / scale
+        shortfall = np.minimum(values / scale - normalized_target, 0.0)
+        semi_scale = float(np.max(np.abs(shortfall)))
+        if not np.isfinite(semi_scale) or semi_scale <= 0:
+            return None
+        rms = float(np.sqrt(np.mean((shortfall / semi_scale) ** 2)))
+        excess_mean = float(normalized.mean() - normalized_target)
+        if not np.isfinite(rms) or rms <= 0 or not np.isfinite(excess_mean):
+            return None
+        score = float((np.sqrt(TRADING_DAYS) * excess_mean / rms) / semi_scale)
+    return score if np.isfinite(score) else None
 
 
 def calmar_ratio(annualized_return: float, max_drawdown: float) -> float:
@@ -272,7 +295,7 @@ class BacktestMetrics:
     total_return: float
     annualized_return: float
     annualized_vol: float
-    sortino: float
+    sortino: float | None
     calmar: float
     sharpe_ci: SharpeConfidenceInterval | None
 

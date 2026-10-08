@@ -230,6 +230,11 @@ Naive, zero-width, or reversed date ranges likewise return `422` before cache ac
     valid overlapping return observations
     — a benchmark is context, not a precondition, so its absence never fails the backtest.
     The frontend Zod schema mirrors it as **nullable** ([[feedback-frontend-shadow-validators]]).
+  - `metrics.sortino` (ADR-205) is a required nullable finite number. `null` means the
+    downside-risk ratio remains unmeasurable after numerical recovery; both result and
+    comparison displays render "Not measurable". Measured zero remains `0.00`, including
+    the short/no-downside convention. Missing keys and nonfinite numeric values are invalid;
+    other measured backtest fields remain available when Sortino is null.
   - `metrics.sharpe_ci` (ADRs 109, 111) is an explicitly identified iid-normal interval and is
     `null` when the backtest window covers fewer than 252 bars
     (~1 year) — Lo (2002)'s asymptotic standard error is unreliable below that. The frontend Zod

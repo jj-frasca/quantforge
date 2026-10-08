@@ -77,7 +77,7 @@ export const backtestMetricsSchema = z.object({
   annualized_vol: z.number(),
   // Downside-only risk-adjusted return (ADR-107): descriptive alongside Sharpe, not a
   // gate input. See backtesting-spec.md §4.
-  sortino: z.number(),
+  sortino: z.number().finite().nullable(),
   // Annualized return over |max_drawdown| (ADR-108): descriptive, not a gate input.
   calmar: z.number(),
   // 95%-default iid-normal confidence interval on `sharpe` (ADRs 109, 111). NULLABLE

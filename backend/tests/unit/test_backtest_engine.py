@@ -1,5 +1,6 @@
 """BacktestEngine + metrics: the §8 oracle tests (buy-and-hold matches the analytic closed form, zero signal flat, long/short symmetry, monotonic cost impact) plus drawdown bounds and the Hypothesis invariant that long-only equity stays finite and positive."""
 
+from decimal import Decimal, localcontext
 from itertools import pairwise
 
 import numpy as np
@@ -321,11 +322,20 @@ def test_sharpe_ratio_is_finite_for_non_constant_series(returns: list[float]) ->
 def test_sortino_ratio_is_finite_when_a_return_falls_below_target(
     returns: list[float],
 ) -> None:
-    # §8 invariant #11: Sortino is finite whenever at least one return falls below the target
-    # (0.0 by default), i.e. downside deviation is strictly positive.
+    # ADR-205: measurable scores are finite; absent scores in this full bounded domain
+    # must be justified by an independent exact-float ratio exceeding float64 range.
     assume(any(r < 0.0 for r in returns))
     result = sortino_ratio(pd.Series(returns))
-    assert np.isfinite(result)
+    if result is None:
+        with localcontext() as context:
+            context.prec = 90
+            values = [Decimal.from_float(value) for value in returns]
+            mean = sum(values) / len(values)
+            semi_variance = sum(min(value, Decimal(0)) ** 2 for value in values) / len(values)
+            exact = Decimal(252).sqrt() * mean / semi_variance.sqrt()
+            assert abs(exact) > Decimal.from_float(np.finfo(float).max)
+    else:
+        assert np.isfinite(result)
 
 
 @settings(deadline=None)

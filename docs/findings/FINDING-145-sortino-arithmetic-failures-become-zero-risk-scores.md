@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-07
 - **Severity:** Medium — descriptive downside-risk claims can conceal arithmetic failure
-- **Status:** Open
+- **Status:** Resolved by ADR-205
 
 ## Evidence
 
@@ -28,3 +28,13 @@ would reject otherwise valid wealth/return calculations. Review nullable metric,
 API and frontend propagation together if selecting None. Retain full-sample
 downside definition, source/target precedence, no-downside convention and fixed
 thresholds. No correction is claimed in ADR-204.
+
+## Resolution and limits
+
+ADR-205 preserves native measurable scores and uses two cancelling scales for failed
+native arithmetic. Truly unrepresentable ratios are None through the required nullable
+metric/API/frontend contract. Measured no-downside zero remains distinct. Against HEAD's
+pre-correction function injected from a scratch module, 14 numerical regressions fail
+and eight preservation/wire cases pass; corrected focused metric/engine tests pass.
+No thresholds or calibration identity changed. General finite-result cancellation
+is separately recorded open in FINDING-146; this correction does not claim to resolve it.

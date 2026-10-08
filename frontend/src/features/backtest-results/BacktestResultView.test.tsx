@@ -70,6 +70,18 @@ const winning: BacktestResponse = {
   },
 }
 
+test('shows unmeasured Sortino while retaining the measured backtest result', () => {
+  render(<BacktestResultView result={{ ...winning, metrics: { ...winning.metrics, sortino: null } }} />)
+  expect(screen.getByText('Not measurable')).toBeInTheDocument()
+  expect(screen.getByText(/Total return 42.0%/)).toBeInTheDocument()
+})
+
+test('shows measured zero Sortino as a numeric score', () => {
+  render(<BacktestResultView result={{ ...winning, metrics: { ...winning.metrics, sortino: 0 } }} />)
+  expect(screen.getByText('0.00')).toBeInTheDocument()
+  expect(screen.queryByText('Not measurable')).not.toBeInTheDocument()
+})
+
 const losing: BacktestResponse = {
   ...winning,
   metrics: { ...winning.metrics, total_return: -0.21 },
