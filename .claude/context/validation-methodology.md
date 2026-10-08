@@ -605,6 +605,15 @@ own).
 
 ### 7.6 The achievable oracle (ADR-061) — the band gap was the benchmark
 
+**Current qualification — FINDING-159 (Open):** the latent and observable
+band references use conditional log-mean signs to score simple returns.
+Their historical scores are reference-strategy measurements. The Gaussian
+simple-return mean requires `expm1(log_mean + predictive_log_variance / 2)`;
+the filtered case also needs posterior state uncertainty. The optimality,
+upper-bound and no-recoverable-edge claims below are historical interpretations,
+not certified conclusions. Detection counts remain unchanged; the finding
+does not correct the reference or certify filter initialization.
+
 `mean_reverting_edge` plants `log price = random-walk level + AR(1) deviation` and only the SUM is
 observable, so the oracle every band capture ratio was divided by knows a state no strategy can see.
 `filtered_deviation` runs the two-state Kalman recursion **with the true process parameters** — an
