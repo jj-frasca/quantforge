@@ -50,6 +50,20 @@ def _positive_leaf_count(value: object) -> int:
     return int(value)
 
 
+def _nonnegative_calibration_count(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError("calibration counts must be nonnegative nonboolean integers")
+    return int(value)
+
+
+def _finite_probability_score(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("calibration probability must be a real nonboolean number")
+    if not (le(0, value) and le(value, 1)):
+        raise ValueError("calibration probability must be in [0, 1]")
+    return _finite_leaf_score(value)
+
+
 class NullGraduate(BaseModel):
     """A false graduate, kept with everything the ADR-018 bar must be recomputed against.
 
@@ -162,13 +176,7 @@ class NullSymbolDiagnostics(BaseModel):
     @field_validator("deflated_sharpe_probability", mode="before")
     @classmethod
     def _validate_probability(cls, value: object) -> float | None:
-        if value is None:
-            return None
-        if isinstance(value, bool) or not isinstance(value, Real):
-            raise ValueError("calibration probability must be a real nonboolean number")
-        if not (le(0, value) and le(value, 1)):
-            raise ValueError("calibration probability must be in [0, 1]")
-        return _finite_leaf_score(value)
+        return None if value is None else _finite_probability_score(value)
 
 
 class NullCalibration(BaseModel):
@@ -228,9 +236,48 @@ class NullCalibration(BaseModel):
     refine_span: float = 0.25
     null_mode: str = "unspecified"
 
+    @field_validator("n_symbols", mode="before")
+    @classmethod
+    def _validate_searched_count(cls, value: object) -> int:
+        return _positive_leaf_count(value)
+
+    @field_validator("n_graduates", "n_clear_deflation_bar", mode="before")
+    @classmethod
+    def _validate_root_counts(cls, value: object) -> int:
+        return _nonnegative_calibration_count(value)
+
+    @field_validator("false_graduation_rate", mode="before")
+    @classmethod
+    def _validate_root_rate(cls, value: object) -> float:
+        return _finite_probability_score(value)
+
+    @field_validator("deflation_bar", mode="before")
+    @classmethod
+    def _validate_root_bar(cls, value: object) -> float:
+        score = _finite_leaf_score(value)
+        if not isinstance(value, Real) or not le(0, value):
+            raise ValueError("calibration deflation bar must be nonnegative")
+        return score
+
+    @field_validator("max_deflated_sharpe", mode="before")
+    @classmethod
+    def _validate_root_maximum(cls, value: object) -> float:
+        return _finite_leaf_score(value)
+
+    @field_validator("max_holdout_sharpe", mode="before")
+    @classmethod
+    def _validate_optional_root_maximum(cls, value: object) -> float | None:
+        return None if value is None else _finite_leaf_score(value)
+
     @model_validator(mode="after")
     def _validate_symbol_diagnostics(self) -> "NullCalibration":
         """Keep additive list projections honest whenever the paired ADR-080 schema is present."""
+        if not (self.n_clear_deflation_bar <= self.n_graduates <= self.n_symbols):
+            raise ValueError("calibration survivor/graduate/searched counts are inconsistent")
+        if self.n_graduates != len(self.graduates):
+            raise ValueError("n_graduates must match the graduate list")
+        if self.false_graduation_rate != self.n_graduates / self.n_symbols:
+            raise ValueError("false_graduation_rate must match graduate/searched counts")
         if self.symbol_diagnostics:
             if len(self.symbol_diagnostics) != self.n_symbols:
                 raise ValueError("symbol_diagnostics must carry one record per searched symbol")

@@ -16,6 +16,7 @@ from app.api.v1.lab import (
 from app.main import app
 from app.research.lab.calibration import (
     NullCalibration,
+    NullGraduate,
     PowerCalibration,
     collect_power_sweep,
 )
@@ -165,7 +166,15 @@ def _calibration_json(mode: str, n_graduates: int, n_bars: int | None = None) ->
         deflation_bar=2.11,
         max_deflated_sharpe=0.92,
         max_holdout_sharpe=0.85,
-        graduates=[],
+        graduates=[
+            NullGraduate(
+                symbol=f"NULL{i:04d}",
+                holdout_sharpe=0.85,
+                holdout_n_bars=600,
+                deflated_sharpe=0.92,
+            )
+            for i in range(n_graduates)
+        ],
         holdout_years=[2.4],
         n_bars=[] if n_bars is None else [n_bars],
         walk_forward_oos_sharpes=[0.1, 0.2, 0.3],

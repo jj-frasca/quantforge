@@ -32,8 +32,10 @@ def test_artifact_path_names_null_mode_and_measured_history(tmp_path: Path) -> N
 
 
 def test_artifact_path_refuses_an_unversioned_history(tmp_path: Path) -> None:
+    measured = _calibration("iid_normal", [7400])
+    legacy = NullCalibration.model_validate(measured.model_dump(round_trip=True) | {"n_bars": []})
     with pytest.raises(ValueError, match="n_bars"):
-        _artifact_path(tmp_path, _calibration("iid_normal", []))
+        _artifact_path(tmp_path, legacy)
 
 
 def test_legacy_artifacts_migrate_to_their_recorded_identity(tmp_path: Path) -> None:

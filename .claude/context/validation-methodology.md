@@ -1026,3 +1026,10 @@ ADR-214 / FINDING-160 closes the null paired-difference boundary separately:
 and complete legacy-array paths. Valid signed/zero differences and unmeasured
 pairs retain their meanings. This does not certify other report arithmetic,
 percentile operations or root scalar coherence; no threshold/identity changes.
+
+ADR-215 / FINDING-161 separately validates null-root original count/score types,
+finiteness and intrinsic bounds. Survivors <= graduates <= searched, graduate
+count matches its list, and the false-graduation rate equals the exact count
+ratio. Legacy optional arrays, nullable maxima and finite signed scores persist.
+Root maximum/formula recomputation, legacy diagnostic-array validity and other
+arithmetic remain separate; no threshold or methodology identity changes.
