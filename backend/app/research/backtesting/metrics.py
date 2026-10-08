@@ -30,21 +30,28 @@ def sharpe_ratio(returns: pd.Series) -> float:
     if len(returns) < 2 or returns.eq(returns.iloc[0]).all():
         return 0.0
     with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
-        std = float(returns.std())
-        mean = float(returns.mean())
-        if np.isfinite(mean) and np.isfinite(std) and std > 0:
-            score = float(np.sqrt(TRADING_DAYS) * mean / std)
-            if np.isfinite(score):
-                return score
-        scale = float(np.max(np.abs(returns.to_numpy(dtype=float, na_value=np.nan))))
+        values = returns.to_numpy(dtype=np.float64)
+        try:
+            with np.errstate(under="raise"):
+                std = float(returns.std())
+                mean = float(returns.mean())
+                if np.isfinite(mean) and np.isfinite(std) and std > 0:
+                    score = float(np.sqrt(TRADING_DAYS) * mean / std)
+                    if np.isfinite(score) and (mean != 0 or fsum(values) == 0):
+                        return score
+        except (FloatingPointError, OverflowError):
+            # A zero mean needs original sum evidence; fsum overflow cannot certify it.
+            pass
+        scale = float(np.max(np.abs(values)))
         if not np.isfinite(scale) or scale <= 0:
             raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
-        normalized = returns / scale
-        std = float(normalized.std())
-        mean = float(normalized.mean())
-        if not np.isfinite(mean) or not np.isfinite(std) or std <= 0:
+        normalized = values / scale
+        std = float(pd.Series(normalized).std())
+        stable_sum = fsum(normalized)
+        if not np.isfinite(stable_sum) or not np.isfinite(std) or std <= 0:
             raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
-        score = float(np.sqrt(TRADING_DAYS) * mean / std)
+        # Preserve subnormal sum evidence until annualization and dispersion rescue it.
+        score = float((np.sqrt(TRADING_DAYS) * stable_sum / std) / len(normalized))
         if not np.isfinite(score):
             raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
     return score

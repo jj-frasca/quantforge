@@ -144,6 +144,18 @@ native estimators/count remain. Former finite PSR inputs become unmeasured, so i
 advances to `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-v9`.
 ADR-205 resolves FINDING-145's separate Sortino arithmetic/representation question.
 
+ADR-209 detects foundation Sharpe native mean/std/ratio underflow and certifies a
+native zero mean with math.fsum of original float64 observations. Failed native
+arithmetic or lost zero evidence invokes float64 maxabs-normalized sample std and
+stable normalized sum, annualized and divided by std before dividing by n. This
+preserves representable subnormal scores whose unannualized mean rounds to zero.
+Nonzero native measurable scores retain their original
+order; genuine cancellation and truly tiny scores rounding to zero remain. This
+is a particular measurability correction, not a universal precision guarantee.
+Accounting identity advances to
+`whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-v10`;
+historical v9 measurements do not certify this procedure. All thresholds remain.
+
 ADR-208 gives annualized volatility native-first sample-std recovery. Source
 validation precedes short/exact-constant zero. Preserve native positive finite
 std * sqrt(252) when no underflow is detected; otherwise compute float64 maxabs-
@@ -165,7 +177,8 @@ full-sample denominator. Sortino is required nullable in BacktestMetrics and the
 None means arithmetic remains unmeasurable, rendered "Not measurable"; measured short/
 no-downside zero remains 0.00. The original engine financial property domains remain;
 within the bounded test domain an absent ratio requires independent Decimal overflow
-justification. Descriptive only, so accounting identity stays v9. General finite-result
+justification. Descriptive only, so ADR-205 did not itself change accounting identity.
+General finite-result
 precision remains a separate limitation. ADR-206 resolves target-related cancellation
 (FINDING-146) by averaging original float64 per-observation excess for nonzero
 targets, retaining exact pandas native mean at target zero. Float64 comparison

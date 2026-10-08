@@ -72,6 +72,18 @@ precedence remain. Accounting identity advances to
 `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-v9` because
 former finite moment evidence becomes unmeasured. No rates are remeasured or claimed.
 
+ADR-209 corrects foundation Sharpe native partial underflow and finite zero means
+with lost original sum evidence. Local underflow detection and original float64
+fsum zero certification route those failures to normalized sample std and stable
+sum recovery. Annualization/std division precede sample-count division, preserving
+representable subnormal scores lost by mean-first rounding. Other native nonzero
+measurable scores remain; all original
+financial property domains and gate thresholds stay. Accounting identity advances
+to `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-v10`.
+Historical v9 measurements retain their executed revision and cannot certify v10;
+fresh fixed-cohort evidence must record the new identity. Arbitrary finite-result
+precision and nonzero native cancellation remain separate limitations.
+
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
 probability; margin/probability delegate to one guard. Valid formulas, counts and gates remain.

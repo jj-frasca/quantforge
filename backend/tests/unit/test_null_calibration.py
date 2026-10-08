@@ -1463,14 +1463,14 @@ def test_the_search_fingerprint_is_stable_across_code_changes() -> None:
     """ADR-058 decision 2 reuses committed calibration artifacts by matching their recorded
     `search_config_version` to the restored procedure. The hash includes the resolved family and
     explicitly versioned accounting method: unrelated code must not drift it, while ADR-104's PBO
-    scope, ADR-105's ties and ADR-201 through ADR-204's native moment policies must.
+    scope, ADR-105's ties and ADR-201 through ADR-209's native moment policies must.
     The literal pins that identity until another
     governed procedure or catalog change deliberately updates it."""
     assert (
         calibration_search_version(
             ["sma", "momentum"], n_per_param=3, config=GateConfig(), refine=True, refine_span=0.25
         )
-        == "9f2946aef782e8a1c3927cc5995060e2d8beb1a6756800615f9de6cf4ebc27d1"
+        == "ae63be276e14bc0edfd86c89667ca9f198af47273559a19e17ea7c4184252d7d"
     )
 
 
@@ -1535,6 +1535,22 @@ def test_higher_moment_underflow_refusal_cannot_match_sharpe_only_identity(
     )
     previous = calibration_search_version(["sma", "momentum"], **kwargs)
     assert previous == "1339239e54a1e48b3e7a3ebc2e321d470ddd50d7088d6cf8e80c5580beb631c7"
+    assert previous != current
+
+
+def test_foundation_sharpe_underflow_correction_cannot_match_unverified_zero_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kwargs = {"n_per_param": 3, "config": GateConfig(), "refine": True, "refine_span": 0.25}
+    current = calibration_search_version(["sma", "momentum"], **kwargs)
+    assert current != "9f2946aef782e8a1c3927cc5995060e2d8beb1a6756800615f9de6cf4ebc27d1"
+    monkeypatch.setattr(
+        calibration_module,
+        "_TRIAL_ACCOUNTING_VERSION",
+        "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-v9",
+    )
+    previous = calibration_search_version(["sma", "momentum"], **kwargs)
+    assert previous == "9f2946aef782e8a1c3927cc5995060e2d8beb1a6756800615f9de6cf4ebc27d1"
     assert previous != current
 
 

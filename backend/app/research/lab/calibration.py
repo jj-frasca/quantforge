@@ -277,7 +277,7 @@ FloatArray = npt.NDArray[np.floating[Any]]
 # Changes whenever the procedure that counts/prices searched hypotheses changes. The resolved grid
 # alone is insufficient identity when the same configs receive a different multiple-testing price.
 _TRIAL_ACCOUNTING_VERSION = (
-    "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-v9"
+    "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-v10"
 )
 _CANDIDATE_BUDGET_VERSION = "fair-family-maximin-v1"
 
