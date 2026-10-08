@@ -1,6 +1,7 @@
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from datetime import datetime
+from fractions import Fraction
 from math import isfinite
 from numbers import Integral, Real
 from operator import le
@@ -1168,12 +1169,35 @@ def measure_power(
 
 
 def _percentiles(values: Sequence[float]) -> tuple[float, float, float] | None:
-    """(median, p95, max), or None when nothing was measured — so "no data" can never be mistaken
-    for "the null scores 0.0"."""
+    """Finite (median, linear p95, max), or unmeasured None (ADR-217).
+
+    Preserve finite native summaries; recover overflowing endpoint arithmetic
+    with exact convex interpolation at the same binary virtual index.
+    """
     if not values:
         return None
-    array = np.asarray(values, dtype=float)
-    return float(np.median(array)), float(np.percentile(array, 95)), float(array.max())
+    array = np.asarray([_finite_leaf_score(value) for value in values], dtype=float)
+    with np.errstate(over="ignore", invalid="ignore"):
+        middle = float(np.median(array))
+        p95 = float(np.percentile(array, 95))
+    if not (isfinite(middle) and isfinite(p95)):
+        ordered = np.sort(array)
+
+        def recover(q: float) -> float:
+            index = (len(ordered) - 1) * q
+            left = int(index)
+            right = min(left + 1, len(ordered) - 1)
+            weight = Fraction.from_float(index - left)
+            return _finite_leaf_score(
+                (1 - weight) * Fraction.from_float(float(ordered[left]))
+                + weight * Fraction.from_float(float(ordered[right]))
+            )
+
+        if not isfinite(middle):
+            middle = recover(0.5)
+        if not isfinite(p95):
+            p95 = recover(0.95)
+    return middle, p95, float(array.max())
 
 
 def _best_by_category(experiment: Experiment) -> dict[str, float]:

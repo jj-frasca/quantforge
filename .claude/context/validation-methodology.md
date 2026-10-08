@@ -1064,3 +1064,13 @@ Sources match the interrupted frozen plan; no redraw/drop or pooled denominator.
 Finite fourth/infinite eighth moments limit kurtosis-precision assumptions.
 Executed `8e372d50`, search `969dd54d`, gate `25085698`; no market/bootstrap certification
 or threshold change. Trial-wide maximum DSR remains a production summary.
+
+## Finite calibration summary arithmetic (ADR-217)
+
+The shared null/power median and linear-p95 helper validates finite original
+score inputs and preserves every finite native summary. Nonfinite native
+median/p95 arithmetic recovers with exact rational endpoint interpolation
+at the unchanged binary virtual index. Empty arrays remain unmeasured; invalid
+sources raise without filtering. This is summary arithmetic, not a power-array
+construction contract or universal finite-native precision guarantee. Search,
+gate, reference strategies, thresholds and fingerprints remain unchanged (F166).
