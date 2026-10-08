@@ -87,8 +87,12 @@ precision and nonzero native cancellation remain separate limitations.
 Local session15's fixed v9 iid cohort completed200/noerrors/0graduates/0ADR018
 survivors (F156), independently audited with a one-sided95% zero-event upper
 limit of1.4867%. It is historical f1891104/v9 evidence, not currentv10 certification
-or power/bootstrap coverage. A separate fixed pairedv10 cohort must finish before
-any current-version rate or paired comparison is claimed; generated data unchanged.
+or power/bootstrap coverage. F157 records the completed paired v10 cohort at
+380df982: identical sources, 200/no errors/0 graduates/0 ADR018 survivors, and
+identical result payloads except the search fingerprint. These are 200 paired
+sources, not 400 independent observations; the one-sided95% zero-event upper
+limit remains1.4867% for each version. Power, heavy-tail stress and bootstrap
+remain separate, unmeasured controls; generated data unchanged.
 
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized

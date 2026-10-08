@@ -38,12 +38,18 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
           <caption>
             {process(sweep.edge)} — a planted edge of measured strength, searched over{' '}
             {sweep.n_bars.toLocaleString('en-US')} bars, the same history a real hunt gets
+            {sweep.edge === 'ar1' && (
+              <p>
+                AR(1) scores use the historical reference sign strategy, which omits the drift
+                intercept; these are not conditional-mean optimal or realized-sample maximum Sharpes.
+              </p>
+            )}
           </caption>
           <thead>
             <tr>
               <th scope="col">Planted</th>
-              <th scope="col">Oracle Sharpe</th>
-              <th scope="col">Oracle net of costs</th>
+              <th scope="col">{sweep.edge === 'ar1' ? 'Reference Sharpe' : 'Oracle Sharpe'}</th>
+              <th scope="col">{sweep.edge === 'ar1' ? 'Reference net of costs' : 'Oracle net of costs'}</th>
               <th scope="col">Detected</th>
               <th scope="col">Clear the deflation bar</th>
               <th scope="col">Capture (upper bound)</th>
@@ -91,11 +97,11 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
       <p data-testid="power-caveat">
         The planted edge is stationary and always on, so every rate here is an{' '}
         <strong>upper bound</strong> on power against real, intermittent edges. Capture is the
-        fraction of the available edge the catalog converts, measured in-sample — so a{' '}
-        <strong>low</strong> capture beside a zero detection rate points at the strategies, not at
-        the thresholds. The oracle is a sign strategy and trades constantly, so read the{' '}
+        in-sample finalist Sharpe relative to the stated reference; selection can inflate this
+        ratio. The sign reference trades constantly, so read the{' '}
         <strong>net</strong> columns: they charge it the same costs every catalog finalist paid,
-        and a planted edge whose net oracle is near zero was never there to be found. For band
+        while a near-zero net reference cannot support a stable capture ratio and does not establish
+        that no tradeable edge exists. For band
         reversion read the <strong>achievable</strong> columns above all: that oracle is what an
         optimal filter could have formed from prices, while the others know the process's hidden
         state — at a one-bar half-life the difference is the entire edge.

@@ -36,3 +36,28 @@ A future correction needs a separate ADR and RED drift-aware sign tests,
 explicit oracle-method attribution for historical/new power measurements, and
 review of gross versus cost-aware/net interpretation. This finding does not
 authorize a threshold change, data rewrite, workflow dispatch or paid resource.
+
+## Display mitigation (methodology remains Open)
+
+`GatePowerPanel` currently labels AR(1) scores "Oracle Sharpe" and "Oracle net
+of costs". Its shared caveat calls capture a fraction of available edge and
+claims a near-zero net oracle means the planted edge was never there to be
+found. A fixed sign reference, particularly one omitting conditional drift,
+cannot justify that absence-of-tradeable-edge claim.
+
+The display-only mitigation names AR(1)'s historical reference sign
+strategy and explicitly disclaims conditional-mean optimality and a realized-
+sample maximum. Capture is described relative to the stated reference, and
+a near-zero net reference is identified as an unstable ratio denominator,
+not proof that no tradeable edge exists. Band-reversion labels, all served
+scores and detection counts, payload identities, stored artifacts and
+thresholds remain unchanged. This clarification does not repair the oracle
+method or close this finding.
+
+Verification: two new AR-only/mixed-sweep assertions failed against the original
+panel before implementation; the band-only preservation test passed. After the
+wording correction, all 17 focused panel tests pass, including unchanged served
+scores, detection counts, null ratios and band-only labels. Targeted ESLint and
+`git diff --check` pass. Session17 full `make check-all PYTEST_WORKERS=4`
+passed 3,163 backend and 359 frontend tests; independent research and frontend
+reviews approved the mitigation.
