@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from math import fsum
 from numbers import Real
 from typing import Literal, cast
 
@@ -110,6 +111,8 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
         0), mirroring `sharpe_ratio`'s degenerate-series convention rather than +inf.
         ADR-205 preserves measurable native scores and recovers failed arithmetic with
         common-scale normalization; an unrepresentable score is None, never invented zero.
+        ADR-206 forms nonzero-target excess before averaging and compares float64
+        observations, avoiding cancellation and narrow-dtype target rounding.
     """
     target_evidence: object = target
     if isinstance(target_evidence, (bool, np.bool_)) or not isinstance(target_evidence, Real):
@@ -123,28 +126,35 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
     _validate_complete_return_sample(returns)
     if len(returns) < 2:
         return 0.0
-    if not returns.lt(target).any():
-        return 0.0
     values = returns.to_numpy(dtype=np.float64)
+    if not (values < target).any():
+        return 0.0
     with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
-        shortfall = np.minimum(values - target, 0.0)
+        excess = values - target
+        shortfall = np.minimum(excess, 0.0)
         semi_std = float(np.sqrt(np.mean(shortfall**2)))
-        excess_mean = float(returns.mean() - target)
+        # Preserve the original pandas estimator at the default target. Nonzero
+        # targets must be subtracted per observation before rounding the mean.
+        excess_mean = float(returns.mean() if target == 0 else pd.Series(excess).mean())
         if np.isfinite(semi_std) and semi_std > 0 and np.isfinite(excess_mean):
             score = float(np.sqrt(TRADING_DAYS) * excess_mean / semi_std)
             if np.isfinite(score):
                 return score
-        scale = max(float(np.max(np.abs(values))), abs(target))
+        if not np.isfinite(excess).all():
+            # Subtract first whenever representable: scaling near-equal source and
+            # target separately can erase their exact-float difference.
+            source_scale = max(float(np.max(np.abs(values))), abs(target))
+            excess = values / source_scale - target / source_scale
+        scale = float(np.max(np.abs(excess)))
         if not np.isfinite(scale) or scale <= 0:
             return None
-        normalized = returns / scale
-        normalized_target = target / scale
-        shortfall = np.minimum(values / scale - normalized_target, 0.0)
+        normalized_excess = excess / scale
+        shortfall = np.minimum(normalized_excess, 0.0)
         semi_scale = float(np.max(np.abs(shortfall)))
         if not np.isfinite(semi_scale) or semi_scale <= 0:
             return None
         rms = float(np.sqrt(np.mean((shortfall / semi_scale) ** 2)))
-        excess_mean = float(normalized.mean() - normalized_target)
+        excess_mean = fsum(normalized_excess) / len(normalized_excess)
         if not np.isfinite(rms) or rms <= 0 or not np.isfinite(excess_mean):
             return None
         score = float((np.sqrt(TRADING_DAYS) * excess_mean / rms) / semi_scale)

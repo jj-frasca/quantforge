@@ -158,7 +158,14 @@ None means arithmetic remains unmeasurable, rendered "Not measurable"; measured 
 no-downside zero remains 0.00. The original engine financial property domains remain;
 within the bounded test domain an absent ratio requires independent Decimal overflow
 justification. Descriptive only, so accounting identity stays v9. General finite-result
-precision/cancellation remains a separate limitation (FINDING-146).
+precision remains a separate limitation. ADR-206 resolves target-related cancellation
+(FINDING-146) by averaging original float64 per-observation excess for nonzero
+targets, retaining exact pandas native mean at target zero. Float64 comparison
+prevents narrow source dtype from rounding away shortfall (FINDING-147). Failed
+native arithmetic normalizes finite excess first; only overflowing subtraction
+normalizes source/target together. fsum stabilizes its fallback numerator.
+FINDING-148 separately records preserved native mean-underflow limitations; this
+is no blanket finite-precision guarantee. Required nullable contract remains.
 
 ADR-188 validates both Calmar scalar inputs before zero-drawdown shortcuts and rejects a
 nonfinite native quotient; finite signed ratio semantics and the absolute denominator remain.

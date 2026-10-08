@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-07
 - **Severity:** Medium — descriptive finite risk scores can lose near-target excess
-- **Status:** Open
+- **Status:** Resolved by ADR-206
 
 ## Evidence
 
@@ -26,3 +26,16 @@ exact-float tests for near-target subtraction/mean order, including representabl
 native compatibility, signed/nonzero targets, complete nullable inputs and strict
 error modes. Preserve full-sample downside, annualization and no-downside semantics.
 Do not change thresholds, rewrite generated records or quote a new calibration.
+
+## Resolution and additional evidence
+
+Finite native averaging also loses target excess: target `1.0` with returns one
+float below and two floats above gives `44.8998886413`, versus exact-float Decimal
+`33.6749164810`. ADR-206 forms original float64 per-observation excess before
+nonzero-target mean; failed native arithmetic scales these differences before
+stable summation, using source/target scaling only when subtraction overflows.
+Twenty-eight RED regressions precede correction, covering signed ordinary/huge
+targets and FINDING-147 narrow-dtype comparison. Target-zero pandas native
+compatibility and an independent Hypothesis nonzero-target oracle remain.
+General arithmetic limitations remain, including written FINDING-148; this
+resolution certifies target handling, not every possible finite result.
