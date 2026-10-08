@@ -83,6 +83,7 @@ def _positive_holdout_years(value: object) -> float:
 _FiniteCalibrationScore = Annotated[float, BeforeValidator(_finite_leaf_score)]
 _PositiveCalibrationBars = Annotated[int, BeforeValidator(_positive_leaf_count)]
 _PositiveHoldoutYears = Annotated[float, BeforeValidator(_positive_holdout_years)]
+_CalibrationProbability = Annotated[float, BeforeValidator(_finite_probability_score)]
 
 
 class NullGraduate(BaseModel):
@@ -590,24 +591,24 @@ class PowerCalibration(BaseModel):
     phi: float | None = None
     half_life: float | None = None
     deviation_share: float | None = None
-    oracle_sharpes: list[float]
+    oracle_sharpes: list[_FiniteCalibrationScore]
     # ADR-055: the same oracle charged the cost model the catalog pays. The gross list above is
     # what ADR-041/042 published and is kept unchanged; this one is what a capture ratio should be
     # divided by, since its numerator paid those costs. Empty means an artifact predating ADR-055.
-    net_oracle_sharpes: list[float] = []
+    net_oracle_sharpes: list[_FiniteCalibrationScore] = []
     # ADR-061: the oracle a causal filter could actually form from prices, charged the same costs.
     # The latent-state oracle above knows the hidden deviation; on a band process most of its edge
     # is not recoverable at all. Empty on an AR(1) cell (its state IS the observed return) and on
     # any artifact predating the field.
-    achievable_oracle_sharpes: list[float] = []
+    achievable_oracle_sharpes: list[_FiniteCalibrationScore] = []
     # ADR-045: one max-DSR finalist per SEARCHED symbol, including non-detections. Conditioning
     # this list on graduation would select lucky captures and inflate the reported ratio.
     # Defaulted so power artifacts written before ADR-045 remain readable and report no capture.
-    finalist_observed_sharpes: list[float] = []
+    finalist_observed_sharpes: list[_FiniteCalibrationScore] = []
     # ADR-101: the same selected finalists' probability-form DSR, enabling the planted-edge power
     # curve that ADR-054 requires beside ADR-096's null Type-I curve. Individual values may be None
     # when ADR-054 could not measure that finalist; an empty list means a pre-ADR-101 artifact.
-    finalist_deflated_sharpe_probabilities: list[float | None] = []
+    finalist_deflated_sharpe_probabilities: list[_CalibrationProbability | None] = []
     # ADR-102: canonical per-symbol joint record. The probability list above remains a compatibility
     # projection and is validated against this record whenever the new schema is present.
     symbol_verdicts: list[CalibrationSymbolVerdict] = []
@@ -620,15 +621,17 @@ class PowerCalibration(BaseModel):
     # symbol. Capture's numerator requires nothing of the finalist except that it won, and on fast
     # band reversion the winner is usually a trend strategy fitting the level rather than anything
     # trading the planted reversion. Empty means an artifact predating the field.
-    finalist_sharpes_by_category: dict[str, list[float]] = Field(default_factory=dict)
+    finalist_sharpes_by_category: dict[str, list[_FiniteCalibrationScore]] = Field(
+        default_factory=dict
+    )
     # ADR-049: independent component pass counts make a composite zero-power result diagnosable.
     # Empty means a legacy artifact did not preserve attribution; it never means zero passes.
     gate_pass_counts: dict[str, int] = Field(default_factory=dict)
-    holdout_years: list[float]
+    holdout_years: list[_PositiveHoldoutYears]
     # ADR-051: the history each planted-edge symbol was searched over, one entry per SEARCHED
     # symbol. Power measured short is a lower bound on the power available, so an artifact that
     # does not state its length cannot bound anything. Empty means a run predating the field.
-    n_bars: list[int] = []
+    n_bars: list[_PositiveCalibrationBars] = []
     errors: dict[str, str]
     gate_config_version: str
     search_config_version: str = "legacy-unspecified"

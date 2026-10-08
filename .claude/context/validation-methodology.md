@@ -1084,3 +1084,13 @@ detected/searched exactly. Sweep reconstruction inherits these guards. Optional
 legacy arrays and reference/process evidence are unchanged; array lengths,
 component relationships and bar recomputation remain separate (F167). No search,
 gate, threshold, fingerprint or generated record changes.
+
+## Power array evidence validity (ADR-219)
+
+Present gross/net/achievable reference, finalist and per-category scores validate
+as original finite real nonboolean elements. Bars are positive nonboolean
+integers; years finite and strictly positive. Nullable finalist probabilities
+retain None and otherwise require original [0,1] bounds before float rounding.
+Existing empty/partial array and capture refusal semantics remain; sweep
+reconstruction inherits the guards. No new lengths, process/reference rules,
+component relationships, thresholds or fingerprints (F169).
