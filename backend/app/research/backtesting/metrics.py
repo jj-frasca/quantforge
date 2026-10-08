@@ -112,7 +112,8 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
         ADR-205 preserves measurable native scores and recovers failed arithmetic with
         common-scale normalization; an unrepresentable score is None, never invented zero.
         ADR-206 forms nonzero-target excess before averaging and compares float64
-        observations, avoiding cancellation and narrow-dtype target rounding.
+        observations, avoiding cancellation and narrow-dtype target rounding. ADR-207
+        recovers detected native underflow and zero means with lost original sum evidence.
     """
     target_evidence: object = target
     if isinstance(target_evidence, (bool, np.bool_)) or not isinstance(target_evidence, Real):
@@ -132,14 +133,20 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
     with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
         excess = values - target
         shortfall = np.minimum(excess, 0.0)
-        semi_std = float(np.sqrt(np.mean(shortfall**2)))
-        # Preserve the original pandas estimator at the default target. Nonzero
-        # targets must be subtracted per observation before rounding the mean.
-        excess_mean = float(returns.mean() if target == 0 else pd.Series(excess).mean())
-        if np.isfinite(semi_std) and semi_std > 0 and np.isfinite(excess_mean):
-            score = float(np.sqrt(TRADING_DAYS) * excess_mean / semi_std)
-            if np.isfinite(score):
-                return score
+        try:
+            # A finite subnormal moment can already have lost precision. Detect
+            # native underflow before accepting it; recovery uses normalized data.
+            with np.errstate(under="raise"):
+                semi_std = float(np.sqrt(np.mean(shortfall**2)))
+                # Preserve the original pandas estimator at the default target.
+                excess_mean = float(returns.mean() if target == 0 else pd.Series(excess).mean())
+                if np.isfinite(semi_std) and semi_std > 0 and np.isfinite(excess_mean):
+                    score = float(np.sqrt(TRADING_DAYS) * excess_mean / semi_std)
+                    if np.isfinite(score) and (excess_mean != 0 or fsum(excess) == 0):
+                        return score
+        except (FloatingPointError, OverflowError):
+            # fsum overflow also leaves a native zero uncertified.
+            pass
         if not np.isfinite(excess).all():
             # Subtract first whenever representable: scaling near-equal source and
             # target separately can erase their exact-float difference.

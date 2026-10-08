@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-07
 - **Severity:** Medium — finite descriptive score can conceal lost mean evidence
-- **Status:** Open
+- **Status:** Resolved by ADR-207
 
 ## Evidence
 
@@ -31,3 +31,14 @@ subnormal range, so its finite nonzero value loses precision. Target `1e-160`
 yields about 5.57e-6 relative error. These are distinct from target cancellation
 and remain outside ADR-206. New target precision properties use a fixed binary
 excess grid; original engine financial property domains are unchanged.
+
+## Resolution and limits
+
+ADR-207 routes detected native moment/mean/ratio underflow to the existing scaled
+recovery and requires zero original-excess fsum before preserving a native zero
+mean. Twenty-nine RED regressions precede correction; exact-float 800-digit
+oracles verify signed residuals and partial moments. True cancellation and tiny
+ratios legitimately rounding to zero remain measured zero. Nonzero native finite
+results remain unchanged; arbitrary subtraction/normalization precision and
+nonzero mean cancellation are not certified. No validation identity or threshold
+changes and no generated evidence is restated.

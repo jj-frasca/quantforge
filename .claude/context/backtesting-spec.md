@@ -164,8 +164,12 @@ targets, retaining exact pandas native mean at target zero. Float64 comparison
 prevents narrow source dtype from rounding away shortfall (FINDING-147). Failed
 native arithmetic normalizes finite excess first; only overflowing subtraction
 normalizes source/target together. fsum stabilizes its fallback numerator.
-FINDING-148 separately records preserved native mean-underflow limitations; this
-is no blanket finite-precision guarantee. Required nullable contract remains.
+ADR-207 resolves native mean/partial moment underflow (FINDING-148) and lost
+native-zero residuals (FINDING-149): native underflow raises locally into scaled
+recovery; native zero mean requires original float64 excess fsum zero. True
+cancellation and legitimately rounded tiny ratios remain measured zero. Nonzero
+native measurable scores remain; no blanket finite-precision guarantee applies.
+Required nullable contract and descriptive-only calibration identity remain.
 
 ADR-188 validates both Calmar scalar inputs before zero-drawdown shortcuts and rejects a
 nonfinite native quotient; finite signed ratio semantics and the absolute denominator remain.
