@@ -1033,3 +1033,14 @@ count matches its list, and the false-graduation rate equals the exact count
 ratio. Legacy optional arrays, nullable maxima and finite signed scores persist.
 Root maximum/formula recomputation, legacy diagnostic-array validity and other
 arithmetic remain separate; no threshold or methodology identity changes.
+
+## Current v10 fixed AR power (FINDING-162)
+
+The frozen 7,400-bar, 200-symbol arms at phi −0.3/+0.3 completed without
+errors: 130/200 and 163/200 graduates, all surviving ADR-018's 1.3432393 bar.
+Negative-arm rejections are stability; positive-arm DSR/stability failure sets
+are disjoint. Shared innovations require separate n200 denominators and marginal
+uncertainty, without independent pooled inference. Historical reference scores
+retain FINDING-155's qualification. Executed8e372d50/search969dd54d/gate25085698;
+this strong stationary synthetic evidence does not certify market/weak-edge
+power or authorize threshold changes. See the report for full hashes/audits.
