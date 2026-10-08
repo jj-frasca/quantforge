@@ -50,6 +50,11 @@ and predictive-variance contracts, review of filter initialization, explicit
 methodology attribution and its own ADR. This report changes no generator,
 reference implementation, threshold, calibration identity or data artifact.
 
+The session17 UI follow-up labels band columns as latent/filtered references,
+explains the log/simple-return mismatch and removes the optimal-filter/entire-
+edge claim. This qualifies display interpretation; the mathematical reference
+correction and filter initialization review remain Open.
+
 ## Verification
 
 The analytic Gaussian expectation, numerical counterexample, independent
@@ -57,3 +62,7 @@ source reconstruction and research review above precede this documentation
 change. Independent final research review approved the report and cold-memory
 qualification. Full foreground `make check-all PYTEST_WORKERS=4` passed
 3,237 backend tests (97.54% coverage) and 359 frontend tests (97.63% statements).
+
+The subsequent display qualification and FINDING-164 scope correction passed
+21 focused frontend cases and full foreground `make check-all PYTEST_WORKERS=4`:
+3,318 backend tests (97.56% coverage) and 363 frontend tests (97.63% statements).

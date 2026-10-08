@@ -44,18 +44,31 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
                 intercept; these are not conditional-mean optimal or realized-sample maximum Sharpes.
               </p>
             )}
+            {sweep.edge === 'band_reversion' && (
+              <p>
+                Band scores use historical latent and filtered sign references. Their positions
+                use predicted log returns while their scores use simple returns; these do not
+                certify an optimal strategy before or after costs, or a maximum sample Sharpe.
+              </p>
+            )}
           </caption>
           <thead>
             <tr>
               <th scope="col">Planted</th>
-              <th scope="col">{sweep.edge === 'ar1' ? 'Reference Sharpe' : 'Oracle Sharpe'}</th>
-              <th scope="col">{sweep.edge === 'ar1' ? 'Reference net of costs' : 'Oracle net of costs'}</th>
+              <th scope="col">{
+                sweep.edge === 'ar1' ? 'Reference Sharpe' :
+                  sweep.edge === 'band_reversion' ? 'Latent reference Sharpe' : 'Oracle Sharpe'
+              }</th>
+              <th scope="col">{
+                sweep.edge === 'ar1' ? 'Reference net of costs' :
+                  sweep.edge === 'band_reversion' ? 'Latent reference net of costs' : 'Oracle net of costs'
+              }</th>
               <th scope="col">Detected</th>
               <th scope="col">Clear the deflation bar</th>
-              <th scope="col">Capture (upper bound)</th>
+              <th scope="col">Capture (in-sample)</th>
               <th scope="col">Capture, net</th>
-              <th scope="col">Oracle a filter could form</th>
-              <th scope="col">Capture vs achievable</th>
+              <th scope="col">{sweep.edge === 'band_reversion' ? 'Filtered reference Sharpe' : 'Oracle a filter could form'}</th>
+              <th scope="col">{sweep.edge === 'band_reversion' ? 'Capture vs filtered reference' : 'Capture vs achievable'}</th>
             </tr>
           </thead>
           <tbody>
@@ -95,16 +108,15 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
         </table>
       ))}
       <p data-testid="power-caveat">
-        The planted edge is stationary and always on, so every rate here is an{' '}
-        <strong>upper bound</strong> on power against real, intermittent edges. Capture is the
+        These stationary, always-on synthetic controls do not establish a bound on real-market
+        power. Capture is the
         in-sample finalist Sharpe relative to the stated reference; selection can inflate this
         ratio. The sign reference trades constantly, so read the{' '}
         <strong>net</strong> columns: they charge it the same costs every catalog finalist paid,
         while a near-zero net reference cannot support a stable capture ratio and does not establish
-        that no tradeable edge exists. For band
-        reversion read the <strong>achievable</strong> columns above all: that oracle is what an
-        optimal filter could have formed from prices, while the others know the process's hidden
-        state — at a one-bar half-life the difference is the entire edge.
+        that no tradeable edge exists. For band reversion, the filtered reference uses prices;
+        the latent reference knows the hidden state. A near-zero filtered net reference does not
+        establish that no recoverable edge exists.
       </p>
     </section>
   )

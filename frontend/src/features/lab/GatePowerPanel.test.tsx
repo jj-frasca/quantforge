@@ -73,21 +73,69 @@ const bandSweep = () => sweep({
   cells: [cell({ edge: 'band_reversion', phi: null, half_life: 5 })],
 })
 
-test('preserves band-only oracle labels without an AR(1) qualification', () => {
+test('identifies historical band scores as latent and filtered references without optimality claims', () => {
   render(<GatePowerPanel sweeps={[bandSweep()]} />)
-  expect(screen.getByRole('columnheader', { name: 'Oracle Sharpe' })).toBeInTheDocument()
-  expect(screen.getByRole('columnheader', { name: 'Oracle net of costs' })).toBeInTheDocument()
+  expect(screen.getByRole('columnheader', { name: 'Latent reference Sharpe' })).toBeInTheDocument()
+  expect(screen.getByRole('columnheader', { name: 'Latent reference net of costs' })).toBeInTheDocument()
+  expect(screen.getByRole('columnheader', { name: 'Filtered reference Sharpe' })).toBeInTheDocument()
+  expect(screen.getByRole('columnheader', { name: 'Capture vs filtered reference' })).toBeInTheDocument()
+  expect(screen.getByText(/historical latent and filtered sign references/)).toHaveTextContent(
+    'use predicted log returns while their scores use simple returns',
+  )
+  expect(screen.getByText(/historical latent and filtered sign references/)).toHaveTextContent(
+    'do not certify an optimal strategy before or after costs, or a maximum sample Sharpe',
+  )
   expect(screen.queryByText(/historical reference sign strategy/)).not.toBeInTheDocument()
   expect(screen.getByText('+3.90')).toBeInTheDocument()
+  expect(screen.getByText('+2.90')).toBeInTheDocument()
   expect(screen.getByText('64%')).toBeInTheDocument()
+  expect(screen.getByText('32 / 50')).toBeInTheDocument()
+  expect(screen.getByText('76.9%')).toBeInTheDocument()
+  expect(screen.getByText('103.4%')).toBeInTheDocument()
+  expect(screen.getAllByText('—')).toHaveLength(2)
 })
 
-test('scopes the historical-reference qualification to AR(1) in mixed sweeps', () => {
+test('scopes drift and log-return qualifications to their own processes in mixed sweeps', () => {
   render(<GatePowerPanel sweeps={[sweep(), bandSweep()]} />)
   const tables = screen.getAllByRole('table')
   expect(within(tables[0]).getByText(/historical reference sign strategy/)).toBeInTheDocument()
   expect(within(tables[1]).queryByText(/historical reference sign strategy/)).not.toBeInTheDocument()
-  expect(within(tables[1]).getByRole('columnheader', { name: 'Oracle Sharpe' })).toBeInTheDocument()
+  expect(within(tables[0]).queryByText(/historical latent and filtered sign references/)).not.toBeInTheDocument()
+  expect(within(tables[0]).getByRole('columnheader', { name: 'Reference Sharpe' })).toBeInTheDocument()
+  expect(within(tables[1]).getByText(/historical latent and filtered sign references/)).toBeInTheDocument()
+  expect(within(tables[1]).getByRole('columnheader', { name: 'Latent reference Sharpe' })).toBeInTheDocument()
+})
+
+test('explains information access without inferring absent recoverable edge from filtered scores', () => {
+  render(<GatePowerPanel sweeps={[bandSweep()]} />)
+  const caveat = screen.getByTestId('power-caveat')
+  expect(caveat).toHaveTextContent('filtered reference uses prices; the latent reference knows the hidden state')
+  expect(caveat).toHaveTextContent('near-zero filtered net reference does not establish that no recoverable edge exists')
+  expect(caveat).not.toHaveTextContent('optimal filter')
+  expect(caveat).not.toHaveTextContent('the difference is the entire edge')
+})
+
+test('labels capture as in-sample while preserving served ratios and detection rates', () => {
+  render(<GatePowerPanel sweeps={[sweep(), bandSweep()]} />)
+  expect(screen.getAllByRole('columnheader', { name: 'Capture (in-sample)' })).toHaveLength(2)
+  expect(screen.queryByRole('columnheader', { name: 'Capture (upper bound)' })).not.toBeInTheDocument()
+  expect(screen.getAllByText('64%')).toHaveLength(2)
+  expect(screen.getAllByText('76.9%')).toHaveLength(2)
+  expect(screen.getAllByText('103.4%')).toHaveLength(2)
+})
+
+test('does not present synthetic detection controls as bounds on real-market power', () => {
+  render(<GatePowerPanel sweeps={[sweep(), bandSweep()]} />)
+  const caveat = screen.getByTestId('power-caveat')
+  expect(caveat).toHaveTextContent('always-on synthetic controls do not establish a bound on real-market power')
+  expect(caveat).not.toHaveTextContent('upper bound')
+})
+
+test('preserves existing labels for an unknown process', () => {
+  render(<GatePowerPanel sweeps={[sweep({ edge: 'future_process' })]} />)
+  expect(screen.getByRole('columnheader', { name: 'Oracle Sharpe' })).toBeInTheDocument()
+  expect(screen.getByRole('columnheader', { name: 'Oracle net of costs' })).toBeInTheDocument()
+  expect(screen.queryByText(/historical latent and filtered sign references/)).not.toBeInTheDocument()
 })
 
 test('takes the middle value, not an average, when a cell has an odd number of oracle Sharpes', () => {
@@ -237,9 +285,9 @@ test('says nothing about categories when a cell predates the split', () => {
   expect(screen.queryByTestId('capture-by-category')).not.toBeInTheDocument()
 })
 
-test('shows capture against the oracle a filter could actually have formed (ADR-061)', () => {
-  // The latent-state oracle knows the process's hidden deviation; on a band process most of that
-  // edge is not recoverable from prices at all, so the achievable column is the honest one.
+test('preserves served filtered-reference scores and capture (ADR-061, FINDING-159)', () => {
+  // The price-filtered reference has different information access from the latent reference.
+  // FINDING-159 qualifies its optimality; neither historical score nor capture is recomputed.
   render(
     <GatePowerPanel
       sweeps={[
@@ -267,8 +315,8 @@ test('shows capture against the oracle a filter could actually have formed (ADR-
 })
 
 test('an AR(1) cell shows a dash for the achievable oracle, because its state is observed', () => {
-  // Not a missing measurement: an AR(1) process's state IS the observed return, so the latent and
-  // achievable oracles coincide and the driver deliberately records none.
+  // The AR(1) driver records no filtered reference because its state is observed.
+  // FINDING-155 separately qualifies the historical sign reference's drift omission.
   render(<GatePowerPanel sweeps={[sweep()]} />)
   expect(screen.getAllByText('—')).toHaveLength(2)
 })

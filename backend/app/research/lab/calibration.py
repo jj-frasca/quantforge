@@ -554,9 +554,9 @@ class PowerCalibration(BaseModel):
     Notes:
         `detection_rate` is power of the gate as such; `n_clear_deflation_bar` is power against the
         standard the project actually holds itself to (ADR-018), and it is the number that
-        interprets "0 of 40 graduates clear the bar". An AR(1) edge is stationary and always-on,
-        so this is an UPPER BOUND on power against real, intermittent edges: a low number here is
-        damning, a high one is not a clean bill of health.
+        interprets "0 of 40 graduates clear the bar". These fixed synthetic controls measure
+        detection under their stated source laws. Stationary, always-on effects do not establish
+        a bound on power against unmatched real-market alternatives (FINDING-164).
     """
 
     model_config = ConfigDict(frozen=True)

@@ -450,8 +450,8 @@ tiers: graduated, and cleared the ADR-018 bar.
   not what the statistics permit. ADR-042's "the asymmetry was the horizon, not the family" reading
   describes the pre-ADR-046/047/048 procedure at 3000 bars and does NOT describe production: at
   full history the horizon does not rescue band reversion.
-- Both processes are stationary and always-on, so every power number is an **upper bound** on power
-  against real, intermittent edges.
+- These always-on synthetic processes measure power under their stated source laws.
+  Their rates do not establish a bound on unmatched real-market power (FINDING-164).
 - ADR-049 records per-component pass counts (`dsr`, `pbo`, `stability`, `mintrl`, `holdout`,
   `beats_buy_and_hold`) because a composite zero cannot identify its own mechanism. Empty counts on
   a legacy artifact mean attribution was not preserved, never that every component had zero passes.
@@ -514,14 +514,15 @@ symbol, including non-detections. `PowerCalibration.capture_ratio` is median fin
 median oracle Sharpe. It returns null for legacy or partial artifacts rather than silently changing
 the denominator.
 
-- This is an **upper bound**, not holdout capture: the finalist is selected in-sample from a grid,
-  so selection works in its favour. Low capture is therefore conclusive; high capture is not.
+- This is a **selected in-sample ratio**, not holdout capture. Selection can inflate it,
+  but does not certify a bound on future capture or make low capture conclusive (FINDING-164).
 - The grid searches 2-bar configurations at both horizons and they win at neither. Fast reversion
   is a smaller, noisier state-estimation target at held-constant oracle Sharpe, not a missing-window
   problem (ADR-045's correction to ADR-042).
-- Capture ≈ 0.47 against the frontier's required true Sharpe 2.13 implies an underlying oracle
-  Sharpe around **4.5** before the current pipeline is likely to find an edge. Because capture is an
-  upper bound, the real requirement is worse. This is a diagnosis, never permission to lower a bar.
+- The historical heuristic combines capture ≈ 0.47 and required true Sharpe 2.13 to suggest
+  reference Sharpe around **4.5**. It is not a certified detection frontier: the ratio is selected
+  in-sample and the reference is qualified by FINDING-155/159. A new strength needs its own
+  matched calibration; this heuristic never permits lowering a bar (FINDING-164).
 
 **ADR-055: take the ratio against the NET oracle.** `oracle_sharpes` is cost-free; every finalist in
 the numerator was charged 10bp on turnover by `BacktestEngine`, and the oracle is a *sign* strategy
@@ -551,7 +552,8 @@ FINDING-155 prevents concluding that no tradeable edge exists from this fixed re
 The ratio is refused when the net reference sits inside Lo (2002)'s Sharpe
 standard error at the cell's own history length. (2) **Net capture above 100% is expected, not a
 bug**: the numerator is selected in-sample from a grid while the denominator is a fixed sign rule
-that pays to flip. It is the clearest demonstration that this ratio is an upper bound. (3) ~~**The
+that pays to flip. This illustrates selection and reference dependence, not a certified bound
+on future capture (FINDING-164). (3) ~~**The
 band gap is the standing finding** — what the catalog cannot express is fast reversion to a
 slow-moving level.~~ **RETIRED by ADR-061 (2026-08-20). Do not restate it in any form.** That
 reading divided by an oracle computed from the process's LATENT deviation, which no causal strategy
