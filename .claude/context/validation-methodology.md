@@ -1041,6 +1041,17 @@ errors: 130/200 and 163/200 graduates, all surviving ADR-018's 1.3432393 bar.
 Negative-arm rejections are stability; positive-arm DSR/stability failure sets
 are disjoint. Shared innovations require separate n200 denominators and marginal
 uncertainty, without independent pooled inference. Historical reference scores
-retain FINDING-155's qualification. Executed8e372d50/search969dd54d/gate25085698;
+retain FINDING-155's qualification. Executed `8e372d50`, search `969dd54d`, gate `25085698`;
 this strong stationary synthetic evidence does not certify market/weak-edge
 power or authorize threshold changes. See the report for full hashes/audits.
+
+## Current v10 fixed heavy-tail null stress (FINDING-163)
+
+Student-t df5 simple returns at drift 0.0003 and vol 0.012 completed all 200
+7,400-bar sources with no errors/graduates/ADR-018 survivors; components
+DSR 0, PBO 180, stability 50, MinTRL 28, holdout 134, beat-hold 29. The conditional
+one-sided 95% zero-event upper bound is 1.4867%, not a zero-error guarantee.
+Sources match the interrupted frozen plan; no redraw/drop or pooled denominator.
+Finite fourth/infinite eighth moments limit kurtosis-precision assumptions.
+Executed `8e372d50`, search `969dd54d`, gate `25085698`; no market/bootstrap certification
+or threshold change. Trial-wide maximum DSR remains a production summary.
