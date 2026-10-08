@@ -84,6 +84,7 @@ _FiniteCalibrationScore = Annotated[float, BeforeValidator(_finite_leaf_score)]
 _PositiveCalibrationBars = Annotated[int, BeforeValidator(_positive_leaf_count)]
 _PositiveHoldoutYears = Annotated[float, BeforeValidator(_positive_holdout_years)]
 _CalibrationProbability = Annotated[float, BeforeValidator(_finite_probability_score)]
+_NonnegativeCalibrationCount = Annotated[int, BeforeValidator(_nonnegative_calibration_count)]
 
 
 class NullGraduate(BaseModel):
@@ -641,7 +642,7 @@ class PowerCalibration(BaseModel):
     )
     # ADR-049: independent component pass counts make a composite zero-power result diagnosable.
     # Empty means a legacy artifact did not preserve attribution; it never means zero passes.
-    gate_pass_counts: dict[str, int] = Field(default_factory=dict)
+    gate_pass_counts: dict[str, _NonnegativeCalibrationCount] = Field(default_factory=dict)
     holdout_years: list[_PositiveHoldoutYears]
     # ADR-051: the history each planted-edge symbol was searched over, one entry per SEARCHED
     # symbol. Power measured short is a lower bound on the power available, so an artifact that
@@ -682,6 +683,8 @@ class PowerCalibration(BaseModel):
             raise ValueError("power survivor/detected/searched counts are inconsistent")
         if self.detection_rate != self.n_detected / self.n_symbols:
             raise ValueError("detection_rate must match detected/searched counts")
+        if any(count > self.n_symbols for count in self.gate_pass_counts.values()):
+            raise ValueError("gate_pass_counts cannot exceed searched symbol count")
         if self.symbol_verdicts:
             if len(self.symbol_verdicts) != self.n_symbols:
                 raise ValueError("symbol_verdicts must carry one record per searched symbol")

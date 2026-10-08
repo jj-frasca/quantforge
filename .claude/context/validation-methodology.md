@@ -1105,3 +1105,12 @@ and legacy absence remain unchanged. FINDING-170's coercion/range bypass is a
 synthetic evidence-boundary defect, not an observed corrupt artifact or candidate
 comparison result. No GateResult scalar policy or root/component reconciliation
 is added, and no threshold, fingerprint, source or generated data changes.
+
+### Power component-count bounds (ADR-221)
+
+Each present gate_pass_counts value is an original nonboolean nonnegative
+integer no larger than n_symbols, ADR-049's successful-search denominator.
+FINDING-171's coerced/impossible attribution is refused before freezing or sweep
+reconstruction. Empty/partial legacy mappings and existing key semantics remain;
+no missing count is inferred. Composite/joint reconciliation is a separate
+contract. No gate component, threshold, fingerprint, source or data change.
