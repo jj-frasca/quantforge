@@ -1094,3 +1094,14 @@ retain None and otherwise require original [0,1] bounds before float rounding.
 Existing empty/partial array and capture refusal semantics remain; sweep
 reconstruction inherits the guards. No new lengths, process/reference rules,
 component relationships, thresholds or fingerprints (F169).
+
+### Joint original scalar evidence (ADR-220)
+
+Canonical CalibrationSymbolVerdict probability, locked-holdout score and bar
+count use the established before-coercion contracts. Probability remains nullable
+and original real nonboolean [0,1]; scores finite real nonboolean and history
+positive nonboolean integer. Exact incumbent holdout projections, strict >0.95
+and legacy absence remain unchanged. FINDING-170's coercion/range bypass is a
+synthetic evidence-boundary defect, not an observed corrupt artifact or candidate
+comparison result. No GateResult scalar policy or root/component reconciliation
+is added, and no threshold, fingerprint, source or generated data changes.

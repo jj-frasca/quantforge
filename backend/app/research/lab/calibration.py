@@ -126,6 +126,21 @@ class CalibrationSymbolVerdict(BaseModel):
     holdout_sharpe: float = Field(allow_inf_nan=False)
     holdout_n_bars: int = Field(ge=1)
 
+    @field_validator("deflated_sharpe_probability", mode="before")
+    @classmethod
+    def _validate_probability(cls, value: object) -> float | None:
+        return None if value is None else _finite_probability_score(value)
+
+    @field_validator("holdout_sharpe", mode="before")
+    @classmethod
+    def _validate_score(cls, value: object) -> float:
+        return _finite_leaf_score(value)
+
+    @field_validator("holdout_n_bars", mode="before")
+    @classmethod
+    def _validate_history(cls, value: object) -> int:
+        return _positive_leaf_count(value)
+
     @model_validator(mode="after")
     def _validate_holdout_projection(self) -> "CalibrationSymbolVerdict":
         if self.gate_result.holdout_sharpe != self.holdout_sharpe:
