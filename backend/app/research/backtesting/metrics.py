@@ -305,6 +305,28 @@ def _max_drawdown_from_returns(returns: pd.Series) -> float:
     return max_drawdown(pd.Series(wealth))
 
 
+def _annualized_volatility(returns: pd.Series) -> float:
+    """Sample std annualized by sqrt(252), with native-first recovery (ADR-208)."""
+    _validate_complete_return_sample(returns)
+    if len(returns) < 2 or returns.eq(returns.iloc[0]).all():
+        return 0.0
+    try:
+        with np.errstate(over="ignore", under="raise", invalid="ignore", divide="ignore"):
+            native = float(returns.std() * np.sqrt(TRADING_DAYS))
+            if np.isfinite(native) and native > 0:
+                return native
+    except FloatingPointError:
+        pass
+    values = returns.to_numpy(dtype=np.float64)
+    scale = float(np.max(np.abs(values)))
+    with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
+        normalized_std = float(pd.Series(values / scale).std())
+        recovered = float((normalized_std * np.sqrt(TRADING_DAYS)) * scale)
+    if not np.isfinite(recovered) or recovered <= 0:
+        raise ValueError("annualized volatility is not measurable in float64")
+    return recovered
+
+
 @dataclass(frozen=True)
 class BacktestMetrics:
     sharpe: float
@@ -320,7 +342,7 @@ class BacktestMetrics:
     def from_series(cls, net_returns: pd.Series) -> "BacktestMetrics":
         ann_return = annualized_return(net_returns)
         dd = _max_drawdown_from_returns(net_returns)
-        ann_vol = float(net_returns.std() * np.sqrt(TRADING_DAYS)) if len(net_returns) > 1 else 0.0
+        ann_vol = _annualized_volatility(net_returns)
         return cls(
             sharpe=sharpe_ratio(net_returns),
             max_drawdown=dd,

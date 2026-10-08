@@ -144,6 +144,14 @@ native estimators/count remain. Former finite PSR inputs become unmeasured, so i
 advances to `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-v9`.
 ADR-205 resolves FINDING-145's separate Sortino arithmetic/representation question.
 
+ADR-208 gives annualized volatility native-first sample-std recovery. Source
+validation precedes short/exact-constant zero. Preserve native positive finite
+std * sqrt(252) when no underflow is detected; otherwise compute float64 maxabs-
+normalized sample std, annualize, then restore scale. This retains representable
+subnormal risk that native variance lost; recovered output must be positive finite
+or raises ValueError. Exact constants no longer fabricate positive volatility.
+Numeric API shape and descriptive-only identity stay; no universal precision proof.
+
 ADR-186 validates original complete finite real numeric source evidence at the public
 compounded-return helpers before conversion/empty shortcuts; boolean, strings and complex
 observations cannot be reinterpreted as measured returns. Numeric empty and log math remain.
