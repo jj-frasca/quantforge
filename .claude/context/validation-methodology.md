@@ -84,6 +84,12 @@ Historical v9 measurements retain their executed revision and cannot certify v10
 fresh fixed-cohort evidence must record the new identity. Arbitrary finite-result
 precision and nonzero native cancellation remain separate limitations.
 
+Local session15's fixed v9 iid cohort completed200/noerrors/0graduates/0ADR018
+survivors (F156), independently audited with a one-sided95% zero-event upper
+limit of1.4867%. It is historical f1891104/v9 evidence, not currentv10 certification
+or power/bootstrap coverage. A separate fixed pairedv10 cohort must finish before
+any current-version rate or paired comparison is claimed; generated data unchanged.
+
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
 probability; margin/probability delegate to one guard. Valid formulas, counts and gates remain.
@@ -518,6 +524,14 @@ the numerator was charged 10bp on turnover by `BacktestEngine`, and the oracle i
 turning over up to 1.19 per bar. `net_oracle_sharpes` charges it the same rate, and
 `net_capture_ratio` is the comparable ratio. Both are pydantic computed fields, so they are served
 rather than re-derived by each reader — do not reimplement the division in a script or a component.
+
+FINDING-155 (session15, Open) corrects the interpretation of AR(1)'s reference
+label: the generator's conditional mean is phi*lagged_return+drift*(1-phi),
+while the current sign reference omits the drift intercept. Report its stored
+gross/net scores as historical reference-strategy scores, not the true conditional-
+mean optimum or a realized-sample maximum. Search/detection counts stay valid;
+no oracle correction or historical artifact relabeling is claimed. Reference
+capture/frontier narratives need this qualification until a governed correction.
 
 | planted (2026-08-20, 5400 bars) | oracle | net oracle | detected | capture | net capture |
 |---|---|---|---|---|---|
