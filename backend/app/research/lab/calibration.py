@@ -1,13 +1,16 @@
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from datetime import datetime
+from math import isfinite
+from numbers import Integral, Real
+from operator import le
 from statistics import median
 from typing import Any, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.backtesting.manifest import compute_parameter_hash
@@ -27,6 +30,26 @@ _START = "2010-01-04"
 PROBABILITY_DSR_THRESHOLD = 0.95
 
 
+def _finite_leaf_score(value: object) -> float:
+    """Validate original real evidence before Pydantic can coerce strings or booleans."""
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("calibration scores must be finite real nonboolean numbers")
+    try:
+        score = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError("calibration scores must be finite float-representable numbers") from exc
+    if not isfinite(score):
+        raise ValueError("calibration scores must be finite float-representable numbers")
+    return score
+
+
+def _positive_leaf_count(value: object) -> int:
+    """Retain positive integer history without boolean or floating-point coercion."""
+    if isinstance(value, bool) or not isinstance(value, Integral) or value <= 0:
+        raise ValueError("calibration history counts must be positive nonboolean integers")
+    return int(value)
+
+
 class NullGraduate(BaseModel):
     """A false graduate, kept with everything the ADR-018 bar must be recomputed against.
 
@@ -42,6 +65,16 @@ class NullGraduate(BaseModel):
     holdout_sharpe: float
     holdout_n_bars: int
     deflated_sharpe: float
+
+    @field_validator("holdout_sharpe", "deflated_sharpe", mode="before")
+    @classmethod
+    def _validate_scores(cls, value: object) -> float:
+        return _finite_leaf_score(value)
+
+    @field_validator("holdout_n_bars", mode="before")
+    @classmethod
+    def _validate_history(cls, value: object) -> int:
+        return _positive_leaf_count(value)
 
 
 class CalibrationSymbolVerdict(BaseModel):
@@ -97,10 +130,45 @@ class NullSymbolDiagnostics(BaseModel):
     # future Type-I-error measurement for that statistic has data to read. None on artifacts
     # committed before this field (the search still ran, the number was just discarded), and on any
     # future run where the finalist's own moments made it unmeasurable.
-    deflated_sharpe_probability: float | None = None
+    deflated_sharpe_probability: float | None = Field(default=None, ge=0.0, le=1.0)
     # ADR-102: canonical joint identity for the counterfactual composite gate. None means a legacy
     # artifact; a marginal probability alone must never be presented as whole-gate evidence.
     calibration_verdict: CalibrationSymbolVerdict | None = None
+
+    @field_validator("n_bars", mode="before")
+    @classmethod
+    def _validate_history(cls, value: object) -> int:
+        return _positive_leaf_count(value)
+
+    @field_validator("holdout_years", mode="before")
+    @classmethod
+    def _validate_years(cls, value: object) -> float:
+        years = _finite_leaf_score(value)
+        if years <= 0.0:
+            raise ValueError("holdout_years must be strictly positive")
+        return years
+
+    @field_validator(
+        "walk_forward_oos_sharpe",
+        "walk_forward_hold_sharpe",
+        "purged_cv_oos_sharpe",
+        "purged_cv_hold_sharpe",
+        mode="before",
+    )
+    @classmethod
+    def _validate_scores(cls, value: object) -> float | None:
+        return None if value is None else _finite_leaf_score(value)
+
+    @field_validator("deflated_sharpe_probability", mode="before")
+    @classmethod
+    def _validate_probability(cls, value: object) -> float | None:
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, Real):
+            raise ValueError("calibration probability must be a real nonboolean number")
+        if not (le(0, value) and le(value, 1)):
+            raise ValueError("calibration probability must be in [0, 1]")
+        return _finite_leaf_score(value)
 
 
 class NullCalibration(BaseModel):

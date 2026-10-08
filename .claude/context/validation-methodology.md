@@ -1000,3 +1000,14 @@ effect is near zero, not merely undetected. **ADR-063's window stays and the two
 now closed** — do not re-derive a third drift-controlled number from the grown pool (ADR-077's
 separate `/api/v1/window-comparison` endpoint exists precisely so a descriptive report line never
 gets mistaken for a third spend of this test).
+
+## Null-calibration leaf validity (ADR-213)
+
+NullGraduate and NullSymbolDiagnostics validate original finite real nonboolean
+score evidence, positive integral history, and positive finite holdout years.
+Present probability DSR is bounded to [0, 1] on the original real value before
+float conversion; absent diagnostics/verdicts remain explicitly unmeasured.
+Nested reconstruction and merge inherit these leaf contracts. Valid signed and
+zero scores, numeric scalar types, formulas, identities and thresholds remain.
+This does not establish top-level/legacy-array coherence or overflow-free
+subtraction of finite diagnostics (FINDING-158).
