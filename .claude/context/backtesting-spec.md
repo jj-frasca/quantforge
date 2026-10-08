@@ -193,6 +193,12 @@ stable normalized sum with frexp-separated numerator/downside exponents and one
 final ldexp. True overflow remains None; genuine tiny zero remains zero. Native
 measurable results and calibration v10 stay. Loss during prior common-scale
 normalization remains an explicit limitation.
+ADR-212 corrects the new subnormal test oracle with exact Fraction squared-score
+midpoint comparisons. Decimal sequential roots do not certify exact halfway
+rounding. Full new property domains remain; normal relative checks and exact
+3/100 fixtures stay. Subnormal error is measured in output units (one ULP in the
+bounded audit), with nonzero/sign assertions retained; this is an explicit
+precision limit, not a correctly-rounded production or changed gate claim.
 ADR-207 resolves native mean/partial moment underflow (FINDING-148) and lost
 native-zero residuals (FINDING-149): native underflow raises locally into scaled
 recovery; native zero mean requires original float64 excess fsum zero. True

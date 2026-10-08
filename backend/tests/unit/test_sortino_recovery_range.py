@@ -2,6 +2,7 @@
 
 import math
 from decimal import Decimal, localcontext
+from fractions import Fraction
 
 import numpy as np
 import pandas as pd
@@ -13,6 +14,18 @@ from app.research.backtesting.metrics import sortino_ratio
 
 
 def _exact_sortino(values) -> float:
+    observations = [Fraction.from_float(float(value)) for value in values]
+    total = sum(observations)
+    squared_score = (
+        252 * total**2 / (len(observations) * sum(min(value, 0) ** 2 for value in observations))
+    )
+    squared_units = squared_score / Fraction.from_float(5e-324) ** 2
+    if squared_units <= 2**104:
+        units = math.isqrt(squared_units.numerator // squared_units.denominator)
+        midpoint_squared = Fraction(2 * units + 1, 2) ** 2
+        if squared_units > midpoint_squared or (squared_units == midpoint_squared and units % 2):
+            units += 1
+        return math.ldexp(float(units) if total >= 0 else -float(units), -1074)
     with localcontext() as context:
         context.prec = 800
         observations = [Decimal.from_float(float(value)) for value in values]
@@ -22,6 +35,12 @@ def _exact_sortino(values) -> float:
         return float(
             Decimal(252).sqrt() * (sum(observations) / len(observations)) / downside_variance.sqrt()
         )
+
+
+@pytest.mark.parametrize("sign,units", [(1, 2), (-1, -1)])
+def test_subnormal_oracle_rounds_exact_halfway_and_infinitesimal_shortfall(sign, units) -> None:
+    values = [-1.0, sign * 5e-324, 1.0] + [0.0] * 109
+    assert _exact_sortino(values) == math.ldexp(float(units), -1074)
 
 
 @pytest.mark.parametrize("dtype", ["float64", "Float64"])
@@ -56,7 +75,13 @@ def test_binary_scaled_tiny_residual_matches_exact_full_sample_ratio(
     with np.errstate(all="raise"):
         result = sortino_ratio(pd.Series(values))
     assert result is not None and result * sign > 0
-    assert result == pytest.approx(expected, rel=5e-14, abs=0)
+    if abs(expected) < np.finfo(float).tiny:
+        # Exact squared-score rounding identifies ties; double recovery can lose
+        # one output unit when a tiny downside square falls below native range.
+        error = abs(Fraction.from_float(result) - Fraction.from_float(expected))
+        assert error <= Fraction.from_float(5e-324)
+    else:
+        assert result == pytest.approx(expected, rel=5e-14, abs=0)
 
 
 @pytest.mark.parametrize("shortfall", [1e-308, 1e-309])
