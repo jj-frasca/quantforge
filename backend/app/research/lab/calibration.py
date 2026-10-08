@@ -302,12 +302,16 @@ class NullCalibration(BaseModel):
         return self
 
     def paired_excess(self, oos_field: str, hold_field: str) -> list[float] | None:
-        """Return only explicit per-symbol pairs, with a strict complete-array legacy fallback."""
+        """Return finite paired differences, refusing overflow rather than dropping evidence."""
         if self.symbol_diagnostics:
             oos_name = oos_field.removesuffix("s")
             hold_name = hold_field.removesuffix("s")
             pairs = [(getattr(d, oos_name), getattr(d, hold_name)) for d in self.symbol_diagnostics]
-            values = [oos - hold for oos, hold in pairs if oos is not None and hold is not None]
+            values = [
+                _finite_leaf_score(oos - hold)
+                for oos, hold in pairs
+                if oos is not None and hold is not None
+            ]
             return values or None
 
         oos = getattr(self, oos_field)
@@ -316,7 +320,7 @@ class NullCalibration(BaseModel):
         # same symbols. Historical positional pairing is safe only when neither side dropped one.
         if len(oos) != self.n_symbols or len(hold) != self.n_symbols:
             return None
-        return [left - right for left, right in zip(oos, hold, strict=True)]
+        return [_finite_leaf_score(left - right) for left, right in zip(oos, hold, strict=True)]
 
     @property
     def graduate_symbols(self) -> list[str]:

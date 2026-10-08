@@ -1020,3 +1020,9 @@ Nested reconstruction and merge inherit these leaf contracts. Valid signed and
 zero scores, numeric scalar types, formulas, identities and thresholds remain.
 This does not establish top-level/legacy-array coherence or overflow-free
 subtraction of finite diagnostics (FINDING-158).
+
+ADR-214 / FINDING-160 closes the null paired-difference boundary separately:
+`paired_excess` rejects nonfinite subtraction results in both symbol-paired
+and complete legacy-array paths. Valid signed/zero differences and unmeasured
+pairs retain their meanings. This does not certify other report arithmetic,
+percentile operations or root scalar coherence; no threshold/identity changes.
