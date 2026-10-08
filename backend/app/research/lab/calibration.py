@@ -569,13 +569,13 @@ class PowerCalibration(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def net_capture_ratio(self) -> float | None:
-        """`capture_ratio` against the effect size the catalog could actually have kept (ADR-055).
+        """`capture_ratio` against the stated reference net of the same costs (ADR-055).
 
         Notes:
             Both numerator and denominator are net of the same cost model. Refused when the net
-            oracle is not distinguishable from zero at this cell's own history length — a planted
-            edge that costs have entirely eaten has no achievable size to express a fraction of,
-            and dividing by it reports a ratio against noise. The scale is Lo (2002)'s Sharpe
+            reference is not distinguishable from zero at this cell's own history length, so
+            dividing by it reports an unstable ratio against noise. This refusal does not establish
+            that no tradeable edge exists (FINDING-155). The scale is Lo (2002)'s Sharpe
             standard error, the same one ADR-043's frontier uses, rather than an invented cutoff.
         """
         if (
@@ -597,8 +597,8 @@ class PowerCalibration(BaseModel):
         Notes:
             The honest denominator for a process whose state is LATENT: the latent-state oracle
             includes edge no strategy could ever see. Same refusal as `net_capture_ratio` — an
-            achievable oracle inside Lo (2002)'s Sharpe standard error has no size to express a
-            fraction of, which is exactly the half-life-1 case.
+            achievable reference inside Lo (2002)'s Sharpe standard error cannot support a stable
+            capture ratio, as in the half-life-1 case; this refusal alone is not a no-edge proof.
         """
         if (
             len(self.finalist_observed_sharpes) != self.n_symbols
@@ -618,8 +618,8 @@ class PowerCalibration(BaseModel):
 
         Notes:
             Same denominator and the same refusal as `net_capture_ratio` — a cell whose net oracle
-            is indistinguishable from zero has no achievable size for any category to express a
-            fraction of. Which category MATCHES a planted process is an interpretation and is
+            is indistinguishable from zero cannot support a stable category capture ratio. This
+            does not certify absence of a tradeable edge. Category MATCHING is an interpretation and is
             deliberately not encoded here; the reader picks the row.
         """
         if self.net_capture_ratio is None:
@@ -634,11 +634,11 @@ class PowerCalibration(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def capture_ratio(self) -> float | None:
-        """Selection-biased upper bound on how much of the planted edge the catalog captures.
+        """Selection-biased in-sample finalist Sharpe relative to the stated gross reference.
 
         Both lists must cover every searched symbol. Partial or legacy artifacts return None rather
-        than silently changing the denominator. A non-positive median oracle has no available edge
-        to express as a meaningful capture fraction.
+        than silently changing the denominator. A non-positive median reference cannot support a
+        meaningful capture fraction; it does not establish that no tradeable edge exists (FINDING-155).
         """
         if (
             len(self.finalist_observed_sharpes) != self.n_symbols
@@ -694,10 +694,12 @@ def oracle_sharpe(frame: pd.DataFrame, *, phi: float, cost_rate: float = 0.0) ->
     """Annualized Sharpe of `position_t = sign(phi * r_{t-1})` on `frame` (ADR-041).
 
     Notes:
-        The sign of the AR(1) conditional mean, so it is the best any causal sign-taking strategy
-        could do on this series — scored with the same one-bar lag the backtest engine applies.
-        Measured on the data the search sees rather than derived, so the reported effect size
-        carries no theory that could be silently wrong.
+        Historical reference sign strategy, scored on the data the search sees (FINDING-155).
+        For autocorrelated_edge's drift-plus-centered-AR(1) returns, the conditional mean is
+        phi * r_{t-1} + drift * (1 - phi). This reference omits that drift intercept; it is
+        neither the conditional-mean sign rule at nonzero drift nor a realized-sample maximum.
+        Preserve its measured gross/net scores for historical attribution. Even a drift-aware
+        conditional-mean sign rule would not certify cost-aware or sample-Sharpe optimality.
     """
     returns = frame["close"].pct_change().dropna()
     return oracle_sharpe_of(frame, phi * returns.shift(1), cost_rate=cost_rate)

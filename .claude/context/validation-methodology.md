@@ -545,8 +545,10 @@ capture/frontier narratives need this qualification until a governed correction.
 | band, half-life 1 / 3 / 5 | +2.60 / +2.70 / +2.65 | +1.70 / +2.13 / +2.21 | 0% | 21% / 25% / 37% | **32% / 31% / 45%** |
 | band, half-life 10 / 20 | +2.03 / +1.45 | +1.71 / +1.24 | 0% | 47% / 50% | 56% / 58% |
 
-Three rules follow. (1) **Never quote "0% power at oracle 1.3"** — net of costs that cell held no
-achievable edge, and the ratio is refused when the net oracle sits inside Lo (2002)'s Sharpe
+Three rules follow. (1) **Never quote "0% power at oracle 1.3"** as a missed achievable edge:
+that is the gross historical sign-reference score, while its net score is near zero.
+FINDING-155 prevents concluding that no tradeable edge exists from this fixed reference.
+The ratio is refused when the net reference sits inside Lo (2002)'s Sharpe
 standard error at the cell's own history length. (2) **Net capture above 100% is expected, not a
 bug**: the numerator is selected in-sample from a grid while the denominator is a fixed sign rule
 that pays to flip. It is the clearest demonstration that this ratio is an upper bound. (3) ~~**The
@@ -568,7 +570,7 @@ catalog + one probe strategy, superseded artifacts `2eede83f…`):
 At half-life 1 the max-DSR search selects a **Trend** strategy 68% of the time on a process that is
 by construction fast reversion. Capture tracks the recognition share. The AR(1) control from the
 same dispatch recognizes perfectly (100% Mean Reversion finalists at φ = −0.2/−0.3; 66–74% Trend at
-φ = +0.2/+0.3; a scattered mix only in the |φ| = 0.1 cells that hold no achievable edge).
+φ = +0.2/+0.3; a scattered mix only in the |φ| = 0.1 cells whose historical net sign-reference scores are near zero).
 
 **ADR-059: the headline capture at fast half-lives is not the MATCHED capture.** Each cell now
 records the best in-sample Sharpe per catalog category and serves `net_capture_by_category` under
@@ -633,8 +635,10 @@ Two things this closes, so they are not retried:
   max purged-CV OOS. Every criterion agrees because the reverting families genuinely score lower on
   all of them.
 
-The AR(1) sweep deliberately records no achievable oracle: its state IS the observed return, which
-is why its capture already exceeds 100%.
+The AR(1) sweep historically records no separate achievable reference because its state is the
+observed return. Capture above 100% follows from an in-sample selected numerator divided by a
+fixed cost-paying reference, not from state observability. FINDING-155 also qualifies the historical
+AR(1) reference's omitted conditional drift; observable state does not make that sign rule optimal.
 
 **ADR-069/070/071: selection-rule sweeps must preserve the selected finalist.** ADR-069 measured
 `observed` against `walk_forward` cross-family selection; the non-default arm failed its pre-stated

@@ -61,3 +61,15 @@ scores, detection counts, null ratios and band-only labels. Targeted ESLint and
 `git diff --check` pass. Session17 full `make check-all PYTEST_WORKERS=4`
 passed 3,163 backend and 359 frontend tests; independent research and frontend
 reviews approved the mitigation.
+
+The follow-up contract clarification removes the same optimality claim from
+`oracle_sharpe`'s docstring and the no-achievable-edge conclusion from current
+validation cold memory. Even the drift-aware conditional-mean sign rule would
+not establish cost-aware or realized-sample Sharpe optimality. Executable
+function ASTs are unchanged after removing docstrings; reference arithmetic,
+legacy attribution and search/gate identities remain unchanged. Accepted ADRs
+retain their historical wording, read with this finding's qualification.
+Capture-property docstrings now describe their actual denominator refusals as
+ratio limits rather than proofs of no edge. Cold memory also attributes capture
+above 100% to selection against a fixed reference, not to AR-state observability.
+These are contract clarifications; the oracle-method correction remains Open.
