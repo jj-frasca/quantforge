@@ -1174,3 +1174,14 @@ F174's synthetic contradictory Type-I claims fail on construction/unchecked merg
 Graduate ordering, absent legacy joints and nullable candidate probabilities
 remain; trial-wide maximum margins and selected-finalist graduate margins are
 not inferred or conflated. No threshold, fingerprint, producer or source change.
+
+
+### Canonical null diagnostic holdout history (ADR-225)
+
+A NullSymbolDiagnostics with present calibration_verdict requires holdout_years
+exactly equal to that verdict's holdout_n_bars / 252. F175's contradictory finite
+history attribution fails at the leaf and through root/merge reconstruction.
+Absent legacy joints and nullable probabilities remain valid. Total n_bars is
+not equated with holdout bars; no split fraction, root-summary, power-array or
+embedded-gate-version policy is added. Source, producer, estimator, threshold,
+fingerprint and generated records remain unchanged.

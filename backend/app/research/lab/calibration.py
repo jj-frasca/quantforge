@@ -213,6 +213,15 @@ class NullSymbolDiagnostics(BaseModel):
     def _validate_probability(cls, value: object) -> float | None:
         return None if value is None else _finite_probability_score(value)
 
+    @model_validator(mode="after")
+    def _validate_joint_holdout_history(self) -> "NullSymbolDiagnostics":
+        if (
+            self.calibration_verdict is not None
+            and self.holdout_years != self.calibration_verdict.holdout_n_bars / _TRADING_DAYS
+        ):
+            raise ValueError("holdout_years does not match canonical holdout_n_bars")
+        return self
+
 
 class NullCalibration(BaseModel):
     """The gate's measured behavior on a universe with no edge by construction (ADR-036).
