@@ -958,6 +958,8 @@ def autocorrelated_edge(
 def _reference_returns(frame: pd.DataFrame) -> "pd.Series[float]":
     """Validate original close evidence before missing returns or short-history shortcuts."""
     prices = frame["close"]
+    if not prices.index.is_unique or not prices.index.is_monotonic_increasing:
+        raise ValueError("reference price calendar must be unique and ascending")
     if (
         not is_numeric_dtype(prices.dtype)
         or is_bool_dtype(prices.dtype)

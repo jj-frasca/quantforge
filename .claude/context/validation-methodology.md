@@ -1240,3 +1240,13 @@ Series feed unchanged native scoring; complete nullable and empty numeric input
 remain supported. Conditional-mean missing startup stays flat. This establishes
 source-value validity, not calendar causality, reference optimality or universal
 extreme arithmetic precision. No thresholds, defaults, fingerprints or data change.
+
+### Reference source calendar ordering (ADR-231)
+
+The shared checked-return helper requires unique ascending source indexes before
+return construction and short-history shortcuts. F181's later-dated AR lag and
+ambiguous duplicate observations fail through all three entries. No sorting or
+deduplication occurs; ordered generic and naive/aware indexes retain exact scores.
+This makes positional adjacency consistent with source index ordering, without
+certifying arbitrary supplied predictions, daily cadence or acquisition lineage.
+Defaults, references, thresholds, fingerprints and generated records stay intact.
