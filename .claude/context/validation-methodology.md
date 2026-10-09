@@ -1218,3 +1218,14 @@ distinct-symbol claim; repeated labels do not prove identical underlying RNG
 paths. No missing nongraduate identity is inferred, and no namespace, deduplication
 or count rewrite is introduced. Empty/distinct graduates, order, legacy evidence,
 combined-N arithmetic, thresholds and sources retain their meanings.
+
+### Finite derived reference-score evidence (ADR-229)
+
+The shared oracle_sharpe_of scorer refuses nonfinite derived net returns before
+dropna, nonfinite sample mean/standard deviation and a nonfinite annualized score.
+F179 shows finite costs can otherwise become a false zero through variance
+overflow or NaN through turnover-cost overflow. Historical and explicit-drift
+AR wrappers inherit refusal. Ordinary native scores, cost defaults, sign/lag/
+startup, ddof=1, short histories and genuine finite zero variance are preserved.
+No scaled fallback, clipping, filtering, new original-scalar policy, historical
+relabeling, threshold or fingerprint change is introduced.

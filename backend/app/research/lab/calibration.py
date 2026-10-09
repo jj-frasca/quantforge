@@ -1024,11 +1024,16 @@ def oracle_sharpe_of(
         return 0.0
     position = np.sign(conditional_mean.reindex(returns.index)).fillna(0.0)
     turnover = position.diff().abs().fillna(position.abs())
-    realized = (position * returns - turnover * cost_rate).dropna()
+    realized = position * returns - turnover * cost_rate
+    if not np.isfinite(realized).all():
+        raise ValueError("reference net returns must be finite")
+    realized = realized.dropna()
     std = float(realized.std())
+    if not isfinite(std) or not isfinite(float(realized.mean())):
+        raise ValueError("reference sample statistics must be finite")
     if std == 0.0:
         return 0.0
-    return float(np.sqrt(_TRADING_DAYS) * realized.mean() / std)
+    return _finite_leaf_score(float(np.sqrt(_TRADING_DAYS) * realized.mean() / std))
 
 
 class PlantedEdge(NamedTuple):
