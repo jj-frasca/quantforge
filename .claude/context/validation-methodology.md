@@ -1124,3 +1124,17 @@ headline/attribution is refused on reconstruction. None candidate probabilities
 retain measured incumbent evidence; absent legacy joint records, partial maps
 and unknown keys remain supported. No median-bar substitution, key/completeness
 policy, null-side reconciliation, threshold, fingerprint or source change.
+
+### Completed frozen AR grid (FINDING-168)
+
+The fixed v10 phi -0.2/-0.1/+0.1/+0.2 arms each completed 200/200 with no errors,
+source-identical replay loaded `29b70228`, independent 800-source/1600-reference
+and full joint/count/schema audits. Detection/survival counts respectively:
+117/53, 0/0, 0/0, 73/51. Marginal two-sided CP95 zero/200 upper is 1.827534%;
+this differs from the separate one-sided t5 bound. The four arms share new seeds;
+prior strong +/-0.3 used a different family, so no independent pooling or wholly
+paired six-point inference. Historical reference scores omit drift intercept
+(F155); net reference near zero does not certify absence of tradeable edge.
+Stationary controls do not bound market power or authorize threshold changes;
+ADR-102 still lacks matched bootstrap:SPY. See F168 for exact counts, intervals,
+procedure, source/result hashes and complete operational-replay attribution.
