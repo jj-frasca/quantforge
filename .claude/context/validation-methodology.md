@@ -1229,3 +1229,14 @@ AR wrappers inherit refusal. Ordinary native scores, cost defaults, sign/lag/
 startup, ddof=1, short histories and genuine finite zero variance are preserved.
 No scaled fallback, clipping, filtering, new original-scalar policy, historical
 relabeling, threshold or fingerprint change is introduced.
+
+### Original reference close-source evidence (ADR-230)
+
+All three reference scorer entries validate complete finite strictly positive
+real nonboolean numeric closes before pct_change or short-history shortcuts.
+F180's missing, negative and complex prices cannot become finite effect-size
+claims through dropped returns or real-component projection. Original numeric
+Series feed unchanged native scoring; complete nullable and empty numeric input
+remain supported. Conditional-mean missing startup stays flat. This establishes
+source-value validity, not calendar causality, reference optimality or universal
+extreme arithmetic precision. No thresholds, defaults, fingerprints or data change.

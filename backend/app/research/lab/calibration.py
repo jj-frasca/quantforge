@@ -11,6 +11,7 @@ from typing import Annotated, Any, NamedTuple
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -954,6 +955,21 @@ def autocorrelated_edge(
     return _ohlcv(closes, opens, highs, lows, volumes)
 
 
+def _reference_returns(frame: pd.DataFrame) -> "pd.Series[float]":
+    """Validate original close evidence before missing returns or short-history shortcuts."""
+    prices = frame["close"]
+    if (
+        not is_numeric_dtype(prices.dtype)
+        or is_bool_dtype(prices.dtype)
+        or is_complex_dtype(prices.dtype)
+    ):
+        raise ValueError("reference prices must be real nonboolean numeric observations")
+    values = prices.to_numpy(dtype=float, na_value=np.nan)
+    if not np.isfinite(values).all() or (values <= 0).any():
+        raise ValueError("reference prices must be positive and finite")
+    return prices.pct_change().dropna()
+
+
 def oracle_sharpe(frame: pd.DataFrame, *, phi: float, cost_rate: float = 0.0) -> float:
     """Annualized Sharpe of `position_t = sign(phi * r_{t-1})` on `frame` (ADR-041).
 
@@ -965,7 +981,7 @@ def oracle_sharpe(frame: pd.DataFrame, *, phi: float, cost_rate: float = 0.0) ->
         Preserve its measured gross/net scores for historical attribution. Even a drift-aware
         conditional-mean sign rule would not certify cost-aware or sample-Sharpe optimality.
     """
-    returns = frame["close"].pct_change().dropna()
+    returns = _reference_returns(frame)
     return oracle_sharpe_of(frame, phi * returns.shift(1), cost_rate=cost_rate)
 
 
@@ -992,7 +1008,7 @@ def ar1_conditional_mean_sign_sharpe(
     intercept = source_drift * (1.0 - coefficient)
     if not isfinite(intercept):
         raise ValueError("AR conditional mean must be finite")
-    returns = frame["close"].pct_change().dropna()
+    returns = _reference_returns(frame)
     with np.errstate(over="ignore", invalid="ignore"):
         conditional_mean = coefficient * returns.shift(1) + intercept
     if not np.isfinite(conditional_mean.iloc[1:]).all():
@@ -1019,7 +1035,7 @@ def oracle_sharpe_of(
     """
     if cost_rate < 0:
         raise ValueError("cost_rate must be >= 0")
-    returns = frame["close"].pct_change().dropna()
+    returns = _reference_returns(frame)
     if len(returns) < 3:
         return 0.0
     position = np.sign(conditional_mean.reindex(returns.index)).fillna(0.0)
