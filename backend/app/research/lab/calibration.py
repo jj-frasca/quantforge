@@ -1035,6 +1035,7 @@ def oracle_sharpe_of(
         turns over heavily, so the net figure is materially lower and, being a *sign* strategy
         rather than a sized one, is a LOWER bound on what perfect knowledge could achieve net.
     """
+    _finite_leaf_score(cost_rate)
     if cost_rate < 0:
         raise ValueError("cost_rate must be >= 0")
     returns = _reference_returns(frame)

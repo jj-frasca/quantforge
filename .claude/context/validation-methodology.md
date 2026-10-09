@@ -1250,3 +1250,14 @@ deduplication occurs; ordered generic and naive/aware indexes retain exact score
 This makes positional adjacency consistent with source index ordering, without
 certifying arbitrary supplied predictions, daily cadence or acquisition lineage.
 Defaults, references, thresholds, fingerprints and generated records stay intact.
+
+### Original reference cost evidence (ADR-232)
+
+The generic scorer validates original cost as finite float-representable real
+nonboolean evidence before its negative comparison and short-history shortcut.
+F182's boolean/nonfinite costs cannot obtain measured-looking reference scores;
+historical AR inherits this guard and explicit AR retains ADR-223 precedence.
+Validation preserves the original native cost operand and original negativity
+comparison, including exact negative values rounding to signed zero. No finite
+cost cap, prediction policy, default, method, threshold, fingerprint or data
+change. Scalar validity does not certify every mixed-dtype/extreme calculation.
