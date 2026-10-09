@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.research.lab.calibration import NullCalibration, merge_calibrations
+from app.research.lab.universe import expected_max_sharpe_under_null
 
 SCORES = [
     "walk_forward_oos_sharpes",
@@ -101,7 +102,13 @@ def test_legacy_empty_arrays_remain_unmeasured() -> None:
 def test_partial_legacy_arrays_remain_raw_measurements_without_excess_pairing() -> None:
     root = NullCalibration.model_validate(
         payload()
-        | {"n_symbols": 2, "holdout_years": [5.0, 5.0], SCORES[0]: [0.5], SCORES[1]: [0.2]}
+        | {
+            "n_symbols": 2,
+            "holdout_years": [5.0, 5.0],
+            "deflation_bar": expected_max_sharpe_under_null(2, 5.0),
+            SCORES[0]: [0.5],
+            SCORES[1]: [0.2],
+        }
     )
     assert root.walk_forward_null_percentiles == (0.5, 0.5, 0.5)
     assert root.paired_excess(SCORES[0], SCORES[1]) is None

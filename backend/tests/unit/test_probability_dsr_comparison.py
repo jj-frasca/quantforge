@@ -12,6 +12,7 @@ from app.research.lab.calibration import (
 )
 from app.research.lab.gate import GateResult
 from app.research.lab.probability_dsr import compare_probability_dsr_gate
+from app.research.lab.universe import expected_max_sharpe_under_null
 
 GATE_VERSION = "gate-v1"
 SEARCH_VERSION = "search-v1"
@@ -58,7 +59,7 @@ def _null(mode: str, *, n: int = 200) -> NullCalibration:
         n_graduates=0,
         false_graduation_rate=0.0,
         n_clear_deflation_bar=0,
-        deflation_bar=3.0,
+        deflation_bar=expected_max_sharpe_under_null(n, 1.0),
         max_deflated_sharpe=-0.1,
         max_holdout_sharpe=None,
         graduates=[],

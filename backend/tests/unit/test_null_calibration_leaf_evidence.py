@@ -128,7 +128,7 @@ def calibration_payload() -> dict[str, Any]:
         "n_graduates": 1,
         "false_graduation_rate": 1.0,
         "n_clear_deflation_bar": 1,
-        "deflation_bar": 1.0,
+        "deflation_bar": 0.0,
         "max_deflated_sharpe": 0.1,
         "max_holdout_sharpe": 2.0,
         "graduates": [graduate_payload()],

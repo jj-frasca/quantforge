@@ -10,6 +10,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from app.research.lab.calibration import NullCalibration, PowerCalibration, _percentiles
+from app.research.lab.universe import expected_max_sharpe_under_null
 
 MAX_FLOAT = float(np.finfo(float).max)
 
@@ -77,6 +78,7 @@ def test_public_calibration_summary_properties_keep_finite_extreme_scores(kind: 
         "gate_config_version": "gate",
     }
     if kind.startswith("null"):
+        common["deflation_bar"] = expected_max_sharpe_under_null(2, 5.0)
         root = NullCalibration(
             **common,
             n_graduates=0,

@@ -2,6 +2,7 @@
 
 import json
 from math import log, sqrt
+from statistics import median
 from typing import Any
 
 import pytest
@@ -16,6 +17,7 @@ from app.research.lab.calibration import (
     merge_calibrations,
 )
 from app.research.lab.gate import GateResult
+from app.research.lab.universe import expected_max_sharpe_under_null
 
 
 def verdict(
@@ -71,7 +73,9 @@ def payload(records: list[CalibrationSymbolVerdict]) -> dict[str, Any]:
             and r.holdout_sharpe > sqrt(2 * log(len(records)) / (r.holdout_n_bars / 252))
             for r in records
         ),
-        "deflation_bar": 0.0,
+        "deflation_bar": expected_max_sharpe_under_null(
+            len(records), median(d["holdout_years"] for d in diagnostics)
+        ),
         "max_deflated_sharpe": 10.0,
         "max_holdout_sharpe": max((g["holdout_sharpe"] for g in graduates), default=None),
         "graduates": graduates,

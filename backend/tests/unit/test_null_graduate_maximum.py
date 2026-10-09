@@ -9,6 +9,7 @@ from hypothesis import strategies as st
 from pydantic import ValidationError
 
 from app.research.lab.calibration import NullCalibration, merge_calibrations
+from app.research.lab.universe import expected_max_sharpe_under_null
 
 
 def payload(scores: list[float]) -> dict[str, Any]:
@@ -18,7 +19,7 @@ def payload(scores: list[float]) -> dict[str, Any]:
         "n_graduates": len(scores),
         "false_graduation_rate": len(scores) / n,
         "n_clear_deflation_bar": 0,
-        "deflation_bar": 0.0,
+        "deflation_bar": expected_max_sharpe_under_null(n, 1.0),
         "max_deflated_sharpe": 100.0,
         "max_holdout_sharpe": max(scores, default=None),
         "graduates": [

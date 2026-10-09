@@ -1194,6 +1194,17 @@ fail on construction and authoritative merge input reconstruction, including
 legacy records without joints. Nonpassing joint finalists are excluded; the
 trial-wide max_deflated_sharpe is not inferred from selected graduate margins.
 Signed scores, ordering, sources, thresholds and fingerprints retain their
-meaning. F177 separately records an open displayed-deflation-bar relationship
-gap: single-shard merge normalizes that false claim, but direct construction
-still accepts it; complete searched histories permit a separate future guard.
+meaning. F177 separately records the displayed-deflation-bar relationship gap
+corrected by ADR-227 below: merge previously normalized that false claim while
+direct construction accepted it.
+
+### Null displayed bar and complete searched histories (ADR-227)
+
+When holdout_years has one measurement per searched symbol, NullCalibration
+requires a finite positive median, a finite unchanged ADR-018 expected maximum
+at enclosing N, and exact agreement of deflation_bar with that value. F177's
+false displayed benchmark and nonfinite derived evidence fail before merge can
+normalize them. Incomplete or empty legacy histories remain unmeasured for this
+relationship. The display uses all searched histories; individual strict survival
+continues to use each graduate's own history. Power fields, approximation,
+thresholds, producers, fingerprints and generated records retain their meaning.

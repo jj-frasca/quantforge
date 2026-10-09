@@ -22,6 +22,7 @@ from app.research.lab.pool_report import (
     window_experiment_symbols,
     window_experiment_workload,
 )
+from app.research.lab.universe import expected_max_sharpe_under_null
 
 _NOW = datetime(2026, 8, 18, tzinfo=UTC)
 
@@ -419,7 +420,7 @@ def _null(
         n_graduates=0,
         false_graduation_rate=0.0,
         n_clear_deflation_bar=0,
-        deflation_bar=2.1,
+        deflation_bar=expected_max_sharpe_under_null(len(walk_forward), 4.3),
         max_deflated_sharpe=-0.3,
         max_holdout_sharpe=None,
         graduates=[],

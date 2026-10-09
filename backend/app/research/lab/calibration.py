@@ -400,6 +400,14 @@ class NullCalibration(BaseModel):
                         "n_clear_deflation_bar does not match incumbent joint verdicts"
                     )
 
+        if len(self.holdout_years) == self.n_symbols:
+            median_years = median(self.holdout_years)
+            if not isfinite(median_years) or median_years <= 0:
+                raise ValueError("deflation_bar requires finite positive median holdout history")
+            expected_bar = expected_max_sharpe_under_null(self.n_symbols, median_years)
+            if not isfinite(expected_bar) or self.deflation_bar != expected_bar:
+                raise ValueError("deflation_bar does not match complete searched histories")
+
         if self.max_holdout_sharpe != max(
             (graduate.holdout_sharpe for graduate in self.graduates), default=None
         ):

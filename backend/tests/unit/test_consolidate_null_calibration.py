@@ -4,6 +4,7 @@ import pytest
 from scripts.consolidate_null_calibration import _artifact_path, _migrate_legacy_artifacts
 
 from app.research.lab.calibration import NullCalibration
+from app.research.lab.universe import expected_max_sharpe_under_null
 
 
 def _calibration(mode: str, n_bars: list[int]) -> NullCalibration:
@@ -12,7 +13,7 @@ def _calibration(mode: str, n_bars: list[int]) -> NullCalibration:
         n_graduates=0,
         false_graduation_rate=0.0,
         n_clear_deflation_bar=0,
-        deflation_bar=1.0,
+        deflation_bar=expected_max_sharpe_under_null(len(n_bars), 4.0),
         max_deflated_sharpe=-0.1,
         max_holdout_sharpe=None,
         graduates=[],
