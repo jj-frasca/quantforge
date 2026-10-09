@@ -1150,3 +1150,15 @@ extra lag, default scorer/measure_power change, artifact relabeling, threshold o
 fingerprint change. F155 stays Open for explicit production method/drift
 attribution; this sign reference does not certify cost-aware or sample-Sharpe
 optimality or absence of tradeable edge.
+
+
+### Frozen conditional-drift reference audit (FINDING-173)
+
+The preplanned source-only comparison on exactly F168's 800 frozen laws matched
+all original source hashes and 1,600 historical reference scores, then independently
+verified the new gross/net scores. Per-cell median paired net Sharpe shifts at
+phi -0.2/-0.1/+0.1/+0.2 are +.047443/+.107290/+.065364/+.020281, descriptive only.
+No searches, gate judgments, new observations, fitting, pooling or optimality
+claim. F155 production attribution remains Open; historical default meanings
+and F168 detection/survival measurements remain unchanged. F173 records the
+counts, separate per-rule medians, paired deltas, source law and audit hashes.
