@@ -169,13 +169,20 @@ def test_probability_comparison_rejects_unchecked_null_joint_scalar(field: str, 
     )
     root = NullCalibration(
         n_symbols=1,
-        n_graduates=0,
-        false_graduation_rate=0.0,
-        n_clear_deflation_bar=0,
+        n_graduates=1,
+        false_graduation_rate=1.0,
+        n_clear_deflation_bar=1,
         deflation_bar=0.0,
-        graduates=[],
-        max_deflated_sharpe=0.0,
-        max_holdout_sharpe=None,
+        graduates=[
+            {
+                "symbol": original.symbol,
+                "holdout_sharpe": original.holdout_sharpe,
+                "holdout_n_bars": original.holdout_n_bars,
+                "deflated_sharpe": 0.1,
+            }
+        ],
+        max_deflated_sharpe=0.1,
+        max_holdout_sharpe=original.holdout_sharpe,
         holdout_years=[1.0],
         n_bars=[1260],
         errors={},

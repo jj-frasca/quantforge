@@ -361,6 +361,36 @@ class NullCalibration(BaseModel):
                 if getattr(self, field) != projection:
                     raise ValueError(f"{field} does not match symbol_diagnostics")
 
+            if all(verdict_presence):
+                passing = {
+                    verdict.symbol: verdict
+                    for diagnostic in self.symbol_diagnostics
+                    if (verdict := diagnostic.calibration_verdict) is not None
+                    and verdict.gate_result.passed
+                }
+                if self.n_graduates != len(passing):
+                    raise ValueError("n_graduates does not match incumbent joint verdicts")
+                if {graduate.symbol for graduate in self.graduates} != set(passing):
+                    raise ValueError("graduate symbols do not match incumbent joint passers")
+                for graduate in self.graduates:
+                    verdict = passing[graduate.symbol]
+                    if (
+                        graduate.holdout_sharpe != verdict.holdout_sharpe
+                        or graduate.holdout_n_bars != verdict.holdout_n_bars
+                    ):
+                        raise ValueError("graduate holdout evidence does not match joint verdict")
+                survivors = sum(
+                    verdict.holdout_sharpe
+                    > expected_max_sharpe_under_null(
+                        self.n_symbols, verdict.holdout_n_bars / _TRADING_DAYS
+                    )
+                    for verdict in passing.values()
+                )
+                if self.n_clear_deflation_bar != survivors:
+                    raise ValueError(
+                        "n_clear_deflation_bar does not match incumbent joint verdicts"
+                    )
+
         for field in (
             "holdout_years",
             "n_bars",

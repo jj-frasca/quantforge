@@ -1162,3 +1162,15 @@ No searches, gate judgments, new observations, fitting, pooling or optimality
 claim. F155 production attribution remains Open; historical default meanings
 and F168 detection/survival measurements remain unchanged. F173 records the
 counts, separate per-rule medians, paired deltas, source law and audit hashes.
+
+
+### Modern null graduate/joint agreement (ADR-224)
+
+When all canonical null diagnostics carry joints, n_graduates equals incumbent
+passage, graduate symbols are exactly that passing set, and each graduate's
+locked-holdout score/history equals its verdict. n_clear_deflation_bar counts
+strict ADR-018 survival at each joint passer's own history and enclosing N.
+F174's synthetic contradictory Type-I claims fail on construction/unchecked merge.
+Graduate ordering, absent legacy joints and nullable candidate probabilities
+remain; trial-wide maximum margins and selected-finalist graduate margins are
+not inferred or conflated. No threshold, fingerprint, producer or source change.
