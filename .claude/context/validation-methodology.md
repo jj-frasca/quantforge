@@ -1138,3 +1138,15 @@ paired six-point inference. Historical reference scores omit drift intercept
 Stationary controls do not bound market power or authorize threshold changes;
 ADR-102 still lacks matched bootstrap:SPY. See F168 for exact counts, intervals,
 procedure, source/result hashes and complete operational-replay attribution.
+
+
+### Explicit-drift AR sign reference (ADR-223)
+
+ar1_conditional_mean_sign_sharpe requires known source-law phi and drift, adds
+that drift intercept to lagged observed simple returns, keeps the first unavailable
+lag flat, and uses the established generic gross/net scoring conventions. Original
+law/cost parameters and derived predictions must be finite. No drift fitting,
+extra lag, default scorer/measure_power change, artifact relabeling, threshold or
+fingerprint change. F155 stays Open for explicit production method/drift
+attribution; this sign reference does not certify cost-aware or sample-Sharpe
+optimality or absence of tradeable edge.

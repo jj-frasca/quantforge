@@ -914,6 +914,37 @@ def oracle_sharpe(frame: pd.DataFrame, *, phi: float, cost_rate: float = 0.0) ->
     return oracle_sharpe_of(frame, phi * returns.shift(1), cost_rate=cost_rate)
 
 
+def ar1_conditional_mean_sign_sharpe(
+    frame: pd.DataFrame, *, phi: float, drift: float, cost_rate: float = 0.0
+) -> float:
+    """Score the known-law drift-aware AR sign reference (ADR-223; FINDING-155).
+
+    Notes:
+        Expects finite positive closes under the existing price-frame convention.
+        Explicit source-law parameters are not estimated from this frame. Predict each
+        observed simple return from its preceding observed return; the first unavailable
+        lag stays flat. Use the established scorer without a second lag. This reference
+        does not certify cost-aware or realized-sample Sharpe optimality and does not
+        replace the historical oracle_sharpe or any calibration default.
+    """
+    coefficient = _finite_leaf_score(phi)
+    source_drift = _finite_leaf_score(drift)
+    cost = _finite_leaf_score(cost_rate)
+    if not -1.0 < phi < 1.0 or not -1.0 < coefficient < 1.0:
+        raise ValueError("phi must be in (-1, 1) for a stationary process")
+    if cost_rate < 0:
+        raise ValueError("cost_rate must be >= 0")
+    intercept = source_drift * (1.0 - coefficient)
+    if not isfinite(intercept):
+        raise ValueError("AR conditional mean must be finite")
+    returns = frame["close"].pct_change().dropna()
+    with np.errstate(over="ignore", invalid="ignore"):
+        conditional_mean = coefficient * returns.shift(1) + intercept
+    if not np.isfinite(conditional_mean.iloc[1:]).all():
+        raise ValueError("AR conditional mean must be finite")
+    return oracle_sharpe_of(frame, conditional_mean, cost_rate=cost)
+
+
 def oracle_sharpe_of(
     frame: pd.DataFrame, conditional_mean: "pd.Series[float]", *, cost_rate: float = 0.0
 ) -> float:

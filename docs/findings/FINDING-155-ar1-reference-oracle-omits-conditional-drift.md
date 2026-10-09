@@ -73,3 +73,24 @@ Capture-property docstrings now describe their actual denominator refusals as
 ratio limits rather than proofs of no edge. Cold memory also attributes capture
 above 100% to selection against a fixed reference, not to AR-state observability.
 These are contract clarifications; the oracle-method correction remains Open.
+
+
+## Additive source-law reference (ADR-223)
+
+A separately named ar1_conditional_mean_sign_sharpe helper now requires explicit
+known-law phi and drift, forms phi * lagged_simple_return + drift * (1 - phi),
+and delegates to the established generic scorer without another lag. The first
+unavailable observed lag stays flat. Its original law/cost parameters and derived
+predictions must be finite; no drift is fitted from future or full-sample prices.
+
+This additive function does not change oracle_sharpe, measure_power, persisted
+reference identities, API/UI behavior or any historical power measurement.
+FINDING-155 remains Open until a separate production opt-in unit supplies explicit
+method/drift attribution across artifacts and consumers. Neither the conditional-
+mean sign rule nor its gross/net score establishes cost-aware or realized-sample
+Sharpe optimality. Source-law provenance remains the caller's responsibility.
+
+TDD observed 45 failing cases before the helper existed; the same 45 pass after
+implementation, including both recorded opposite-sign examples, phi zero/nonzero
+drift, exact zero-drift historical equivalence, first-lag and causal-prefix
+checks, scalar turnover accounting and a bounded independent Hypothesis oracle.
