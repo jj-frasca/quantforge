@@ -1185,3 +1185,15 @@ Absent legacy joints and nullable probabilities remain valid. Total n_bars is
 not equated with holdout bars; no split fraction, root-summary, power-array or
 embedded-gate-version policy is added. Source, producer, estimator, threshold,
 fingerprint and generated records remain unchanged.
+
+### Null graduate holdout maximum (ADR-226)
+
+NullCalibration.max_holdout_sharpe equals the maximum score in its required
+graduate list, or None exactly when empty. F176's contradictory finite maxima
+fail on construction and authoritative merge input reconstruction, including
+legacy records without joints. Nonpassing joint finalists are excluded; the
+trial-wide max_deflated_sharpe is not inferred from selected graduate margins.
+Signed scores, ordering, sources, thresholds and fingerprints retain their
+meaning. F177 separately records an open displayed-deflation-bar relationship
+gap: single-shard merge normalizes that false claim, but direct construction
+still accepts it; complete searched histories permit a separate future guard.

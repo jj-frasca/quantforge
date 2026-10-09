@@ -165,7 +165,7 @@ def _calibration_json(mode: str, n_graduates: int, n_bars: int | None = None) ->
         n_clear_deflation_bar=0,
         deflation_bar=2.11,
         max_deflated_sharpe=0.92,
-        max_holdout_sharpe=0.85,
+        max_holdout_sharpe=0.85 if n_graduates else None,
         graduates=[
             NullGraduate(
                 symbol=f"NULL{i:04d}",

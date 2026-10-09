@@ -400,6 +400,11 @@ class NullCalibration(BaseModel):
                         "n_clear_deflation_bar does not match incumbent joint verdicts"
                     )
 
+        if self.max_holdout_sharpe != max(
+            (graduate.holdout_sharpe for graduate in self.graduates), default=None
+        ):
+            raise ValueError("max_holdout_sharpe does not match the graduate list")
+
         for field in (
             "holdout_years",
             "n_bars",

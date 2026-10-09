@@ -54,6 +54,7 @@ def test_root_rate_bounds_apply_before_rounding(value: object) -> None:
         # Keep the rounded 1.0 rate coherent: only original bounds may reject it.
         claim.update(
             n_graduates=1,
+            max_holdout_sharpe=0.5,
             graduates=[
                 {
                     "symbol": "N",
