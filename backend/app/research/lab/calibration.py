@@ -413,6 +413,9 @@ class NullCalibration(BaseModel):
         ):
             raise ValueError("max_holdout_sharpe does not match the graduate list")
 
+        if len({graduate.symbol for graduate in self.graduates}) != len(self.graduates):
+            raise ValueError("calibration contains a duplicate graduate symbol")
+
         for field in (
             "holdout_years",
             "n_bars",

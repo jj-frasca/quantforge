@@ -1208,3 +1208,13 @@ normalize them. Incomplete or empty legacy histories remain unmeasured for this
 relationship. The display uses all searched histories; individual strict survival
 continues to use each graduate's own history. Power fields, approximation,
 thresholds, producers, fingerprints and generated records retain their meaning.
+
+### Unique known null graduate identities (ADR-228)
+
+Every NullCalibration requires unique graduate symbols, including legacy records
+without joints. F178's ambiguous repeated labels fail on construction and merge,
+including collisions across individually valid shards. This refuses an unsafe
+distinct-symbol claim; repeated labels do not prove identical underlying RNG
+paths. No missing nongraduate identity is inferred, and no namespace, deduplication
+or count rewrite is introduced. Empty/distinct graduates, order, legacy evidence,
+combined-N arithmetic, thresholds and sources retain their meanings.
