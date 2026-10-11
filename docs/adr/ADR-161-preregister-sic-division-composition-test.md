@@ -1,6 +1,6 @@
 # ADR-161: Pre-register the SIC-division composition test for the 7,400-vs-9,247-bar excess gap
 
-- **Status**: Accepted (test not yet run — see "Run gate")
+- **Status**: Accepted — test run once on 2026-10-11 (see "Result"); reading: inconclusive
 - **Date**: 2026-10-04
 - **Deciders**: Autonomous session #151 (authority delegated by Joe, `.claude/AUTONOMY_CHARTER.md` §1)
 - **Acts on**: ADR-146 (captured the raw `sic_code`; deferred the test to "its own ADR")
@@ -92,3 +92,24 @@ tunable after the data is seen.**
 - Adds only this document; no code, data or threshold changes. The run gate may take one or two
   more weekly sweeps; it is not expected ever to be satisfied for the ADR-absent symbols.
 - **Reverse**: set Status to Superseded; nothing depends on it.
+
+## Result (single look, 2026-10-11, session #186)
+
+Run gate met after the 2026-10-11 sweep (pool rows without `sic_code`: 1/92 and 3/276 = 1.1%).
+`backend/scripts/sic_composition_test.py` ran once; output in `data/sic_composition/result.json`.
+
+| | 7,400 bars | 9,247 bars |
+|---|---|---|
+| matched symbols | 92 | 276 |
+| absent from fundamentals pool | 32 | 48 |
+| used (complete-case) | 59 | 225 |
+| mean walk-forward excess | -0.176 | -0.096 |
+
+- **S1**: chi-square 20.4, permutation p = 0.0057 — the division mix differs between cohorts.
+- **S2**: raw gap -0.080 [-0.145, -0.018]; adjusted gap -0.056 [-0.124, +0.009].
+- **Reading: inconclusive.** Raw CI excludes 0 and S1 rejects, but the adjusted CI also includes 0 only
+  marginally and |adjusted| = 0.70 x |raw| > 0.5 x |raw|, so neither "explains" nor "does not explain"
+  fires. Composition accounts for roughly 30% of the point gap at most; no directional claim.
+- Restricted to fundamentals-eligible symbols (ETFs/ADRs/many financials absent). Single look: no
+  re-run; a follow-up needs its own ADR (section 8). The non-monotonic history-length pattern in
+  `ARCHITECTURE.md` §0.6.1 therefore stays unresolved.
