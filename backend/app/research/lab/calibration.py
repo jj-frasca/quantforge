@@ -1102,10 +1102,14 @@ def filtered_deviation(
         strategy could estimate — a strategy that also has to fit `rho` and the two volatilities
         can only do worse. The first bar has no return to update on and is NaN.
     """
+    _finite_leaf_score(rho)
     if not -1.0 < rho < 1.0:
         raise ValueError("rho must be in (-1, 1) for a stationary deviation")
+    _finite_leaf_score(level_vol)
+    _finite_leaf_score(deviation_vol)
     if level_vol < 0.0 or deviation_vol <= 0.0:
         raise ValueError("level_vol must be >= 0 and deviation_vol > 0")
+    _finite_leaf_score(drift)
 
     source = np.asarray(log_prices)
     if source.ndim != 1:

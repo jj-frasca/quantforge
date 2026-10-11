@@ -1282,3 +1282,15 @@ Validation preserves original np.diff input, native dtype arithmetic, signed
 logs, empty/singleton sources and first-unmeasured estimates. No source repair,
 parameter/initialization/optimality change, threshold, fingerprint or generated
 data change. F159 remains Open; derived arithmetic and precision are separate.
+
+### Band-filter original process scalars (ADR-235)
+
+filtered_deviation requires original finite float-representable real nonboolean
+rho, level_vol, deviation_vol and drift before source recursion. Validation
+retains original operands and exact range comparisons: stationary rho, zero
+level noise allowed, strictly positive deviation noise and signed drift. F185
+invalid process evidence cannot become missing forecasts and finite scores.
+Scalar validity precedes combined malformed scalar inputs; existing valid-range
+errors still precede source errors. No normalization, initialization, filter
+formula, reference/default, threshold, fingerprint or data change. Derived
+arithmetic and general mixed-type measurability remain separate; F159 stays Open.
