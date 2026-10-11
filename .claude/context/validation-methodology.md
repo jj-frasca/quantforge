@@ -1411,3 +1411,15 @@ zero, missing/unmatched/noise refusals and finalist attribution persist. Direct
 comparison-row construction is outside this guard. Synthetic records do not
 establish corrupt production comparisons or revised calibration rates. No
 estimator, threshold, source, search, fingerprint or generated artifact change.
+
+### Unique paired capture cell identity (ADR-246)
+
+FINDING-195 follows ADR-103/FINDING-035's existing refusal of ordering-selected
+evidence at the separate ADR-057 capture consumer. Duplicate effect keys silently
+selected the last cell and could reverse an attributable delta's sign. The
+capture comparator now refuses collisions within either side after its existing
+identity refusals and before dictionary construction, using its unchanged
+phi/half-life/legacy-zero key. Equal signed zero and identical duplicates collide.
+Unique matched/unmatched output and attribution remain exact; collection/schema
+and nested wrapper binding remain separate. No production duplicate or changed
+rate is inferred from synthetic evidence; no threshold or artifact change.

@@ -1777,6 +1777,10 @@ def compare_power_sweeps(before: PowerSweep, after: PowerSweep) -> list[PowerSwe
     def _key(cell: PowerCalibration) -> float:
         return cell.phi if cell.phi is not None else (cell.half_life or 0.0)
 
+    for side, sweep in (("before", before), ("after", after)):
+        keys = [_key(cell) for cell in sweep.cells]
+        if len(set(keys)) != len(keys):
+            raise ValueError(f"{side} sweep contains duplicate power cell keys")
     before_cells = {_key(c): c for c in before.cells}
     after_cells = {_key(c): c for c in after.cells}
     rows: list[PowerSweepComparison] = []
