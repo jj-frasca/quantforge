@@ -1271,3 +1271,14 @@ become finite effect sizes. Missing means, nullable input, sparse coverage and
 unmatched labels retain their established flat semantics; scoring uses the
 original Series. No prediction-index/completeness/fitting/causality guarantee,
 reference/default replacement, threshold, fingerprint or generated data change.
+
+### Band-filter observed log-price evidence (ADR-234)
+
+filtered_deviation requires one-dimensional original real nonboolean numeric
+complete finite float64-representable log-price observations after existing
+parameter checks and before recursion. Masked entries are missing source
+evidence; invalid observations cannot disappear into flat forecasts (F184).
+Validation preserves original np.diff input, native dtype arithmetic, signed
+logs, empty/singleton sources and first-unmeasured estimates. No source repair,
+parameter/initialization/optimality change, threshold, fingerprint or generated
+data change. F159 remains Open; derived arithmetic and precision are separate.

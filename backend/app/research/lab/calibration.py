@@ -1107,6 +1107,18 @@ def filtered_deviation(
     if level_vol < 0.0 or deviation_vol <= 0.0:
         raise ValueError("level_vol must be >= 0 and deviation_vol > 0")
 
+    source = np.asarray(log_prices)
+    if source.ndim != 1:
+        raise ValueError("log prices must be one-dimensional")
+    if source.dtype.kind not in "iuf":
+        raise ValueError("log prices must be real nonboolean numeric observations")
+    with np.errstate(over="ignore", invalid="ignore"):
+        values = np.asarray(source, dtype=np.float64)
+    if not np.isfinite(values).all() or (
+        np.ma.isMaskedArray(log_prices) and np.any(np.ma.getmaskarray(log_prices))
+    ):
+        raise ValueError("log prices must be complete and finite")
+
     transition = np.array([[rho, 0.0], [1.0, 0.0]])
     process_noise = np.array([[deviation_vol**2 * (1.0 - rho**2), 0.0], [0.0, 0.0]])
     observation = np.array([[1.0, -1.0]])
