@@ -1341,3 +1341,14 @@ predictable fractions concern stationary log-return variance, not realized
 volatility or simple-return/Sharpe bounds. Executable AST, defaults, field names,
 source draws, fingerprints, thresholds and artifacts are unchanged. F155's AR
 attribution and F159's mathematical/posterior correction remain separate and Open.
+
+### ADR-240 — Original legacy AR reference coefficient evidence (2026-10-11)
+
+FINDING-189 records original boolean/NaN phi obtaining finite reference scores,
+and infinite phi on flat prices becoming all-missing predictions and score zero.
+oracle_sharpe validates original finite real nonboolean phi before returns, without
+replacing its multiplier. Invalid phi now precedes source errors; valid-phi
+source-before-delegated-cost ordering stays unchanged. No new stationarity range,
+lag/cost/default/reference/source/threshold/fingerprint change. General mixed-type
+support stays separate; F155's omitted drift/production attribution and F159's
+band mathematical/posterior qualifications remain Open.

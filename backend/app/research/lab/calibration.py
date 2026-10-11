@@ -984,6 +984,7 @@ def oracle_sharpe(frame: pd.DataFrame, *, phi: float, cost_rate: float = 0.0) ->
         Preserve its measured gross/net scores for historical attribution. Even a drift-aware
         conditional-mean sign rule would not certify cost-aware or sample-Sharpe optimality.
     """
+    _finite_leaf_score(phi)
     returns = _reference_returns(frame)
     return oracle_sharpe_of(frame, phi * returns.shift(1), cost_rate=cost_rate)
 
