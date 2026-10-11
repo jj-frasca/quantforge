@@ -1400,3 +1400,14 @@ This establishes the source-calendar boundary only, without a new price/geometry
 policy. Synthetic direct-call evidence does not establish production corruption,
 changed null rates or false graduates. No cohort, search, threshold, fingerprint
 or generated artifact changes.
+
+### Finite paired power capture deltas (ADR-245)
+
+FINDING-194 records finite capture endpoints overflowing native subtraction in
+compare_power_sweeps; JSON rendered those invalid deltas as unmeasured nulls.
+The matched capture-difference producer now refuses a nonfinite executed result
+after its original None early return. Exact finite native differences, signed
+zero, missing/unmatched/noise refusals and finalist attribution persist. Direct
+comparison-row construction is outside this guard. Synthetic records do not
+establish corrupt production comparisons or revised calibration rates. No
+estimator, threshold, source, search, fingerprint or generated artifact change.

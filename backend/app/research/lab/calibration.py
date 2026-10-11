@@ -1836,7 +1836,10 @@ def _delta(before: float | None, after: float | None) -> float | None:
     """A difference only when BOTH sides measured it — a missing side is not a zero change."""
     if before is None or after is None:
         return None
-    return after - before
+    result = after - before
+    if not isfinite(result):
+        raise ValueError("power capture delta must be finite")
+    return result
 
 
 def merge_calibrations(shards: Sequence[NullCalibration]) -> NullCalibration:
