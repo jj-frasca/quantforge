@@ -1022,19 +1022,17 @@ def ar1_conditional_mean_sign_sharpe(
 def oracle_sharpe_of(
     frame: pd.DataFrame, conditional_mean: "pd.Series[float]", *, cost_rate: float = 0.0
 ) -> float:
-    """Annualized Sharpe of `position_t = sign(E[r_t | F_{t-1}])` on `frame` (ADR-042).
+    """Annualized simple-return Sharpe of supplied lagged sign predictions (ADR-042).
 
     Notes:
-        The generic form of `oracle_sharpe`: any planted process can report its effect size on the
-        same scale as ADR-041's AR(1) one by handing over its own conditional mean. `conditional_mean`
-        must already be lagged — indexed by the bar it PREDICTS, using only information available
-        before that bar.
+        `conditional_mean` supplies reference predictions, indexed by the bar they predict and
+        formed using information available before that bar. This scorer applies their signs to
+        observed simple returns; it does not establish that supplied predictions are conditional
+        simple-return means. Historical band references supply log-mean predictions (FINDING-159).
 
-        `cost_rate` charges turnover the way `BacktestEngine` charges the catalog (ADR-055). It
-        defaults to ZERO, which is the gross definition every committed power artifact was measured
-        under; changing that default would silently restate published effect sizes. A sign oracle
-        turns over heavily, so the net figure is materially lower and, being a *sign* strategy
-        rather than a sized one, is a LOWER bound on what perfect knowledge could achieve net.
+        `cost_rate` charges turnover the way `BacktestEngine` charges the catalog (ADR-055).
+        Its ZERO default preserves historical gross-score attribution. Gross/net figures measure
+        the supplied sign strategy; they do not certify cost-aware or sample-Sharpe optimality.
     """
     _finite_leaf_score(cost_rate)
     if cost_rate < 0:
@@ -1066,21 +1064,21 @@ def oracle_sharpe_of(
 
 
 class PlantedEdge(NamedTuple):
-    """A planted-edge frame with the latent state that makes its effect size measurable.
+    """A band-source frame with latent and filtered log-mean references (ADR-042).
 
     Notes:
-        `conditional_mean` is `E[r_t | F_{t-1}]`, indexed by the bar it predicts — what an oracle
-        with knowledge of the process, but not of the future, would act on. `deviation` is the
-        latent distance from the level, kept because `half_life` is a statement about IT and not
-        about the returns.
+        `conditional_mean` is the historical conditional LOG-return mean using the latent
+        deviation, indexed by the bar it predicts. `deviation` is distance from the random-walk
+        level, whose persistence is described by `half_life`. The scorer uses simple returns;
+        these log-mean sign references are not conditional simple-mean benchmarks (FINDING-159).
     """
 
     frame: pd.DataFrame
     conditional_mean: "pd.Series[float]"
     deviation: "pd.Series[float]"
-    # ADR-061: the same conditional mean an optimal CAUSAL filter could form from observed prices
-    # alone. `conditional_mean` uses the latent deviation, which no strategy can see; the gap
-    # between the two is how much of the planted edge was never recoverable.
+    # ADR-061: the historical log-mean rule using states from the specified causal price filter.
+    # Its initialization/posterior are not certified here; the latent/filtered score gap does not
+    # establish an upper bound or irrecoverable edge (FINDING-159).
     achievable_conditional_mean: "pd.Series[float]"
 
 
@@ -1092,16 +1090,18 @@ def filtered_deviation(
     deviation_vol: float,
     drift: float = 0.0,
 ) -> npt.NDArray[np.float64]:
-    """MMSE estimate of the latent deviation from observed log prices alone (ADR-061).
+    """Estimate latent deviation with the specified causal Kalman recursion (ADR-061).
 
     Notes:
-        The Kalman recursion for `log price = random-walk level + AR(1) deviation`, given the true
-        process parameters. Observing only the sum, the return `z_t = d_t - d_{t-1} + level shock`
-        depends on two consecutive states, so the state is augmented to `[d_t, d_{t-1}]`.
+        For `log price = random-walk level + AR(1) deviation`, the observed log return depends
+        on two consecutive deviations, so the state is augmented to `[d_t, d_{t-1}]`.
+        The existing initialization is zero state with diagonal deviation_vol**2 covariance.
+        The first bar has no observed return to update on and its estimate remains NaN.
 
-        Knowing the parameters exactly makes this an UPPER bound on what any causal price-based
-        strategy could estimate — a strategy that also has to fit `rho` and the two volatilities
-        can only do worse. The first bar has no return to update on and is NaN.
+        Known process parameters do not certify this initialization or posterior as MMSE.
+        Filtered reference scores use the historical log-mean sign convention and do not bound
+        every causal strategy's performance (FINDING-159). This function preserves that specified
+        recursion; a mathematical reference correction requires separate attribution.
     """
     _finite_leaf_score(rho)
     if not -1.0 < rho < 1.0:
@@ -1180,19 +1180,18 @@ def mean_reverting_edge(
     drift: float = 0.0003,
     start_price: float = 100.0,
 ) -> PlantedEdge:
-    """A price that wanders (random-walk level) and reverts to where it wandered (ADR-042).
+    """A price that wanders around a random-walk level (ADR-042).
 
     Notes:
-        `half_life` is the number of bars in which a deviation from the level decays by half, i.e.
-        the horizon a band/oscillator strategy is meant to trade — the parameter ADR-041's lag-1
-        AR(1) process could not express. `deviation_share` is the share of total return variance
-        the reverting component contributes; the level volatility is solved for so realized
-        volatility stays at `total_vol` at every horizon, without which a horizon sweep would move
-        the volatility and the effect size at the same time and confound all three.
+        `half_life` describes the latent AR(1) deviation's persistence. `deviation_share` is the
+        deviation component's share of stationary log-return variance. The volatilities are chosen
+        so that stationary model variance is total_vol**2; finite-sample realized volatility and
+        the initialized transient are not fixed by that normalization.
 
-        Effect size is bounded by the horizon: only `(1 - rho) / 2` of the deviation's variance is
-        predictable one bar ahead, so a slow band cannot be as tradeable as a fast one — see
-        ADR-042 for why the sweep is therefore read in two tiers.
+        In the stationary model, predictable variance is `(1 - rho) / 2` of the deviation
+        component's log-return variance. This explains the model's horizon dependence, without
+        establishing a simple-return or strategy-Sharpe bound. Returned reference means retain
+        the historical log-mean convention; FINDING-159 qualifies scoring and initialization.
     """
     if n_bars < 1:
         raise ValueError("n_bars must be >= 1")
@@ -1228,10 +1227,10 @@ def mean_reverting_edge(
     frame = _ohlcv(closes, opens, highs, lows, volumes)
 
     deviation = pd.Series(deviations, index=frame.index)
-    # E[r_t | F_{t-1}] = drift + (rho - 1) * dev_{t-1}: the level is a martingale, so everything
-    # predictable about the next bar is the part of the deviation that is about to decay away.
+    # Historical conditional LOG-return mean: drift + (rho - 1) * dev_{t-1}.
+    # The simple-return mean differs by the lognormal variance correction (FINDING-159).
     conditional_mean = drift + (rho - 1.0) * deviation.shift(1)
-    # ADR-061: the same quantity formed from PRICES rather than from the hidden state.
+    # ADR-061: the same historical log-mean rule using filtered rather than latent states.
     estimated = pd.Series(
         filtered_deviation(
             np.log(closes),

@@ -66,3 +66,29 @@ qualification. Full foreground `make check-all PYTEST_WORKERS=4` passed
 The subsequent display qualification and FINDING-164 scope correction passed
 21 focused frontend cases and full foreground `make check-all PYTEST_WORKERS=4`:
 3,318 backend tests (97.56% coverage) and 363 frontend tests (97.63% statements).
+
+## Source documentation qualification — 2026-10-11, ADR-239
+
+Before ADR-239, source docstrings described the band log mean as E[simple return],
+the specified recursion as certified MMSE, and the latent/filtered gap as
+unrecoverable edge. The generic scorer accepts supplied lagged predictions; it
+cannot certify their mean or strategy optimality. These source-facing claims required
+the same qualifications already present in the UI and this finding; ADR-239
+now applies them to the source.
+
+Generator variance statements also require a stationary-model qualification.
+With stationary latent variance deviation_vol**2, Var(delta deviation) is
+2*(1-rho)*deviation_vol**2 and Var(conditional log-mean deviation) is
+(1-rho)**2*deviation_vol**2. Their ratio is (1-rho)/2. Together with level noise,
+the chosen stationary log-return variance is total_vol**2. This does not fix
+finite-sample realized volatility, the initialized transient, simple-return
+variance or a strategy's Sharpe bound. Independent research review approved this
+qualification before documentation edits.
+
+ADR-239 changes only explanatory source wording and records these limits;
+mathematical references and initialization remain unchanged and this finding
+remains Open. Parent and independent review confirmed the entire executable
+module AST unchanged after excluding actual docstrings. Final independent review
+approved all four paths and the variance derivation. Full foreground make
+check-all passed 4616 backend and 363 frontend tests, with lint, strict types and
+coverage green. No wording-mirroring tests or source redraws were added.

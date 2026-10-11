@@ -1329,3 +1329,15 @@ uint64[max-1,max] has difference one that float projection erases. Signed decrea
 nondecreasing unsigned sources, inclusive boundaries, masks, byte order and short
 histories remain supported. No precision guarantee, source reconstruction,
 initialization/reference/threshold/fingerprint change; FINDING-155/159 remain Open.
+
+### ADR-239 — Source-facing band reference qualifications (2026-10-11)
+
+FINDING-159 stays Open. Source docstrings/comments now match the existing UI and
+finding: supplied lagged sign-reference scores use simple returns; band fields
+store historical latent/filtered log-mean predictions. The specified zero-state,
+diagonal-covariance filter initialization is not certified MMSE, and the score gap
+is not an upper bound or proof of irrecoverable edge. Generator normalization and
+predictable fractions concern stationary log-return variance, not realized
+volatility or simple-return/Sharpe bounds. Executable AST, defaults, field names,
+source draws, fingerprints, thresholds and artifacts are unchanged. F155's AR
+attribution and F159's mathematical/posterior correction remain separate and Open.
