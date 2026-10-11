@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from app.research.benchmarks.comparator import BenchmarkComparator
@@ -144,6 +144,9 @@ def test_relative_drawdown_extreme_loss_remains_bounded() -> None:
 def test_relative_drawdown_matches_independent_product_ratio_oracle(
     pairs: list[tuple[float, float]],
 ) -> None:
+    # A subnormal benchmark makes beta unrepresentable (the comparator rightly refuses it);
+    # that refusal is covered by the nonfinite-statistics tests, not this drawdown oracle.
+    assume(all(b == 0.0 or abs(b) > 1e-100 for _, b in pairs))
     strategy = pd.Series([pair[0] for pair in pairs])
     benchmark = pd.Series([pair[1] for pair in pairs])
     wealth = np.concatenate(
@@ -312,3 +315,10 @@ def test_comparison_collapsed_variance_handles_extreme_scale_ratio(constant: boo
         else:
             with pytest.raises(ValueError, match=r"statistics.*finite"):
                 BenchmarkComparator().compare(strategy, benchmark)
+
+
+def test_comparison_refuses_subnormal_benchmark_with_unrepresentable_beta() -> None:
+    with pytest.raises(ValueError, match=r"statistics.*finite"):
+        BenchmarkComparator().compare(
+            pd.Series([0.0, 0.125]), pd.Series([2.225073858507e-311, 0.0])
+        )
