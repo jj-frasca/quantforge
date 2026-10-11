@@ -1781,6 +1781,20 @@ def compare_power_sweeps(before: PowerSweep, after: PowerSweep) -> list[PowerSwe
         keys = [_key(cell) for cell in sweep.cells]
         if len(set(keys)) != len(keys):
             raise ValueError(f"{side} sweep contains duplicate power cell keys")
+    for sweep in (before, after):
+        for cell in sweep.cells:
+            for attribute in ("edge", "gate_config_version", "search_config_version"):
+                if getattr(cell, attribute) != getattr(sweep, attribute):
+                    raise ValueError(f"power cell {attribute} differs from its sweep")
+            if cell.n_bars:
+                try:
+                    history = int(median(cell.n_bars))
+                except OverflowError as exc:
+                    raise ValueError("power cell history summary must be representable") from exc
+                if history != sweep.n_bars:
+                    raise ValueError("power cell n_bars differs from its sweep")
+        if sweep.cells and not any(cell.n_bars for cell in sweep.cells) and sweep.n_bars != 0:
+            raise ValueError("sweep n_bars must be zero when all cell histories are absent")
     before_cells = {_key(c): c for c in before.cells}
     after_cells = {_key(c): c for c in after.cells}
     rows: list[PowerSweepComparison] = []

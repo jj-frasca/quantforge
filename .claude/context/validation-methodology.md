@@ -1423,3 +1423,16 @@ phi/half-life/legacy-zero key. Equal signed zero and identical duplicates collid
 Unique matched/unmatched output and attribution remain exact; collection/schema
 and nested wrapper binding remain separate. No production duplicate or changed
 rate is inferred from synthetic evidence; no threshold or artifact change.
+
+### Nested paired capture identity (ADR-247)
+
+FINDING-196 follows ADR-103's nested-binding principle at the capture consumer:
+matched headers could mislabel cells' process, gate, search or measured history.
+Before reading endpoints, capture comparison binds cell edge/gate/search to the
+header and checks each recorded history's original int(median(n_bars)) summary.
+Nonempty all-absent histories require the collector's zero marker. Partial,
+heterogeneous and mixed known/absent histories and direct empty sweeps retain
+existing meaning; probability strong-cell completeness is not imported. Native
+summary overflow refuses without changing the median. Earlier header/duplicate
+refusals persist. Synthetic mislabeled wrappers do not establish corrupt artifacts
+or revised rates; no reference, threshold, source, search or artifact changes.
