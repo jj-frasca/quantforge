@@ -711,6 +711,11 @@ class PowerCalibration(BaseModel):
     refine: bool = False
     refine_span: float = 0.25
 
+    @field_validator("phi", "half_life", "deviation_share", mode="before")
+    @classmethod
+    def _validate_process_parameter(cls, value: object) -> float | None:
+        return None if value is None else _finite_leaf_score(value)
+
     @field_validator("n_symbols", mode="before")
     @classmethod
     def _validate_searched_count(cls, value: object) -> int:

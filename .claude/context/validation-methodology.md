@@ -1352,3 +1352,13 @@ source-before-delegated-cost ordering stays unchanged. No new stationarity range
 lag/cost/default/reference/source/threshold/fingerprint change. General mixed-type
 support stays separate; F155's omitted drift/production attribution and F159's
 band mathematical/posterior qualifications remain Open.
+
+### ADR-241 — Original optional power process metadata (2026-10-11)
+
+FINDING-190 records coercive boolean/string and nonfinite phi, half_life and
+deviation_share evidence in PowerCalibration and reconstructed sweeps. One before
+validator preserves None/absence and otherwise uses the established original
+finite real nonboolean leaf guard. Existing float normalization and broad finite
+domains remain; this does not certify generator domains or process-family
+completeness. No source, reference, threshold, fingerprint or artifact change.
+FINDING-155 and FINDING-159 remain Open.
