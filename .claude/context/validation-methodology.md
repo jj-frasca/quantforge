@@ -1374,3 +1374,16 @@ seed, run gate, classification or generated-data change. This guards published
 results and replacement; it does not serialize concurrent absent-start analyses
 or guarantee atomic completion after process interruption. A follow-up still
 requires its own pre-registration.
+
+### Finite derived power capture evidence (ADR-243)
+
+FINDING-192 shows that finite power-array elements can still yield infinite
+capture, false zero or a false noise refusal. All four capture accessors check
+the existing executed native medians, history years, unchanged Lo standard error
+and quotients, and normalize arithmetic overflow to ValueError. Native history
+operands, ordinary exact values, signed zero, finite underflow and legitimate
+partial/legacy/noise refusals persist. Incomplete categories remain omitted.
+This fails closed without estimator recovery, filtering or threshold changes;
+some representable mathematical ratios with overflowing native intermediates
+are refused. It does not certify finite precision or resolve FINDING-155/159's
+reference qualifications. No source, search, fingerprint or artifact change.

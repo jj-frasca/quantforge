@@ -89,6 +89,38 @@ _CalibrationProbability = Annotated[float, BeforeValidator(_finite_probability_s
 _NonnegativeCalibrationCount = Annotated[int, BeforeValidator(_nonnegative_calibration_count)]
 
 
+def _capture_median(values: Sequence[float]) -> float:
+    """Check native capture medians without replacing their operands (ADR-243)."""
+    try:
+        result = median(values)
+        if not isinstance(result, int) and not isfinite(result):
+            raise ValueError("capture median must remain finite")
+    except OverflowError as exc:
+        raise ValueError("capture median must remain finite") from exc
+    return result
+
+
+def _capture_above_noise(oracle: float, bars: Sequence[int]) -> bool:
+    """Retain the existing Lo noise comparison, refusing invalid derived evidence."""
+    try:
+        years = _capture_median(bars) / _TRADING_DAYS
+        if not isfinite(years):
+            raise ValueError("capture history years must remain finite")
+        noise = sharpe_standard_error(oracle, years)
+        if not isfinite(noise):
+            raise ValueError("capture standard error must remain finite")
+    except OverflowError as exc:
+        raise ValueError("capture noise arithmetic must remain finite") from exc
+    return oracle > noise
+
+
+def _capture_quotient(scores: Sequence[float], oracle: float) -> float:
+    ratio = _capture_median(scores) / oracle
+    if not isfinite(ratio):
+        raise ValueError("capture ratio must remain finite")
+    return ratio
+
+
 class NullGraduate(BaseModel):
     """A false graduate, kept with everything the ADR-018 bar must be recomputed against.
 
@@ -855,10 +887,10 @@ class PowerCalibration(BaseModel):
             or not self.n_bars
         ):
             return None
-        oracle = median(self.net_oracle_sharpes)
-        if oracle <= sharpe_standard_error(oracle, median(self.n_bars) / _TRADING_DAYS):
+        oracle = _capture_median(self.net_oracle_sharpes)
+        if not _capture_above_noise(oracle, self.n_bars):
             return None
-        return median(self.finalist_observed_sharpes) / oracle
+        return _capture_quotient(self.finalist_observed_sharpes, oracle)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -877,10 +909,10 @@ class PowerCalibration(BaseModel):
             or not self.n_bars
         ):
             return None
-        oracle = median(self.achievable_oracle_sharpes)
-        if oracle <= sharpe_standard_error(oracle, median(self.n_bars) / _TRADING_DAYS):
+        oracle = _capture_median(self.achievable_oracle_sharpes)
+        if not _capture_above_noise(oracle, self.n_bars):
             return None
-        return median(self.finalist_observed_sharpes) / oracle
+        return _capture_quotient(self.finalist_observed_sharpes, oracle)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -895,9 +927,9 @@ class PowerCalibration(BaseModel):
         """
         if self.net_capture_ratio is None:
             return {}
-        oracle = median(self.net_oracle_sharpes)
+        oracle = _capture_median(self.net_oracle_sharpes)
         return {
-            category: median(sharpes) / oracle
+            category: _capture_quotient(sharpes, oracle)
             for category, sharpes in self.finalist_sharpes_by_category.items()
             if len(sharpes) == self.n_symbols
         }
@@ -916,10 +948,10 @@ class PowerCalibration(BaseModel):
             or len(self.oracle_sharpes) != self.n_symbols
         ):
             return None
-        oracle = median(self.oracle_sharpes)
+        oracle = _capture_median(self.oracle_sharpes)
         if oracle <= 0.0:
             return None
-        return median(self.finalist_observed_sharpes) / oracle
+        return _capture_quotient(self.finalist_observed_sharpes, oracle)
 
 
 def autocorrelated_edge(
