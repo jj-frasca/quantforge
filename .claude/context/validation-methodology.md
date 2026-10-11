@@ -1307,3 +1307,14 @@ Fraction object arrays). Preserve zero level noise, semidefinite covariance and
 startup NaN; translate native arithmetic overflow into ValueError and restore
 caller NumPy policy. No floor, scaling recovery, precision/conditioning guarantee,
 initialization or reference change; FINDING-159 remains Open.
+
+### ADR-237 — Preserve original band-generator scalar provenance (2026-10-11)
+
+FINDING-187 records boolean half-life/share/volatility/start price becoming finite
+sources and reference scores after arithmetic erased their original types.
+mean_reverting_edge now validates original finite real nonboolean half_life,
+deviation_share, total_vol, drift and start_price without replacing operands.
+Retain n_bars-first and existing half-life/share range precedence; no new domain,
+seeded draw, initialization, reference, threshold or fingerprint change. Exact
+negative Fraction range comparisons remain original; general mixed-type producer
+support and derived source arithmetic remain separate. FINDING-155/159 stay Open.

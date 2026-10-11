@@ -1187,10 +1187,16 @@ def mean_reverting_edge(
     """
     if n_bars < 1:
         raise ValueError("n_bars must be >= 1")
+    _finite_leaf_score(half_life)
     if half_life <= 0.0:
         raise ValueError("half_life must be > 0 bars")
+    _finite_leaf_score(deviation_share)
     if not 0.0 < deviation_share <= 1.0:
         raise ValueError("deviation_share must be in (0, 1]")
+
+    _finite_leaf_score(total_vol)
+    _finite_leaf_score(drift)
+    _finite_leaf_score(start_price)
 
     rho = 0.5 ** (1.0 / half_life)
     deviation_vol = total_vol * np.sqrt(deviation_share / (2.0 * (1.0 - rho)))
