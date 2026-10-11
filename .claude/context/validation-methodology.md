@@ -1294,3 +1294,16 @@ Scalar validity precedes combined malformed scalar inputs; existing valid-range
 errors still precede source errors. No normalization, initialization, filter
 formula, reference/default, threshold, fingerprint or data change. Derived
 arithmetic and general mixed-type measurability remain separate; F159 stays Open.
+
+### ADR-236 — Native filter arithmetic must remain measurable (2026-10-11)
+
+FINDING-186 extends original scalar/source validation: finite volatility can
+square to infinite noise or zero covariance, and finite innovations can overflow
+a recursive residual. Missing/zero states can otherwise become finite reference
+scores. Refuse nonfinite initialized noise/covariance and recursive quantities;
+require original finite residual variance strictly positive before division.
+Inspect separate float64 inspection arrays without replacing native operands (including
+Fraction object arrays). Preserve zero level noise, semidefinite covariance and
+startup NaN; translate native arithmetic overflow into ValueError and restore
+caller NumPy policy. No floor, scaling recovery, precision/conditioning guarantee,
+initialization or reference change; FINDING-159 remains Open.

@@ -1123,24 +1123,42 @@ def filtered_deviation(
     ):
         raise ValueError("log prices must be complete and finite")
 
-    transition = np.array([[rho, 0.0], [1.0, 0.0]])
-    process_noise = np.array([[deviation_vol**2 * (1.0 - rho**2), 0.0], [0.0, 0.0]])
-    observation = np.array([[1.0, -1.0]])
-    observation_noise = level_vol**2
+    def require_finite(*quantities: object) -> None:
+        if any(not np.isfinite(np.asarray(value, dtype=np.float64)).all() for value in quantities):
+            raise ValueError("filter arithmetic must remain finite and measurable")
 
-    state = np.zeros((2, 1))
-    covariance = np.array([[deviation_vol**2, 0.0], [0.0, deviation_vol**2]])
-    estimates = np.full(len(log_prices), np.nan)
-    for index, innovation_input in enumerate(np.diff(log_prices) - drift):
-        state = transition @ state
-        covariance = transition @ covariance @ transition.T + process_noise
-        residual = innovation_input - (observation @ state)[0, 0]
-        residual_variance = (observation @ covariance @ observation.T)[0, 0] + observation_noise
-        gain = covariance @ observation.T / residual_variance
-        state = state + gain * residual
-        covariance = covariance - gain @ observation @ covariance
-        estimates[index + 1] = state[0, 0]
-    return estimates
+    try:
+        with np.errstate(all="ignore"):
+            transition = np.array([[rho, 0.0], [1.0, 0.0]])
+            process_noise = np.array([[deviation_vol**2 * (1.0 - rho**2), 0.0], [0.0, 0.0]])
+            observation = np.array([[1.0, -1.0]])
+            observation_noise = level_vol**2
+
+            state = np.zeros((2, 1))
+            covariance = np.array([[deviation_vol**2, 0.0], [0.0, deviation_vol**2]])
+            require_finite(process_noise, observation_noise, covariance)
+            estimates = np.full(len(log_prices), np.nan)
+            for index, innovation_input in enumerate(np.diff(log_prices) - drift):
+                require_finite(innovation_input)
+                state = transition @ state
+                covariance = transition @ covariance @ transition.T + process_noise
+                require_finite(state, covariance)
+                residual = innovation_input - (observation @ state)[0, 0]
+                residual_variance = (observation @ covariance @ observation.T)[
+                    0, 0
+                ] + observation_noise
+                require_finite(residual, residual_variance)
+                if residual_variance <= 0.0:
+                    raise ValueError("filter arithmetic requires positive residual variance")
+                gain = covariance @ observation.T / residual_variance
+                require_finite(gain)
+                state = state + gain * residual
+                covariance = covariance - gain @ observation @ covariance
+                require_finite(state, covariance)
+                estimates[index + 1] = state[0, 0]
+            return estimates
+    except (OverflowError, FloatingPointError) as exc:
+        raise ValueError("filter arithmetic must remain finite and measurable") from exc
 
 
 def mean_reverting_edge(
