@@ -2,6 +2,7 @@ from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from fractions import Fraction
+from itertools import pairwise
 from math import isfinite
 from numbers import Integral, Real
 from operator import le
@@ -1122,6 +1123,14 @@ def filtered_deviation(
         np.ma.isMaskedArray(log_prices) and np.any(np.ma.getmaskarray(log_prices))
     ):
         raise ValueError("log prices must be complete and finite")
+
+    if source.dtype.kind in "iu":
+        limits = np.iinfo(source.dtype.str)
+        if any(
+            not limits.min <= int(right) - int(left) <= limits.max
+            for left, right in pairwise(source)
+        ):
+            raise ValueError("filter arithmetic integer differences must fit the source dtype")
 
     def require_finite(*quantities: object) -> None:
         if any(not np.isfinite(np.asarray(value, dtype=np.float64)).all() for value in quantities):

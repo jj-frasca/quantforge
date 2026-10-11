@@ -1318,3 +1318,14 @@ Retain n_bars-first and existing half-life/share range precedence; no new domain
 seeded draw, initialization, reference, threshold or fingerprint change. Exact
 negative Fraction range comparisons remain original; general mixed-type producer
 support and derived source arithmetic remain separate. FINDING-155/159 stay Open.
+
+### ADR-238 — Refuse wrapped native integer filter differences (2026-10-11)
+
+FINDING-188 records unsigned decreases and signed overflow becoming finite false
+innovations/states. After original source guards, require exact adjacent Python
+integer differences within the original np.iinfo range. Refuse otherwise and keep
+original np.diff for accepted sources. Do not float-normalize observations:
+uint64[max-1,max] has difference one that float projection erases. Signed decreases,
+nondecreasing unsigned sources, inclusive boundaries, masks, byte order and short
+histories remain supported. No precision guarantee, source reconstruction,
+initialization/reference/threshold/fingerprint change; FINDING-155/159 remain Open.
