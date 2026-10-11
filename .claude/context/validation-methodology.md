@@ -1261,3 +1261,13 @@ Validation preserves the original native cost operand and original negativity
 comparison, including exact negative values rounding to signed zero. No finite
 cost cap, prediction policy, default, method, threshold, fingerprint or data
 change. Scalar validity does not certify every mixed-dtype/extreme calculation.
+
+### Present reference prediction evidence (ADR-233)
+
+Before sign or short-history shortcuts, the generic scorer requires real
+nonboolean numeric conditional means and finite float-representable present
+values across every supplied label. F183's infinite/complex predictions cannot
+become finite effect sizes. Missing means, nullable input, sparse coverage and
+unmatched labels retain their established flat semantics; scoring uses the
+original Series. No prediction-index/completeness/fitting/causality guarantee,
+reference/default replacement, threshold, fingerprint or generated data change.

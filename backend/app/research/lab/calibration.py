@@ -1039,6 +1039,15 @@ def oracle_sharpe_of(
     if cost_rate < 0:
         raise ValueError("cost_rate must be >= 0")
     returns = _reference_returns(frame)
+    if (
+        not is_numeric_dtype(conditional_mean.dtype)
+        or is_bool_dtype(conditional_mean.dtype)
+        or is_complex_dtype(conditional_mean.dtype)
+    ):
+        raise ValueError("reference predictions must be real nonboolean numeric observations")
+    prediction_values = conditional_mean.to_numpy(dtype=float, na_value=np.nan)
+    if np.isinf(prediction_values).any():
+        raise ValueError("reference predictions must be finite when present")
     if len(returns) < 3:
         return 0.0
     position = np.sign(conditional_mean.reindex(returns.index)).fillna(0.0)
