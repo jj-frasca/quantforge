@@ -654,6 +654,8 @@ def bootstrap_null(
     """
     if n_bars < 1:
         raise ValueError("n_bars must be >= 1")
+    if not source.index.is_unique or not source.index.is_monotonic_increasing:
+        raise ValueError("bootstrap source calendar must have a unique increasing index")
     returns = source["close"].pct_change().dropna()
     if returns.empty:
         raise ValueError("source frame has no returns to resample (need >= 2 bars)")

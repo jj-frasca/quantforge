@@ -1387,3 +1387,16 @@ This fails closed without estimator recovery, filtering or threshold changes;
 some representable mathematical ratios with overflowing native intermediates
 are refused. It does not certify finite precision or resolve FINDING-155/159's
 reference qualifications. No source, search, fingerprint or artifact change.
+
+### Bootstrap source observation identity (ADR-244)
+
+FINDING-193 reproduces duplicate-label expansion that pairs a sampled return
+with another source bar's geometry; reordered calendars also change adjacency.
+bootstrap_null now requires a unique increasing source index before calculating
+returns or drawing randomness. It refuses rather than sorting or deleting source
+observations. Ordered generic, naive, aware and irregular calendars keep exact
+native seeded outputs; empty/singleton and n_bars refusals retain precedence.
+This establishes the source-calendar boundary only, without a new price/geometry
+policy. Synthetic direct-call evidence does not establish production corruption,
+changed null rates or false graduates. No cohort, search, threshold, fingerprint
+or generated artifact changes.
