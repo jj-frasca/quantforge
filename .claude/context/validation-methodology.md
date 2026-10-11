@@ -1362,3 +1362,15 @@ finite real nonboolean leaf guard. Existing float normalization and broad finite
 domains remain; this does not certify generator domains or process-family
 completeness. No source, reference, threshold, fingerprint or artifact change.
 FINDING-155 and FINDING-159 remain Open.
+
+### SIC composition-test publication (ADR-242)
+
+ADR-161's SIC division test is a completed single look; its published result
+cannot authorize another inference on the growing pools. FINDING-191 exposed
+the driver's unconditional recomputation and replacement path. The driver now
+refuses an occupied output before input access and publishes exclusively, so a
+late competing result retains its bytes. No actual-cohort rerun, statistic,
+seed, run gate, classification or generated-data change. This guards published
+results and replacement; it does not serialize concurrent absent-start analyses
+or guarantee atomic completion after process interruption. A follow-up still
+requires its own pre-registration.

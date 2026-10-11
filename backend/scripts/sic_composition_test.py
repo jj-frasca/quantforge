@@ -4,7 +4,8 @@ Usage: PYTHONPATH=. uv run python scripts/sic_composition_test.py
 
 Reads data/research_pool/ and data/fundamentals_pool.json; writes data/sic_composition/result.json.
 Refuses to run unless the ADR-161 section 7 gate holds (<= 5% of each cohort's matched symbols are
-in the fundamentals pool without a sic_code).
+in the fundamentals pool without a sic_code). A published output stops any further look before
+input access; exclusive publication cannot replace a competing result (ADR-242).
 """
 
 import json
@@ -36,6 +37,11 @@ def _per_symbol_excess(experiments: list[Experiment], bars: int) -> dict[str, fl
 
 
 def main() -> int:
+    if OUT.exists() or OUT.is_symlink():
+        print(
+            "ADR-161 single look already has an output; a follow-up needs a new pre-registration."
+        )
+        return 1
     experiments = PartitionedExperimentStore(DATA / "research_pool").all()
     pool = {r["symbol"]: r for r in json.loads((DATA / "fundamentals_pool.json").read_text())}
     cohorts: list[list[Member]] = []
@@ -68,7 +74,12 @@ def main() -> int:
     result["cohorts"] = report
     result["restriction"] = "fundamentals-eligible symbols only (ADR-161 section 7)"
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(result, indent=2) + "\n")
+    try:
+        with OUT.open("x") as output:
+            output.write(json.dumps(result, indent=2) + "\n")
+    except FileExistsError:
+        print("ADR-161 single-look output appeared during analysis; existing bytes preserved.")
+        return 1
     print(json.dumps(result, indent=2))
     return 0
 
