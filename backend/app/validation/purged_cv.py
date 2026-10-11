@@ -210,6 +210,7 @@ def purged_cv_evaluate(
     folds: list[PurgedCVFoldResult] = []
     hold_sharpes: list[float] = []
     for train_idx, test_idx in splits:
+        row_sources = (train_idx, test_idx)
         train_idx = np.asarray(train_idx)
         test_idx = np.asarray(test_idx)
         for rows in (train_idx, test_idx):
@@ -219,14 +220,19 @@ def purged_cv_evaluate(
                 raise ValueError("fold index out of range for the performance matrix")
             if np.any(rows[1:] <= rows[:-1]):
                 raise ValueError("fold rows must be unique and ascending")
-        if len(train_idx) == 0 or len(test_idx) == 0:
+        empty_fold = len(train_idx) == 0 or len(test_idx) == 0
+        if not empty_fold:
+            if np.any(test_idx[1:] != test_idx[:-1] + 1):
+                raise ValueError("test rows must form one contiguous fold")
+            lower = int(test_idx[0]) - embargo
+            upper = int(test_idx[-1]) + embargo
+            if any(lower <= int(row) <= upper for row in train_idx):
+                raise ValueError("train rows violate the declared embargo")
+        for source in row_sources:
+            if np.ma.isMaskedArray(source) and np.any(np.ma.getmaskarray(source)):
+                raise ValueError("fold rows cannot have masked identities")
+        if empty_fold:
             continue
-        if np.any(test_idx[1:] != test_idx[:-1] + 1):
-            raise ValueError("test rows must form one contiguous fold")
-        lower = int(test_idx[0]) - embargo
-        upper = int(test_idx[-1]) + embargo
-        if any(lower <= int(row) <= upper for row in train_idx):
-            raise ValueError("train rows violate the declared embargo")
         if benchmark is not None:
             hold_sharpes.append(_sharpe(benchmark[test_idx]))
         train_sharpes = [_sharpe(performance[train_idx, c]) for c in range(performance.shape[1])]

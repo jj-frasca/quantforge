@@ -243,6 +243,14 @@ finite float64 matrix/control evidence before selection or singleton/flat/fold-d
 Explicitly masked missing observations are refused before masks can disappear on materialization.
 Valid numeric, unmasked, constant/singleton and absent-control behavior and formulas remain.
 
+ADR-248 additionally retains original train/test index masks at both OOS
+boundaries. A masked storage index is an unidentified observation, even when its
+underlying integer passes geometry. Any true mask refuses before selection,
+benchmark scoring or empty purged-fold dropping. Kept geometry checks retain
+precedence; all-false masks and complete canonical splits keep exact results.
+FINDING-197 is synthetic direct-call evidence, not observed production leakage.
+No filling, filtering, score, threshold or calibration identity changes.
+
 ADR-202 assigns exact constant diagnostic blocks their defined zero score before moments,
 and refuses nonconstant unmeasurable mean/dispersion/annualized scores with ValueError.
 The original one-dimensional arithmetic/order and singleton convention are preserved;

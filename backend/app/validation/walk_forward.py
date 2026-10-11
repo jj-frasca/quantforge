@@ -181,6 +181,7 @@ def walk_forward_evaluate(
         raise ValueError("benchmark returns must be finite")
     results: list[WalkForwardSplitResult] = []
     for train_idx, test_idx in splits:
+        row_sources = (train_idx, test_idx)
         train_idx = np.asarray(train_idx)
         test_idx = np.asarray(test_idx)
         for rows in (train_idx, test_idx):
@@ -192,6 +193,9 @@ def walk_forward_evaluate(
                 raise ValueError("split rows must be unique and ascending")
         if train_idx[-1] >= test_idx[0]:
             raise ValueError("train rows must precede test rows")
+        for source in row_sources:
+            if np.ma.isMaskedArray(source) and np.any(np.ma.getmaskarray(source)):
+                raise ValueError("split rows cannot have masked identities")
         train_sharpes = [_sharpe(performance[train_idx, c]) for c in range(performance.shape[1])]
         best = int(np.argmax(train_sharpes))
         results.append(
