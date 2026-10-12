@@ -1,3 +1,6 @@
+from decimal import Decimal
+from numbers import Rational
+
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
@@ -31,6 +34,20 @@ def asset_returns(prices: pd.DataFrame) -> pd.DataFrame:
     return returns
 
 
+def _is_finite_native_scalar(value: object) -> bool:
+    """Validate without narrowing a native cost or object-dtype return operand."""
+    if isinstance(value, Rational):
+        return True
+    if isinstance(value, Decimal):
+        return value.is_finite()
+    if isinstance(value, (float, np.generic)):
+        try:
+            return bool(np.isfinite(value))
+        except TypeError:
+            return False
+    return False
+
+
 def portfolio_returns(
     signals: pd.DataFrame,
     prices: pd.DataFrame,
@@ -48,15 +65,27 @@ def portfolio_returns(
     """
     if cost_rate < 0:
         raise ValueError("cost_rate must be >= 0")
+    if not _is_finite_native_scalar(cost_rate):
+        raise ValueError("cost_rate must be finite")
     weights = (
         long_short_weights(signals, quantile)
         .reindex(index=prices.index, columns=prices.columns)
         .fillna(0.0)
     )
     rets = asset_returns(prices)
-    gross = (weights.shift(1).fillna(0.0) * rets).sum(axis=1)
-    turnover = weights.diff().abs().fillna(weights.abs()).sum(axis=1)
-    net = gross - turnover * cost_rate
+    try:
+        gross = (weights.shift(1).fillna(0.0) * rets).sum(axis=1)
+        turnover = weights.diff().abs().fillna(weights.abs()).sum(axis=1)
+        net = gross - turnover * cost_rate
+    except (OverflowError, FloatingPointError) as exc:
+        raise ValueError("cross-sectional portfolio returns must be finite") from exc
+    finite = (
+        np.isfinite(net).all()
+        if is_numeric_dtype(net.dtype)
+        else net.map(_is_finite_native_scalar).all()
+    )
+    if not finite:
+        raise ValueError("cross-sectional portfolio returns must be finite")
     return net
 
 

@@ -3,6 +3,9 @@ panel by holding each date's dollar-neutral weights to earn the NEXT bar's retur
 t+1 — the same `.shift(1)` the single-name BacktestEngine uses), net of turnover cost. The
 load-bearing invariant — no look-ahead — is a Hypothesis truncation-invariance property test."""
 
+from decimal import Decimal
+from fractions import Fraction
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -293,3 +296,101 @@ def test_asset_returns_refuses_constructed_unrepresentable_ratios(
     prices = pd.DataFrame({"A": [10.0**-small_exponent, 10.0**large_exponent]})
     with pytest.raises(ValueError):
         asset_returns(prices)
+
+
+@pytest.mark.parametrize("cost", [float("nan"), float("inf"), -float("inf")])
+@pytest.mark.parametrize("history", ["empty", "flat", "reversing"])
+def test_portfolio_returns_refuses_nonfinite_original_cost(cost: float, history: str) -> None:
+    prices = pd.DataFrame({"A": [100.0] * 3, "B": [100.0] * 3})
+    signals = pd.DataFrame({"A": [1.0, -1.0, 1.0], "B": [-1.0, 1.0, -1.0]})
+    if history == "empty":
+        prices, signals = prices.iloc[:0], signals.iloc[:0]
+    elif history == "flat":
+        signals[:] = np.nan
+    with pytest.raises(ValueError, match="cost_rate"):
+        portfolio_returns(signals, prices, quantile=0.5, cost_rate=cost)
+
+
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+@pytest.mark.parametrize(
+    "cost", [1e308, Fraction(10**308), Fraction(10**400), np.longdouble("1e400")]
+)
+def test_portfolio_returns_refuses_native_fee_overflow(error_mode: str, cost: float) -> None:
+    prices = pd.DataFrame({"A": [100.0] * 3, "B": [100.0] * 3})
+    signals = pd.DataFrame({"A": [1.0, -1.0, 1.0], "B": [-1.0, 1.0, -1.0]})
+    with np.errstate(all=error_mode):
+        before = np.geterr()
+        with pytest.raises(ValueError, match="portfolio returns"):
+            portfolio_returns(signals, prices, quantile=0.5, cost_rate=cost)
+        assert np.geterr() == before
+
+
+@pytest.mark.parametrize("error", [OverflowError, FloatingPointError])
+def test_portfolio_returns_normalizes_native_fee_arithmetic_exception(
+    error: type[ArithmeticError], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prices = pd.DataFrame({"A": [100.0] * 3, "B": [100.0] * 3})
+
+    def fail_native(*_: object, **__: object) -> None:
+        raise error("synthetic native fee overflow")
+
+    monkeypatch.setattr(pd.Series, "__mul__", fail_native)
+    with pytest.raises(ValueError, match="portfolio returns"):
+        portfolio_returns(prices, prices, cost_rate=0.001)
+
+
+@pytest.mark.parametrize("cost", [0.0, True, False, Fraction(1, 1000), np.float64(0.001)])
+def test_portfolio_returns_preserves_native_two_leg_cost_accounting(cost: float) -> None:
+    prices = pd.DataFrame({"A": [100.0] * 3, "B": [100.0] * 3})
+    signals = pd.DataFrame({"A": [1.0, -1.0, 1.0], "B": [-1.0, 1.0, -1.0]})
+    originals = prices.copy(deep=True), signals.copy(deep=True)
+    expected = pd.Series([-2.0 * cost, -4.0 * cost, -4.0 * cost])
+    if isinstance(cost, Fraction):
+        expected = expected.astype(object)
+    result = portfolio_returns(signals, prices, quantile=0.5, cost_rate=cost)
+    pd.testing.assert_series_equal(result, expected, check_exact=True)
+    pd.testing.assert_frame_equal(prices, originals[0])
+    pd.testing.assert_frame_equal(signals, originals[1])
+
+
+@pytest.mark.parametrize(
+    "cost", [1e308, np.longdouble("1e400"), Fraction(10**400), Decimal("1e400")]
+)
+def test_portfolio_returns_preserves_empty_native_finite_cost(cost: float) -> None:
+    prices = pd.DataFrame({"A": [], "B": []})
+    result = portfolio_returns(prices, prices, cost_rate=cost)
+    expected = pd.Series([], dtype=object if isinstance(cost, (Fraction, Decimal)) else float)
+    pd.testing.assert_series_equal(result, expected, check_exact=True)
+
+
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+def test_portfolio_returns_preserves_huge_finite_flat_cost(error_mode: str) -> None:
+    prices = pd.DataFrame({"A": [100.0] * 3, "B": [100.0] * 3})
+    signals = pd.DataFrame(np.nan, index=prices.index, columns=prices.columns)
+    with np.errstate(all=error_mode):
+        before = np.geterr()
+        pd.testing.assert_series_equal(
+            portfolio_returns(signals, prices, quantile=0.5, cost_rate=1e308),
+            pd.Series([0.0, 0.0, 0.0]),
+            check_exact=True,
+        )
+        assert np.geterr() == before
+
+
+def test_portfolio_returns_keeps_exact_negative_fraction_refusal() -> None:
+    prices = pd.DataFrame({"A": [], "B": []})
+    with pytest.raises(ValueError, match="cost_rate"):
+        portfolio_returns(prices, prices, cost_rate=Fraction(-1, 10**400))
+
+
+@given(cost=st.floats(min_value=0.0, max_value=0.01, allow_nan=False, allow_infinity=False))
+def test_portfolio_returns_matches_scalar_reversing_leg_fee_oracle(cost: float) -> None:
+    prices = pd.DataFrame({"A": [100.0] * 3, "B": [100.0] * 3})
+    signals = pd.DataFrame({"A": [1.0, -1.0, 1.0], "B": [-1.0, 1.0, -1.0]})
+    # Entering two unit legs trades two units; reversing them trades four.
+    expected = pd.Series([-2.0 * cost, -4.0 * cost, -4.0 * cost])
+    pd.testing.assert_series_equal(
+        portfolio_returns(signals, prices, quantile=0.5, cost_rate=cost),
+        expected,
+        check_exact=True,
+    )

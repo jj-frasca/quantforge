@@ -125,6 +125,12 @@ symbols may change the chosen legs. The frozen ordered universe preserves this
 reconstruction identity. No tie algorithm, return, cost or existing claim changes;
 a different tie policy needs a separate methodology decision and validation evidence.
 
+ADR-258 requires finite native cross-sectional cost evidence and final net returns.
+Original negative comparison, operand, lag/turnover/net formulas and output dtype
+remain; bool/Fraction costs, wide finite empty outputs and huge finite flat outputs
+retain native accounting. Nonfinite derived net or native arithmetic overflow
+raises ValueError without caps, float narrowing or NumPy error-state changes.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 
