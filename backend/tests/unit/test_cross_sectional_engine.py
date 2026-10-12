@@ -456,3 +456,24 @@ def test_portfolio_returns_never_drops_an_unpriced_ranked_long_leg(extra: float)
     signals = pd.DataFrame({"A": [1.0] * 2, "B": [2.0] * 2, "UNPRICED": [extra] * 2})
     with pytest.raises(ValueError, match=r"signal.*price"):
         portfolio_returns(signals, prices, quantile=0.5, cost_rate=0.0)
+
+
+def test_portfolio_returns_refuses_shipped_momentum_overflow_false_ties() -> None:
+    from app.research.cross_sectional.strategies import momentum_signal
+
+    prices = pd.DataFrame(
+        {
+            "A": np.append(10.0 ** np.linspace(-200, 200, 127), 2e200),
+            "B": np.append(10.0 ** np.linspace(-180, 180, 127), 1e180),
+        }
+    )
+    assert np.isfinite(asset_returns(prices)).all().all()
+    # Exact rational ordering of original floats: A should be long, B short.
+    ratio_a = Fraction(float(prices.A.iloc[126])) / Fraction(float(prices.A.iloc[0]))
+    ratio_b = Fraction(float(prices.B.iloc[126])) / Fraction(float(prices.B.iloc[0]))
+    assert ratio_a > ratio_b
+    with np.errstate(over="ignore"):
+        signals = momentum_signal(prices, lookback=126, skip=0)
+    assert np.isposinf(signals.iloc[126]).all()
+    with pytest.raises(ValueError, match="infinite"):
+        portfolio_returns(signals, prices, quantile=0.5, cost_rate=0.0)

@@ -2,9 +2,14 @@
 dollar-neutral target weights: the top `quantile` fraction share +1, the bottom fraction share -1.
 NaN signals (an unscorable name that day) are excluded; a date with <2 valid names trades flat."""
 
+from decimal import Decimal
+from fractions import Fraction
+
 import numpy as np
 import pandas as pd
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from app.research.cross_sectional.panel import long_short_weights
 
@@ -99,3 +104,61 @@ def test_long_short_weights_are_flat_where_a_date_has_no_valid_names_at_all() ->
 
     assert w.iloc[0].to_dict() == {"A": 0.0, "B": 0.0}
     assert w.iloc[1].to_dict() == {"A": -1.0, "B": 1.0}
+
+
+@pytest.mark.parametrize("value", [np.inf, -np.inf])
+@pytest.mark.parametrize("kind", ["float64", "Float64", "longdouble", "decimal"])
+@pytest.mark.parametrize("other", [1.0, np.nan])
+def test_long_short_weights_refuses_infinite_scores(value: float, kind: str, other: float) -> None:
+
+    if kind == "decimal":
+        signals = pd.DataFrame({"A": [Decimal(str(value))], "B": [Decimal(str(other))]})
+    else:
+        signals = pd.DataFrame({"A": [value], "B": [other]}).astype(kind)
+    with pytest.raises(ValueError, match="infinite"):
+        long_short_weights(signals, quantile=0.5)
+
+
+def test_long_short_weights_refuses_infinite_score_before_ranking(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def forbid_rank(*_: object, **__: object) -> None:
+        pytest.fail("ranking must not consume infinite scores")
+
+    monkeypatch.setattr(pd.DataFrame, "rank", forbid_rank)
+    with pytest.raises(ValueError, match="infinite"):
+        long_short_weights(pd.DataFrame({"A": [np.inf], "B": [1.0]}))
+
+
+@pytest.mark.parametrize("kind", ["nullable", "wide", "fraction", "decimal", "bool", "empty"])
+def test_long_short_weights_preserves_native_finite_and_missing_scores(kind: str) -> None:
+
+    signals = pd.DataFrame({"A": [1.0, np.nan], "B": [2.0, np.nan]})
+    if kind == "nullable":
+        signals = signals.astype("Float64")
+    elif kind == "wide":
+        signals = signals.astype(np.longdouble)
+        signals.iloc[0] = [np.longdouble("1e400"), np.longdouble("2e400")]
+    elif kind == "fraction":
+        signals = pd.DataFrame({"A": [Fraction(10**400), None], "B": [Fraction(2 * 10**400), None]})
+    elif kind == "decimal":
+        signals = pd.DataFrame({"A": [Decimal("1e400"), None], "B": [Decimal("2e400"), None]})
+    elif kind == "bool":
+        signals = pd.DataFrame({"A": [False], "B": [True]})
+    elif kind == "empty":
+        signals = signals.iloc[:0]
+    expected = pd.DataFrame({"A": [-1.0, 0.0], "B": [1.0, 0.0]})
+    if kind == "bool":
+        expected = expected.iloc[:1]
+    elif kind == "empty":
+        expected = expected.iloc[:0]
+    pd.testing.assert_frame_equal(long_short_weights(signals, 0.5), expected, check_exact=True)
+
+
+@given(value=st.sampled_from([np.inf, -np.inf]), rows=st.integers(1, 8), missing=st.booleans())
+def test_long_short_weights_never_ranks_an_infinite_factor_score(
+    value: float, rows: int, missing: bool
+) -> None:
+    signals = pd.DataFrame({"A": [value] * rows, "B": [np.nan if missing else 1.0] * rows})
+    with pytest.raises(ValueError, match="infinite"):
+        long_short_weights(signals, 0.5)

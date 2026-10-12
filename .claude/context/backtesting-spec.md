@@ -137,6 +137,12 @@ projection and remove a neutral leg. Subset/reordered signals, sparse dates and
 NaN warmup retain their original ranks/projection/lag/cost arithmetic; extra names
 raise even for empty/flat histories. This adds no complete-panel or tie policy.
 
+ADR-260 refuses exact signed infinity at the shared cross-sectional ranker before
+ranking, after quantile validation. Overflowed momentum/reversal ratios cannot
+become false supplied-order ties. Original NaN/pd.NA exclusion, finite native wide,
+nullable/object numeric/bool compatibility and empty behavior remain. No dtype
+ban, score conversion, estimator recovery or finite-precision certification is added.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 

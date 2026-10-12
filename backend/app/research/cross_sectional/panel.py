@@ -25,6 +25,8 @@ def long_short_weights(signals: pd.DataFrame, quantile: float = 0.2) -> pd.DataF
     """
     if not 0.0 < quantile <= 0.5:
         raise ValueError("quantile must be in (0, 0.5]")
+    if signals.isin([np.inf, -np.inf]).any().any():
+        raise ValueError("cross-sectional signals must not contain infinite scores")
 
     ranked = signals.rank(axis=1, method="first")  # 1 = lowest signal; NaN stays NaN
     n_valid = signals.notna().sum(axis=1)
