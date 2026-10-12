@@ -135,6 +135,10 @@ Single-name forward scoring, lifecycle decisions, and paper-order target sizing 
 `ResearchDatasetEvidence`: the complete passed report, source, adapter version, requested half-open
 range, and executed revision. The report symbol must equal the managed position symbol. Legacy
 scores keep `None`; failed or mismatched evidence produces no new score or target.
+ADR-251 applies the manager's existing normalized target-symbol comparison at
+direct evaluate_forward entry, before frame access and zero/nonzero-forward
+scoring. Another asset's dataset cannot produce a standalone score for the target;
+matched native scores, evidence and caller state retain their existing semantics.
 
 Cross-sectional forward scoring requires an exact mapping of every frozen universe symbol to a
 `ResearchDataset` (ADR-140). Reports must match their mapping symbols, every component must name one

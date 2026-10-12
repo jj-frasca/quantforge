@@ -394,6 +394,8 @@ def evaluate_forward(position: PaperPosition, dataset: ResearchDataset) -> Forwa
     post-freeze slice is scored. Deterministic; no network. Returns a zero-bar score if no forward
     data has accrued yet.
     """
+    if dataset.quality_report.symbol != position.symbol.strip().upper():
+        raise ValueError("forward dataset symbol does not match paper position")
     frame = dataset.frame
     as_of = pd.Timestamp(frame.index.max())
     forward_mask = frame.index > pd.Timestamp(position.frozen_at)

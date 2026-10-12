@@ -478,3 +478,46 @@ def test_valid_unchecked_copy_still_projects_exact_existing_position() -> None:
     copied = experiment.model_copy(update={"created_at": experiment.created_at})
     actual = freeze_graduate(copied, frozen_at=_FREEZE, universe_n_symbols=607)
     assert actual.model_dump_json() == expected.model_dump_json()
+
+
+@pytest.mark.parametrize("no_forward", [False, True])
+def test_direct_forward_scoring_refuses_another_symbols_dataset(no_forward: bool) -> None:
+    position = _position(datetime(2030, 1, 1, tzinfo=UTC) if no_forward else _FREEZE)
+    position = position.model_copy(update={"symbol": "BBB"})
+    with pytest.raises(ValueError, match=r"dataset symbol.*paper position"):
+        evaluate_forward(position, _dataset())
+
+
+def test_direct_forward_symbol_refusal_precedes_frame_copy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.research import dataset as dataset_module
+
+    dataset = _dataset()
+    position = _position().model_copy(update={"symbol": "BBB"})
+
+    def unexpected_copy(_: pd.DataFrame) -> pd.DataFrame:
+        pytest.fail("another symbol's prices cannot be read before identity refusal")
+
+    monkeypatch.setattr(dataset_module, "_copy_frame", unexpected_copy)
+    with pytest.raises(ValueError, match=r"dataset symbol.*paper position"):
+        evaluate_forward(position, dataset)
+
+
+@pytest.mark.parametrize("symbol", ["AAA", "aaa", " AAA ", " aAa "])
+@pytest.mark.parametrize("no_forward", [False, True])
+def test_direct_forward_scoring_preserves_normalized_target_and_caller_state(
+    symbol: str, no_forward: bool
+) -> None:
+    position = _position(datetime(2030, 1, 1, tzinfo=UTC) if no_forward else _FREEZE)
+    dataset = _dataset()
+    expected = evaluate_forward(position, dataset)
+    position = position.model_copy(update={"symbol": symbol})
+    original = position.model_dump_json(round_trip=True)
+    prices = dataset.frame
+    evidence = dataset.evidence().model_dump_json(round_trip=True)
+    actual = evaluate_forward(position, dataset)
+    assert actual.model_dump_json() == expected.model_dump_json()
+    assert position.model_dump_json(round_trip=True) == original
+    pd.testing.assert_frame_equal(dataset.frame, prices)
+    assert dataset.evidence().model_dump_json(round_trip=True) == evidence
