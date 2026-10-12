@@ -166,6 +166,11 @@ reasons, score curves, and embedded evidence are defensive immutable copies; lif
 evidence symbol, counts, finite statistics, and non-empty curve geometry are validated on
 construction, managed replacement, reload, and store write. Empty legacy curves and absent legacy
 evidence remain explicit supported states.
+ADR-249 re-enters complete Experiment validation at single-name freeze_graduate
+before projecting a paper position. Unchecked source copies cannot lose their
+invalid selected-trial, gate or business-veto evidence in the narrower projection.
+Existing legacy selection/evidence absence and ADR-033's recorded failure cohort
+remain supported; no paper criterion, threshold or generated record changes.
 ADR-149 applies the same complete boundary to cross-sectional forward positions. Lifecycle reasons,
 score curves, and ordered component evidence are defensive immutable copies. The boundary validates
 open/retired identity, finite cost and score statistics, unique ordered universe membership, exact

@@ -384,3 +384,97 @@ def test_positions_persisted_before_adr_033_still_validate() -> None:
     position = PaperPosition.model_validate(legacy)
     assert position.survives_universe_deflation is None
     assert position.universe_n_symbols is None
+
+
+@pytest.mark.parametrize(
+    "corruption",
+    [
+        "parameters",
+        "strategy",
+        "best_gate",
+        "failed_gate",
+        "selected_index",
+        "strategy_names",
+        "fundamental_veto",
+        "distress_veto",
+    ],
+)
+def test_freeze_graduate_revalidates_complete_source_claim(corruption: str) -> None:
+    from app.data.fundamentals import FundamentalScreen
+    from app.research.fundamentals.distress import DistressScreen
+
+    experiment = _graduated_experiment()
+    graduate = experiment.graduate
+    assert graduate is not None
+    if corruption == "parameters":
+        update = {"graduate": graduate.model_copy(update={"parameters": {"window": 999}})}
+    elif corruption == "strategy":
+        update = {"graduate": graduate.model_copy(update={"strategy_name": "momentum"})}
+    elif corruption == "best_gate":
+        update = {
+            "best_gate_result": graduate.gate_result.model_copy(update={"reasons": ["other"]})
+        }
+    elif corruption == "failed_gate":
+        failed = graduate.gate_result.model_copy(update={"passed": False, "dsr_ok": False})
+        update = {
+            "best_gate_result": failed,
+            "graduate": graduate.model_copy(update={"gate_result": failed}),
+        }
+    elif corruption == "selected_index":
+        update = {"selected_trial_index": 99}
+    elif corruption == "strategy_names":
+        update = {"strategy_names": ["momentum"]}
+    elif corruption == "fundamental_veto":
+        update = {"fundamental_screen": FundamentalScreen(passed=False, reasons=["veto"])}
+    else:
+        update = {"distress_screen": DistressScreen(distressed=True, reasons=["veto"])}
+    malformed = experiment.model_copy(update=update)
+    with pytest.raises(ValueError):
+        Experiment.model_validate(malformed.model_dump(round_trip=True))
+    with pytest.raises(ValueError):
+        freeze_graduate(malformed, frozen_at=_FREEZE, universe_n_symbols=607)
+
+
+def test_invalid_promotion_source_refuses_before_deflation_or_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.research.lab import paper
+
+    experiment = _graduated_experiment().model_copy(update={"selected_trial_index": 99})
+
+    def unexpected_projection(*_: object, **__: object) -> None:
+        pytest.fail("invalid source cannot reach deflation or paper output")
+
+    monkeypatch.setattr(paper, "expected_max_sharpe_under_null", unexpected_projection)
+    monkeypatch.setattr(paper, "PaperPosition", unexpected_projection)
+    with pytest.raises(ValueError):
+        freeze_graduate(experiment, frozen_at=_FREEZE, universe_n_symbols=607)
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+@pytest.mark.parametrize("universe", [None, 607])
+def test_promotion_preserves_valid_source_identity_and_caller_graph(
+    legacy: bool, universe: int | None
+) -> None:
+    experiment = _graduated_experiment()
+    if legacy:
+        payload = experiment.model_dump(round_trip=True)
+        payload["selected_trial_index"] = None
+        experiment = Experiment.model_validate(payload)
+    original = experiment.model_dump_json(round_trip=True)
+    position = freeze_graduate(experiment, frozen_at=_FREEZE, universe_n_symbols=universe)
+    assert position.symbol == "CRM"
+    assert position.strategy_name == "rsi_mean_reversion"
+    assert position.parameters == {"window": 14}
+    assert position.frozen_at == _FREEZE
+    assert position.universe_n_symbols == universe
+    assert position.survives_universe_deflation is (None if universe is None else False)
+    assert experiment.model_dump_json(round_trip=True) == original
+
+
+def test_valid_unchecked_copy_still_projects_exact_existing_position() -> None:
+    experiment = _graduated_experiment()
+    expected = freeze_graduate(experiment, frozen_at=_FREEZE, universe_n_symbols=607)
+    copied = experiment.model_copy(update={"created_at": experiment.created_at})
+    actual = freeze_graduate(copied, frozen_at=_FREEZE, universe_n_symbols=607)
+    assert actual.model_dump_json() == expected.model_dump_json()

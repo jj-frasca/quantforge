@@ -356,6 +356,7 @@ def freeze_graduate(
     (ADR-033). Omitted (a single-symbol run) leaves the verdict honestly unknown — there was no
     cross-symbol selection to deflate, which is not the same as passing.
     """
+    experiment = Experiment.model_validate(experiment.model_dump(round_trip=True))
     if experiment.graduate is None:
         raise ValueError(f"experiment for {experiment.symbol!r} has no graduate to freeze")
     g = experiment.graduate
