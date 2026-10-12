@@ -167,6 +167,14 @@ labels/order/native dtypes and valid zero-cell panels remain. No normalization,
 deduplication or earlier portfolio guard is added. Original financial formulas,
 error precedence and longitudinal calibration identity stay unchanged.
 
+ADR-264 preserves native rank-IC inputs before pairwise masking on both signal
+and forward-return sides. Native integer/wide frames use scalar-preserving
+object inputs before where/rank; ordinary paths retain their original operation.
+IC keeps average ties, paired NaN warmup/undefined-date dropping and original
+correlation/summary formulas. Finite direct native IC values change where prior
+narrowing fabricated ties; canonical float64 outputs and longitudinal calibration
+identity remain. Infinity and summary-domain policies are separate limitations.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 

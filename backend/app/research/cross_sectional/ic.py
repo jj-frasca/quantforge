@@ -26,6 +26,21 @@ class ICSummary(BaseModel):
     n_periods: int
 
 
+def _native_average_ranks(frame: pd.DataFrame, scorable: pd.DataFrame) -> pd.DataFrame:
+    """Preserve native scalar order before pairwise masking adds missing values (ADR-264)."""
+    rank_input = frame
+    if any(
+        isinstance(dtype, np.dtype)
+        and (
+            dtype.kind in {"i", "u"}
+            or (dtype.kind == "f" and dtype.itemsize > np.dtype(float).itemsize)
+        )
+        for dtype in frame.dtypes
+    ):
+        rank_input = frame.astype(object)
+    return rank_input.where(scorable).rank(axis=1)
+
+
 def rank_ic(signals: pd.DataFrame, prices: pd.DataFrame) -> pd.Series:
     """Per-date Spearman rank correlation between the signal cross-section at t and each asset's
     return from t to t+1 (ADR-035).
@@ -43,8 +58,8 @@ def rank_ic(signals: pd.DataFrame, prices: pd.DataFrame) -> pd.Series:
     # than ranked against a hole. Vectorized row-wise: a per-date Python loop is ~500x slower on a
     # full-universe panel, and this runs inside every cross-sectional search.
     scorable = signals.notna() & forward.notna()
-    s_rank = signals.where(scorable).rank(axis=1)
-    r_rank = forward.where(scorable).rank(axis=1)
+    s_rank = _native_average_ranks(signals, scorable)
+    r_rank = _native_average_ranks(forward, scorable)
     s_dev = s_rank.sub(s_rank.mean(axis=1), axis=0)
     r_dev = r_rank.sub(r_rank.mean(axis=1), axis=0)
     s_norm = np.sqrt((s_dev**2).sum(axis=1))
