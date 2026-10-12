@@ -170,3 +170,63 @@ def test_asset_returns_are_invariant_to_positive_price_scale(
     pd.testing.assert_frame_equal(
         asset_returns(prices), asset_returns(prices * scale), rtol=1e-12, atol=1e-12
     )
+
+
+@pytest.mark.parametrize("mutation", ["reverse", "shuffle", "duplicate"])
+def test_asset_returns_refuses_noncausal_source_calendar(mutation: str) -> None:
+    prices = pd.DataFrame({"A": [100.0, 110.0, 120.0], "B": [100.0] * 3})
+    prices.index = {"reverse": [2, 1, 0], "shuffle": [0, 2, 1], "duplicate": [0, 0, 1]}[mutation]
+    with pytest.raises(ValueError):
+        asset_returns(prices)
+
+
+@pytest.mark.parametrize("mutation", ["reverse", "shuffle", "duplicate"])
+@pytest.mark.parametrize("zero_exposure", [False, True])
+def test_portfolio_returns_refuses_noncausal_calendar_without_repair(
+    mutation: str, zero_exposure: bool
+) -> None:
+    prices = pd.DataFrame({"A": [100.0, 110.0, 120.0], "B": [100.0] * 3})
+    prices.index = {"reverse": [2, 1, 0], "shuffle": [0, 2, 1], "duplicate": [0, 0, 1]}[mutation]
+    signals = pd.DataFrame({"A": [1.0] * 3, "B": [-1.0] * 3}, index=prices.index)
+    if zero_exposure:
+        signals[:] = np.nan
+    with pytest.raises(ValueError):
+        portfolio_returns(signals, prices, quantile=0.5, cost_rate=0.001)
+
+
+def test_asset_calendar_refusal_precedes_pct_change(monkeypatch: pytest.MonkeyPatch) -> None:
+    prices = pd.DataFrame({"A": [100.0, 101.0]}, index=[1, 0])
+
+    def unexpected_returns(*_: object, **__: object) -> None:
+        pytest.fail("noncausal source cannot reach return computation")
+
+    monkeypatch.setattr(pd.DataFrame, "pct_change", unexpected_returns)
+    with pytest.raises(ValueError):
+        asset_returns(prices)
+
+
+@pytest.mark.parametrize(
+    "calendar", ["integers", "strings", "naive", "aware", "empty", "singleton"]
+)
+def test_asset_returns_preserves_ordered_native_calendar_and_caller(calendar: str) -> None:
+    prices = pd.DataFrame({"A": [100.0, 110.0, 120.0], "B": [100.0, 99.0, 98.0]})
+    if calendar == "strings":
+        prices.index = ["a", "b", "c"]
+    elif calendar == "naive":
+        prices.index = pd.date_range("2020-01-01", periods=3)
+    elif calendar == "aware":
+        prices.index = pd.date_range("2020-01-01", periods=3, tz="UTC")
+    elif calendar == "empty":
+        prices = prices.iloc[:0]
+    elif calendar == "singleton":
+        prices = prices.iloc[:1]
+    original = prices.copy(deep=True)
+    pd.testing.assert_frame_equal(asset_returns(prices), prices.pct_change().fillna(0.0))
+    pd.testing.assert_frame_equal(prices, original)
+
+
+@given(order=st.permutations((0, 1, 2)).filter(lambda order: tuple(order) != (0, 1, 2)))
+def test_asset_returns_refuses_every_nonidentity_source_permutation(order: list[int]) -> None:
+    prices = pd.DataFrame({"A": [100.0, 110.0, 120.0], "B": [100.0] * 3})
+    with pytest.raises(ValueError):
+        asset_returns(prices.iloc[list(order)])

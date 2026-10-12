@@ -109,6 +109,11 @@ checks preserve nullable and wider numeric precision without float64 conversion.
 Zero-cell panels and valid singleton first-period zero remain supported; missing,
 nonfinite, nonpositive and nonreal prices cannot become finite portfolio evidence.
 Original return/ranking/lag/cost arithmetic and source calendars remain unchanged.
+ADR-255 requires the original cross-sectional price index to be unique and
+ascending at asset_returns before price validation or pct_change. Invalid raw
+calendars cannot publish a positional return using a future-dated source row.
+No sorting/deduplication or UTC/cadence policy is added; ordered generic, naive,
+aware, empty and singleton calendars retain their native results.
 
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.

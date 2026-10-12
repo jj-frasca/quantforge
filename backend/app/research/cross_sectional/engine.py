@@ -8,6 +8,8 @@ from app.research.cross_sectional.panel import long_short_weights
 def asset_returns(prices: pd.DataFrame) -> pd.DataFrame:
     """Per-symbol simple returns; the first bar is 0 (no prior price), matching the single-name
     engine's `prices.pct_change().fillna(0.0)`."""
+    if not prices.index.is_unique or not prices.index.is_monotonic_increasing:
+        raise ValueError("cross-sectional price index must be unique and ascending")
     if prices.size:
         for _, column in prices.items():
             if (
