@@ -143,6 +143,13 @@ become false supplied-order ties. Original NaN/pd.NA exclusion, finite native wi
 nullable/object numeric/bool compatibility and empty behavior remain. No dtype
 ban, score conversion, estimator recovery or finite-precision certification is added.
 
+ADR-261 preserves native wide floating score order by selecting an object-typed
+rank input only when a native floating column is wider than float64. Pandas keeps
+the native scalars instead of fabricating ties through narrowing. True ties retain
+supplied order; original missing counts/weights/lag/costs and ordinary rank paths
+remain. Longitudinal calibration identity is unchanged. This does not recover
+already-rounded generator scores or certify arbitrary mixed integer/float precision.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 

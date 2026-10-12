@@ -28,7 +28,16 @@ def long_short_weights(signals: pd.DataFrame, quantile: float = 0.2) -> pd.DataF
     if signals.isin([np.inf, -np.inf]).any().any():
         raise ValueError("cross-sectional signals must not contain infinite scores")
 
-    ranked = signals.rank(axis=1, method="first")  # 1 = lowest signal; NaN stays NaN
+    # Pandas' numeric rank path narrows to float64; object ranking retains wide scalars.
+    rank_input = signals
+    if any(
+        isinstance(dtype, np.dtype)
+        and dtype.kind == "f"
+        and dtype.itemsize > np.dtype(float).itemsize
+        for dtype in signals.dtypes
+    ):
+        rank_input = signals.astype(object)
+    ranked = rank_input.rank(axis=1, method="first")  # 1 = lowest signal; NaN stays NaN
     n_valid = signals.notna().sum(axis=1)
     k = np.maximum(1, (quantile * n_valid).astype(int))
 
