@@ -182,6 +182,16 @@ average ranks and all IC/summary arithmetic remain. No dtype ban, range cap or
 summary-domain policy is added. Portfolio-first search already refuses these
 inputs; longitudinal calibration identity and historical records are unchanged.
 
+ADR-266 requires finite defined rank-IC outputs before projecting derived
+endpoint roundoff to the proven [-1,1] correlation range. summarize_ic validates
+each original scalar as finite real evidence within that range before conversion
+or short-sample None. Native Fraction/Decimal/wide endpoint neighbors cannot
+round into acceptance; raw observations are never clipped/filled/dropped.
+Valid bool/numeric/empty/singleton behavior and all summary formulas/std floor
+remain. Complex and numeric-string coefficient encodings refuse; no whole-dtype
+or model-leaf rule is added. Derived endpoints may change an ULP, including
+production; longitudinal calibration identity and historical records remain.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 

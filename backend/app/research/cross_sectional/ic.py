@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
-from app.research.cross_sectional.engine import asset_returns
+from app.research.cross_sectional.engine import _is_finite_native_scalar, asset_returns
 
 _MIN_RANKED_NAMES = 2
 _MIN_PERIODS_FOR_SUMMARY = 2
@@ -70,12 +70,27 @@ def rank_ic(signals: pd.DataFrame, prices: pd.DataFrame) -> pd.Series:
     # Drop, never zero-fill: too few names to rank, or a flat cross-section on either side (zero
     # dispersion -> the correlation is undefined, not zero).
     defined = (scorable.sum(axis=1) >= _MIN_RANKED_NAMES) & (s_norm > 0.0) & (r_norm > 0.0)
-    return ic[defined].rename("rank_ic")
+    measured = ic[defined]
+    if not np.isfinite(measured).all():
+        raise ValueError("rank IC must be finite")
+    return measured.clip(-1.0, 1.0).rename("rank_ic")
 
 
 def summarize_ic(series: pd.Series) -> ICSummary | None:
     """Summarize a rank-IC series. Returns None below two periods: a single date carries no
     dispersion estimate, so there is no IR and no t-statistic to report honestly."""
+    for value in series:
+        try:
+            invalid = (
+                np.iscomplexobj(value)
+                or not _is_finite_native_scalar(value)
+                or value < -1
+                or value > 1
+            )
+        except TypeError as exc:
+            raise ValueError("IC observations must be finite real values in [-1, 1]") from exc
+        if invalid:
+            raise ValueError("IC observations must be finite real values in [-1, 1]")
     n = len(series)
     if n < _MIN_PERIODS_FOR_SUMMARY:
         return None
