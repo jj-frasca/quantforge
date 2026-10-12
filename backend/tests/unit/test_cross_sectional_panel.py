@@ -60,7 +60,7 @@ def test_long_short_weights_rejects_out_of_range_quantile() -> None:
 
 
 def test_long_short_weights_breaks_ties_deterministically() -> None:
-    # All-equal signals: rank(method="first") makes the choice reproducible, not order-dependent.
+    # All-equal signals: rank(method="first") is reproducible for this fixed column order.
     signals = _panel({"A": [1.0], "B": [1.0], "C": [1.0], "D": [1.0]}, 1)
     w1 = long_short_weights(signals, quantile=0.25)
     w2 = long_short_weights(signals, quantile=0.25)

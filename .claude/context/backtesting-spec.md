@@ -119,6 +119,11 @@ be finite before portfolio multiplication/aggregation, so zero exposure cannot
 hide overflow as a flat return. Original pct_change/fillna arithmetic, finite
 extremes, nullable/wide precision and zero-cell panels remain; native arithmetic
 overflow raises ValueError without changing NumPy error state or using a fallback.
+ADR-257 qualifies cross-sectional tie handling: rank(method="first") follows
+supplied column order, so fixed-order input is deterministic while permuting tied
+symbols may change the chosen legs. The frozen ordered universe preserves this
+reconstruction identity. No tie algorithm, return, cost or existing claim changes;
+a different tie policy needs a separate methodology decision and validation evidence.
 
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.

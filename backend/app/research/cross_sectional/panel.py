@@ -8,8 +8,9 @@ def long_short_weights(signals: pd.DataFrame, quantile: float = 0.2) -> pd.DataF
     For each date independently: drop NaN signals (an unscorable name that day), rank the rest, and
     give the top ``quantile`` fraction a shared +1 long leg and the bottom fraction a shared -1 short
     leg (each name in a leg gets an equal share, so the legs net to zero). A date with fewer than two
-    valid names cannot form both legs and trades flat. Ties are broken with ``rank(method="first")``
-    so the selection is deterministic, never dependent on column order.
+    valid names cannot form both legs and trades flat. Ties use ``rank(method="first")`` in supplied
+    column order. Selection is deterministic for a fixed ordered panel; reordering tied symbols
+    may change the selected names.
 
     Notes:
         ``quantile`` must be in (0, 0.5]; at 0.5 the universe splits cleanly into long and short
