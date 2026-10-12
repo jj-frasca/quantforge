@@ -54,6 +54,8 @@ def rank_ic(signals: pd.DataFrame, prices: pd.DataFrame) -> pd.Series:
         raise ValueError("signals and prices must share the same symbol columns, in order")
 
     forward = asset_returns(prices).shift(-1)
+    if signals.isin([np.inf, -np.inf]).any().any():
+        raise ValueError("cross-sectional signals must not contain infinite scores")
     # Rank only names scorable on BOTH sides that date, so an unscorable name is excluded rather
     # than ranked against a hole. Vectorized row-wise: a per-date Python loop is ~500x slower on a
     # full-universe panel, and this runs inside every cross-sectional search.

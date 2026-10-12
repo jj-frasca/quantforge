@@ -175,6 +175,13 @@ correlation/summary formulas. Finite direct native IC values change where prior
 narrowing fabricated ties; canonical float64 outputs and longitudinal calibration
 identity remain. Infinity and summary-domain policies are separate limitations.
 
+ADR-265 refuses exact signed infinity in original rank-IC signals after ordered
+column matching and checked-price preparation, before pairwise masking/ranking.
+Even final/unscorable infinities refuse; NaN/pd.NA warmup, native finite scores,
+average ranks and all IC/summary arithmetic remain. No dtype ban, range cap or
+summary-domain policy is added. Portfolio-first search already refuses these
+inputs; longitudinal calibration identity and historical records are unchanged.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 
