@@ -179,6 +179,11 @@ replacement, reload, and store write. Evidence-null and empty-curve compatibilit
 ADR-150 requires every persistent experiment-pool writer to revalidate incoming model dumps before
 any filesystem mutation. This applies to monolithic and partitioned single-name pools and the
 cross-sectional pool, preventing unchecked model copies from bypassing ADR-145/147 at write time.
+ADR-250 re-enters complete CrossSectionalExperiment validation before forward
+promotion projects its graduate and frozen inputs. Unchecked source copies cannot
+discard invalid trial, gate or lineage relationships into a valid narrower position.
+Existing absent lineage/holdout and None/partial/empty fundamental snapshots retain
+their meanings; legacy required-snapshot refusals and all paper criteria remain.
 
 ADR-155 hardens `data/fundamentals_pool.json`, the separate ADR-029 company-score record that feeds
 cross-sectional factors. Each `FundamentalRecord` defensively freezes its flags, rejects non-finite

@@ -465,6 +465,7 @@ def freeze_cross_sectional_graduate(
 ) -> CrossSectionalPosition:
     """Freeze a cross-sectional graduate for forward-testing: lock its strategy, searched params +
     quantile, universe, cost rate, and fundamental score snapshots as of `frozen_at`."""
+    experiment = CrossSectionalExperiment.model_validate(experiment.model_dump(round_trip=True))
     graduate = experiment.graduate
     if graduate is None:
         raise ValueError("experiment has no graduate to freeze")

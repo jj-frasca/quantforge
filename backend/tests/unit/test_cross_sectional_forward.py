@@ -582,3 +582,113 @@ def test_score_forward_is_truncation_invariant_no_lookahead(cut: int) -> None:
     trunc_equity = score_forward(pos, truncated).forward_equity
     for i in range(len(trunc_equity)):
         assert full_equity[i].strategy_equity == pytest.approx(trunc_equity[i].strategy_equity)
+
+
+@pytest.mark.parametrize(
+    "corruption",
+    [
+        "parameters",
+        "strategy",
+        "best_gate",
+        "failed_gate",
+        "best_strategy",
+        "strategy_names",
+        "missing_best_gate",
+        "partial_lineage",
+    ],
+)
+def test_cross_sectional_promotion_revalidates_complete_source(corruption: str) -> None:
+    experiment = _graduated_experiment(
+        "xs_momentum", ["B", "A"], {"lookback": 126, "quantile": 0.2}
+    )
+    graduate = experiment.graduate
+    assert graduate is not None
+    if corruption == "parameters":
+        update = {"graduate": graduate.model_copy(update={"parameters": {"quantile": 0.49}})}
+    elif corruption == "strategy":
+        update = {"graduate": graduate.model_copy(update={"strategy_name": "xs_reversal"})}
+    elif corruption == "best_gate":
+        update = {
+            "best_gate_result": graduate.gate_result.model_copy(update={"reasons": ["other"]})
+        }
+    elif corruption == "failed_gate":
+        failed = graduate.gate_result.model_copy(update={"passed": False, "dsr_ok": False})
+        update = {
+            "best_gate_result": failed,
+            "graduate": graduate.model_copy(update={"gate_result": failed}),
+        }
+    elif corruption == "best_strategy":
+        update = {"best_strategy_name": "xs_reversal"}
+    elif corruption == "strategy_names":
+        update = {"strategy_names": ["xs_reversal"]}
+    elif corruption == "missing_best_gate":
+        update = {"best_gate_result": None}
+    else:
+        update = {"data_quality_reports": []}
+    malformed = experiment.model_copy(update=update)
+    with pytest.raises(ValueError):
+        CrossSectionalExperiment.model_validate(malformed.model_dump(round_trip=True))
+    with pytest.raises(ValueError):
+        freeze_cross_sectional_graduate(malformed, frozen_at=experiment.created_at)
+
+
+def test_cross_sectional_source_refuses_before_position_construction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.research.cross_sectional import forward
+
+    experiment = _graduated_experiment("xs_momentum", ["A", "B"], {"quantile": 0.2})
+    malformed = experiment.model_copy(update={"best_strategy_name": "xs_reversal"})
+
+    def unexpected_output(*_: object, **__: object) -> None:
+        pytest.fail("invalid experiment cannot reach position construction")
+
+    monkeypatch.setattr(forward, "CrossSectionalPosition", unexpected_output)
+    with pytest.raises(ValueError):
+        freeze_cross_sectional_graduate(malformed, frozen_at=experiment.created_at)
+
+
+@pytest.mark.parametrize("strategy", ["xs_momentum", "xs_value", "xs_quality", "xs_quality_value"])
+@pytest.mark.parametrize("snapshot_kind", ["full", "partial", "empty"])
+@pytest.mark.parametrize("structured_holdout", [False, True])
+@pytest.mark.parametrize("cost", [0.0, 0.005])
+def test_cross_sectional_promotion_preserves_complete_valid_claim(
+    strategy: str, snapshot_kind: str, structured_holdout: bool, cost: float
+) -> None:
+    experiment = _graduated_experiment(strategy, ["B", "A"], {"quantile": 0.2})
+    payload = experiment.model_dump(round_trip=True)
+    snapshot = {"B": 0.4, "A": 0.8}
+    if snapshot_kind == "partial":
+        snapshot = {"A": 0.8}
+    elif snapshot_kind == "empty":
+        snapshot = {}
+    payload["value_scores"] = snapshot if strategy in {"xs_value", "xs_quality_value"} else None
+    payload["quality_scores"] = snapshot if strategy in {"xs_quality", "xs_quality_value"} else None
+    if structured_holdout:
+        for gate in (payload["best_gate_result"], payload["graduate"]["gate_result"]):
+            gate["holdout_sharpe"] = 1.0
+            gate["holdout_n_bars"] = 252
+    experiment = CrossSectionalExperiment.model_validate(payload)
+    original = experiment.model_dump_json(round_trip=True)
+    expected = CrossSectionalPosition(
+        strategy_name=strategy,
+        parameters={"quantile": 0.2},
+        universe_symbols=("B", "A"),
+        frozen_at=experiment.created_at,
+        cost_rate=cost,
+        value_scores=payload["value_scores"],
+        quality_scores=payload["quality_scores"],
+    )
+    for source in (experiment, experiment.model_copy(update={"rationale": experiment.rationale})):
+        actual = freeze_cross_sectional_graduate(
+            source, frozen_at=experiment.created_at, cost_rate=cost
+        )
+        assert actual.model_dump_json() == expected.model_dump_json()
+    assert experiment.model_dump_json(round_trip=True) == original
+
+
+@pytest.mark.parametrize("strategy", ["xs_value", "xs_quality", "xs_quality_value"])
+def test_cross_sectional_promotion_preserves_missing_legacy_snapshot_refusal(strategy: str) -> None:
+    experiment = _graduated_experiment(strategy, ["A", "B"], {"quantile": 0.2})
+    with pytest.raises(ValueError, match=r"lacks its frozen"):
+        freeze_cross_sectional_graduate(experiment, frozen_at=experiment.created_at)
