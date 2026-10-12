@@ -159,6 +159,14 @@ Original guards/counts/financial formulas and longitudinal calibration identity
 stay. Already-rounded source values and unsupported mixed payloads remain outside
 this correction; this does not certify universal arithmetic precision.
 
+ADR-263 requires unique original cross-sectional price column labels at
+asset_returns after calendar checks and before price validation/arithmetic.
+Duplicate symbols cannot copy one ranked weight into multiple priced columns
+and break neutrality. Duplicate zero-row axes also refuse; unique arbitrary
+labels/order/native dtypes and valid zero-cell panels remain. No normalization,
+deduplication or earlier portfolio guard is added. Original financial formulas,
+error precedence and longitudinal calibration identity stay unchanged.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 

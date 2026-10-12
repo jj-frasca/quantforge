@@ -13,6 +13,8 @@ def asset_returns(prices: pd.DataFrame) -> pd.DataFrame:
     engine's `prices.pct_change().fillna(0.0)`."""
     if not prices.index.is_unique or not prices.index.is_monotonic_increasing:
         raise ValueError("cross-sectional price index must be unique and ascending")
+    if not prices.columns.is_unique:
+        raise ValueError("cross-sectional price columns must be unique")
     if prices.size:
         for _, column in prices.items():
             if (
