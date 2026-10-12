@@ -145,6 +145,10 @@ Cross-sectional forward scoring requires an exact mapping of every frozen univer
 executed revision, and panel alignment must retain the frozen columns in order. Any component
 failure leaves the prior factor score unchanged; a new score stores ordered
 `ResearchDatasetEvidence` for the complete panel.
+ADR-252 enforces the same exact ordered panel columns at direct score_forward
+entry before calendar access and zero/nonzero-forward scoring. Matching synthetic
+panels may still omit evidence; mismatched membership/order refuses rather than
+silently transforming the frozen factor or its equal-weight benchmark.
 
 Static fundamental factor inputs are part of the cross-sectional claim (ADR-142). New experiments
 store value and quality mappings projected into retained panel order; `None` means that family was

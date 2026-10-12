@@ -692,3 +692,81 @@ def test_cross_sectional_promotion_preserves_missing_legacy_snapshot_refusal(str
     experiment = _graduated_experiment(strategy, ["A", "B"], {"quantile": 0.2})
     with pytest.raises(ValueError, match=r"lacks its frozen"):
         freeze_cross_sectional_graduate(experiment, frozen_at=experiment.created_at)
+
+
+@pytest.mark.parametrize("mutation", ["subset", "substitute", "additional", "duplicate", "reorder"])
+@pytest.mark.parametrize("no_forward", [False, True])
+def test_direct_cross_sectional_score_refuses_frozen_panel_identity_drift(
+    mutation: str, no_forward: bool
+) -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel, split=799 if no_forward else 400)
+    if mutation == "subset":
+        malformed = panel.iloc[:, :-1]
+    elif mutation == "substitute":
+        malformed = panel.rename(columns={"S0": "OUTSIDE"})
+    elif mutation == "additional":
+        malformed = panel.assign(OUTSIDE=panel["S0"])
+    elif mutation == "duplicate":
+        malformed = panel.rename(columns={"S1": "S0"})
+    else:
+        malformed = panel.iloc[:, ::-1]
+    with pytest.raises(ValueError):
+        score_forward(position, malformed)
+
+
+def test_direct_cross_sectional_panel_refusal_precedes_index_access(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel)
+    malformed = panel.iloc[:, :-1]
+
+    def unexpected_max(*_: object, **__: object) -> None:
+        pytest.fail("mismatched panel cannot reach forward calendar access")
+
+    monkeypatch.setattr(pd.DatetimeIndex, "max", unexpected_max)
+    with pytest.raises(ValueError):
+        score_forward(position, malformed)
+
+
+@pytest.mark.parametrize("strategy", ["xs_momentum", "xs_value", "xs_quality", "xs_quality_value"])
+@pytest.mark.parametrize("no_forward", [False, True])
+@pytest.mark.parametrize("with_evidence", [False, True])
+def test_direct_cross_sectional_scoring_preserves_matching_panel_and_evidence(
+    strategy: str, no_forward: bool, with_evidence: bool
+) -> None:
+    panel = _persistent_momentum_panel()
+    snapshot = {symbol: float(i + 1) / 7.0 for i, symbol in enumerate(panel.columns)}
+    parameters = (
+        {"lookback": 126, "skip": 0, "quantile": 0.2}
+        if strategy == "xs_momentum"
+        else {"quantile": 0.2}
+    )
+    position = CrossSectionalPosition(
+        strategy_name=strategy,
+        parameters=parameters,
+        universe_symbols=tuple(panel.columns),
+        cost_rate=0.001,
+        frozen_at=panel.index[799 if no_forward else 400].to_pydatetime(),
+        value_scores=snapshot if strategy in {"xs_value", "xs_quality_value"} else None,
+        quality_scores=snapshot if strategy in {"xs_quality", "xs_quality_value"} else None,
+    )
+    evidence = (
+        [dataset.evidence() for dataset in _datasets(panel).values()] if with_evidence else None
+    )
+    original_position = position.model_dump_json(round_trip=True)
+    original_panel = panel.copy(deep=True)
+    original_evidence = (
+        None if evidence is None else [item.model_dump_json(round_trip=True) for item in evidence]
+    )
+    score = score_forward(position, panel, evidence=evidence)
+    assert score.forward_bars == (0 if no_forward else 399)
+    assert (score.evidence is None) is (evidence is None)
+    if evidence is not None:
+        assert score.evidence == evidence
+    assert position.model_dump_json(round_trip=True) == original_position
+    pd.testing.assert_frame_equal(panel, original_panel)
+    assert (
+        None if evidence is None else [item.model_dump_json(round_trip=True) for item in evidence]
+    ) == original_evidence

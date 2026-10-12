@@ -292,6 +292,8 @@ def score_forward(
     long-only universe (ADR-025). The engine runs over the FULL panel so signals are warmed up by the
     freeze date; only the post-freeze slice is scored. No look-ahead; returns a zero-bar score when no
     forward data has accrued yet."""
+    if list(panel.columns) != list(position.universe_symbols):
+        raise ValueError("forward panel columns must match the exact frozen universe order")
     as_of = pd.Timestamp(panel.index.max())
     forward_mask = panel.index > pd.Timestamp(position.frozen_at)
     if not bool(forward_mask.any()):
