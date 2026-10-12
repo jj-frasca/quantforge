@@ -394,3 +394,65 @@ def test_portfolio_returns_matches_scalar_reversing_leg_fee_oracle(cost: float) 
         expected,
         check_exact=True,
     )
+
+
+@pytest.mark.parametrize("history", ["active", "flat", "empty"])
+@pytest.mark.parametrize("extra", [3.0, -3.0, np.nan])
+def test_portfolio_returns_refuses_unpriced_signal_names(history: str, extra: float) -> None:
+    prices = pd.DataFrame({"A": [100.0, 110.0, 121.0], "B": [100.0] * 3})
+    signals = pd.DataFrame({"A": [1.0] * 3, "B": [2.0] * 3, "UNPRICED": [extra] * 3})
+    if history == "flat":
+        signals[:] = np.nan
+    elif history == "empty":
+        prices, signals = prices.iloc[:0], signals.iloc[:0]
+    with pytest.raises(ValueError, match=r"signal.*price"):
+        portfolio_returns(signals, prices, quantile=0.5, cost_rate=0.0)
+
+
+def test_portfolio_returns_refuses_unpriced_names_before_ranking(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    prices = pd.DataFrame({"A": [100.0], "B": [100.0]})
+    signals = pd.DataFrame({"A": [1.0], "UNPRICED": [2.0]})
+
+    def forbid_rank(*_: object, **__: object) -> None:
+        pytest.fail("ranking must not consume an unpriced signal universe")
+
+    monkeypatch.setattr("app.research.cross_sectional.engine.long_short_weights", forbid_rank)
+    with pytest.raises(ValueError, match=r"signal.*price"):
+        portfolio_returns(signals, prices)
+
+
+@pytest.mark.parametrize("columns", [["A", "B"], ["B", "A"], ["A"], []])
+@pytest.mark.parametrize("sparse", [False, True])
+def test_portfolio_returns_preserves_priced_signal_subsets_and_order(
+    columns: list[str],
+    sparse: bool,
+) -> None:
+    prices = pd.DataFrame({"A": [100.0, 110.0, 121.0], "B": [100.0] * 3, "C": [100.0] * 3})
+    signals = pd.DataFrame({"A": [1.0] * 3, "B": [2.0] * 3})[columns]
+    if sparse:
+        signals = signals.iloc[[0, 2]]
+    # Two supplied names create one unit leg each. Missing dates are flat, so
+    # turnover is two on entry/exit; an unrankable subset stays flat.
+    if len(columns) == 2:
+        expected = pd.Series(
+            [-0.002, -0.10200000000000009, -0.002]
+            if sparse
+            else [-0.002, -0.10000000000000009, -0.10000000000000009]
+        )
+    else:
+        expected = pd.Series([0.0] * 3)
+    pd.testing.assert_series_equal(
+        portfolio_returns(signals, prices, quantile=0.5),
+        expected,
+        check_exact=True,
+    )
+
+
+@given(extra=st.floats(min_value=3.0, max_value=1e6, allow_nan=False, allow_infinity=False))
+def test_portfolio_returns_never_drops_an_unpriced_ranked_long_leg(extra: float) -> None:
+    prices = pd.DataFrame({"A": [100.0, 90.0], "B": [100.0, 100.0]})
+    signals = pd.DataFrame({"A": [1.0] * 2, "B": [2.0] * 2, "UNPRICED": [extra] * 2})
+    with pytest.raises(ValueError, match=r"signal.*price"):
+        portfolio_returns(signals, prices, quantile=0.5, cost_rate=0.0)

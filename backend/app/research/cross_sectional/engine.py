@@ -67,6 +67,8 @@ def portfolio_returns(
         raise ValueError("cost_rate must be >= 0")
     if not _is_finite_native_scalar(cost_rate):
         raise ValueError("cost_rate must be finite")
+    if not signals.columns.isin(prices.columns).all():
+        raise ValueError("cross-sectional signal names must have price columns")
     weights = (
         long_short_weights(signals, quantile)
         .reindex(index=prices.index, columns=prices.columns)

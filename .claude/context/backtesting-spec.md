@@ -131,6 +131,12 @@ remain; bool/Fraction costs, wide finite empty outputs and huge finite flat outp
 retain native accounting. Nonfinite derived net or native arithmetic overflow
 raises ValueError without caps, float narrowing or NumPy error-state changes.
 
+ADR-259 requires every supplied cross-sectional signal column to have a price
+column before ranking. An unpriced ranked name cannot disappear during weight
+projection and remove a neutral leg. Subset/reordered signals, sparse dates and
+NaN warmup retain their original ranks/projection/lag/cost arithmetic; extra names
+raise even for empty/flat histories. This adds no complete-panel or tie policy.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 
