@@ -149,6 +149,10 @@ ADR-252 enforces the same exact ordered panel columns at direct score_forward
 entry before calendar access and zero/nonzero-forward scoring. Matching synthetic
 panels may still omit evidence; mismatched membership/order refuses rather than
 silently transforming the frozen factor or its equal-weight benchmark.
+ADR-253 also reconstructs any supplied score evidence through the existing leaf
+boundary and binds normalized ordered report symbols to the frozen universe before
+scoring. None, valid model leaves and raw dictionary leaves remain supported; native
+source/revision checks and output arithmetic retain their existing rules.
 
 Static fundamental factor inputs are part of the cross-sectional claim (ADR-142). New experiments
 store value and quality mappings projected into retained panel order; `None` means that family was

@@ -770,3 +770,67 @@ def test_direct_cross_sectional_scoring_preserves_matching_panel_and_evidence(
     assert (
         None if evidence is None else [item.model_dump_json(round_trip=True) for item in evidence]
     ) == original_evidence
+
+
+@pytest.mark.parametrize("mutation", ["partial", "foreign", "reorder"])
+@pytest.mark.parametrize("no_forward", [False, True])
+def test_direct_factor_score_refuses_other_universe_evidence(
+    mutation: str, no_forward: bool
+) -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel, split=799 if no_forward else 400)
+    evidence = [dataset.evidence() for dataset in _datasets(panel).values()]
+    if mutation == "partial":
+        evidence = evidence[:-1]
+    elif mutation == "foreign":
+        report = evidence[0].quality_report.model_copy(update={"symbol": "OUTSIDE"})
+        evidence[0] = evidence[0].model_copy(update={"quality_report": report})
+    else:
+        evidence = evidence[::-1]
+    with pytest.raises(ValueError):
+        score_forward(position, panel, evidence=evidence)
+
+
+def test_direct_factor_invalid_evidence_refuses_before_calendar_access(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    panel = _persistent_momentum_panel()
+    position = _momentum_position(panel)
+    evidence = [dataset.evidence() for dataset in _datasets(panel).values()]
+    evidence[0] = evidence[0].model_copy(update={"source": "alpaca"})
+
+    def unexpected_max(*_: object, **__: object) -> None:
+        pytest.fail("invalid supplied evidence cannot reach calendar access")
+
+    monkeypatch.setattr(pd.DatetimeIndex, "max", unexpected_max)
+    with pytest.raises(ValueError):
+        score_forward(position, panel, evidence=evidence)
+
+
+@pytest.mark.parametrize("mode", ["none", "models", "dictionaries"])
+@pytest.mark.parametrize("no_forward", [False, True])
+@pytest.mark.parametrize("normalized_labels", [False, True])
+def test_direct_factor_score_preserves_evidence_forms_and_normalized_symbols(
+    mode: str, no_forward: bool, normalized_labels: bool
+) -> None:
+    from app.research.dataset import ResearchDatasetEvidence
+
+    panel = _persistent_momentum_panel()
+    if normalized_labels:
+        panel = panel.rename(columns=lambda symbol: f" {symbol.lower()} ")
+    position = _momentum_position(panel, split=799 if no_forward else 400)
+    models = [dataset.evidence() for dataset in _datasets(panel).values()]
+    expected = score_forward(position, panel, evidence=None if mode == "none" else models)
+    supplied = None if mode == "none" else models
+    if mode == "dictionaries":
+        supplied = cast(
+            list[ResearchDatasetEvidence], [item.model_dump(round_trip=True) for item in models]
+        )
+    original = position.model_dump_json(round_trip=True)
+    prices = panel.copy(deep=True)
+    evidence_json = [item.model_dump_json(round_trip=True) for item in models]
+    actual = score_forward(position, panel, evidence=supplied)
+    assert actual.model_dump_json() == expected.model_dump_json()
+    assert position.model_dump_json(round_trip=True) == original
+    pd.testing.assert_frame_equal(panel, prices)
+    assert [item.model_dump_json(round_trip=True) for item in models] == evidence_json

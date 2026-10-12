@@ -294,6 +294,17 @@ def score_forward(
     forward data has accrued yet."""
     if list(panel.columns) != list(position.universe_symbols):
         raise ValueError("forward panel columns must match the exact frozen universe order")
+    if evidence is not None:
+        validated_evidence: list[ResearchDatasetEvidence] = []
+        for item in evidence:
+            payload: object = item
+            if isinstance(payload, ResearchDatasetEvidence):
+                payload = payload.model_dump(round_trip=True)
+            validated_evidence.append(ResearchDatasetEvidence.model_validate(payload))
+        evidence = validated_evidence
+        symbols = [item.quality_report.symbol.strip().upper() for item in evidence]
+        if symbols != [symbol.strip().upper() for symbol in position.universe_symbols]:
+            raise ValueError("forward score evidence must match the frozen universe order")
     as_of = pd.Timestamp(panel.index.max())
     forward_mask = panel.index > pd.Timestamp(position.frozen_at)
     if not bool(forward_mask.any()):
