@@ -1,4 +1,6 @@
+import numpy as np
 import pandas as pd
+from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 
 from app.research.cross_sectional.panel import long_short_weights
 
@@ -6,6 +8,18 @@ from app.research.cross_sectional.panel import long_short_weights
 def asset_returns(prices: pd.DataFrame) -> pd.DataFrame:
     """Per-symbol simple returns; the first bar is 0 (no prior price), matching the single-name
     engine's `prices.pct_change().fillna(0.0)`."""
+    if prices.size:
+        for _, column in prices.items():
+            if (
+                not is_numeric_dtype(column.dtype)
+                or is_bool_dtype(column.dtype)
+                or is_complex_dtype(column.dtype)
+            ):
+                raise ValueError(
+                    "cross-sectional prices must contain real nonboolean numeric values"
+                )
+            if column.isna().any() or not np.isfinite(column).all() or (column <= 0.0).any():
+                raise ValueError("cross-sectional prices must be finite and strictly positive")
     return prices.pct_change().fillna(0.0)
 
 

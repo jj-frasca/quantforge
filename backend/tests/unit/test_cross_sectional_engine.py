@@ -96,3 +96,77 @@ def test_split_panel_holdout_rejects_bad_fraction() -> None:
     prices = _prices(1500, 3, 4)
     with pytest.raises(ValueError, match="holdout_fraction"):
         split_panel_holdout(prices, holdout_fraction=1.5)
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -float("inf"), 0.0, -1.0])
+@pytest.mark.parametrize("location", ["first", "interior", "last", "singleton"])
+def test_asset_returns_refuses_invalid_original_price(bad: float, location: str) -> None:
+    values = [100.0] if location == "singleton" else [100.0, 101.0, 102.0]
+    index = {"first": 0, "interior": 1, "last": 2, "singleton": 0}[location]
+    values[index] = bad
+    with pytest.raises(ValueError):
+        asset_returns(pd.DataFrame({"A": values, "B": [100.0] * len(values)}))
+
+
+@pytest.mark.parametrize("values", [[True, False], ["100", "101"], [100 + 1j, 101 + 1j]])
+def test_asset_returns_refuses_nonreal_original_price_dtype(values: list[object]) -> None:
+    with pytest.raises(ValueError):
+        asset_returns(pd.DataFrame({"A": values}))
+
+
+def test_asset_returns_refuses_object_numeric_prices_without_coercion() -> None:
+    prices = pd.DataFrame({"A": pd.Series([100.0, 101.0], dtype=object)})
+    with pytest.raises(ValueError):
+        asset_returns(prices)
+
+
+@pytest.mark.parametrize("zero_exposure", [False, True])
+def test_portfolio_returns_refuses_missing_prices_even_without_exposure(
+    zero_exposure: bool,
+) -> None:
+    prices = pd.DataFrame({"A": [100.0, np.nan, 110.0], "B": [100.0] * 3})
+    signals = pd.DataFrame({"A": [1.0] * 3, "B": [-1.0] * 3})
+    if zero_exposure:
+        signals[:] = np.nan
+    with pytest.raises(ValueError):
+        portfolio_returns(signals, prices, quantile=0.5, cost_rate=0.001)
+
+
+@pytest.mark.parametrize(
+    "kind", ["float64", "Float64", "Int64", "uint64", "longdouble", "empty", "zero_columns"]
+)
+def test_asset_returns_preserves_native_complete_and_zero_cell_panels(kind: str) -> None:
+    if kind == "empty":
+        prices = pd.DataFrame(columns=["A", "B"])
+    elif kind == "zero_columns":
+        prices = pd.DataFrame(index=[0, 1])
+    elif kind == "uint64":
+        prices = pd.DataFrame({"A": np.array([2**64 - 3, 2**64 - 2, 2**64 - 1], dtype=np.uint64)})
+    elif kind == "longdouble":
+        values = np.array(["1e400", "2e400", "3e400"], dtype=np.longdouble)
+        if not np.isfinite(values).all():
+            values = np.array([100, 101, 102], dtype=np.longdouble)
+        prices = pd.DataFrame({"A": values})
+    else:
+        prices = pd.DataFrame({"A": pd.Series([100, 101, 102], dtype=kind)})
+    original = prices.copy(deep=True)
+    expected = prices.pct_change().fillna(0.0)
+    pd.testing.assert_frame_equal(asset_returns(prices), expected)
+    pd.testing.assert_frame_equal(prices, original)
+
+
+@given(
+    values=st.lists(
+        st.floats(min_value=1.0, max_value=100.0, allow_nan=False, allow_infinity=False),
+        min_size=2,
+        max_size=20,
+    ),
+    scale=st.floats(min_value=0.5, max_value=2.0, allow_nan=False, allow_infinity=False),
+)
+def test_asset_returns_are_invariant_to_positive_price_scale(
+    values: list[float], scale: float
+) -> None:
+    prices = pd.DataFrame({"A": values, "B": values[::-1]})
+    pd.testing.assert_frame_equal(
+        asset_returns(prices), asset_returns(prices * scale), rtol=1e-12, atol=1e-12
+    )

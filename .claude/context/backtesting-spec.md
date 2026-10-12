@@ -103,6 +103,12 @@ before pct_change. Missing first/interior/last observations and invalid singleto
 even for zero exposure, rather than becoming zero returns. Object/string/complex payloads are not
 coerced; complete nullable numeric and empty numeric Series retain their existing semantics.
 No observation is filled, dropped or repaired, and lag/cost/metric calculations are unchanged.
+ADR-254 applies the same original-price dtype/domain boundary to populated
+cross-sectional panels at asset_returns before pct_change. Native per-column
+checks preserve nullable and wider numeric precision without float64 conversion.
+Zero-cell panels and valid singleton first-period zero remain supported; missing,
+nonfinite, nonpositive and nonreal prices cannot become finite portfolio evidence.
+Original return/ranking/lag/cost arithmetic and source calendars remain unchanged.
 
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
