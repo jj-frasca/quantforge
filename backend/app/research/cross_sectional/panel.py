@@ -28,9 +28,15 @@ def long_short_weights(signals: pd.DataFrame, quantile: float = 0.2) -> pd.DataF
     if signals.isin([np.inf, -np.inf]).any().any():
         raise ValueError("cross-sectional signals must not contain infinite scores")
 
-    # Pandas' numeric rank path narrows to float64; object ranking retains wide scalars.
+    # Avoid narrowing wide floats or promoting mixed native integer scores to float.
     rank_input = signals
-    if any(
+    native_kinds = {
+        dtype.kind if isinstance(dtype, np.dtype) else "extension" for dtype in signals.dtypes
+    }
+    mixed_native = native_kinds <= {"b", "i", "u", "f"} and (
+        {"i", "f"} <= native_kinds or {"u", "f"} <= native_kinds or {"i", "u"} <= native_kinds
+    )
+    if mixed_native or any(
         isinstance(dtype, np.dtype)
         and dtype.kind == "f"
         and dtype.itemsize > np.dtype(float).itemsize

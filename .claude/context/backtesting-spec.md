@@ -150,6 +150,15 @@ supplied order; original missing counts/weights/lag/costs and ordinary rank path
 remain. Longitudinal calibration identity is unchanged. This does not recover
 already-rounded generator scores or certify arbitrary mixed integer/float precision.
 
+ADR-262 also preserves represented score order for all-native numeric panels
+mixing integer/float or signed/unsigned integer dtypes. Scalar-preserving object
+rank avoids common-array floating promotion; exact represented integer/float
+comparisons retain true supplied-order ties. Homogeneous, nullable and object
+paths remain; small mixed dtypes share the object cost without value thresholds.
+Original guards/counts/financial formulas and longitudinal calibration identity
+stay. Already-rounded source values and unsupported mixed payloads remain outside
+this correction; this does not certify universal arithmetic precision.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 
