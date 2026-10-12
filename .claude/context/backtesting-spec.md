@@ -114,6 +114,11 @@ ascending at asset_returns before price validation or pct_change. Invalid raw
 calendars cannot publish a positional return using a future-dated source row.
 No sorting/deduplication or UTC/cadence policy is added; ordered generic, naive,
 aware, empty and singleton calendars retain their native results.
+ADR-256 also requires populated native cross-sectional asset-return results to
+be finite before portfolio multiplication/aggregation, so zero exposure cannot
+hide overflow as a flat return. Original pct_change/fillna arithmetic, finite
+extremes, nullable/wide precision and zero-cell panels remain; native arithmetic
+overflow raises ValueError without changing NumPy error state or using a fallback.
 
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.

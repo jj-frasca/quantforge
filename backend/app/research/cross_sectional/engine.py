@@ -22,7 +22,13 @@ def asset_returns(prices: pd.DataFrame) -> pd.DataFrame:
                 )
             if column.isna().any() or not np.isfinite(column).all() or (column <= 0.0).any():
                 raise ValueError("cross-sectional prices must be finite and strictly positive")
-    return prices.pct_change().fillna(0.0)
+    try:
+        returns = prices.pct_change().fillna(0.0)
+    except (OverflowError, FloatingPointError) as exc:
+        raise ValueError("cross-sectional asset returns must be finite") from exc
+    if returns.size and not np.isfinite(returns).all().all():
+        raise ValueError("cross-sectional asset returns must be finite")
+    return returns
 
 
 def portfolio_returns(

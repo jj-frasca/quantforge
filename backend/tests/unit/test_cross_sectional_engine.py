@@ -230,3 +230,66 @@ def test_asset_returns_refuses_every_nonidentity_source_permutation(order: list[
     prices = pd.DataFrame({"A": [100.0, 110.0, 120.0], "B": [100.0] * 3})
     with pytest.raises(ValueError):
         asset_returns(prices.iloc[list(order)])
+
+
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+def test_asset_returns_refuses_native_ratio_overflow(error_mode: str) -> None:
+    prices = pd.DataFrame({"A": [np.finfo(float).tiny, np.finfo(float).max], "B": [100.0] * 2})
+    with np.errstate(all=error_mode):
+        before = np.geterr()
+        with pytest.raises(ValueError):
+            asset_returns(prices)
+        assert np.geterr() == before
+
+
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+@pytest.mark.parametrize("zero_exposure", [False, True])
+def test_portfolio_returns_refuses_asset_overflow_instead_of_flat_output(
+    error_mode: str, zero_exposure: bool
+) -> None:
+    prices = pd.DataFrame({"A": [np.finfo(float).tiny, np.finfo(float).max], "B": [100.0] * 2})
+    signals = pd.DataFrame({"A": [1.0] * 2, "B": [-1.0] * 2})
+    if zero_exposure:
+        signals[:] = np.nan
+    with np.errstate(all=error_mode):
+        before = np.geterr()
+        with pytest.raises(ValueError):
+            portfolio_returns(signals, prices, quantile=0.5, cost_rate=0.001)
+        assert np.geterr() == before
+
+
+@pytest.mark.parametrize("error", [OverflowError, FloatingPointError])
+def test_asset_returns_normalizes_native_arithmetic_overflow(
+    error: type[ArithmeticError], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prices = pd.DataFrame({"A": [100.0, 110.0]})
+
+    def fail_native(*_: object, **__: object) -> None:
+        raise error("synthetic native overflow")
+
+    monkeypatch.setattr(pd.DataFrame, "pct_change", fail_native)
+    with pytest.raises(ValueError):
+        asset_returns(prices)
+
+
+@pytest.mark.parametrize("error_mode", ["ignore", "raise"])
+def test_asset_returns_preserves_representable_extreme_ratios_and_error_state(
+    error_mode: str,
+) -> None:
+    prices = pd.DataFrame({"A": [1e-150, 1e150], "B": [1e150, 1e-150]})
+    original = prices.copy(deep=True)
+    with np.errstate(all=error_mode):
+        before = np.geterr()
+        expected = prices.pct_change().fillna(0.0)
+        pd.testing.assert_frame_equal(asset_returns(prices), expected)
+        assert np.geterr() == before
+    pd.testing.assert_frame_equal(prices, original)
+
+
+@given(small_exponent=st.integers(100, 200), large_exponent=st.integers(210, 300))
+def test_asset_returns_refuses_constructed_unrepresentable_ratios(
+    small_exponent: int, large_exponent: int
+) -> None:
+    prices = pd.DataFrame({"A": [10.0**-small_exponent, 10.0**large_exponent]})
+    with pytest.raises(ValueError):
+        asset_returns(prices)
