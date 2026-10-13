@@ -382,6 +382,13 @@ variance is computed. Ordinary/nullable nonwide arithmetic and all other formula
 Already-rounded sources, uneven translations, other statistics and native measurability limits
 are not certified; thresholds, calibration identity and generated records remain unchanged.
 
+ADR-271 supports genuine native wider returns paired with classic masked Float32/64 or
+Int/UInt8/16/32/64 by subtracting original aligned native arrays into a plain wider excess
+Series. Index and pandas binary name consensus are preserved using public empty ordinary
+metadata operands. Every other pair retains pandas subtraction; guards and downstream
+formulas remain. Arrow/Sparse/third-party support and universal numeric precision are not
+claimed. No source repair, threshold, calibration identity or generated record change.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

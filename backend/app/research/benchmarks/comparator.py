@@ -6,6 +6,19 @@ from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 
 from app.research.backtesting.metrics import TRADING_DAYS
 
+_MASKED_NUMERIC_DTYPES = (
+    pd.Float32Dtype,
+    pd.Float64Dtype,
+    pd.Int8Dtype,
+    pd.Int16Dtype,
+    pd.Int32Dtype,
+    pd.Int64Dtype,
+    pd.UInt8Dtype,
+    pd.UInt16Dtype,
+    pd.UInt32Dtype,
+    pd.UInt64Dtype,
+)
+
 
 @dataclass(frozen=True)
 class BenchmarkComparison:
@@ -68,17 +81,32 @@ class BenchmarkComparator:
             raise ValueError("returns must be finite")
         if np.any(strat_values <= -1.0) or np.any(bench_values <= -1.0):
             raise ValueError("returns must preserve positive wealth")
+        wide_source = any(
+            isinstance(returns.dtype, np.dtype)
+            and returns.dtype.kind == "f"
+            and returns.dtype.itemsize > np.dtype(float).itemsize
+            for returns in (strat, bench)
+        )
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
-            excess = strat - bench
+            if wide_source and any(
+                isinstance(returns.dtype, _MASKED_NUMERIC_DTYPES) for returns in (strat, bench)
+            ):
+                # Pandas has no wider masked dtype. Preserve original values in a plain Series.
+                # Empty ordinary operands retain pandas name consensus, including NaN/NA.
+                excess_name = (
+                    pd.Series(dtype=float, name=strat.name)
+                    - pd.Series(dtype=float, name=bench.name)
+                ).name
+                excess = pd.Series(
+                    strat.to_numpy(dtype=np.longdouble) - bench.to_numpy(dtype=np.longdouble),
+                    index=strat.index,
+                    name=excess_name,
+                )
+            else:
+                excess = strat - bench
 
             # Exact native constants have zero covariance before rounded centering (ADR-269).
             constant_source = bool(strat.eq(strat.iloc[0]).all() or bench.eq(bench.iloc[0]).all())
-            wide_source = any(
-                isinstance(returns.dtype, np.dtype)
-                and returns.dtype.kind == "f"
-                and returns.dtype.itemsize > np.dtype(float).itemsize
-                for returns in (strat, bench)
-            )
             needs_scaled = False
             try:
                 with np.errstate(under="raise"):
