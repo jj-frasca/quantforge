@@ -455,6 +455,16 @@ excess moments retain separate limits, including zero risk from variance
 underflow and float16/masked-byte-integer subtraction incompatibility. No threshold,
 calibration identity, generated record or blanket precision claim changes.
 
+ADR-279 measures nonconstant native float16/32 or classic masked Float32 EXCESS
+with temporary float64 sample standard deviation (ddof1) and stable math.fsum
+mean, retaining the original returned Series. Narrow variance can erase positive
+risk or overflow; ordinary promoted summation can still erase a cancellation mean.
+Exact constants bypass all new moments. Existing float64/wider/integer excess and
+source beta/alpha/guards/drawdown stay unchanged. This intentionally changes narrow
+IR/TE rounding, without epsilon or threshold/calibration/generated record changes.
+Range bounds do not imply arbitrary correctly rounded moments; already rounded
+subtraction, source alpha and masked-byte-integer compatibility remain separate.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

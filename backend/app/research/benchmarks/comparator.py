@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from math import fsum
 
 import numpy as np
 import pandas as pd
@@ -118,6 +119,12 @@ def _exact_unsigned_excess(strategy: pd.Series, benchmark: pd.Series) -> pd.Seri
         pd.Series(dtype=float, name=strategy.name) - pd.Series(dtype=float, name=benchmark.name)
     ).name
     return pd.Series(values, index=strategy.index, name=name)
+
+
+def _narrow_excess_moments(excess: pd.Series) -> tuple[float, float]:
+    """Measure represented narrow observations without narrow variance rounding (ADR-279)."""
+    values = excess.to_numpy(dtype=np.float64)
+    return fsum(values) / len(values), float(np.std(values, ddof=1))
 
 
 def _anchored_native_wide_excess_std(excess: pd.Series) -> np.longdouble:
@@ -267,8 +274,16 @@ class BenchmarkComparator:
                 else float((strat.mean() - beta * bench.mean()) * TRADING_DAYS)
             )
 
+            low_width_excess = isinstance(excess.dtype, pd.Float32Dtype) or (
+                isinstance(excess.dtype, np.dtype)
+                and excess.dtype.kind == "f"
+                and excess.dtype.itemsize < np.dtype(float).itemsize
+            )
+            narrow_excess_mean = 0.0
             if excess.eq(excess.iloc[0]).all():
                 excess_std: float | np.longdouble = 0.0
+            elif low_width_excess:
+                narrow_excess_mean, excess_std = _narrow_excess_moments(excess)
             elif (
                 isinstance(excess.dtype, np.dtype)
                 and excess.dtype.kind == "f"
@@ -279,7 +294,13 @@ class BenchmarkComparator:
                 excess_std = float(excess.std())
             sqrt_t = np.sqrt(TRADING_DAYS)
             information_ratio = (
-                float(sqrt_t * excess.mean() / excess_std) if excess_std > 0 else 0.0
+                float(
+                    sqrt_t
+                    * (narrow_excess_mean if low_width_excess else excess.mean())
+                    / excess_std
+                )
+                if excess_std > 0
+                else 0.0
             )
             tracking_error = float(sqrt_t * excess_std)
             # Relative drawdown = drawdown of the strategy's equity RELATIVE to the benchmark's
