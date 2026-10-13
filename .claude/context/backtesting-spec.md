@@ -398,6 +398,16 @@ to zero while native dispersion still supports nonzero IR. Ordinary nonconstant
 paths, mean, beta/alpha, excess metadata and drawdown remain. This is not universal
 precision certification and changes no threshold, calibration identity or record.
 
+ADR-273 subtracts both-original-unsigned native/classic masked integer sources
+as exact Python integers before native floating excess encoding. Every encoded
+integer ratio must equal the original exact difference or comparison refuses;
+no wrap or silent rounding is permitted. Plain excess retains aligned index and
+public pandas name consensus. All other subtraction/source/beta/alpha/drawdown
+paths remain; IR/TE consume corrected excess through ADR-272. Derived excess
+can be <=-1, since it is not a positive-wealth source return. Large original source
+means/covariance and mixed signed precision remain separate limits; no threshold,
+calibration identity or generated record changes.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

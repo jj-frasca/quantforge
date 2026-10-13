@@ -18,6 +18,7 @@ _MASKED_NUMERIC_DTYPES = (
     pd.UInt32Dtype,
     pd.UInt64Dtype,
 )
+_MASKED_UNSIGNED_DTYPES = (pd.UInt8Dtype, pd.UInt16Dtype, pd.UInt32Dtype, pd.UInt64Dtype)
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,21 @@ def _anchored_native_wide_beta(strategy: pd.Series, benchmark: pd.Series) -> flo
             return float(numerator / denominator)
     except FloatingPointError as exc:
         raise ValueError("native-wide beta moments must be measurable") from exc
+
+
+def _exact_unsigned_excess(strategy: pd.Series, benchmark: pd.Series) -> pd.Series:
+    """Subtract integers before encoding, refusing rounded evidence (ADR-273)."""
+    differences = [int(a) - int(b) for a, b in zip(strategy, benchmark, strict=True)]
+    values = np.asarray(differences, dtype=np.longdouble)
+    if any(
+        value.as_integer_ratio() != (difference, 1)
+        for value, difference in zip(values, differences, strict=True)
+    ):
+        raise ValueError("unsigned excess differences must be exactly representable")
+    name = (
+        pd.Series(dtype=float, name=strategy.name) - pd.Series(dtype=float, name=benchmark.name)
+    ).name
+    return pd.Series(values, index=strategy.index, name=name)
 
 
 def _anchored_native_wide_excess_std(excess: pd.Series) -> np.longdouble:
@@ -102,8 +118,15 @@ class BenchmarkComparator:
             and returns.dtype.itemsize > np.dtype(float).itemsize
             for returns in (strat, bench)
         )
+        unsigned_sources = all(
+            (isinstance(returns.dtype, np.dtype) and returns.dtype.kind == "u")
+            or isinstance(returns.dtype, _MASKED_UNSIGNED_DTYPES)
+            for returns in (strat, bench)
+        )
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
-            if wide_source and any(
+            if unsigned_sources:
+                excess = _exact_unsigned_excess(strat, bench)
+            elif wide_source and any(
                 isinstance(returns.dtype, _MASKED_NUMERIC_DTYPES) for returns in (strat, bench)
             ):
                 # Pandas has no wider masked dtype. Preserve original values in a plain Series.

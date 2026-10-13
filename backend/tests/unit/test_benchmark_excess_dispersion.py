@@ -67,8 +67,18 @@ def test_exact_constant_excess_has_zero_dispersion(dtype: object, value: float) 
 
 @pytest.mark.parametrize("dtype", ["uint64", "UInt64", np.longdouble])
 def test_exact_maximum_unsigned_constant_excess_control(dtype: object) -> None:
-    strategy = pd.Series([int(np.iinfo(np.uint64).max)] * 3, dtype=dtype)
+    maximum = int(np.iinfo(np.uint64).max)
+    strategy = pd.Series([maximum] * 3, dtype=dtype)
     benchmark = pd.Series([0] * 3, dtype=dtype)
+    # ADR-273 certifies original unsigned differences; a floating source already
+    # records its represented value and retains the ADR-272 constant control.
+    if dtype in ("uint64", "UInt64") and np.longdouble(maximum).as_integer_ratio() != (
+        maximum,
+        1,
+    ):
+        with pytest.raises(ValueError, match=r"unsigned excess.*exactly representable"):
+            BenchmarkComparator().compare(strategy, benchmark)
+        return
     result = BenchmarkComparator().compare(strategy, benchmark)
     assert result.information_ratio == result.tracking_error == 0
 
