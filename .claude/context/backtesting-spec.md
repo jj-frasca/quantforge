@@ -436,6 +436,15 @@ intentionally changes and need not match rounded published beta times rounded
 means. Beta outputs, noninteger formulas, excess/IR/TE/drawdown and source guards
 remain; no threshold/calibration/generated record changes or blanket precision claim.
 
+ADR-277 matches classic masked Float32 benchmark variance to existing float64
+covariance after integer/wider/constant precedence. Only that native denominator
+uses a temporary plain float64 Series; needed existing scaled recovery uses both
+original aligned float64 arrays for matched normalized moments. Original covariance,
+scale restoration and other benchmark paths remain. Beta and its downstream alpha
+may change; means/excess/IR/TE/drawdown and metadata stay. Float32 mean/dispersion,
+large integer partner precision and uneven float64 normalization retain separate
+limits; no threshold/calibration/generated record or universal precision claim.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

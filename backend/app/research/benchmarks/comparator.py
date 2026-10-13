@@ -217,7 +217,16 @@ class BenchmarkComparator:
                     elif wide_source and not constant_source:
                         native_beta = _anchored_native_wide_beta(strat, bench)
                     else:
-                        bench_var = 0.0 if constant_source else float(bench.var())
+                        # Covariance already uses float64; masked Float32 variance does not.
+                        bench_var = (
+                            0.0
+                            if constant_source
+                            else float(
+                                bench.astype(np.float64).var()
+                                if isinstance(bench.dtype, pd.Float32Dtype)
+                                else bench.var()
+                            )
+                        )
                         needs_scaled = bench_var == 0.0
                         native_beta = float(strat.cov(bench) / bench_var) if bench_var > 0 else 0.0
             except FloatingPointError:
@@ -232,8 +241,12 @@ class BenchmarkComparator:
                 if strat_scale == 0.0:
                     beta = 0.0
                 else:
-                    scaled_bench = bench / bench_scale
-                    scaled_strat = strat / strat_scale
+                    if isinstance(bench.dtype, pd.Float32Dtype):
+                        scaled_bench = pd.Series(bench_values / bench_scale, index=bench.index)
+                        scaled_strat = pd.Series(strat_values / strat_scale, index=strat.index)
+                    else:
+                        scaled_bench = bench / bench_scale
+                        scaled_strat = strat / strat_scale
                     scaled_var = float(scaled_bench.var())
                     if not np.isfinite(scaled_var) or scaled_var <= 0.0:
                         raise ValueError(
