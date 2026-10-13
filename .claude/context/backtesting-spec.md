@@ -361,6 +361,13 @@ one; all-zero strategy and true constant benchmark retain beta zero. Native posi
 arithmetic and other statistics remain unchanged. FINDING-113 distinguishes this repaired case
 from positive subnormal variance/covariance underflow and other tiny-moment limitations.
 
+ADR-268 extends that recovery trigger to underflow signaled during native benchmark variance,
+covariance or the beta quotient. Ordinary native beta and existing constant conventions remain;
+the same separately normalized covariance ratio recovers affected positive-variance cases.
+Alpha keeps its original formula with corrected beta. Rounded constant-centering residuals,
+uneven-scale recovery precision and other comparator statistics remain explicit limitations.
+No epsilon, source repair, gate threshold, calibration identity or generated record changes.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

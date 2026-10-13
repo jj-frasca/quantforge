@@ -52,8 +52,14 @@ class BenchmarkComparator:
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
             excess = strat - bench
 
-            with np.errstate(under="ignore"):
-                bench_var = float(bench.var())
+            try:
+                with np.errstate(under="raise"):
+                    bench_var = float(bench.var())
+                    native_beta = float(strat.cov(bench) / bench_var) if bench_var > 0 else 0.0
+            except FloatingPointError:
+                # Positive variance/covariance can also lose evidence to underflow (ADR-268).
+                # Reuse scaled recovery without changing the native path otherwise.
+                bench_var, native_beta = 0.0, 0.0
             if bench_var == 0.0 and np.any(bench_values != bench_values[0]):
                 # A nonconstant benchmark is not the constant-series convention: sample
                 # squares can underflow. Scale the same covariance ratio (ADR-181).
@@ -72,7 +78,7 @@ class BenchmarkComparator:
                     scaled_beta = float(scaled_strat.cov(scaled_bench) / scaled_var)
                     beta = scaled_beta * (strat_scale / bench_scale) if scaled_beta != 0.0 else 0.0
             else:
-                beta = float(strat.cov(bench) / bench_var) if bench_var > 0 else 0.0
+                beta = native_beta
             alpha = float((strat.mean() - beta * bench.mean()) * TRADING_DAYS)
 
             excess_std = float(excess.std())
