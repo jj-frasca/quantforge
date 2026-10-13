@@ -486,6 +486,15 @@ selected fixtures remain exact, without a universal correctly rounded claim.
 Global lost-mean, source-alpha strict-state and original variance-overflow limits
 remain separate; no threshold/calibration/generated record changes.
 
+ADR-282 certifies a zero native mean only for nonconstant native float64/classic
+Float64 excess with positive finite native std and no ADR-281 recovery. Original
+fsum zero retains zero IR; a nonzero original total uses frexp/ldexp and the
+EXISTING measured std, while uncertified overflow refuses. Tracking error stays
+exactly unchanged. Nonzero native means, constants, other excess families and
+ADR-281 recovery keep their paths. Fraction oracles use known native std and
+state a one-output-ULP subnormal ratio limit, not exact variance or universal
+correct rounding. No threshold/calibration/generated record changes.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

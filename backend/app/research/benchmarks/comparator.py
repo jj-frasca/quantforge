@@ -162,6 +162,25 @@ def _recover_float64_excess_statistics(excess: pd.Series) -> tuple[float, float]
         raise ValueError("excess statistics must be measurable") from exc
 
 
+def _certified_float64_zero_mean_ir(excess: pd.Series, std: float) -> float:
+    """Certify native zero means using original sums and measured risk (ADR-282)."""
+    try:
+        total = fsum(excess.to_numpy(dtype=float))
+        if total == 0:
+            return 0.0
+        sum_mantissa, sum_exponent = frexp(total)
+        std_mantissa, std_exponent = frexp(std)
+        score = ldexp(
+            float(np.sqrt(TRADING_DAYS)) * sum_mantissa / std_mantissa / len(excess),
+            sum_exponent - std_exponent,
+        )
+        if not np.isfinite(score):
+            raise ValueError("information ratio must be measurable")
+        return score
+    except OverflowError as exc:
+        raise ValueError("information ratio must be measurable") from exc
+
+
 def _exact_narrow_alpha(
     strategy: pd.Series, benchmark: pd.Series, *, constant_source: bool
 ) -> float:
@@ -361,6 +380,11 @@ class BenchmarkComparator:
             )
             narrow_excess_mean = 0.0
             recover_excess = False
+            float64_excess = isinstance(excess.dtype, pd.Float64Dtype) or (
+                isinstance(excess.dtype, np.dtype)
+                and excess.dtype.kind == "f"
+                and excess.dtype.itemsize == np.dtype(float).itemsize
+            )
             if excess.eq(excess.iloc[0]).all():
                 excess_std: float | np.longdouble = 0.0
             elif low_width_excess:
@@ -371,11 +395,7 @@ class BenchmarkComparator:
                 and excess.dtype.itemsize > np.dtype(float).itemsize
             ):
                 excess_std = _anchored_native_wide_excess_std(excess)
-            elif isinstance(excess.dtype, pd.Float64Dtype) or (
-                isinstance(excess.dtype, np.dtype)
-                and excess.dtype.kind == "f"
-                and excess.dtype.itemsize == np.dtype(float).itemsize
-            ):
+            elif float64_excess:
                 try:
                     with np.errstate(under="raise"):
                         excess_std = float(excess.std())
@@ -391,15 +411,15 @@ class BenchmarkComparator:
             if recover_excess:
                 information_ratio, tracking_error = _recover_float64_excess_statistics(excess)
             else:
-                information_ratio = (
-                    float(
-                        sqrt_t
-                        * (narrow_excess_mean if low_width_excess else excess.mean())
-                        / excess_std
+                if excess_std > 0:
+                    excess_mean = narrow_excess_mean if low_width_excess else excess.mean()
+                    information_ratio = (
+                        _certified_float64_zero_mean_ir(excess, float(excess_std))
+                        if float64_excess and np.isfinite(excess_std) and excess_mean == 0
+                        else float(sqrt_t * excess_mean / excess_std)
                     )
-                    if excess_std > 0
-                    else 0.0
-                )
+                else:
+                    information_ratio = 0.0
                 tracking_error = float(sqrt_t * excess_std)
             # Relative drawdown = drawdown of the strategy's equity RELATIVE to the benchmark's
             # (a ratio of compounded curves, always positive). Compounding the return *difference*
