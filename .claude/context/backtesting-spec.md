@@ -427,6 +427,15 @@ formula remains, with alpha naturally using corrected beta. Noninteger paths,
 excess/IR/TE/drawdown and source guards remain. Original means and other scalar
 precision are not certified; no threshold/calibration/generated record changes.
 
+ADR-276 uses the exact integer OLS intercept before beta/mean rounding for that
+same integer domain: 252*(sumS*den-num*sumB)/(n*den) with one final float quotient.
+Exact constant-source beta-zero convention uses only 252*sumS/n, bypassing all
+covariance moments. Shared streaming sums preserve the beta wrapper; nonconstant
+public pairs may scan twice without mutable caching. Integer alpha rounding
+intentionally changes and need not match rounded published beta times rounded
+means. Beta outputs, noninteger formulas, excess/IR/TE/drawdown and source guards
+remain; no threshold/calibration/generated record changes or blanket precision claim.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

@@ -38,8 +38,10 @@ class BenchmarkComparison:
     benchmark_relative_drawdown: float
 
 
-def _exact_integer_beta(strategy: pd.Series, benchmark: pd.Series) -> float:
-    """Accumulate exact covariance sufficient sums before final beta (ADR-275)."""
+def _integer_covariance_sums(
+    strategy: pd.Series, benchmark: pd.Series
+) -> tuple[int, int, int, int]:
+    """Retain exact covariance and original totals before OLS rounding (ADR-276)."""
     strategy_origin, benchmark_origin = int(strategy.iloc[0]), int(benchmark.iloc[0])
     strategy_sum = benchmark_sum = cross_sum = benchmark_square_sum = 0
     for a, b in zip(strategy, benchmark, strict=True):
@@ -50,9 +52,38 @@ def _exact_integer_beta(strategy: pd.Series, benchmark: pd.Series) -> float:
         benchmark_square_sum += db * db
     n = len(strategy)
     denominator = n * benchmark_square_sum - benchmark_sum**2
+    numerator = n * cross_sum - strategy_sum * benchmark_sum
+    return (
+        numerator,
+        denominator,
+        strategy_sum + n * strategy_origin,
+        benchmark_sum + n * benchmark_origin,
+    )
+
+
+def _exact_integer_beta(strategy: pd.Series, benchmark: pd.Series) -> float:
+    """Accumulate exact covariance sufficient sums before final beta (ADR-275)."""
+    numerator, denominator, _, _ = _integer_covariance_sums(strategy, benchmark)
     if denominator <= 0:
         raise ValueError("integer beta denominator must be positive")
-    return (n * cross_sum - strategy_sum * benchmark_sum) / denominator
+    return numerator / denominator
+
+
+def _exact_integer_alpha(
+    strategy: pd.Series, benchmark: pd.Series, *, constant_source: bool
+) -> float:
+    """Compute the integer intercept before beta/mean rounding (ADR-276)."""
+    n = len(strategy)
+    if constant_source:
+        return TRADING_DAYS * sum(int(value) for value in strategy) / n
+    numerator, denominator, strategy_sum, benchmark_sum = _integer_covariance_sums(
+        strategy, benchmark
+    )
+    if denominator <= 0:
+        raise ValueError("integer alpha denominator must be positive")
+    return (
+        TRADING_DAYS * (strategy_sum * denominator - numerator * benchmark_sum) / (n * denominator)
+    )
 
 
 def _anchored_native_wide_beta(strategy: pd.Series, benchmark: pd.Series) -> float:
@@ -212,7 +243,11 @@ class BenchmarkComparator:
                     beta = scaled_beta * (strat_scale / bench_scale) if scaled_beta != 0.0 else 0.0
             else:
                 beta = native_beta
-            alpha = float((strat.mean() - beta * bench.mean()) * TRADING_DAYS)
+            alpha = (
+                _exact_integer_alpha(strat, bench, constant_source=constant_source)
+                if integer_sources
+                else float((strat.mean() - beta * bench.mean()) * TRADING_DAYS)
+            )
 
             if excess.eq(excess.iloc[0]).all():
                 excess_std: float | np.longdouble = 0.0
