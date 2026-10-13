@@ -1,5 +1,7 @@
 """Exact constant sources have zero beta before rounded moment centering."""
 
+from fractions import Fraction
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -20,7 +22,14 @@ def test_beta_exact_original_constant_sources_are_zero(side: str, dtype: object)
     with np.errstate(all="ignore"):
         result = BenchmarkComparator().compare(strategy, benchmark)
     assert result.beta == 0
-    assert result.alpha == float(strategy.mean() * 252)
+    if dtype in {"float32", "Float32"}:
+        # ADR-280 retains beta zero while measuring the original strategy mean exactly.
+        expected_alpha = float(
+            252 * sum(Fraction(*value.as_integer_ratio()) for value in strategy) / len(strategy)
+        )
+    else:
+        expected_alpha = float(strategy.mean() * 252)
+    assert result.alpha == expected_alpha
     pd.testing.assert_series_equal(strategy, before_strategy)
     pd.testing.assert_series_equal(benchmark, before_benchmark)
     pd.testing.assert_series_equal(result.excess_returns, strategy - benchmark)

@@ -127,6 +127,40 @@ def _narrow_excess_moments(excess: pd.Series) -> tuple[float, float]:
     return fsum(values) / len(values), float(np.std(values, ddof=1))
 
 
+def _exact_narrow_alpha(
+    strategy: pd.Series, benchmark: pd.Series, *, constant_source: bool
+) -> float:
+    """Compute the represented narrow-source intercept before rounding (ADR-280)."""
+    grid = 1 << 149
+
+    def encode(value: float) -> int:
+        numerator, denominator = value.as_integer_ratio()
+        return numerator * (grid // denominator)
+
+    n = len(strategy)
+    if constant_source:
+        return TRADING_DAYS * sum(encode(value) for value in strategy) / (n * grid)
+    strategy_origin, benchmark_origin = encode(strategy.iloc[0]), encode(benchmark.iloc[0])
+    strategy_sum = benchmark_sum = cross_sum = benchmark_square_sum = 0
+    for a, b in zip(strategy, benchmark, strict=True):
+        ds, db = encode(a) - strategy_origin, encode(b) - benchmark_origin
+        strategy_sum += ds
+        benchmark_sum += db
+        cross_sum += ds * db
+        benchmark_square_sum += db * db
+    denominator = n * benchmark_square_sum - benchmark_sum**2
+    if denominator <= 0:
+        raise ValueError("narrow alpha denominator must be positive")
+    numerator = n * cross_sum - strategy_sum * benchmark_sum
+    strategy_total = strategy_sum + n * strategy_origin
+    benchmark_total = benchmark_sum + n * benchmark_origin
+    return (
+        TRADING_DAYS
+        * (strategy_total * denominator - numerator * benchmark_total)
+        / (n * denominator * grid)
+    )
+
+
 def _anchored_native_wide_excess_std(excess: pd.Series) -> np.longdouble:
     """Retain wider sample dispersion through final statistics (ADR-272)."""
     try:
@@ -268,9 +302,20 @@ class BenchmarkComparator:
                     beta = scaled_beta * (strat_scale / bench_scale) if scaled_beta != 0.0 else 0.0
             else:
                 beta = native_beta
+            narrow_sources = all(
+                isinstance(returns.dtype, pd.Float32Dtype)
+                or (
+                    isinstance(returns.dtype, np.dtype)
+                    and returns.dtype.kind == "f"
+                    and returns.dtype.itemsize < np.dtype(float).itemsize
+                )
+                for returns in (strat, bench)
+            )
             alpha = (
                 _exact_integer_alpha(strat, bench, constant_source=constant_source)
                 if integer_sources
+                else _exact_narrow_alpha(strat, bench, constant_source=constant_source)
+                if narrow_sources
                 else float((strat.mean() - beta * bench.mean()) * TRADING_DAYS)
             )
 

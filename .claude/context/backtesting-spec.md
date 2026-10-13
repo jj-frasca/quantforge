@@ -465,6 +465,16 @@ IR/TE rounding, without epsilon or threshold/calibration/generated record change
 Range bounds do not imply arbitrary correctly rounded moments; already rounded
 subtraction, source alpha and masked-byte-integer compatibility remain separate.
 
+ADR-280 calculates annual alpha for both-original native float16/float32 or
+classic Float32 source pairs from exact Python integer sufficient sums on the
+2**-149 grid. Only the final unrounded OLS intercept is converted to float;
+constants keep beta-zero convention and use only the exact strategy total.
+Published beta and accepted integer helpers remain unchanged. Narrow-family
+alpha rounding intentionally changes and need not equal rounded beta times
+rounded source means. Other source pairs, excess/moments/drawdown/metadata and
+source guards remain. No threshold/calibration/generated record changes;
+source beta precision and unsupported pairs retain their separate limits.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)
