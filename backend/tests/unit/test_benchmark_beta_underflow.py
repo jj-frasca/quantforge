@@ -87,10 +87,10 @@ def test_beta_tiny_affine_samples_match_exact_represented_input_oracle(
     assert result.beta == pytest.approx(expected, rel=1e-12, abs=0)
 
 
-def test_beta_retains_ordinary_constant_centering_baseline_as_separate_limit() -> None:
-    # Rounded centering without underflow is separate; retain the published native result.
+def test_beta_exact_constant_benchmark_does_not_fabricate_centering_residual() -> None:
+    # ADR-269 resolves the separate rounded-centering defect identified during ADR-268.
     result = BenchmarkComparator().compare(pd.Series([0.01, 0.02, 0.03]), pd.Series([0.1] * 3))
-    assert result.beta == 0.041666666666666664
+    assert result.beta == 0
 
 
 @pytest.mark.parametrize("exponent", [-520, -540])

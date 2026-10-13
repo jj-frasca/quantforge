@@ -52,15 +52,17 @@ class BenchmarkComparator:
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
             excess = strat - bench
 
+            # Exact native constants have zero covariance before rounded centering (ADR-269).
+            constant_source = bool(strat.eq(strat.iloc[0]).all() or bench.eq(bench.iloc[0]).all())
             try:
                 with np.errstate(under="raise"):
-                    bench_var = float(bench.var())
+                    bench_var = 0.0 if constant_source else float(bench.var())
                     native_beta = float(strat.cov(bench) / bench_var) if bench_var > 0 else 0.0
             except FloatingPointError:
                 # Positive variance/covariance can also lose evidence to underflow (ADR-268).
                 # Reuse scaled recovery without changing the native path otherwise.
                 bench_var, native_beta = 0.0, 0.0
-            if bench_var == 0.0 and np.any(bench_values != bench_values[0]):
+            if not constant_source and bench_var == 0.0 and np.any(bench_values != bench_values[0]):
                 # A nonconstant benchmark is not the constant-series convention: sample
                 # squares can underflow. Scale the same covariance ratio (ADR-181).
                 bench_scale = float(np.abs(bench_values).max())

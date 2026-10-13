@@ -368,6 +368,12 @@ Alpha keeps its original formula with corrected beta. Rounded constant-centering
 uneven-scale recovery precision and other comparator statistics remain explicit limitations.
 No epsilon, source repair, gate threshold, calibration identity or generated record changes.
 
+ADR-269 identifies exact constants on both original aligned return Series before beta moments.
+Either constant side yields beta zero, avoiding fabricated residual covariance from rounded
+centering. Original native equality preserves wider distinct observations and partial overlap;
+all nonconstant ADR-268 arithmetic and downstream formulas remain. Alpha naturally changes with
+corrected beta. Near-constant/wide moment precision and other comparator statistics stay separate.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)
