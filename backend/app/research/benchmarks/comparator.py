@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from math import fsum
+from math import frexp, fsum, ldexp
 
 import numpy as np
 import pandas as pd
@@ -125,6 +125,41 @@ def _narrow_excess_moments(excess: pd.Series) -> tuple[float, float]:
     """Measure represented narrow observations without narrow variance rounding (ADR-279)."""
     values = excess.to_numpy(dtype=np.float64)
     return fsum(values) / len(values), float(np.std(values, ddof=1))
+
+
+def _recover_float64_excess_statistics(excess: pd.Series) -> tuple[float, float]:
+    """Recover underflowed risk without rounding away original sums (ADR-281)."""
+    try:
+        with np.errstate(all="ignore"):
+            values = excess.to_numpy(dtype=float)
+            delta = values - values[0]
+            if not np.isfinite(delta).all():
+                raise ValueError("excess statistics must be measurable")
+            scale = float(np.max(np.abs(delta)))
+            if not np.isfinite(scale) or scale <= 0:
+                raise ValueError("excess statistics must be measurable")
+            normalized_std = float(pd.Series(delta / scale).std())
+            if not np.isfinite(normalized_std) or normalized_std <= 0:
+                raise ValueError("excess statistics must be measurable")
+            total = fsum(values)
+            scale_mantissa, scale_exponent = frexp(scale)
+            std_mantissa, std_exponent = frexp(normalized_std)
+            sqrt_t = float(np.sqrt(TRADING_DAYS))
+            tracking_error = ldexp(
+                sqrt_t * scale_mantissa * std_mantissa, scale_exponent + std_exponent
+            )
+            information_ratio = 0.0
+            if total != 0:
+                sum_mantissa, sum_exponent = frexp(total)
+                information_ratio = ldexp(
+                    sqrt_t * sum_mantissa / scale_mantissa / normalized_std / len(values),
+                    sum_exponent - scale_exponent,
+                )
+            if not np.isfinite([information_ratio, tracking_error]).all():
+                raise ValueError("excess statistics must be measurable")
+            return information_ratio, tracking_error
+    except OverflowError as exc:
+        raise ValueError("excess statistics must be measurable") from exc
 
 
 def _exact_narrow_alpha(
@@ -325,6 +360,7 @@ class BenchmarkComparator:
                 and excess.dtype.itemsize < np.dtype(float).itemsize
             )
             narrow_excess_mean = 0.0
+            recover_excess = False
             if excess.eq(excess.iloc[0]).all():
                 excess_std: float | np.longdouble = 0.0
             elif low_width_excess:
@@ -335,19 +371,36 @@ class BenchmarkComparator:
                 and excess.dtype.itemsize > np.dtype(float).itemsize
             ):
                 excess_std = _anchored_native_wide_excess_std(excess)
+            elif isinstance(excess.dtype, pd.Float64Dtype) or (
+                isinstance(excess.dtype, np.dtype)
+                and excess.dtype.kind == "f"
+                and excess.dtype.itemsize == np.dtype(float).itemsize
+            ):
+                try:
+                    with np.errstate(under="raise"):
+                        excess_std = float(excess.std())
+                except FloatingPointError:
+                    # Retain existing nonfinite dispersion refusal before recovery.
+                    with np.errstate(under="ignore"):
+                        excess_std = float(excess.std())
+                    recover_excess = True
+                recover_excess = np.isfinite(excess_std) and (recover_excess or excess_std == 0)
             else:
                 excess_std = float(excess.std())
             sqrt_t = np.sqrt(TRADING_DAYS)
-            information_ratio = (
-                float(
-                    sqrt_t
-                    * (narrow_excess_mean if low_width_excess else excess.mean())
-                    / excess_std
+            if recover_excess:
+                information_ratio, tracking_error = _recover_float64_excess_statistics(excess)
+            else:
+                information_ratio = (
+                    float(
+                        sqrt_t
+                        * (narrow_excess_mean if low_width_excess else excess.mean())
+                        / excess_std
+                    )
+                    if excess_std > 0
+                    else 0.0
                 )
-                if excess_std > 0
-                else 0.0
-            )
-            tracking_error = float(sqrt_t * excess_std)
+                tracking_error = float(sqrt_t * excess_std)
             # Relative drawdown = drawdown of the strategy's equity RELATIVE to the benchmark's
             # (a ratio of compounded curves, always positive). Compounding the return *difference*
             # (strat - bench) is invalid — it can fall to <= -1 and yield a meaningless curve.

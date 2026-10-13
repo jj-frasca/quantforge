@@ -475,6 +475,17 @@ rounded source means. Other source pairs, excess/moments/drawdown/metadata and
 source guards remain. No threshold/calibration/generated record changes;
 source beta precision and unsupported pairs retain their separate limits.
 
+ADR-281 recovers collapsed/detected-underflow sample dispersion only for
+nonconstant native float64/classic Float64 excess, retaining original nonfinite
+std refusal and native finite arithmetic without detected underflow. Anchored
+first-value deltas precede maxabs normalization; original fsum plus frexp/ldexp
+separate IR from final annualized TE rounding. TE may legitimately round to zero
+with nonzero IR. Constants and other excess families retain their paths. Exact
+Fraction squared midpoint tests state a one-output-ULP subnormal property limit;
+selected fixtures remain exact, without a universal correctly rounded claim.
+Global lost-mean, source-alpha strict-state and original variance-overflow limits
+remain separate; no threshold/calibration/generated record changes.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)
