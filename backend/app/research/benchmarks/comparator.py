@@ -187,6 +187,11 @@ class BenchmarkComparator:
             or isinstance(returns.dtype, _MASKED_INTEGER_DTYPES)
             for returns in (strat, bench)
         )
+        low_width_benchmark = isinstance(bench.dtype, pd.Float32Dtype) or (
+            isinstance(bench.dtype, np.dtype)
+            and bench.dtype.kind == "f"
+            and bench.dtype.itemsize < np.dtype(float).itemsize
+        )
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
             if unsigned_sources or mixed_integer_sources:
                 excess = _exact_unsigned_excess(strat, bench)
@@ -217,13 +222,13 @@ class BenchmarkComparator:
                     elif wide_source and not constant_source:
                         native_beta = _anchored_native_wide_beta(strat, bench)
                     else:
-                        # Covariance already uses float64; masked Float32 variance does not.
+                        # Covariance already uses float64; low-width variance does not.
                         bench_var = (
                             0.0
                             if constant_source
                             else float(
                                 bench.astype(np.float64).var()
-                                if isinstance(bench.dtype, pd.Float32Dtype)
+                                if low_width_benchmark
                                 else bench.var()
                             )
                         )
@@ -241,7 +246,7 @@ class BenchmarkComparator:
                 if strat_scale == 0.0:
                     beta = 0.0
                 else:
-                    if isinstance(bench.dtype, pd.Float32Dtype):
+                    if low_width_benchmark:
                         scaled_bench = pd.Series(bench_values / bench_scale, index=bench.index)
                         scaled_strat = pd.Series(strat_values / strat_scale, index=strat.index)
                     else:

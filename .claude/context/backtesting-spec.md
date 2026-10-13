@@ -445,6 +445,16 @@ may change; means/excess/IR/TE/drawdown and metadata stay. Float32 mean/dispersi
 large integer partner precision and uneven float64 normalization retain separate
 limits; no threshold/calibration/generated record or universal precision claim.
 
+ADR-278 extends that exact matched-precision path to native floating benchmarks
+narrower than float64 (float16/32), preserving the old masked Float32 results and
+all other benchmark/constant/integer/wider paths. Native narrowed variance can
+overflow or underflow while covariance remains float64 measurable, producing
+false beta-zero/same-series alpha. Both native variance and needed normalized
+operands now match float64; covariance stays original. Means/alpha and narrow
+excess moments retain separate limits, including zero risk from variance
+underflow and float16/masked-byte-integer subtraction incompatibility. No threshold,
+calibration identity, generated record or blanket precision claim changes.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)
