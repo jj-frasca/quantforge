@@ -417,6 +417,16 @@ code/results. Original missing/negative source guards still precede subtraction;
 derived negative differences remain valid. Source moments/beta/alpha/drawdown and
 precision limitations remain; no threshold, calibration or generated record change.
 
+ADR-275 computes beta for both-original-supported integer sources from exact
+Python integer covariance sufficient sums, after original guards and exact
+constant detection. Own-first deltas and streaming sums give exact
+n*sum(ds*db)-sum(ds)*sum(db) over n*sum(db*db)-sum(db)**2 before one final
+integer quotient to float. No native encoding/moments/scaled fallback is needed.
+Integer beta rounding deliberately changes family-wide; original mean/alpha
+formula remains, with alpha naturally using corrected beta. Noninteger paths,
+excess/IR/TE/drawdown and source guards remain. Original means and other scalar
+precision are not certified; no threshold/calibration/generated record changes.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

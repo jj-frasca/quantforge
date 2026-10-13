@@ -38,6 +38,23 @@ class BenchmarkComparison:
     benchmark_relative_drawdown: float
 
 
+def _exact_integer_beta(strategy: pd.Series, benchmark: pd.Series) -> float:
+    """Accumulate exact covariance sufficient sums before final beta (ADR-275)."""
+    strategy_origin, benchmark_origin = int(strategy.iloc[0]), int(benchmark.iloc[0])
+    strategy_sum = benchmark_sum = cross_sum = benchmark_square_sum = 0
+    for a, b in zip(strategy, benchmark, strict=True):
+        ds, db = int(a) - strategy_origin, int(b) - benchmark_origin
+        strategy_sum += ds
+        benchmark_sum += db
+        cross_sum += ds * db
+        benchmark_square_sum += db * db
+    n = len(strategy)
+    denominator = n * benchmark_square_sum - benchmark_sum**2
+    if denominator <= 0:
+        raise ValueError("integer beta denominator must be positive")
+    return (n * cross_sum - strategy_sum * benchmark_sum) / denominator
+
+
 def _anchored_native_wide_beta(strategy: pd.Series, benchmark: pd.Series) -> float:
     """Match wider centered sums without narrowing or unused variance (ADR-270)."""
     try:
@@ -134,6 +151,11 @@ class BenchmarkComparator:
             isinstance(returns.dtype, (np.dtype, *_MASKED_INTEGER_DTYPES))
             for returns in (strat, bench)
         )
+        integer_sources = all(
+            (isinstance(returns.dtype, np.dtype) and returns.dtype.kind in ("i", "u"))
+            or isinstance(returns.dtype, _MASKED_INTEGER_DTYPES)
+            for returns in (strat, bench)
+        )
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
             if unsigned_sources or mixed_integer_sources:
                 excess = _exact_unsigned_excess(strat, bench)
@@ -159,7 +181,9 @@ class BenchmarkComparator:
             needs_scaled = False
             try:
                 with np.errstate(under="raise"):
-                    if wide_source and not constant_source:
+                    if integer_sources and not constant_source:
+                        native_beta = _exact_integer_beta(strat, bench)
+                    elif wide_source and not constant_source:
                         native_beta = _anchored_native_wide_beta(strat, bench)
                     else:
                         bench_var = 0.0 if constant_source else float(bench.var())
