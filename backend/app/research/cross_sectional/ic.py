@@ -1,6 +1,9 @@
+from numbers import Integral
+from typing import Self
+
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.research.cross_sectional.engine import _is_finite_native_scalar, asset_returns
 
@@ -16,14 +19,33 @@ class ICSummary(BaseModel):
     is therefore OPTIMISTIC for a slow signal whose IC series is autocorrelated — it is a screening
     diagnostic, not an inferential claim."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
-    mean: float
-    std: float
-    information_ratio: float
-    t_stat: float
-    hit_rate: float
-    n_periods: int
+    # Finite-only mean preserves coherent historical endpoint roundoff (ADR-267).
+    mean: float = Field(allow_inf_nan=False)
+    std: float = Field(ge=0, allow_inf_nan=False)
+    information_ratio: float = Field(allow_inf_nan=False)
+    t_stat: float = Field(allow_inf_nan=False)
+    hit_rate: float = Field(ge=0, le=1, allow_inf_nan=False)
+    n_periods: int = Field(ge=_MIN_PERIODS_FOR_SUMMARY)
+
+    @field_validator("n_periods", mode="before")
+    @classmethod
+    def _validate_period_count(cls, value: object) -> int:
+        if isinstance(value, bool) or not isinstance(value, Integral):
+            raise ValueError("n_periods must be a native integer count")
+        return int(value)
+
+    @model_validator(mode="after")
+    def _validate_statistic_identity(self) -> Self:
+        try:
+            expected_ir = self.mean / max(self.std, _MIN_STD)
+            expected_t = self.information_ratio * float(np.sqrt(self.n_periods))
+        except (TypeError, OverflowError, FloatingPointError) as exc:
+            raise ValueError("IC summary statistics must be measurable") from exc
+        if self.information_ratio != expected_ir or self.t_stat != expected_t:
+            raise ValueError("IC summary IR and t_stat must match the original formulas")
+        return self
 
 
 def _native_average_ranks(frame: pd.DataFrame, scorable: pd.DataFrame) -> pd.DataFrame:

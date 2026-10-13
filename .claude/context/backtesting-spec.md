@@ -192,6 +192,13 @@ remain. Complex and numeric-string coefficient encodings refuse; no whole-dtype
 or model-leaf rule is added. Derived endpoints may change an ULP, including
 production; longitudinal calibration identity and historical records remain.
 
+ADR-267 validates durable ICSummary leaves: finite scalars, std>=0, hit_rate in [0,1],
+native integer periods>=2 excluding bool, always instance revalidation, and exact original
+IR/t formula coherence with the unchanged std floor. Existing nested/store reconstruction
+rejects bad claims before writes. Finite-only mean preserves coherent historical endpoint
+roundoff; impossible-but-coherent finite metadata remains an explicit limitation. No
+statistic repair, generated record rewrite, schema-field, selector or gate change.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 

@@ -4,6 +4,7 @@ JSON pool with a dependency-injected path; an empty/missing pool returns null, n
 
 from datetime import UTC, datetime
 
+import numpy as np
 from fastapi.testclient import TestClient
 
 from app.api.v1.cross_sectional import get_pool_path
@@ -89,8 +90,15 @@ def test_returns_null_when_pool_is_empty(tmp_path) -> None:
 def test_rank_ic_is_surfaced_per_trial_and_is_null_when_not_measured(tmp_path) -> None:
     # ADR-035: the IC answers "did the ranking carry information", which the Sharpe columns cannot.
     # A trial written before that ADR has no IC and must read as absent, never as zero.
+    mean, std, n = 0.021, 0.14, 500
+    ir = mean / std
     ic = ICSummary(
-        mean=0.021, std=0.14, information_ratio=0.15, t_stat=3.4, hit_rate=0.54, n_periods=500
+        mean=mean,
+        std=std,
+        information_ratio=ir,
+        t_stat=ir * float(np.sqrt(n)),
+        hit_rate=0.54,
+        n_periods=n,
     )
     experiment = _experiment(datetime(2026, 7, 1, tzinfo=UTC), ["AAPL", "MSFT"], "xs_momentum")
     scored = experiment.model_copy(
@@ -102,7 +110,7 @@ def test_rank_ic_is_surfaced_per_trial_and_is_null_when_not_measured(tmp_path) -
     try:
         trials = TestClient(app).get("/api/v1/cross-sectional").json()["trials"]
         assert trials[0]["ic_mean"] == 0.021
-        assert trials[0]["ic_t_stat"] == 3.4
+        assert trials[0]["ic_t_stat"] == ic.t_stat
         assert trials[1]["ic_mean"] is None
         assert trials[1]["ic_t_stat"] is None
     finally:
