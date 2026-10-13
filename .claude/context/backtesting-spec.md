@@ -389,6 +389,15 @@ metadata operands. Every other pair retains pandas subtraction; guards and downs
 formulas remain. Arrow/Sparse/third-party support and universal numeric precision are not
 claimed. No source repair, threshold, calibration identity or generated record change.
 
+ADR-272 detects exact constants on original aligned excess before dispersion:
+IR and tracking error are zero without rounded centering artifacts. Nonconstant
+native wider excess uses anchored native sample variance/std retained through
+the original IR quotient and tracking-error annualization. Needed native underflow
+raises ValueError without narrowing fallback; final float tracking error can round
+to zero while native dispersion still supports nonzero IR. Ordinary nonconstant
+paths, mean, beta/alpha, excess metadata and drawdown remain. This is not universal
+precision certification and changes no threshold, calibration identity or record.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

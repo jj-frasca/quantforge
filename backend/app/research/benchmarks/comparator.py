@@ -49,6 +49,21 @@ def _anchored_native_wide_beta(strategy: pd.Series, benchmark: pd.Series) -> flo
         raise ValueError("native-wide beta moments must be measurable") from exc
 
 
+def _anchored_native_wide_excess_std(excess: pd.Series) -> np.longdouble:
+    """Retain wider sample dispersion through final statistics (ADR-272)."""
+    try:
+        with np.errstate(under="raise"):
+            values = excess.to_numpy(dtype=np.longdouble)
+            delta = values - values[0]
+            deviations = delta - delta.mean()
+            variance = np.longdouble(np.sum(deviations * deviations) / (len(values) - 1))
+            if not np.isfinite(variance) or variance <= 0:
+                raise ValueError("native-wide excess dispersion must be measurable")
+            return np.longdouble(np.sqrt(variance))
+    except FloatingPointError as exc:
+        raise ValueError("native-wide excess dispersion must be measurable") from exc
+
+
 class BenchmarkComparator:
     """Compares a strategy's returns to a benchmark (default SPY), backtesting-spec.md §5.
 
@@ -141,7 +156,16 @@ class BenchmarkComparator:
                 beta = native_beta
             alpha = float((strat.mean() - beta * bench.mean()) * TRADING_DAYS)
 
-            excess_std = float(excess.std())
+            if excess.eq(excess.iloc[0]).all():
+                excess_std: float | np.longdouble = 0.0
+            elif (
+                isinstance(excess.dtype, np.dtype)
+                and excess.dtype.kind == "f"
+                and excess.dtype.itemsize > np.dtype(float).itemsize
+            ):
+                excess_std = _anchored_native_wide_excess_std(excess)
+            else:
+                excess_std = float(excess.std())
             sqrt_t = np.sqrt(TRADING_DAYS)
             information_ratio = (
                 float(sqrt_t * excess.mean() / excess_std) if excess_std > 0 else 0.0
