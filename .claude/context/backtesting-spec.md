@@ -408,6 +408,15 @@ can be <=-1, since it is not a positive-wealth source return. Large original sou
 means/covariance and mixed signed precision remain separate limits; no threshold,
 calibration identity or generated record changes.
 
+ADR-274 additionally routes original mixed signed/unsigned native/classic masked
+integer pairs through the same exact difference/certified encoding helper. Family
+scope deliberately gives every mixed pair plain native floating excess, including
+small pairs whose prior subtraction worked; IR/TE can change through ADR-272.
+Both-unsigned ADR-273, signed-only and floating/native-wide paths retain exact
+code/results. Original missing/negative source guards still precede subtraction;
+derived negative differences remain valid. Source moments/beta/alpha/drawdown and
+precision limitations remain; no threshold, calibration or generated record change.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

@@ -19,6 +19,13 @@ _MASKED_NUMERIC_DTYPES = (
     pd.UInt64Dtype,
 )
 _MASKED_UNSIGNED_DTYPES = (pd.UInt8Dtype, pd.UInt16Dtype, pd.UInt32Dtype, pd.UInt64Dtype)
+_MASKED_INTEGER_DTYPES = (
+    pd.Int8Dtype,
+    pd.Int16Dtype,
+    pd.Int32Dtype,
+    pd.Int64Dtype,
+    *_MASKED_UNSIGNED_DTYPES,
+)
 
 
 @dataclass(frozen=True)
@@ -51,7 +58,7 @@ def _anchored_native_wide_beta(strategy: pd.Series, benchmark: pd.Series) -> flo
 
 
 def _exact_unsigned_excess(strategy: pd.Series, benchmark: pd.Series) -> pd.Series:
-    """Subtract integers before encoding, refusing rounded evidence (ADR-273)."""
+    """Certify integer differences for pairs containing unsigned returns (ADR-273/274)."""
     differences = [int(a) - int(b) for a, b in zip(strategy, benchmark, strict=True)]
     values = np.asarray(differences, dtype=np.longdouble)
     if any(
@@ -123,8 +130,12 @@ class BenchmarkComparator:
             or isinstance(returns.dtype, _MASKED_UNSIGNED_DTYPES)
             for returns in (strat, bench)
         )
+        mixed_integer_sources = {strat.dtype.kind, bench.dtype.kind} == {"i", "u"} and all(
+            isinstance(returns.dtype, (np.dtype, *_MASKED_INTEGER_DTYPES))
+            for returns in (strat, bench)
+        )
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
-            if unsigned_sources:
+            if unsigned_sources or mixed_integer_sources:
                 excess = _exact_unsigned_excess(strat, bench)
             elif wide_source and any(
                 isinstance(returns.dtype, _MASKED_NUMERIC_DTYPES) for returns in (strat, bench)
