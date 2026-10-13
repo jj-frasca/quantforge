@@ -374,6 +374,14 @@ centering. Original native equality preserves wider distinct observations and pa
 all nonconstant ADR-268 arithmetic and downstream formulas remain. Alpha naturally changes with
 corrected beta. Near-constant/wide moment precision and other comparator statistics stay separate.
 
+ADR-270 corrects the native wider nonconstant beta path with matched anchored centered sums
+of original aligned values. Sample n-1 factors cancel; covariance/benchmark-deviation sums
+remain native through division, then only final beta becomes float. Needed wider underflow
+or an invalid denominator raises ValueError without a narrowed fallback; no unused strategy
+variance is computed. Ordinary/nullable nonwide arithmetic and all other formulas remain.
+Already-rounded sources, uneven translations, other statistics and native measurability limits
+are not certified; thresholds, calibration identity and generated records remain unchanged.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

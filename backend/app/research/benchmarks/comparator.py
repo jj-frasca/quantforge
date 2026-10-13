@@ -17,6 +17,25 @@ class BenchmarkComparison:
     benchmark_relative_drawdown: float
 
 
+def _anchored_native_wide_beta(strategy: pd.Series, benchmark: pd.Series) -> float:
+    """Match wider centered sums without narrowing or unused variance (ADR-270)."""
+    try:
+        with np.errstate(under="raise"):
+            strategy_values = strategy.to_numpy(dtype=np.longdouble)
+            benchmark_values = benchmark.to_numpy(dtype=np.longdouble)
+            strategy_delta = strategy_values - strategy_values[0]
+            benchmark_delta = benchmark_values - benchmark_values[0]
+            strategy_dev = strategy_delta - strategy_delta.mean()
+            benchmark_dev = benchmark_delta - benchmark_delta.mean()
+            denominator = np.longdouble(np.sum(benchmark_dev * benchmark_dev))
+            if not np.isfinite(denominator) or denominator <= 0:
+                raise ValueError("native-wide beta denominator must be positive and finite")
+            numerator = np.longdouble(np.sum(strategy_dev * benchmark_dev))
+            return float(numerator / denominator)
+    except FloatingPointError as exc:
+        raise ValueError("native-wide beta moments must be measurable") from exc
+
+
 class BenchmarkComparator:
     """Compares a strategy's returns to a benchmark (default SPY), backtesting-spec.md §5.
 
@@ -54,15 +73,26 @@ class BenchmarkComparator:
 
             # Exact native constants have zero covariance before rounded centering (ADR-269).
             constant_source = bool(strat.eq(strat.iloc[0]).all() or bench.eq(bench.iloc[0]).all())
+            wide_source = any(
+                isinstance(returns.dtype, np.dtype)
+                and returns.dtype.kind == "f"
+                and returns.dtype.itemsize > np.dtype(float).itemsize
+                for returns in (strat, bench)
+            )
+            needs_scaled = False
             try:
                 with np.errstate(under="raise"):
-                    bench_var = 0.0 if constant_source else float(bench.var())
-                    native_beta = float(strat.cov(bench) / bench_var) if bench_var > 0 else 0.0
+                    if wide_source and not constant_source:
+                        native_beta = _anchored_native_wide_beta(strat, bench)
+                    else:
+                        bench_var = 0.0 if constant_source else float(bench.var())
+                        needs_scaled = bench_var == 0.0
+                        native_beta = float(strat.cov(bench) / bench_var) if bench_var > 0 else 0.0
             except FloatingPointError:
                 # Positive variance/covariance can also lose evidence to underflow (ADR-268).
                 # Reuse scaled recovery without changing the native path otherwise.
-                bench_var, native_beta = 0.0, 0.0
-            if not constant_source and bench_var == 0.0 and np.any(bench_values != bench_values[0]):
+                needs_scaled, native_beta = True, 0.0
+            if not constant_source and needs_scaled and np.any(bench_values != bench_values[0]):
                 # A nonconstant benchmark is not the constant-series convention: sample
                 # squares can underflow. Scale the same covariance ratio (ADR-181).
                 bench_scale = float(np.abs(bench_values).max())

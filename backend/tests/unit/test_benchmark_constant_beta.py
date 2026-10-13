@@ -60,10 +60,9 @@ def test_beta_native_wide_distinctions_are_not_float64_constants() -> None:
     assert not returns.eq(returns.iloc[0]).all()
     if np.finfo(np.longdouble).nmant > np.finfo(float).nmant:
         assert np.all(returns.to_numpy(dtype=float) == float(base))
-    # Independent native formula baseline; this is preservation, not a precision claim.
-    expected = float(returns.cov(returns) / float(returns.var()))
+    # ADR-270 corrects the separately documented wider moment loss: same-series beta is one.
     result = BenchmarkComparator().compare(returns, returns)
-    assert result.beta == expected
+    assert result.beta == 1
     assert result.beta != 0
 
 
