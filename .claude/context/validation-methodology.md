@@ -94,8 +94,8 @@ ADR-289 subsequently advances accounting to v12 for certified PBO translation.
 ADR-290 then advances to v13 for certified native primary Sharpe translation.
 ADR-291 advances to v14 for certified OOS selection/test/control translation.
 All historical v13/v12/v11 and frozen v10 cohorts retain their executed identity and cannot certify
-v14. Current-version null, power, heavy-tail and bootstrap distributions are
-unmeasured; frozen sources/results are not rerun, redrawn or relabeled. No actual
+v14. Those current-version distributions were unmeasured at adoption; F241
+below subsequently measures one local iid-normal cohort only; frozen sources/results are not rerun, redrawn or relabeled. No actual
 false graduate is established and no threshold or generated-data change is made.
 
 Local session15's fixed v9 iid cohort completed200/noerrors/0graduates/0ADR018
@@ -107,6 +107,15 @@ identical result payloads except the search fingerprint. These are 200 paired
 sources, not 400 independent observations; the one-sided95% zero-event upper
 limit remains1.4867% for each version. Power, heavy-tail stress and bootstrap
 remain separate, unmeasured controls; generated data unchanged.
+
+FINDING-241 measures one NEW fixed local v14 iid-normal cohort at executed
+66c1c5d8: 200/200 sources, zero errors/graduates/ADR018 survivors, one-sided95%
+zero-event upper1.4867%. Full34/defaultGate/refine/nper3/7400/prior0/noStore;
+combinedN200 bar1.3432393159670402. Historical v10/v9 sources were not rerun or
+pooled. Current power, heavy-tail, bootstrap and published sole-writer artifacts
+remain separately unmeasured; this local law-only result is not a threshold
+permission or complete ADR102 candidate comparison. See F241 for frozen hashes,
+checkpoint/source audits and pre-search reader-unit refusal/amendment.
 
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
@@ -323,7 +332,8 @@ first-index ties, benchmark windows, folds and aggregation stay. This does not
 certify arbitrary numerator precision or universally exact rankings/rounding.
 Accounting advances to
 `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-sharpe-exact-translation-oos-exact-translation-v14`.
-Current null/power/heavy-tail/bootstrap distributions remain unmeasured; historical
+At adoption current distributions were unmeasured; F241 subsequently supplies
+one local iid-normal cohort. Power/heavy-tail/bootstrap remain unmeasured; historical
 v13/v12/v11 and frozen v10 retain executed attribution without rerun/redraw/pooling
 or relabeling. Primary ADR-290 and PBO ADR-289 contracts remain independent.
 
