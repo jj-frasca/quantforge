@@ -152,6 +152,30 @@ def sharpe_confidence_interval(
     )
 
 
+def _recover_float64_sortino_downside(values: NDArray[np.float64], total: float) -> float | None:
+    """Retain original sum evidence through failed downside recovery (ADR-288)."""
+    if total == 0:
+        return 0.0
+    with np.errstate(all="ignore"):
+        shortfall = np.minimum(values, 0.0)
+        scale = float(np.max(np.abs(shortfall)))
+        if not np.isfinite(scale) or scale <= 0:
+            return None
+        rms = float(np.sqrt(np.mean((shortfall / scale) ** 2)))
+        if not np.isfinite(rms) or rms <= 0:
+            return None
+        sum_mantissa, sum_exponent = frexp(total)
+        downside_mantissa, downside_exponent = frexp(scale)
+        mantissa_ratio = (
+            np.sqrt(TRADING_DAYS) * sum_mantissa / rms / len(values) / downside_mantissa
+        )
+        try:
+            score = ldexp(float(mantissa_ratio), sum_exponent - downside_exponent)
+        except OverflowError:
+            return None
+    return score if np.isfinite(score) else None
+
+
 def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
     """Annualized Sortino ratio (Sortino & van der Meer 1991), ADR-107.
 
@@ -168,6 +192,7 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
         ADR-206 forms nonzero-target excess before averaging and compares float64
         observations, avoiding cancellation and narrow-dtype target rounding. ADR-207
         recovers detected native underflow and zero means with lost original sum evidence.
+        ADR-288 retains original sums for finite failed default-target Float64 downside.
     """
     target_evidence: object = target
     if isinstance(target_evidence, (bool, np.bool_)) or not isinstance(target_evidence, Real):
@@ -184,6 +209,12 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
     values = returns.to_numpy(dtype=np.float64)
     if not (values < target).any():
         return 0.0
+    float64_source = isinstance(returns.dtype, pd.Float64Dtype) or (
+        isinstance(returns.dtype, np.dtype)
+        and returns.dtype.kind == "f"
+        and returns.dtype.itemsize == 8
+    )
+    recover_downside = False
     with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
         excess = values - target
         shortfall = np.minimum(excess, 0.0)
@@ -191,7 +222,17 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
             # A finite subnormal moment can already have lost precision. Detect
             # native underflow before accepting it; recovery uses normalized data.
             with np.errstate(under="raise"):
-                semi_std = float(np.sqrt(np.mean(shortfall**2)))
+                try:
+                    semi_std = float(np.sqrt(np.mean(shortfall**2)))
+                except FloatingPointError:
+                    if float64_source and target == 0:
+                        with np.errstate(under="ignore"):
+                            semi_std = float(np.sqrt(np.mean(shortfall**2)))
+                        recover_downside = bool(np.isfinite(semi_std))
+                    raise
+                recover_downside = bool(
+                    float64_source and target == 0 and np.isfinite(semi_std) and semi_std == 0
+                )
                 # Preserve the original pandas estimator at the default target.
                 excess_mean = float(returns.mean() if target == 0 else pd.Series(excess).mean())
                 if np.isfinite(semi_std) and semi_std > 0 and np.isfinite(excess_mean):
@@ -201,6 +242,14 @@ def sortino_ratio(returns: pd.Series, target: float = 0.0) -> float | None:
         except (FloatingPointError, OverflowError):
             # fsum overflow also leaves a native zero uncertified.
             pass
+        if recover_downside:
+            try:
+                original_total = fsum(values)
+            except OverflowError:
+                # The prior fallback retains its existing unmeasured/overflow policy.
+                pass
+            else:
+                return _recover_float64_sortino_downside(values, original_total)
         if not np.isfinite(excess).all():
             # Subtract first whenever representable: scaling near-equal source and
             # target separately can erase their exact-float difference.

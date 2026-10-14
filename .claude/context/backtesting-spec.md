@@ -320,6 +320,17 @@ cancellation and legitimately rounded tiny ratios remain measured zero. Nonzero
 native measurable scores remain; no blanket finite-precision guarantee applies.
 Required nullable contract and descriptive-only calibration identity remain.
 
+ADR-288 / FINDING-237 preserves original fsum evidence only for original
+native/classic Float64 with default target zero and finite native downside RMS
+underflow/collapse. Original negative shortfalls are normalized separately;
+sum/downside mantissas restore one exponent difference after full-sample division
+and annualization. Genuine cancellation, subnormal/signed-zero rounding and final
+overflow None retain their meaning. Uncertifiable fsum overflow, nonfinite RMS,
+mean/ratio-only failure, nonzero targets, other families and ordinary native
+results keep prior paths. Selected exact oracles and ADR-212's one-output-ULP
+subnormal controls do not certify universal precision. Descriptive accounting
+stays v11, current calibration is unmeasured and frozen cohorts remain unchanged.
+
 ADR-188 validates both Calmar scalar inputs before zero-drawdown shortcuts and rejects a
 nonfinite native quotient; finite signed ratio semantics and the absolute denominator remain.
 
