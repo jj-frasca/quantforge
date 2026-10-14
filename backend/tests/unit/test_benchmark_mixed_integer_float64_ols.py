@@ -194,8 +194,13 @@ def test_mixed_ols_preserves_predecessor_and_other_families(
     pair: tuple[object, object],
 ) -> None:
     a, b = pd.Series([0, 1, 2], dtype=pair[0]), pd.Series([0, 2, 1], dtype=pair[1])
-    if pair == ("float64", "Float64"):
-        result = comparator.BenchmarkComparator().compare(a, b)
+    if pair in (("float64", "Float64"), ("float32", "float64")):
+        # ADR-285 admits narrow/Float64 while preserving both-Float64 routing.
+        with patch.object(
+            comparator, "_exact_float64_ols", wraps=comparator._exact_float64_ols
+        ) as exact_ols:
+            result = comparator.BenchmarkComparator().compare(a, b)
+        assert exact_ols.call_count == 1
     else:
         with patch.object(
             comparator,

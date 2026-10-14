@@ -218,7 +218,7 @@ def _exact_narrow_alpha(
 def _exact_float64_ols(
     strategy: pd.Series, benchmark: pd.Series, *, constant_source: bool
 ) -> tuple[float, float]:
-    """Round final Float64 or mixed integer/Float64 OLS coefficients (ADR-283/284)."""
+    """Round final supported Float64-containing OLS coefficients (ADR-283/284/285)."""
 
     def ratio(value: float | int) -> tuple[int, int]:
         return (int(value), 1) if isinstance(value, (int, np.integer)) else value.as_integer_ratio()
@@ -334,19 +334,24 @@ class BenchmarkComparator:
             and bench.dtype.kind == "f"
             and bench.dtype.itemsize < np.dtype(float).itemsize
         )
-        float64_sources = (
-            all(
-                isinstance(returns.dtype, pd.Float64Dtype)
-                or (
-                    isinstance(returns.dtype, np.dtype)
-                    and returns.dtype.kind == "f"
-                    and returns.dtype.itemsize == np.dtype(float).itemsize
-                )
-                or (isinstance(returns.dtype, np.dtype) and returns.dtype.kind in ("i", "u"))
-                or isinstance(returns.dtype, _MASKED_INTEGER_DTYPES)
-                for returns in (strat, bench)
+        float64_sources = any(
+            isinstance(returns.dtype, pd.Float64Dtype)
+            or (
+                isinstance(returns.dtype, np.dtype)
+                and returns.dtype.kind == "f"
+                and returns.dtype.itemsize == np.dtype(float).itemsize
             )
-            and not integer_sources
+            for returns in (strat, bench)
+        ) and all(
+            isinstance(returns.dtype, _MASKED_NUMERIC_DTYPES)
+            or (
+                isinstance(returns.dtype, np.dtype)
+                and (
+                    returns.dtype.kind in ("i", "u")
+                    or (returns.dtype.kind == "f" and returns.dtype.itemsize in (2, 4, 8))
+                )
+            )
+            for returns in (strat, bench)
         )
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
             if unsigned_sources or mixed_integer_sources:

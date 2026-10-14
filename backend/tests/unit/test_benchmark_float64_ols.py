@@ -182,8 +182,8 @@ def test_float64_ols_other_source_family_bypasses_exact_helper(
     strategy = pd.Series([1, 2, 3], dtype=other if side == "strategy" else dtype)
     benchmark = pd.Series([1, 2, 3], dtype=other if side == "benchmark" else dtype)
     expected = BenchmarkComparator().compare(strategy, benchmark)
-    if other in {"int64", "Int64", "uint64", "UInt64"}:
-        # ADR-284 intentionally admits these original mixed integer/Float64 pairs.
+    if other in {"int64", "Int64", "uint64", "UInt64", "float16", "float32", "Float32"}:
+        # ADR-284/285 intentionally admit these original mixed numeric/Float64 pairs.
         with patch.object(
             comparator, "_exact_float64_ols", wraps=comparator._exact_float64_ols
         ) as exact_ols:

@@ -515,6 +515,16 @@ retain their results. Mixed coefficient rounding changes family-wide, while
 original excess/IR/TE/drawdown/metadata/guards remain. Already-rounded mixed
 excess is a separate precision limit. No threshold, calibration or record changes.
 
+ADR-285 additionally admits nativefloat16/32 orclassicFloat32 paired with
+native/classic Float64 to that unchanged exact coupled coefficient helper.
+Eligibility requires an original Float64 source and two supported native/
+classic integer or float16/32/64 sources, excluding both-narrow, both-integer,
+integer/narrow, genuine wider and third-party pairs. All predecessor coefficient
+results and original other statistics/guards/metadata remain. Family-wide mixed
+floating coefficient rounding changes; final overflow refuses and legitimate
+zero/subnormal remains. Unrelated mean/excess/risk availability and precision
+stay separate; no threshold, calibration identity or generated-record changes.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)
