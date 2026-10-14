@@ -4,10 +4,11 @@ Formal contracts for the research engine (Phase 3). Read when working on
 `backend/app/research/`. Decisions: ADR-007 (vectorized pandas/numpy, NOT vectorbt).
 Behavioral rules live in CLAUDE.md; this holds shapes, formulas, and the oracle tests.
 
-Current search accounting is v13 via ADR-289's certified PBO translation and
-ADR-290's certified primary Sharpe translation. Version numbers inside earlier
+Current search accounting is v14 via ADR-289's certified PBO translation,
+ADR-290's certified primary Sharpe translation and ADR-291's certified OOS
+selection/test/control translation. Version numbers inside earlier
 ADR summaries describe their adoption identity; current calibration distributions
-are unmeasured. Historical v12/v11 and frozen v10 cohorts retain executed attribution.
+are unmeasured. Historical v13/v12/v11 and frozen v10 cohorts retain executed attribution.
 
 ---
 

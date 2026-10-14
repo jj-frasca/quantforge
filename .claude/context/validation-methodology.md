@@ -92,14 +92,15 @@ ordinary native estimates retain prior behavior. Trial accounting now advances t
 `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-v11`.
 ADR-289 subsequently advances accounting to v12 for certified PBO translation.
 ADR-290 then advances to v13 for certified native primary Sharpe translation.
-All historical v12/v11 and frozen v10 cohorts retain their executed identity and cannot certify
-v13. Current-version null, power, heavy-tail and bootstrap distributions are
+ADR-291 advances to v14 for certified OOS selection/test/control translation.
+All historical v13/v12/v11 and frozen v10 cohorts retain their executed identity and cannot certify
+v14. Current-version null, power, heavy-tail and bootstrap distributions are
 unmeasured; frozen sources/results are not rerun, redrawn or relabeled. No actual
 false graduate is established and no threshold or generated-data change is made.
 
 Local session15's fixed v9 iid cohort completed200/noerrors/0graduates/0ADR018
 survivors (F156), independently audited with a one-sided95% zero-event upper
-limit of1.4867%. It is historical f1891104/v9 evidence, not v10/v11/v12/v13 certification
+limit of1.4867%. It is historical f1891104/v9 evidence, not v10/v11/v12/v13/v14 certification
 or power/bootstrap coverage. F157 records the completed paired v10 cohort at
 380df982: identical sources, 200/no errors/0 graduates/0 ADR018 survivors, and
 identical result payloads except the search fingerprint. These are 200 paired
@@ -308,6 +309,24 @@ diagnostic distributions are unmeasured until an authorized sole-writer refresh.
   because the selection earns *drift*, so any future gate on this must be stated against
   buy-and-hold on the same windows, never against zero (ADR-038 §Measured).
 
+ADR-291 / FINDING-240 corrects original represented Float64 OOS scores only after
+all existing native moment/annualized-score guards. Independent original matrix
+and benchmark flags (kind f, itemsize 8, including byte order) reach every train,
+selected test and kept control block. Same-sign nonzero maxabs<=2minabs certifies
+exact anchor subtraction; normalized difference ddof1 STD and separated exponents
+retain the actual accepted native mean. Mixed/zero/wider-spread, native zero mean,
+other sources and all native failures retain their prior results/refusals.
+Positive partial-underflow native STD remains eligible under the existing ignore
+policy. The frozen synthetic fixture selects config0 instead of wrong config1;
+no actual graduate, leakage or market effect is established. Geometry, argmax
+first-index ties, benchmark windows, folds and aggregation stay. This does not
+certify arbitrary numerator precision or universally exact rankings/rounding.
+Accounting advances to
+`whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-sharpe-exact-translation-oos-exact-translation-v14`.
+Current null/power/heavy-tail/bootstrap distributions remain unmeasured; historical
+v13/v12/v11 and frozen v10 retain executed attribution without rerun/redraw/pooling
+or relabeling. Primary ADR-290 and PBO ADR-289 contracts remain independent.
+
 ---
 
 ## 4. Purged K-Fold CV (ADR-039)
@@ -331,6 +350,10 @@ that gap IS the optimistic bias, and it is why the two are never averaged.
 - **Invariant**: no training index lies within `embargo` of any test index (no leakage).
 - A sample too short to hold the folds plus an honest embargo reports `purged_cv=None` plus a
   flag. Shrinking the embargo to fit would emit a leaky number labelled "purged".
+
+ADR-291 applies the same certified OOS scalar correction described in §3 to
+purged train/selected-test scores and its independently sourced benchmark on kept
+folds. Embargo, intentionally noncausal training, dropping and pairing remain.
 
 ADR-198 verifies the evaluator's declared nonnegative integral embargo against supplied fold
 rows: integer/bounded/unique ascending arrays, contiguous kept test blocks, and no train row

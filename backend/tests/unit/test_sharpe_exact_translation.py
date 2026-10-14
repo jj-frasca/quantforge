@@ -17,15 +17,16 @@ from app.research.lab.gate import GateConfig
 
 _V12 = "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-v12"
 _V13 = "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-sharpe-exact-translation-v13"
+_V14 = _V13.removesuffix("-v13") + "-oos-exact-translation-v14"
 
 
 def test_sharpe_translation_advances_identity_and_preserves_historical_v12(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert calibration._TRIAL_ACCOUNTING_VERSION == _V13
+    assert calibration._TRIAL_ACCOUNTING_VERSION == _V14
     kwargs = {"n_per_param": 3, "config": GateConfig(), "refine": True, "refine_span": 0.25}
     current = calibration.calibration_search_version(["sma", "momentum"], **kwargs)
-    assert current == "d89985d6dc2affeceff9e72c73a9e07ecd76508b43e5948a5a1ac865c491648d"
+    assert current == "ece94d5f4a3d9713249f42ab7764128b348415487bdc411b608c2dc93f930080"
     monkeypatch.setattr(calibration, "_TRIAL_ACCOUNTING_VERSION", _V12)
     historical = calibration.calibration_search_version(["sma", "momentum"], **kwargs)
     assert historical == "d84be10e9f71134607ce9c42db52eedee71cc93f2f45db8b0acf637ab592bf68"

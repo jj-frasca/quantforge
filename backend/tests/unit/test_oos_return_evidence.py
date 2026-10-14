@@ -1,6 +1,8 @@
 """Original real numeric and complete finite evidence at both OOS diagnostic boundaries."""
 
 import math
+from decimal import Decimal, localcontext
+from fractions import Fraction
 from functools import partial
 
 import numpy as np
@@ -70,14 +72,24 @@ def test_oos_exact_constant_selection_matches_independent_score(evaluate) -> Non
     assert result.mean_oos_sharpe == pytest.approx(expected)
 
 
-def test_oos_nearly_constant_evidence_retains_native_arithmetic(evaluate) -> None:
+def test_oos_nearly_constant_evidence_retains_represented_variance(evaluate) -> None:
     positive = np.tile([0.1, np.nextafter(0.1, 1), 0.1], 4)
     performance = np.column_stack((positive, -positive))
-    expected = float(np.sqrt(252) * positive[6:].mean() / positive[6:].std(ddof=1))
+    values = [Fraction(float(value)) for value in positive[6:]]
+    center = sum(values) / len(values)
+    variance = sum((value - center) ** 2 for value in values) / (len(values) - 1)
+    numerator = Fraction(float(positive[6:].mean()))
+    with localcontext() as context:
+        context.prec = 800
+        expected = float(
+            Decimal(252).sqrt()
+            * (Decimal(numerator.numerator) / Decimal(numerator.denominator))
+            / (Decimal(variance.numerator) / Decimal(variance.denominator)).sqrt()
+        )
     assert expected > 0
     with np.errstate(all="raise"):
         result = evaluate(performance, [(np.arange(6), np.arange(6, 12))])
-    assert result.mean_oos_sharpe == expected
+    assert result.mean_oos_sharpe == pytest.approx(expected, rel=5e-14, abs=0)
 
 
 @pytest.mark.parametrize("role", ["performance", "benchmark"])

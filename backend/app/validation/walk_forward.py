@@ -5,6 +5,7 @@ import numpy.typing as npt
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.research.backtesting.metrics import TRADING_DAYS
+from app.validation._sharpe import _certified_float64_sharpe
 from app.validation.result_graph import FrozenResultList
 
 IntArray = npt.NDArray[np.intp]
@@ -112,7 +113,7 @@ class WalkForwardResult(BaseModel):
         return self
 
 
-def _sharpe(returns: FloatArray) -> float:
+def _sharpe(returns: FloatArray, *, exact_translation: bool = True) -> float:
     """Annualized, matching metrics.sharpe_ratio — these numbers sit next to the observed and
     holdout Sharpes, so a per-bar figure would read as a sqrt(252)x weaker result."""
     if len(returns) < 2 or np.all(returns == returns[0]):
@@ -125,7 +126,7 @@ def _sharpe(returns: FloatArray) -> float:
         score = float(np.sqrt(TRADING_DAYS) * mean / std)
     if not math.isfinite(score):
         raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
-    return score
+    return _certified_float64_sharpe(returns, mean, score) if exact_translation else score
 
 
 def walk_forward_evaluate(
@@ -166,6 +167,10 @@ def walk_forward_evaluate(
         raise ValueError("performance must carry real numeric returns")
     if benchmark is not None and benchmark.dtype.kind not in "iuf":
         raise ValueError("benchmark must carry real numeric returns")
+    original_float64 = performance.dtype.kind == "f" and performance.dtype.itemsize == 8
+    benchmark_float64 = (
+        benchmark is not None and benchmark.dtype.kind == "f" and benchmark.dtype.itemsize == 8
+    )
     with np.errstate(over="ignore", invalid="ignore"):
         performance = np.asarray(performance, dtype=np.float64)
         if benchmark is not None:
@@ -196,13 +201,16 @@ def walk_forward_evaluate(
         for source in row_sources:
             if np.ma.isMaskedArray(source) and np.any(np.ma.getmaskarray(source)):
                 raise ValueError("split rows cannot have masked identities")
-        train_sharpes = [_sharpe(performance[train_idx, c]) for c in range(performance.shape[1])]
+        train_sharpes = [
+            _sharpe(performance[train_idx, c], exact_translation=original_float64)
+            for c in range(performance.shape[1])
+        ]
         best = int(np.argmax(train_sharpes))
         results.append(
             WalkForwardSplitResult(
                 selected_config=best,
                 is_sharpe=train_sharpes[best],
-                oos_sharpe=_sharpe(performance[test_idx, best]),
+                oos_sharpe=_sharpe(performance[test_idx, best], exact_translation=original_float64),
                 n_train=len(train_idx),
                 n_test=len(test_idx),
             )
@@ -220,6 +228,13 @@ def walk_forward_evaluate(
         mean_oos_hold_sharpe=(
             None
             if benchmark is None
-            else float(np.mean([_sharpe(benchmark[test_idx]) for _, test_idx in splits]))
+            else float(
+                np.mean(
+                    [
+                        _sharpe(benchmark[test_idx], exact_translation=benchmark_float64)
+                        for _, test_idx in splits
+                    ]
+                )
+            )
         ),
     )

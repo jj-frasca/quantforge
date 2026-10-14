@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.research.backtesting.metrics import TRADING_DAYS
 from app.research.strategies.base import BaseStrategy
+from app.validation._sharpe import _certified_float64_sharpe
 from app.validation.result_graph import FrozenResultList
 
 IntArray = npt.NDArray[np.intp]
@@ -130,7 +131,7 @@ def lookback_embargo(configs: Sequence[BaseStrategy], floor: int) -> int:
     return max([floor, *lookbacks])
 
 
-def _sharpe(returns: FloatArray) -> float:
+def _sharpe(returns: FloatArray, *, exact_translation: bool = True) -> float:
     """Annualized, matching metrics.sharpe_ratio (ADR-039) so folds are comparable with the
     observed, holdout and walk-forward Sharpes."""
     if len(returns) < 2 or np.all(returns == returns[0]):
@@ -143,7 +144,7 @@ def _sharpe(returns: FloatArray) -> float:
         score = float(np.sqrt(TRADING_DAYS) * mean / std)
     if not math.isfinite(score):
         raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
-    return score
+    return _certified_float64_sharpe(returns, mean, score) if exact_translation else score
 
 
 def purged_cv_evaluate(
@@ -186,6 +187,10 @@ def purged_cv_evaluate(
         raise ValueError("performance must carry real numeric returns")
     if benchmark is not None and benchmark.dtype.kind not in "iuf":
         raise ValueError("benchmark must carry real numeric returns")
+    original_float64 = performance.dtype.kind == "f" and performance.dtype.itemsize == 8
+    benchmark_float64 = (
+        benchmark is not None and benchmark.dtype.kind == "f" and benchmark.dtype.itemsize == 8
+    )
     with np.errstate(over="ignore", invalid="ignore"):
         performance = np.asarray(performance, dtype=np.float64)
         if benchmark is not None:
@@ -234,13 +239,16 @@ def purged_cv_evaluate(
         if empty_fold:
             continue
         if benchmark is not None:
-            hold_sharpes.append(_sharpe(benchmark[test_idx]))
-        train_sharpes = [_sharpe(performance[train_idx, c]) for c in range(performance.shape[1])]
+            hold_sharpes.append(_sharpe(benchmark[test_idx], exact_translation=benchmark_float64))
+        train_sharpes = [
+            _sharpe(performance[train_idx, c], exact_translation=original_float64)
+            for c in range(performance.shape[1])
+        ]
         best = int(np.argmax(train_sharpes))
         folds.append(
             PurgedCVFoldResult(
                 selected_config=best,
-                oos_sharpe=_sharpe(performance[test_idx, best]),
+                oos_sharpe=_sharpe(performance[test_idx, best], exact_translation=original_float64),
                 n_train=len(train_idx),
                 n_test=len(test_idx),
             )

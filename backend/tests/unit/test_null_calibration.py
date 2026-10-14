@@ -1465,14 +1465,15 @@ def test_the_search_fingerprint_is_stable_across_code_changes() -> None:
     explicitly versioned accounting method: unrelated code must not drift it, while ADR-104's PBO
     scope, ADR-105's ties, ADR-201 through ADR-209's native moment policies and
     ADR-286's anchored Float64 dispersion recovery and ADR-289's
-    certified native PBO translation and ADR-290's primary Sharpe translation must.
+    certified native PBO translation, ADR-290's primary Sharpe translation
+    and ADR-291's OOS translation must.
     The literal pins that identity until another
     governed procedure or catalog change deliberately updates it."""
     assert (
         calibration_search_version(
             ["sma", "momentum"], n_per_param=3, config=GateConfig(), refine=True, refine_span=0.25
         )
-        == "d89985d6dc2affeceff9e72c73a9e07ecd76508b43e5948a5a1ac865c491648d"
+        == "ece94d5f4a3d9713249f42ab7764128b348415487bdc411b608c2dc93f930080"
     )
 
 
