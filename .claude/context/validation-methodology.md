@@ -91,14 +91,15 @@ fsum/exponent recovery. Nonfinite STD, mean/ratio-only failures, other families 
 ordinary native estimates retain prior behavior. Trial accounting now advances to
 `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-v11`.
 ADR-289 subsequently advances accounting to v12 for certified PBO translation.
-All historical v11 and frozen v10 cohorts retain their executed identity and cannot certify
-v12. Current-version null, power, heavy-tail and bootstrap distributions are
+ADR-290 then advances to v13 for certified native primary Sharpe translation.
+All historical v12/v11 and frozen v10 cohorts retain their executed identity and cannot certify
+v13. Current-version null, power, heavy-tail and bootstrap distributions are
 unmeasured; frozen sources/results are not rerun, redrawn or relabeled. No actual
 false graduate is established and no threshold or generated-data change is made.
 
 Local session15's fixed v9 iid cohort completed200/noerrors/0graduates/0ADR018
 survivors (F156), independently audited with a one-sided95% zero-event upper
-limit of1.4867%. It is historical f1891104/v9 evidence, not v10/v11/v12 certification
+limit of1.4867%. It is historical f1891104/v9 evidence, not v10/v11/v12/v13 certification
 or power/bootstrap coverage. F157 records the completed paired v10 cohort at
 380df982: identical sources, 200/no errors/0 graduates/0 ADR018 survivors, and
 identical result payloads except the search fingerprint. These are 200 paired
@@ -235,11 +236,26 @@ ties, masks and strict pbo_max stay. Eligible finite positive partial-underflow 
 can change; zero/nonfinite native STD still refuses. The frozen synthetic matrix
 changes PBO1/3 to exact-variance2/3, crossing the existing gate; no actual graduate
 is established. Known-native-mean exact variance controls do not certify arbitrary
-numerator accuracy or universal correct rounding/ranking. Primary Sharpe/OOS
-centering remains separate. Accounting advances to
+numerator accuracy or universal correct rounding/ranking. Primary Sharpe centering
+is separately corrected by ADR-290 within its own certified range; OOS centering
+remains separate. This PBO correction advanced accounting to
 `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-v12`;
 current distributions are unmeasured and historical v11/frozen v10 evidence stays
 attributed. No cohort redraw, threshold, selector or generated-record changes.
+
+ADR-290 / FINDING-239 corrects original native/classic Float64 primary Sharpe
+only after native positive STD/nonzero mean/finite score acceptance without
+detected STD/mean/ratio failure. Same-sign nonzero observations with maxabs<=2*minabs
+certify exact anchor subtraction; normalized-difference sample STD and separated
+mean/scale exponents retain the actual accepted native mean. Existing ADR-286
+underflow recovery, zero means, other families and mixed/zero/wider-spread native
+paths stay. The derived iid interval follows corrected Sharpe with unchanged
+formula/assumptions; other metrics and ADR-289 PBO remain. Known-native-mean exact
+variance controls do not certify arbitrary numerator accuracy or universal
+rounding. Accounting now advances to
+`whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-sharpe-exact-translation-v13`;
+current distributions are unmeasured, historical v12/v11 and frozen v10 retain
+executed identity, and no threshold, cohort or generated-record changes occur.
 
 ---
 

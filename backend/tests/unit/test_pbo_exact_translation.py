@@ -20,15 +20,16 @@ from app.validation import pbo
 
 _V11 = "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-v11"
 _V12 = "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-v12"
+_V13 = "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-sharpe-exact-translation-v13"
 
 
 def test_pbo_translation_advances_identity_and_preserves_historical_v11(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert calibration._TRIAL_ACCOUNTING_VERSION == _V12
+    assert calibration._TRIAL_ACCOUNTING_VERSION == _V13
     kwargs = {"n_per_param": 3, "config": GateConfig(), "refine": True, "refine_span": 0.25}
     current = calibration.calibration_search_version(["sma", "momentum"], **kwargs)
-    assert current == "d84be10e9f71134607ce9c42db52eedee71cc93f2f45db8b0acf637ab592bf68"
+    assert current == "d89985d6dc2affeceff9e72c73a9e07ecd76508b43e5948a5a1ac865c491648d"
     monkeypatch.setattr(calibration, "_TRIAL_ACCOUNTING_VERSION", _V11)
     historical = calibration.calibration_search_version(["sma", "momentum"], **kwargs)
     assert historical == "8e2982a4d8fdbe76472df8cc9faeedf28d3b1e8a127cbf94b4ff40d0dfe5f175"

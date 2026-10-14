@@ -149,11 +149,11 @@ def test_representable_signed_samples_match_independent_native_oracles(dtype) ->
     assert moments.kurtosis == pytest.approx(pd.Series(values).kurt() + 3)
 
 
-def test_nearly_constant_sample_retains_native_sharpe() -> None:
+def test_nearly_constant_sample_matches_independent_variance_oracle() -> None:
     returns = pd.Series([0.1, np.nextafter(0.1, 1), 0.1] * 2)
-    expected = float(np.sqrt(252) * returns.mean() / float(returns.std()))
+    expected = _decimal_sample_sharpe(returns)
     assert expected > 0
-    assert sharpe_ratio(returns) == expected
+    assert sharpe_ratio(returns) == pytest.approx(expected, rel=2e-15, abs=0)
 
 
 @pytest.mark.parametrize("values", [[], [0.1]])

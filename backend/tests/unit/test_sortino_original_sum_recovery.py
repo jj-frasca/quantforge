@@ -235,9 +235,9 @@ def test_sortino_true_upper_overflow_remains_unmeasured() -> None:
         assert metrics.sortino_ratio(pd.Series([-math.ulp(0.0), 1.0])) is None
 
 
-def test_sortino_descriptive_correction_keeps_current_v12() -> None:
+def test_sortino_descriptive_correction_keeps_current_v13() -> None:
     assert calibration._TRIAL_ACCOUNTING_VERSION.endswith(
-        "verified-zero-anchored-dispersion-pbo-exact-translation-v12"
+        "verified-zero-anchored-dispersion-pbo-exact-translation-sharpe-exact-translation-v13"
     )
 
 

@@ -277,8 +277,8 @@ def test_volatility_std_underflow_nonfinite_recomputation_keeps_prior_recovery(
         )
 
 
-def test_descriptive_volatility_keeps_current_v12_accounting() -> None:
+def test_descriptive_volatility_keeps_current_v13_accounting() -> None:
     assert (
         calibration._TRIAL_ACCOUNTING_VERSION
-        == "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-v12"
+        == "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-sharpe-exact-translation-v13"
     )

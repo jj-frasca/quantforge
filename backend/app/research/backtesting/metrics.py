@@ -55,6 +55,28 @@ def _recover_float64_sharpe_dispersion(returns: pd.Series) -> float:
     return score
 
 
+def _sharpe_from_exact_float64_translation(values: NDArray[np.float64], mean: float) -> float:
+    """Anchor certified exact differences, retaining the accepted mean (ADR-290)."""
+    with np.errstate(all="ignore"):
+        differences = values - values[0]
+        scale = float(np.max(np.abs(differences)))
+        std = float(pd.Series(differences / scale).std())
+        mean_mantissa, mean_exponent = frexp(mean)
+        scale_mantissa, scale_exponent = frexp(scale)
+        try:
+            score = ldexp(
+                float(np.sqrt(TRADING_DAYS) * mean_mantissa / scale_mantissa / std),
+                mean_exponent - scale_exponent,
+            )
+        except OverflowError as exc:
+            raise ValueError(
+                "nonconstant returns must have measurable finite Sharpe moments"
+            ) from exc
+    if not np.isfinite(score):
+        raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+    return score
+
+
 def sharpe_ratio(returns: pd.Series) -> float:
     """Annualized Sharpe of complete real returns; zero for valid degenerate samples."""
     _validate_complete_return_sample(returns)
@@ -83,6 +105,13 @@ def sharpe_ratio(returns: pd.Series) -> float:
                 if np.isfinite(mean) and np.isfinite(std) and std > 0:
                     score = float(np.sqrt(TRADING_DAYS) * mean / std)
                     if np.isfinite(score) and (mean != 0 or fsum(values) == 0):
+                        if float64_source and mean != 0:
+                            minimum = float(values.min())
+                            maximum = float(values.max())
+                            if (minimum > 0 or maximum < 0) and max(
+                                abs(minimum), abs(maximum)
+                            ) <= 2 * min(abs(minimum), abs(maximum)):
+                                return _sharpe_from_exact_float64_translation(values, mean)
                         return score
         except (FloatingPointError, OverflowError):
             # A zero mean needs original sum evidence; fsum overflow cannot certify it.

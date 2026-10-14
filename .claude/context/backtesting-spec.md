@@ -4,10 +4,10 @@ Formal contracts for the research engine (Phase 3). Read when working on
 `backend/app/research/`. Decisions: ADR-007 (vectorized pandas/numpy, NOT vectorbt).
 Behavioral rules live in CLAUDE.md; this holds shapes, formulas, and the oracle tests.
 
-Current search accounting is v12 via ADR-289's certified PBO translation, separate
-from these primary/descriptive metric corrections. Version numbers inside earlier
+Current search accounting is v13 via ADR-289's certified PBO translation and
+ADR-290's certified primary Sharpe translation. Version numbers inside earlier
 ADR summaries describe their adoption identity; current calibration distributions
-are unmeasured. Historical v11 and frozen v10 cohorts retain executed attribution.
+are unmeasured. Historical v12/v11 and frozen v10 cohorts retain executed attribution.
 
 ---
 
@@ -264,6 +264,18 @@ Subnormal control cases permit one output ULP; universal correct rounding is not
 claimed. Accounting advances to verified-zero-anchored-dispersion-v11. Historical
 v10 evidence remains attributed to its executed revision; v11 calibration is
 unmeasured. Frozen cohorts, thresholds and generated records are unchanged.
+
+ADR-290 / FINDING-239 also corrects native-accepted original Float64 Sharpe
+dispersion when strictly same-sign nonzero values satisfy maxabs<=2*minabs.
+That inclusive range certifies exact first-value subtraction; normalized-difference
+sample STD avoids rounded source-level centering. Preserve the actual accepted
+native mean and use separated mantissas with one exponent restoration. Original
+STD/mean/ratio failures, zero means, mixed-sign/zero/wider-spread observations and
+other dtype families retain prior paths. Primary Sharpe and its derived iid
+confidence interval change; the interval formula/assumptions and other metrics
+stay. Known-native-mean Fraction variance checks do not certify arbitrary native
+numerator accuracy or universal correct rounding. Accounting advances to v13,
+current calibration remains unmeasured and prior/frozen cohorts stay attributed.
 
 ADR-208 gives annualized volatility native-first sample-std recovery. Source
 validation precedes short/exact-constant zero. Preserve native positive finite
