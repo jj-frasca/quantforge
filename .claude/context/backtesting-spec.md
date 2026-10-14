@@ -506,6 +506,15 @@ metadata/guards remain. O(n) streaming scans avoid mutable caching; other
 statistic precision/availability limits stay separate. No threshold, calibration
 identity or generated-record changes; no historical contamination is established.
 
+ADR-284 extends that coupled coefficient path to one original supported native/
+classic integer source paired with native float64/classic Float64. Exact integer
+ratios (int(value),1) preserve masked NumPy integer neighbors without float
+conversion; original floating ratios and sufficient sums remain. Both-integer
+ADR-275/276, both-Float64 ADR-283 and narrow/wider/third-party/mixed-other paths
+retain their results. Mixed coefficient rounding changes family-wide, while
+original excess/IR/TE/drawdown/metadata/guards remain. Already-rounded mixed
+excess is a separate precision limit. No threshold, calibration or record changes.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)

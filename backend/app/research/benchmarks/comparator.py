@@ -218,13 +218,15 @@ def _exact_narrow_alpha(
 def _exact_float64_ols(
     strategy: pd.Series, benchmark: pd.Series, *, constant_source: bool
 ) -> tuple[float, float]:
-    """Round only final represented Float64 OLS coefficients (ADR-283)."""
-    grid: int = max(
-        value.as_integer_ratio()[1] for series in (strategy, benchmark) for value in series
-    )
+    """Round final Float64 or mixed integer/Float64 OLS coefficients (ADR-283/284)."""
+
+    def ratio(value: float | int) -> tuple[int, int]:
+        return (int(value), 1) if isinstance(value, (int, np.integer)) else value.as_integer_ratio()
+
+    grid: int = max(ratio(value)[1] for series in (strategy, benchmark) for value in series)
 
     def encode(value: float) -> int:
-        numerator, denominator = value.as_integer_ratio()
+        numerator, denominator = ratio(value)
         return numerator * (grid // denominator)
 
     n = len(strategy)
@@ -332,14 +334,19 @@ class BenchmarkComparator:
             and bench.dtype.kind == "f"
             and bench.dtype.itemsize < np.dtype(float).itemsize
         )
-        float64_sources = all(
-            isinstance(returns.dtype, pd.Float64Dtype)
-            or (
-                isinstance(returns.dtype, np.dtype)
-                and returns.dtype.kind == "f"
-                and returns.dtype.itemsize == np.dtype(float).itemsize
+        float64_sources = (
+            all(
+                isinstance(returns.dtype, pd.Float64Dtype)
+                or (
+                    isinstance(returns.dtype, np.dtype)
+                    and returns.dtype.kind == "f"
+                    and returns.dtype.itemsize == np.dtype(float).itemsize
+                )
+                or (isinstance(returns.dtype, np.dtype) and returns.dtype.kind in ("i", "u"))
+                or isinstance(returns.dtype, _MASKED_INTEGER_DTYPES)
+                for returns in (strat, bench)
             )
-            for returns in (strat, bench)
+            and not integer_sources
         )
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
             if unsigned_sources or mixed_integer_sources:
