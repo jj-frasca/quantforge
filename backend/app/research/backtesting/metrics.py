@@ -371,18 +371,60 @@ def _max_drawdown_from_returns(returns: pd.Series) -> float:
     return max_drawdown(pd.Series(wealth))
 
 
+def _recover_float64_volatility_dispersion(returns: pd.Series) -> float:
+    """Recover failed Float64 STD from represented differences (ADR-287)."""
+    values = returns.to_numpy(dtype=np.float64)
+    with np.errstate(all="ignore"):
+        differences = values - values[0]
+        scale = float(np.max(np.abs(differences)))
+        if not np.isfinite(differences).all() or not np.isfinite(scale) or scale <= 0:
+            raise ValueError("annualized volatility is not measurable in float64")
+        std = float(pd.Series(differences / scale).std())
+        if not np.isfinite(std) or std <= 0:
+            raise ValueError("annualized volatility is not measurable in float64")
+        scale_mantissa, scale_exponent = frexp(scale)
+        std_mantissa, std_exponent = frexp(std)
+        try:
+            recovered = ldexp(
+                float(scale_mantissa * std_mantissa * np.sqrt(TRADING_DAYS)),
+                scale_exponent + std_exponent,
+            )
+        except OverflowError as exc:
+            raise ValueError("annualized volatility is not measurable in float64") from exc
+    if not np.isfinite(recovered) or recovered <= 0:
+        raise ValueError("annualized volatility is not measurable in float64")
+    return recovered
+
+
 def _annualized_volatility(returns: pd.Series) -> float:
-    """Sample std annualized by sqrt(252), with native-first recovery (ADR-208)."""
+    """Sample std annualized by sqrt(252), with native-first recovery (ADR-208/287)."""
     _validate_complete_return_sample(returns)
     if len(returns) < 2 or returns.eq(returns.iloc[0]).all():
         return 0.0
+    float64_source = isinstance(returns.dtype, pd.Float64Dtype) or (
+        isinstance(returns.dtype, np.dtype)
+        and returns.dtype.kind == "f"
+        and returns.dtype.itemsize == 8
+    )
+    recover_std = False
     try:
         with np.errstate(over="ignore", under="raise", invalid="ignore", divide="ignore"):
-            native = float(returns.std() * np.sqrt(TRADING_DAYS))
+            try:
+                std = returns.std()
+            except FloatingPointError:
+                if float64_source:
+                    with np.errstate(under="ignore"):
+                        std = returns.std()
+                    recover_std = bool(np.isfinite(std))
+                raise
+            recover_std = bool(float64_source and np.isfinite(std) and std == 0)
+            native = float(std * np.sqrt(TRADING_DAYS))
             if np.isfinite(native) and native > 0:
                 return native
     except FloatingPointError:
         pass
+    if recover_std:
+        return _recover_float64_volatility_dispersion(returns)
     values = returns.to_numpy(dtype=np.float64)
     scale = float(np.max(np.abs(values)))
     with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):

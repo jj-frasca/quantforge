@@ -268,6 +268,16 @@ subnormal risk that native variance lost; recovered output must be positive fini
 or raises ValueError. Exact constants no longer fabricate positive volatility.
 Numeric API shape and descriptive-only identity stay; no universal precision proof.
 
+ADR-287 / FINDING-236 anchors represented differences before normalization for
+original native/classic Float64 STD underflow or finite collapse. Difference-scale
+and normalized sample-STD mantissas are annualized before one combined exponent
+restoration, retaining positive subnormal risk. Final rounded zero still refuses
+under ADR-208. Ordinary native results, nonfinite STD, annualization-only failures
+and other source families keep prior behavior. Subnormal controls permit one
+output ULP; universal correct rounding is not claimed. This field remains
+descriptive: accounting stays v11, calibration remains unmeasured, and frozen
+historical cohorts and generated records retain their original attribution.
+
 ADR-186 validates original complete finite real numeric source evidence at the public
 compounded-return helpers before conversion/empty shortcuts; boolean, strings and complex
 observations cannot be reinterpreted as measured returns. Numeric empty and log math remain.
