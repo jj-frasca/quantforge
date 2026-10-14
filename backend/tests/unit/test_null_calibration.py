@@ -1464,14 +1464,15 @@ def test_the_search_fingerprint_is_stable_across_code_changes() -> None:
     `search_config_version` to the restored procedure. The hash includes the resolved family and
     explicitly versioned accounting method: unrelated code must not drift it, while ADR-104's PBO
     scope, ADR-105's ties, ADR-201 through ADR-209's native moment policies and
-    ADR-286's anchored Float64 dispersion recovery must.
+    ADR-286's anchored Float64 dispersion recovery and ADR-289's
+    certified native PBO translation must.
     The literal pins that identity until another
     governed procedure or catalog change deliberately updates it."""
     assert (
         calibration_search_version(
             ["sma", "momentum"], n_per_param=3, config=GateConfig(), refine=True, refine_span=0.25
         )
-        == "8e2982a4d8fdbe76472df8cc9faeedf28d3b1e8a127cbf94b4ff40d0dfe5f175"
+        == "d84be10e9f71134607ce9c42db52eedee71cc93f2f45db8b0acf637ab592bf68"
     )
 
 

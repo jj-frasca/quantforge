@@ -18,6 +18,7 @@ from app.research.lab.gate import GateConfig
 _DTYPES = ["float64", "Float64"]
 _V10 = "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-v10"
 _V11 = "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-v11"
+_V12 = "whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-v12"
 _V10_HASH = "ae63be276e14bc0edfd86c89667ca9f198af47273559a19e17ea7c4184252d7d"
 
 
@@ -229,7 +230,7 @@ def test_sharpe_only_std_failure_selects_anchored_recovery(failure: str) -> None
 def test_sharpe_anchored_correction_invalidates_frozen_v10_accounting(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert calibration._TRIAL_ACCOUNTING_VERSION == _V11
+    assert calibration._TRIAL_ACCOUNTING_VERSION == _V12
     kwargs = {
         "n_per_param": 3,
         "config": GateConfig(),

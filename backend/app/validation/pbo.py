@@ -7,7 +7,24 @@ from scipy.stats import rankdata
 FloatArray = npt.NDArray[np.float64]
 
 
-def _sharpe_per_config(block: FloatArray) -> FloatArray:
+def _sharpe_from_exact_float64_translation(block: FloatArray, mean: FloatArray) -> FloatArray:
+    """Center certified exact differences, retaining native block means (ADR-289)."""
+    with np.errstate(all="ignore"):
+        differences = block - block[0]
+        scale = np.max(np.abs(differences), axis=0)
+        normalized_std = (differences / scale).std(axis=0, ddof=1)
+        mean_mantissa, mean_exponent = np.frexp(mean)
+        scale_mantissa, scale_exponent = np.frexp(scale)
+        scores: FloatArray = np.ldexp(
+            mean_mantissa / scale_mantissa / normalized_std,
+            mean_exponent - scale_exponent,
+        )
+    if not np.isfinite(scores).all():
+        raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+    return scores
+
+
+def _sharpe_per_config(block: FloatArray, *, exact_translation: bool = True) -> FloatArray:
     constant = np.all(block == block[0], axis=0)
     sharpe: FloatArray = np.zeros(block.shape[1], dtype=np.float64)
     if constant.all():
@@ -24,6 +41,23 @@ def _sharpe_per_config(block: FloatArray) -> FloatArray:
         np.divide(mean, std, out=sharpe, where=~constant)
     if not np.isfinite(sharpe).all():
         raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+    if exact_translation:
+        with np.errstate(all="ignore"):
+            minimum = block.min(axis=0)
+            maximum = block.max(axis=0)
+            minimum_magnitude = np.minimum(np.abs(minimum), np.abs(maximum))
+            maximum_magnitude = np.maximum(np.abs(minimum), np.abs(maximum))
+            # Sterbenz's inclusive factor-two range certifies exact subtraction.
+            eligible = (
+                ~constant
+                & (mean != 0)
+                & ((minimum > 0) | (maximum < 0))
+                & (maximum_magnitude <= 2 * minimum_magnitude)
+            )
+            if eligible.any():
+                sharpe[eligible] = _sharpe_from_exact_float64_translation(
+                    block[:, eligible], mean[eligible]
+                )
     return sharpe
 
 
@@ -46,6 +80,7 @@ def probability_of_backtest_overfitting(
         raise ValueError("performance must be a two-dimensional matrix")
     if source.dtype.kind not in {"i", "u", "f"}:
         raise ValueError("performance must contain real nonboolean numeric returns")
+    original_float64 = source.dtype.kind == "f" and source.dtype.itemsize == 8
     performance = np.asarray(source, dtype=np.float64)
     n_obs, n_configs = performance.shape
     if n_configs < 2:
@@ -76,7 +111,7 @@ def probability_of_backtest_overfitting(
         cached = cache.get(subset)
         if cached is None:
             rows = np.concatenate([groups[g] for g in subset])
-            cached = _sharpe_per_config(performance[rows])
+            cached = _sharpe_per_config(performance[rows], exact_translation=original_float64)
             cache[subset] = cached
         return cached
 

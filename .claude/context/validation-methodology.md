@@ -90,14 +90,15 @@ STD underflow or finite zero collapse selects anchored differences and original
 fsum/exponent recovery. Nonfinite STD, mean/ratio-only failures, other families and
 ordinary native estimates retain prior behavior. Trial accounting now advances to
 `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-v11`.
-All historical v10 cohorts below retain their executed identity and cannot certify
-v11. Current-version null, power, heavy-tail and bootstrap distributions are
+ADR-289 subsequently advances accounting to v12 for certified PBO translation.
+All historical v11 and frozen v10 cohorts retain their executed identity and cannot certify
+v12. Current-version null, power, heavy-tail and bootstrap distributions are
 unmeasured; frozen sources/results are not rerun, redrawn or relabeled. No actual
 false graduate is established and no threshold or generated-data change is made.
 
 Local session15's fixed v9 iid cohort completed200/noerrors/0graduates/0ADR018
 survivors (F156), independently audited with a one-sided95% zero-event upper
-limit of1.4867%. It is historical f1891104/v9 evidence, not v10/v11 certification
+limit of1.4867%. It is historical f1891104/v9 evidence, not v10/v11/v12 certification
 or power/bootstrap coverage. F157 records the completed paired v10 cohort at
 380df982: identical sources, 200/no errors/0 graduates/0 ADR018 survivors, and
 identical result payloads except the search fingerprint. These are 200 paired
@@ -222,6 +223,23 @@ This corrects finite constant-only PBO results, so accounting identity advances 
 `whole-search-budgeted-robust-iqr-pbo-ties-constant-v6`. Old calibration cannot match
 the corrected procedure; new rates are unmeasured until an authorized sole-writer refresh.
 Native representable nonconstant scoring, tie rules and all thresholds are retained.
+
+ADR-289 / FINDING-238 corrects positive finite native PBO dispersion only for
+original Float64 nonconstant columns with nonzero native means, strictly one sign
+and maxabs<=2*minabs. The inclusive factor-two relation certifies exact first-value
+subtraction. Original full-block mean/layout and all native refusal guards precede
+normalized-difference STD and one frexp/ldexp per-bar quotient restoration.
+Public original dtype provenance reaches every cached subset; integer/narrow/wider
+sources and noneligible columns keep prior results. Constants, CSCV geometry,
+ties, masks and strict pbo_max stay. Eligible finite positive partial-underflow STD
+can change; zero/nonfinite native STD still refuses. The frozen synthetic matrix
+changes PBO1/3 to exact-variance2/3, crossing the existing gate; no actual graduate
+is established. Known-native-mean exact variance controls do not certify arbitrary
+numerator accuracy or universal correct rounding/ranking. Primary Sharpe/OOS
+centering remains separate. Accounting advances to
+`whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-v12`;
+current distributions are unmeasured and historical v11/frozen v10 evidence stays
+attributed. No cohort redraw, threshold, selector or generated-record changes.
 
 ---
 

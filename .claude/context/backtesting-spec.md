@@ -4,6 +4,11 @@ Formal contracts for the research engine (Phase 3). Read when working on
 `backend/app/research/`. Decisions: ADR-007 (vectorized pandas/numpy, NOT vectorbt).
 Behavioral rules live in CLAUDE.md; this holds shapes, formulas, and the oracle tests.
 
+Current search accounting is v12 via ADR-289's certified PBO translation, separate
+from these primary/descriptive metric corrections. Version numbers inside earlier
+ADR summaries describe their adoption identity; current calibration distributions
+are unmeasured. Historical v11 and frozen v10 cohorts retain executed attribution.
+
 ---
 
 ## 1. Price frame convention
