@@ -84,9 +84,20 @@ Historical v9 measurements retain their executed revision and cannot certify v10
 fresh fixed-cohort evidence must record the new identity. Arbitrary finite-result
 precision and nonzero native cancellation remain separate limitations.
 
+ADR-286 / FINDING-235 corrects finite Float64 Sharpe dispersion recovery that
+scaled near-equal levels before centering. Only original native/classic Float64
+STD underflow or finite zero collapse selects anchored differences and original
+fsum/exponent recovery. Nonfinite STD, mean/ratio-only failures, other families and
+ordinary native estimates retain prior behavior. Trial accounting now advances to
+`whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-v11`.
+All historical v10 cohorts below retain their executed identity and cannot certify
+v11. Current-version null, power, heavy-tail and bootstrap distributions are
+unmeasured; frozen sources/results are not rerun, redrawn or relabeled. No actual
+false graduate is established and no threshold or generated-data change is made.
+
 Local session15's fixed v9 iid cohort completed200/noerrors/0graduates/0ADR018
 survivors (F156), independently audited with a one-sided95% zero-event upper
-limit of1.4867%. It is historical f1891104/v9 evidence, not currentv10 certification
+limit of1.4867%. It is historical f1891104/v9 evidence, not v10/v11 certification
 or power/bootstrap coverage. F157 records the completed paired v10 cohort at
 380df982: identical sources, 200/no errors/0 graduates/0 ADR018 survivors, and
 identical result payloads except the search fingerprint. These are 200 paired
@@ -1051,7 +1062,7 @@ and excess-pairing semantics; canonical projections and merge inherit guards.
 This does not establish new array lengths, power-array contracts or overflow-free
 percentiles. No threshold, formula, identity or generated-data changes.
 
-## Current v10 fixed AR power (FINDING-162)
+## Historical v10 fixed AR power (FINDING-162)
 
 The frozen 7,400-bar, 200-symbol arms at phi −0.3/+0.3 completed without
 errors: 130/200 and 163/200 graduates, all surviving ADR-018's 1.3432393 bar.
@@ -1062,7 +1073,7 @@ retain FINDING-155's qualification. Executed `8e372d50`, search `969dd54d`, gate
 this strong stationary synthetic evidence does not certify market/weak-edge
 power or authorize threshold changes. See the report for full hashes/audits.
 
-## Current v10 fixed heavy-tail null stress (FINDING-163)
+## Historical v10 fixed heavy-tail null stress (FINDING-163)
 
 Student-t df5 simple returns at drift 0.0003 and vol 0.012 completed all 200
 7,400-bar sources with no errors/graduates/ADR-018 survivors; components

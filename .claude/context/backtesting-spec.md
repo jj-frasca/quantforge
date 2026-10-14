@@ -251,6 +251,15 @@ Accounting identity advances to
 `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-v10`;
 historical v9 measurements do not certify this procedure. All thresholds remain.
 
+ADR-286 / FINDING-235 recovers original native/classic Float64 STD underflow or
+finite collapse by anchoring differences before normalization, preserving original
+fsum evidence and restoring the combined exponent once. Ordinary native results,
+nonfinite STD, mean/ratio-only failures and other dtype families retain prior paths.
+Subnormal control cases permit one output ULP; universal correct rounding is not
+claimed. Accounting advances to verified-zero-anchored-dispersion-v11. Historical
+v10 evidence remains attributed to its executed revision; v11 calibration is
+unmeasured. Frozen cohorts, thresholds and generated records are unchanged.
+
 ADR-208 gives annualized volatility native-first sample-std recovery. Source
 validation precedes short/exact-constant zero. Preserve native positive finite
 std * sqrt(252) when no underflow is detected; otherwise compute float64 maxabs-

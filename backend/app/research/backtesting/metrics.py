@@ -24,6 +24,37 @@ def _validate_complete_return_sample(returns: pd.Series) -> None:
         raise ValueError("returns must be finite and complete")
 
 
+def _recover_float64_sharpe_dispersion(returns: pd.Series) -> float:
+    """Recover failed Float64 dispersion without scaling near-equal source levels."""
+    values = returns.to_numpy(dtype=np.float64)
+    with np.errstate(all="ignore"):
+        differences = values - values[0]
+        scale = float(np.max(np.abs(differences)))
+        if not np.isfinite(differences).all() or not np.isfinite(scale) or scale <= 0:
+            raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+        std = float(pd.Series(differences / scale).std())
+        if not np.isfinite(std) or std <= 0:
+            raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+        try:
+            total = fsum(values)
+            if total == 0:
+                return 0.0
+            sum_mantissa, sum_exponent = frexp(total)
+            scale_mantissa, scale_exponent = frexp(scale)
+            # Keep original sum evidence until dispersion and annualization rescue it.
+            score = ldexp(
+                float(np.sqrt(TRADING_DAYS) * sum_mantissa / scale_mantissa / std / len(values)),
+                sum_exponent - scale_exponent,
+            )
+        except OverflowError as exc:
+            raise ValueError(
+                "nonconstant returns must have measurable finite Sharpe moments"
+            ) from exc
+        if not np.isfinite(score):
+            raise ValueError("nonconstant returns must have measurable finite Sharpe moments")
+    return score
+
+
 def sharpe_ratio(returns: pd.Series) -> float:
     """Annualized Sharpe of complete real returns; zero for valid degenerate samples."""
     _validate_complete_return_sample(returns)
@@ -31,9 +62,23 @@ def sharpe_ratio(returns: pd.Series) -> float:
         return 0.0
     with np.errstate(over="ignore", under="ignore", invalid="ignore", divide="ignore"):
         values = returns.to_numpy(dtype=np.float64)
+        float64_source = isinstance(returns.dtype, pd.Float64Dtype) or (
+            isinstance(returns.dtype, np.dtype)
+            and returns.dtype.kind == "f"
+            and returns.dtype.itemsize == 8
+        )
+        recover_std = False
         try:
             with np.errstate(under="raise"):
-                std = float(returns.std())
+                try:
+                    std = float(returns.std())
+                except FloatingPointError:
+                    if float64_source:
+                        with np.errstate(under="ignore"):
+                            std = float(returns.std())
+                        recover_std = bool(np.isfinite(std))
+                    raise
+                recover_std = bool(float64_source and np.isfinite(std) and std == 0)
                 mean = float(returns.mean())
                 if np.isfinite(mean) and np.isfinite(std) and std > 0:
                     score = float(np.sqrt(TRADING_DAYS) * mean / std)
@@ -42,6 +87,8 @@ def sharpe_ratio(returns: pd.Series) -> float:
         except (FloatingPointError, OverflowError):
             # A zero mean needs original sum evidence; fsum overflow cannot certify it.
             pass
+        if recover_std:
+            return _recover_float64_sharpe_dispersion(returns)
         scale = float(np.max(np.abs(values)))
         if not np.isfinite(scale) or scale <= 0:
             raise ValueError("nonconstant returns must have measurable finite Sharpe moments")

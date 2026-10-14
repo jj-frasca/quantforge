@@ -1463,14 +1463,15 @@ def test_the_search_fingerprint_is_stable_across_code_changes() -> None:
     """ADR-058 decision 2 reuses committed calibration artifacts by matching their recorded
     `search_config_version` to the restored procedure. The hash includes the resolved family and
     explicitly versioned accounting method: unrelated code must not drift it, while ADR-104's PBO
-    scope, ADR-105's ties and ADR-201 through ADR-209's native moment policies must.
+    scope, ADR-105's ties, ADR-201 through ADR-209's native moment policies and
+    ADR-286's anchored Float64 dispersion recovery must.
     The literal pins that identity until another
     governed procedure or catalog change deliberately updates it."""
     assert (
         calibration_search_version(
             ["sma", "momentum"], n_per_param=3, config=GateConfig(), refine=True, refine_span=0.25
         )
-        == "ae63be276e14bc0edfd86c89667ca9f198af47273559a19e17ea7c4184252d7d"
+        == "8e2982a4d8fdbe76472df8cc9faeedf28d3b1e8a127cbf94b4ff40d0dfe5f175"
     )
 
 
