@@ -229,11 +229,18 @@ def test_comparison_preserves_aligned_only_value_validation(dtype: str) -> None:
 @pytest.mark.parametrize("strict", [False, True])
 def test_comparison_rejects_nonfinite_statistics(values: list[float], strict: bool) -> None:
     returns = pd.Series(values)
-    with (
-        np.errstate(all="raise" if strict else "ignore"),
-        pytest.raises(ValueError, match=r"statistics.*finite"),
-    ):
-        BenchmarkComparator().compare(returns, returns)
+    with np.errstate(all="raise" if strict else "ignore"):
+        if returns.eq(returns.iloc[0]).all():
+            # The exact annualized constant mean is itself unrepresentable.
+            with pytest.raises(ValueError, match=r"statistics.*finite"):
+                BenchmarkComparator().compare(returns, returns)
+        else:
+            # ADR-283 no longer refuses solely on an overflowing covariance intermediate.
+            result = BenchmarkComparator().compare(returns, returns)
+            assert result.beta == 1
+            assert result.alpha == result.information_ratio == result.tracking_error == 0
+            assert result.benchmark_relative_drawdown == 0
+            pd.testing.assert_series_equal(result.excess_returns, returns - returns)
 
 
 def test_comparison_preserves_large_representable_constant_statistics() -> None:
@@ -248,8 +255,11 @@ def test_comparison_preserves_large_representable_constant_statistics() -> None:
 @given(st.floats(min_value=1e160, max_value=1e250, allow_nan=False, allow_infinity=False))
 def test_comparison_declines_overflowing_moments_without_publishing_nan(scale: float) -> None:
     returns = pd.Series([scale, 2 * scale, 3 * scale])
-    with pytest.raises(ValueError, match=r"statistics.*finite"):
-        BenchmarkComparator().compare(returns, returns)
+    result = BenchmarkComparator().compare(returns, returns)
+    assert result.beta == 1
+    assert result.alpha == result.information_ratio == result.tracking_error == 0
+    assert result.benchmark_relative_drawdown == 0
+    pd.testing.assert_series_equal(result.excess_returns, returns - returns)
 
 
 @pytest.mark.parametrize("strict", [False, True])

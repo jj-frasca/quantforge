@@ -22,8 +22,8 @@ def test_beta_exact_original_constant_sources_are_zero(side: str, dtype: object)
     with np.errstate(all="ignore"):
         result = BenchmarkComparator().compare(strategy, benchmark)
     assert result.beta == 0
-    if dtype in {"float32", "Float32"}:
-        # ADR-280 retains beta zero while measuring the original strategy mean exactly.
+    if dtype in {"float32", "Float32", "float64", "Float64"}:
+        # ADR-280/283 retain beta zero while measuring the original strategy mean exactly.
         expected_alpha = float(
             252 * sum(Fraction(*value.as_integer_ratio()) for value in strategy) / len(strategy)
         )
@@ -57,7 +57,7 @@ def test_beta_constant_check_uses_only_aligned_source_observations() -> None:
     benchmark = pd.Series([0.01, 0.02, 0.03, 888.0], index=[1, 2, 3, 4])
     result = BenchmarkComparator().compare(strategy, benchmark)
     assert result.beta == 0
-    assert result.alpha == float(strategy.iloc[1:].mean() * 252)
+    assert result.alpha == float(252 * Fraction(*strategy.iloc[1].as_integer_ratio()))
     pd.testing.assert_series_equal(result.excess_returns, strategy.iloc[1:] - benchmark.iloc[:3])
 
 
@@ -95,4 +95,6 @@ def test_beta_repeated_represented_sources_have_exact_zero_covariance(
         result = BenchmarkComparator().compare(strategy, benchmark)
     assert np.geterr() == state
     assert result.beta == 0
-    assert result.alpha == float(strategy.mean() * 252)
+    assert result.alpha == float(
+        252 * sum(Fraction(*value.as_integer_ratio()) for value in strategy) / len(strategy)
+    )

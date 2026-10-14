@@ -215,6 +215,51 @@ def _exact_narrow_alpha(
     )
 
 
+def _exact_float64_ols(
+    strategy: pd.Series, benchmark: pd.Series, *, constant_source: bool
+) -> tuple[float, float]:
+    """Round only final represented Float64 OLS coefficients (ADR-283)."""
+    grid: int = max(
+        value.as_integer_ratio()[1] for series in (strategy, benchmark) for value in series
+    )
+
+    def encode(value: float) -> int:
+        numerator, denominator = value.as_integer_ratio()
+        return numerator * (grid // denominator)
+
+    n = len(strategy)
+    try:
+        if constant_source:
+            beta = 0.0
+            alpha = TRADING_DAYS * sum(encode(value) for value in strategy) / (n * grid)
+        else:
+            strategy_origin, benchmark_origin = encode(strategy.iloc[0]), encode(benchmark.iloc[0])
+            strategy_sum = benchmark_sum = cross_sum = benchmark_square_sum = 0
+            for a, b in zip(strategy, benchmark, strict=True):
+                ds, db = encode(a) - strategy_origin, encode(b) - benchmark_origin
+                strategy_sum += ds
+                benchmark_sum += db
+                cross_sum += ds * db
+                benchmark_square_sum += db * db
+            denominator = n * benchmark_square_sum - benchmark_sum**2
+            if denominator <= 0:
+                raise ValueError("Float64 OLS denominator must be positive")
+            numerator = n * cross_sum - strategy_sum * benchmark_sum
+            strategy_total = strategy_sum + n * strategy_origin
+            benchmark_total = benchmark_sum + n * benchmark_origin
+            beta = numerator / denominator
+            alpha = (
+                TRADING_DAYS
+                * (strategy_total * denominator - numerator * benchmark_total)
+                / (n * denominator * grid)
+            )
+        if not np.isfinite([beta, alpha]).all():
+            raise ValueError("benchmark statistics coefficients must be finite")
+        return beta, alpha
+    except OverflowError as exc:
+        raise ValueError("benchmark statistics coefficients must be finite") from exc
+
+
 def _anchored_native_wide_excess_std(excess: pd.Series) -> np.longdouble:
     """Retain wider sample dispersion through final statistics (ADR-272)."""
     try:
@@ -287,6 +332,15 @@ class BenchmarkComparator:
             and bench.dtype.kind == "f"
             and bench.dtype.itemsize < np.dtype(float).itemsize
         )
+        float64_sources = all(
+            isinstance(returns.dtype, pd.Float64Dtype)
+            or (
+                isinstance(returns.dtype, np.dtype)
+                and returns.dtype.kind == "f"
+                and returns.dtype.itemsize == np.dtype(float).itemsize
+            )
+            for returns in (strat, bench)
+        )
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
             if unsigned_sources or mixed_integer_sources:
                 excess = _exact_unsigned_excess(strat, bench)
@@ -310,9 +364,14 @@ class BenchmarkComparator:
             # Exact native constants have zero covariance before rounded centering (ADR-269).
             constant_source = bool(strat.eq(strat.iloc[0]).all() or bench.eq(bench.iloc[0]).all())
             needs_scaled = False
+            float64_alpha = 0.0
             try:
                 with np.errstate(under="raise"):
-                    if integer_sources and not constant_source:
+                    if float64_sources:
+                        native_beta, float64_alpha = _exact_float64_ols(
+                            strat, bench, constant_source=constant_source
+                        )
+                    elif integer_sources and not constant_source:
                         native_beta = _exact_integer_beta(strat, bench)
                     elif wide_source and not constant_source:
                         native_beta = _anchored_native_wide_beta(strat, bench)
@@ -366,7 +425,9 @@ class BenchmarkComparator:
                 for returns in (strat, bench)
             )
             alpha = (
-                _exact_integer_alpha(strat, bench, constant_source=constant_source)
+                float64_alpha
+                if float64_sources
+                else _exact_integer_alpha(strat, bench, constant_source=constant_source)
                 if integer_sources
                 else _exact_narrow_alpha(strat, bench, constant_source=constant_source)
                 if narrow_sources

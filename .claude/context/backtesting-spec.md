@@ -495,6 +495,17 @@ ADR-281 recovery keep their paths. Fraction oracles use known native std and
 state a one-output-ULP subnormal ratio limit, not exact variance or universal
 correct rounding. No threshold/calibration/generated record changes.
 
+ADR-283 computes both beta and annual alpha for both-original native float64/
+classic Float64 sources from exact represented common-grid integer sufficient
+sums, converting only final quotients. Exact constant-source beta0 uses only
+the exact strategy mean. Final coefficient overflow refuses as ValueError;
+legitimate rounded zero/subnormal results remain. Family-wide coefficient
+rounding changes intentionally, and alpha uses the unrounded slope. Integer,
+narrow, wider, third-party/mixed-other paths and original excess/IR/TE/drawdown/
+metadata/guards remain. O(n) streaming scans avoid mutable caching; other
+statistic precision/availability limits stay separate. No threshold, calibration
+identity or generated-record changes; no historical contamination is established.
+
 - `excess_returns = strat - bench`
 - `information_ratio = sqrt(252) * mean(excess) / std(excess)`
 - `beta = cov(strat, bench) / var(bench)`; `alpha = mean(strat) - beta*mean(bench)` (annualized)
