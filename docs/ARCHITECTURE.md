@@ -328,11 +328,16 @@ ADR-103 also binds every deserialized power cell and embedded gate verdict back 
 sweep/calibration identity and rejects duplicate strong-edge cells; producer call history is not a
 trust boundary for persisted evidence.
 
-**The detectable-edge frontier (ADR-043) factors those two numbers.** `app/research/lab/frontier.py`
+**The detectable-edge frontier (ADR-043/292) describes a conditional single-bar model.** `app/research/lab/frontier.py`
 solves `SR_true = bar(N, T) + z_p · SE(SR_true)` with Lo (2002)'s standard error — which at SR = 0
-is exactly the `sqrt(1/T)` the ADR-018 bar already uses. At the current design (607 symbols, 4.3y
-holdout) an edge must be a **true annualized Sharpe of 2.13** to be found 80% of the time. Measured
-power is lower than that frontier, and the gap is the catalog's *capture efficiency*. ADR-045 now
+is exactly the `sqrt(1/T)` the ADR-018 bar already uses. ADR-292 certifies the open unique inverse
+domain `abs(z_p) < sqrt(504*T)` with stable normal tails and signed root algebra, refusing
+unsupported or unrepresentable requests instead of reporting a finite iteration result.
+At the stated design (607 symbols, 4.3y holdout), this conditional iid-normal asymptotic
+single-bar model requires a **true annualized Sharpe of 2.13** for 80% clearance probability.
+It does not certify composite pipeline power; gaps from measured power cannot isolate
+catalog capture from other model and pipeline differences. Shared standard-error, bar,
+reference scoring and accounting remain unchanged. ADR-045 now
 records the max-DSR finalist's in-sample Sharpe for every searched power-calibration symbol and
 reports median finalist / median oracle as a **selected in-sample ratio** (FINDING-164). Measured
 gross capture is 0.21–0.25 at 1–3 bar reversion half-lives and 0.37 at 5 bars (0.32/0.31/0.45 net of

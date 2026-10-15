@@ -1,4 +1,7 @@
 import math
+from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
+from fractions import Fraction
+from statistics import NormalDist
 
 from pydantic import BaseModel, ConfigDict
 
@@ -7,22 +10,19 @@ from app.research.lab.universe import expected_max_sharpe_under_null
 # Annualizing Lo (2002)'s per-period SR^2/2 term: SR_annual = sqrt(252) * SR_period, so the term
 # becomes SR_annual^2 / (2 * 252).
 _ANNUALIZED_SR_SQUARED = 2.0 * 252
-# The fixed-point map's derivative is z * SR / (504 * T * SE), which is ~1e-3 at any plausible
-# Sharpe, so a fixed iteration count converges past float precision and needs no exit test.
-_ITERATIONS = 8
 
 
 class DetectionFrontier(BaseModel):
-    """What an edge must actually BE for this pipeline to detect it (ADR-043).
+    """Conditional normal-model Sharpe needed to cross the ADR-018 bar (ADR-292).
 
     Notes:
         `bar` is what must be OBSERVED (ADR-018); `detectable_sharpe` is what must be TRUE for the
         observation to happen with probability `power`. The gap between them is estimation noise,
         which is why an edge sitting exactly at the bar is a coin flip rather than a graduate.
 
-        This is the pipeline's statistical resolution assuming a strategy captures the edge
-        perfectly, so it is an OPTIMISTIC bound. ADR-041/042's measured power is the realized
-        number; the gap between the two is the catalog's capture efficiency.
+        This iid asymptotic approximation concerns one bar, not the composite search and
+        graduation pipeline. Its gap from measured power does not identify catalog capture
+        separately from other model and pipeline differences.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -50,25 +50,54 @@ def sharpe_standard_error(sharpe: float, holdout_years: float) -> float:
 
 
 def detectable_sharpe(n_symbols: int, holdout_years: float, *, power: float = 0.8) -> float:
-    """The smallest TRUE annualized Sharpe the ADR-018 bar clears with probability `power`.
+    """Unique signed annualized Sharpe for conditional single-bar power (ADR-292).
 
     Notes:
-        Solves `SR = bar(N, T) + z_power * SE(SR)`, implicit because the standard error grows with
-        the true Sharpe. Fixed-point iteration from the bar; the SR^2 / 504 term makes the map a
-        very strong contraction, so a fixed handful of passes lands past float precision.
+        Solves `SR = bar(N, T) + z_power * SE(SR)` only in the open unique inverse regime
+        `abs(z_power) < sqrt(504*T)`. Exact represented coefficients certify that domain;
+        private Decimal arithmetic and a rationalized negative-quantile branch avoid loss
+        near its boundary and near zero. Other regimes raise rather than choosing a branch.
 
         Below two symbols the deflation bar is 0.0 (nothing was selected across), but the
         estimation noise does not vanish with it — reporting 0.0 there would claim a coin flip is
         detectable, so the noise term still applies.
     """
-    if not 0.0 < power < 1.0:
-        raise ValueError("power must be in (0, 1)")
-    bar = expected_max_sharpe_under_null(n_symbols, holdout_years)
+    if not math.isfinite(holdout_years) or holdout_years <= 0.0:
+        raise ValueError("holdout_years must be finite and > 0")
     z = _normal_quantile(power)
-    sharpe = bar
-    for _ in range(_ITERATIONS):
-        sharpe = bar + z * sharpe_standard_error(sharpe, holdout_years)
-    return sharpe
+    bar = expected_max_sharpe_under_null(n_symbols, holdout_years)
+    if not math.isfinite(bar):
+        raise ValueError("frontier bar must be finite")
+    b = Fraction.from_float(float(bar))
+    t = Fraction.from_float(float(holdout_years))
+    q = Fraction.from_float(z)
+    a = 1 - q * q / (504 * t)
+    if a <= 0:
+        raise ValueError("requested power is outside the supported unique inverse regime")
+    if z == 0.0:
+        result = bar
+    else:
+        c = b * b - q * q / t
+        discriminant = b * b - a * c
+        with localcontext(Context(prec=160, rounding=ROUND_HALF_EVEN)):
+
+            def d(value: Fraction) -> Decimal:
+                return Decimal(value.numerator) / Decimal(value.denominator)
+
+            root = d(discriminant).sqrt()
+            candidate = (d(b) + root) / d(a) if z > 0 else d(c) / (d(b) + root)
+            result = float(candidate)
+    if not math.isfinite(result):
+        raise ValueError("frontier root must be finite")
+    # This shared function also serves calibration references; retain its arithmetic
+    # and refuse a reporting result whose required standard error cannot be represented.
+    try:
+        se = sharpe_standard_error(result, holdout_years)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError("frontier standard_error cannot be represented") from exc
+    if not math.isfinite(se):
+        raise ValueError("frontier standard_error must be finite")
+    return result
 
 
 def describe_frontier(
@@ -87,18 +116,10 @@ def describe_frontier(
 
 
 def _normal_quantile(p: float) -> float:
-    """Inverse standard normal CDF by bisection on `math.erf`.
-
-    Notes:
-        Deliberately dependency-free: scipy is not a backend dependency and adding one for a single
-        quantile would be a poor trade. Bisection over 200 halvings on [-10, 10] is exact to well
-        past float precision and runs in microseconds.
-    """
-    low, high = -10.0, 10.0
-    for _ in range(200):
-        mid = (low + high) / 2.0
-        if 0.5 * (1.0 + math.erf(mid / math.sqrt(2.0))) < p:
-            low = mid
-        else:
-            high = mid
-    return (low + high) / 2.0
+    """Tail-safe standard-library inverse normal CDF without forming `1-p`."""
+    if not math.isfinite(p) or not 0.0 < p < 1.0:
+        raise ValueError("power must be finite and in (0, 1)")
+    z = NormalDist().inv_cdf(p)
+    if not math.isfinite(z):
+        raise ValueError("power quantile must be finite")
+    return z

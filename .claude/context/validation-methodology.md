@@ -574,10 +574,18 @@ tiers: graduated, and cleared the ADR-018 bar.
   Read half-lives ≥ 10 as a statement about that ceiling, not about the catalog.
 
 ### 7.3 The detectable-edge frontier (ADR-043) — `app/research/lab/frontier.py`
-Power measures statistics × capture together. The frontier is the statistics alone:
-`SR_true = bar(N, T) + z_p · SE(SR_true)`, with `SE = sqrt((1 + SR²/504)/T)` (Lo 2002, annualized),
-solved by fixed point. At `SR = 0` that SE is exactly the `sqrt(1/T)` in
-`expected_max_sharpe_under_null` — if the two ever diverge, one of them is wrong.
+The frontier inverts a conditional iid-normal asymptotic model for crossing one bar:
+`SR_true = bar(N, T) + z_p · SE(SR_true)`, with `SE = sqrt((1 + SR²/504)/T)` (Lo 2002, annualized).
+ADR-292 / FINDING-244 replaces eight fixed iterations and a bounded erf quantile with
+standard-library inverse-normal tails and exact-Fraction existence classification.
+The open unique inverse domain is `abs(z_p) < sqrt(504*T)`; a private Decimal160
+context evaluates stable signed root algebra. Boundary/nonunique/unattainable
+requests or nonfinite/unrepresentable evidence raise ValueError; supported lower
+powers retain signed solutions and power .5 returns the exact original bar.
+This is not composite pipeline power, and its gap from measured calibration power
+does not isolate capture from other model/pipeline differences. Shared standard-error,
+bar, thresholds, reference scoring and v14 accounting are unchanged. At `SR = 0`
+that SE is exactly the `sqrt(1/T)` in `expected_max_sharpe_under_null`.
 
 - Current design (607 symbols, 4.3-year holdout): a **true annualized Sharpe of 2.13** is needed to
   clear the bar 80% of the time. Printed by `scripts/pool_report.py` and by the dashboard's
