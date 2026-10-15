@@ -92,3 +92,26 @@ module AST unchanged after excluding actual docstrings. Final independent review
 approved all four paths and the variance derivation. Full foreground make
 check-all passed 4616 backend and 363 frontend tests, with lint, strict types and
 coverage green. No wording-mirroring tests or source redraws were added.
+
+## Residual active guidance qualification — 2026-10-14
+
+The remaining PowerCalibration field comment and active cold-memory/architecture
+advice still described the filtered reference as a recoverable-edge bound and
+ruled out better estimators or selection rules. These claims now describe only
+the specified strategies and measured comparisons. Low net reference scores do
+not establish no tradeable edge; historical 0/50 detections do not establish that
+another causal, cost-aware strategy could not graduate. The historical band table
+is unchanged, including its original labels and values. FINDING-155's AR drift
+qualification is also retained. No historical accepted ADR is rewritten.
+
+The entire calibration module AST, including docstrings, compares exactly with
+the published predecessor: only two explanatory comments change. The historical
+cold-memory band table also compares byte-for-byte. This qualification implements
+the existing reporting scope of ADR-239/F159/F164; it neither corrects the
+mathematical reference nor certifies filter initialization. This finding remains Open.
+
+Independent final research review approved all five paths, the exact entire
+module AST and table comparisons, and the retained historical finalist shares
+(18% Mean Reversion versus 68% Trend at half-life1). Full foreground
+`make check-all` passed 11,311 backend tests (97.38% coverage) and 363 frontend
+tests (97.63% statement coverage), with lint, formatting and strict typing green.

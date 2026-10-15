@@ -698,7 +698,7 @@ alone; and use `compare_power_sweeps(before, after)`, which refuses to call a ca
 attributable unless the finalist mix moved with it (a larger grid raises an in-sample maximum on its
 own).
 
-### 7.6 The achievable oracle (ADR-061) — the band gap was the benchmark
+### 7.6 Historical latent and filtered band references (ADR-061)
 
 **Current qualification — FINDING-159 (Open):** the latent and observable
 band references use conditional log-mean signs to score simple returns.
@@ -709,11 +709,15 @@ upper-bound and no-recoverable-edge claims below are historical interpretations,
 not certified conclusions. Detection counts remain unchanged; the finding
 does not correct the reference or certify filter initialization.
 
-`mean_reverting_edge` plants `log price = random-walk level + AR(1) deviation` and only the SUM is
-observable, so the oracle every band capture ratio was divided by knows a state no strategy can see.
-`filtered_deviation` runs the two-state Kalman recursion **with the true process parameters** — an
-upper bound on any causal price-based strategy — and `achievable_capture_ratio` divides by that,
-under the same refusal ADR-055 applies to the net ratio. Measured, 50 symbols per cell at 5400 bars:
+`mean_reverting_edge` plants `log price = random-walk level + AR(1) deviation`;
+only their sum is observed. The latent sign reference uses the hidden deviation.
+`filtered_deviation` applies the specified two-state Kalman recursion using known
+source parameters and its historical initialization. Its filtered sign reference
+is scored net of the stated costs; `achievable_capture_ratio` divides the selected
+in-sample finalist score by that reference under ADR-055's denominator refusals.
+These measurements do not certify filter initialization or a bound on causal
+strategy performance. The following historical table retains its original labels
+and values: 50 symbols per cell at 5400 bars.
 
 | band half-life | 1 | 2 | 3 | 5 | 10 | 20 |
 |---|---|---|---|---|---|---|
@@ -722,22 +726,29 @@ under the same refusal ADR-055 applies to the net ratio. Measured, 50 symbols pe
 | capture vs latent (the headline) | 32% | 29% | 31% | 45% | 56% | 58% |
 | **capture vs achievable** | *refused* | 261% | 130% | 105% | 103% | 104% |
 
-**What to say about band reversion from now on.** The catalog converts essentially all of the
-recoverable edge from half-life 3 onward; at half-lives 1–2 there is nothing recoverable to convert
-(the optimal filter with perfect parameter knowledge nets −0.08 at half-life 1). The 0/50 detection
-in every band cell is then fully explained by ADR-043's frontier — an achievable net Sharpe of at
-most ≈0.95 against a ≈2.1 requirement — **without any reference to the catalog at all. A gate that
-graduated one of these cells would be wrong.**
+**What these band controls establish.** The recorded net filtered reference is
+−0.08 at half-life 1, and the selected in-sample capture ratios from half-life 3
+are near or above 100% against that specified denominator. These observations do
+not establish that all recoverable edge was captured or that no other causal,
+cost-aware strategy could trade shorter half-lives. Each cell's 0/50 detection
+count remains a result of the executed pipeline. Comparing the largest recorded
+filtered net reference, about 0.95, with the historical ADR-043 approximately 2.1
+frontier can
+contextualize that reference; it does not prove that a graduation would be wrong.
 
-Two things this closes, so they are not retried:
-- **A better estimator cannot help.** At the production deviation shares the Kalman filter and a
-  naive EWM residual correlate with the true deviation equally (0.270 vs 0.271 at half-life 1). The
-  estimation problem binds, not the estimator. ADR-056's strategy WAS the naive estimator and the
-  per-symbol Kalman gain it proposed as a follow-up is the optimal one.
-- **A different selection rule cannot help.** Matched-family pick rate at half-life 1 is 0% under
-  max-DSR (production), 0% under max in-sample Sharpe, 10% under max walk-forward OOS and 0% under
-  max purged-CV OOS. Every criterion agrees because the reverting families genuinely score lower on
-  all of them.
+Two historical diagnostic comparisons remain useful within their measured scope:
+
+- **Estimator comparison.** At the measured deviation shares and half-life 1,
+  the recorded Kalman and naive EWM residual correlations with the hidden
+  deviation were 0.270 and 0.271. Similar correlations for those two estimators
+  do not certify the historical filter or rule out a better estimator, position
+  rule or treatment of costs. ADR-056's naive estimator and proposed Kalman
+  follow-up remain attributable to their executed methods.
+- **Selection comparison.** The measured half-life-1 matched-family pick rates
+  were 0% under max DSR, 0% under max in-sample Sharpe, 10% under max walk-forward
+  OOS and 0% under max purged-CV OOS. These fixed-cohort observations do not prove
+  that another selection rule cannot help. Production selection decisions and
+  their separate criteria remain governed by ADR-069/070/071.
 
 The AR(1) sweep historically records no separate achievable reference because its state is the
 observed return. Capture above 100% follows from an in-sample selected numerator divided by a

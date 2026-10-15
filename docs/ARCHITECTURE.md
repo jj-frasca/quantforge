@@ -238,14 +238,15 @@ transcribed prose — which is how the superseded zero propagated.
 cost-free while every catalog finalist pays 10bp on turnover, and the oracle is a *sign* strategy
 turning over up to 1.19 per bar. Charged the same cost, two readings change. The zero-power cells at
 |φ| = 0.10 have a net oracle of **+0.02 / −0.09** against a Sharpe standard error of ≈0.22 — they
-contained no achievable edge, so "0% at oracle ≈ 1.3" was never a miss. And at net accounting the
+are near zero for this fixed sign reference; they do not prove absence of tradeable edge
+(FINDING-155). And at net accounting the
 catalog's in-sample finalist *beats* a cost-paying oracle on AR(1) (net capture **104–126%**, the
-clearest possible demonstration that ADR-045's ratio is an upper bound, not a fraction achieved)
+illustrating a selected in-sample ratio rather than a fraction of an optimal edge achieved)
 while reaching only **29–45% on band reversion at half-lives 1–5**. The band gap therefore survives
 both corrections and gets sharper: those fast band cells have a HIGHER net oracle (+1.70) than the
 AR(1) cell detected 22% of the time (+1.15), and capture rises monotonically with the horizon
 (31% → 58%). A capture ratio is refused outright when the net oracle sits inside its own standard
-error, so a cell with no achievable edge reports no fraction rather than a ratio against noise.
+error, so a denominator within its stated uncertainty refusal reports no fraction rather than a ratio against noise.
 
 **ADR-056/057/058 resolved what that gap actually is, and it is not what the wording above implied.**
 ADR-056 added `two_timescale_reversion` — a strategy whose entire design is to estimate the level and
@@ -255,22 +256,28 @@ ADR-057 then made the reading attributable by recording which strategy won each 
 the answer is decisive: at half-life 1 the max-DSR search selects a **Trend** strategy 68% of the
 time, and the share of *Mean Reversion* finalists (18% / 44% / 64% / 94% / 94% / 82% across
 half-lives 1–20) tracks net capture (32% / 30% / 31% / 45% / 56% / 58%) almost exactly. The AR(1)
-control recognizes perfectly. **The fast-half-life gap is a RECOGNITION failure — at those horizons
-no reverting strategy wins the in-sample comparison, so adding reverting strategies cannot help.**
+control recognizes perfectly. **The historical fast-half-life gap includes a recognition pattern:**
+the tested reverting strategies were selected less often at half-life 1 (18%) than Trend
+strategies (68%). This does not establish
+that another strategy could not help (FINDING-159/164).
 ADR-059 then split capture by the kind of strategy that earned it, and the fast cells change
 meaning: at half-life 1 the headline 32% is carried by **Trend at 31%** (fitting the random-walk
 level, 83% of return variance there) while everything aimed at the planted reversion keeps **22%**.
-From half-life 3 the matched row is the headline. Quote 22% for what the catalog's reverting
-strategies keep of a fast planted reversion. **ADR-061 then retired the finding entirely.** The band oracle is computed from the process's LATENT
-deviation and only the level-plus-deviation SUM is observable, so no causal strategy could ever have
-reached it. A Kalman filter given the true parameters — the upper bound on any price-based strategy
-— nets −0.08 / +0.22 / +0.51 / +0.95 / +0.93 / +0.70 at half-lives 1 / 2 / 3 / 5 / 10 / 20 against a
-latent oracle of +1.70 to +2.21. Capture against what is recoverable is **103–105% at half-lives
-5–20**, 130% at 3, and refused at 1. The catalog converts essentially everything convertible; the
-0/50 detection follows from ADR-043's frontier alone (recoverable ≤0.95 against a ≈2.1 requirement),
-with no reference to the catalog. Two follow-ups are closed by the same measurement: a better
-estimator cannot help (Kalman and a naive EWM residual correlate with the truth equally at the
-production shares) and no alternative selection rule recognizes the matched family more often.
+From half-life 3 the matched row is the headline. The 22% is a selected in-sample ratio to the
+historical latent reference, not a fraction of all recoverable edge.
+**ADR-061 introduced a separate historical filtered reference.** The band reference uses the
+process's latent deviation, while only the level-plus-deviation sum is observed. The specified
+Kalman recursion with true source parameters records net reference scores
+−0.08 / +0.22 / +0.51 / +0.95 / +0.93 / +0.70 at half-lives 1 / 2 / 3 / 5 / 10 / 20,
+while the historical latent-reference comparison quoted +1.70 to +2.21. Selected in-sample capture
+against that filtered reference is **103–105% at half-lives 5–20**, 130% at 3, and refused at 1.
+These ratios compare specified strategies; they do not show that all recoverable edge was captured.
+The historical 0/50 detections remain pipeline observations. Comparing the largest recorded filtered
+net reference, 0.95, with ADR-043's approximately 2.1 frontier contextualizes that reference;
+it does not prove another causal, cost-aware strategy cannot graduate. The measured Kalman-versus-naive-EWM
+residual correlations and tested selection-rule comparisons remain diagnostics for those methods,
+without ruling out another estimator, position rule or selection method. FINDING-159 remains Open:
+these measurements do not certify filter initialization or correct the conditional-log-mean/simple-return mismatch.
 ADR-058 removed the probe strategy for failing its own pre-stated criterion (restoring
 `search_config_version 3f36fda2…`, so the committed calibration artifacts apply unchanged) and
 points the next unit at the selection step, judged against the finalist category mix.
@@ -280,9 +287,9 @@ every experiment's trials by catalog category and reports the winning category's
 the runner-up against Lo (2002)'s Sharpe standard error. Over 3,255 pooled experiments: Trend
 +0.569 (wins 53%), Breakout +0.495 (10%), Mean Reversion +0.469 (33%), Combination +0.316 (3%), and
 the **median lead is +0.074 against an SE of 0.215 — inside one standard error**. The *kind* of
-strategy the search selects is not distinguishable from the kind it rejected, on real symbols, for
-the same reason ADR-061 gives on synthetic ones: at this history length the data does not separate
-the hypotheses. That points the next unit at **holdout length**, not at the selection rule.
+strategy the search selects has a small recorded lead over the kind it rejected on real symbols.
+That observation motivated the historical **holdout length** investigation; neither this lead/SE
+comparison nor ADR-061's reference scores prove that alternative selection methods cannot help.
 
 **The first measured selection-rule alternative did not replace the default (ADR-069/070), and its
 artifact extraction is repaired by ADR-071.** Ranking families by walk-forward OOS Sharpe moved
@@ -327,7 +334,7 @@ is exactly the `sqrt(1/T)` the ADR-018 bar already uses. At the current design (
 holdout) an edge must be a **true annualized Sharpe of 2.13** to be found 80% of the time. Measured
 power is lower than that frontier, and the gap is the catalog's *capture efficiency*. ADR-045 now
 records the max-DSR finalist's in-sample Sharpe for every searched power-calibration symbol and
-reports median finalist / median oracle as a selection-biased **upper bound** on capture. Measured
+reports median finalist / median oracle as a **selected in-sample ratio** (FINDING-164). Measured
 gross capture is 0.21–0.25 at 1–3 bar reversion half-lives and 0.37 at 5 bars (0.32/0.31/0.45 net of
 ADR-055's cost correction); the 2-bar configs are searched but do not win, so the fast-reversion
 weakness is estimation, not a missing short window.
@@ -712,8 +719,9 @@ error unchanged at 0/200 on both nulls (max DSR −0.261 / −0.368, `deflation_
 1.722), and AR(1) detection moved **34/22/0/0/14/64% → 40/36/0/0/24/66%** for φ = −0.3…+0.3 — four
 of four cells that had an edge to find, none down, on a deterministic sweep. The cells ADR-063
 named (φ = ±0.1, band half-lives 3–5) stayed at 0%, so the pre-stated criterion is recorded as
-**failed**: it lumped "0% for want of power" together with "0% because ADR-061 showed there is
-nothing recoverable there". Band capture also *fell* (32/29/31/45/56/58% → 31/30/30/42/51/50%,
+**failed**: it combined low-power cells with cells whose specified filtered reference had low net scores.
+ADR-061 did not certify absence of recoverable edge (FINDING-159).
+Band capture also *fell* (32/29/31/45/56/58% → 31/30/30/42/51/50%,
 and 105/103/104% → 97/98/88% against the achievable oracle) — capture's numerator is an in-sample
 maximum, so 1,600 more bars regress it toward truth. **The older, higher ratios were the more
 selection-biased ones.**

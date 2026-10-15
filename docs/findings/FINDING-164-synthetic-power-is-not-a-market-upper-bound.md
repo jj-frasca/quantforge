@@ -48,3 +48,11 @@ two additional RED cases and nineteen preserved cases before its patch. Final
 at 97.56% backend coverage and 97.63% frontend statements. All served scores,
 ratios, detections and null displays are preserved. FINDING-159's mathematical
 reference correction remains Open.
+
+The 2026-10-14 residual guidance follow-up also removes the PowerCalibration
+history comment's claim that shorter-history power is a lower bound on longer-
+history power. History-specific detection rates do not establish that ordering
+without a matched argument. Active architecture/cold-memory guidance describes
+capture as a selected in-sample ratio to a qualified reference and preserves all
+historical table values. The full calibration module AST is identical, including
+docstrings; no score, history, ratio, field, threshold or identity changes.

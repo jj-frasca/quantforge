@@ -701,10 +701,10 @@ class PowerCalibration(BaseModel):
     # what ADR-041/042 published and is kept unchanged; this one is what a capture ratio should be
     # divided by, since its numerator paid those costs. Empty means an artifact predating ADR-055.
     net_oracle_sharpes: list[_FiniteCalibrationScore] = []
-    # ADR-061: the oracle a causal filter could actually form from prices, charged the same costs.
-    # The latent-state oracle above knows the hidden deviation; on a band process most of its edge
-    # is not recoverable at all. Empty on an AR(1) cell (its state IS the observed return) and on
-    # any artifact predating the field.
+    # ADR-061: the historical price-based filtered sign reference, charged the same costs.
+    # The latent reference knows the hidden deviation; their measured gap compares these
+    # specified strategies, not a certified bound on recoverable edge (FINDING-159).
+    # Empty on historical AR(1) cells and artifacts predating the field.
     achievable_oracle_sharpes: list[_FiniteCalibrationScore] = []
     # ADR-045: one max-DSR finalist per SEARCHED symbol, including non-detections. Conditioning
     # this list on graduation would select lucky captures and inflate the reported ratio.
@@ -733,9 +733,9 @@ class PowerCalibration(BaseModel):
     # Empty means a legacy artifact did not preserve attribution; it never means zero passes.
     gate_pass_counts: dict[str, _NonnegativeCalibrationCount] = Field(default_factory=dict)
     holdout_years: list[_PositiveHoldoutYears]
-    # ADR-051: the history each planted-edge symbol was searched over, one entry per SEARCHED
-    # symbol. Power measured short is a lower bound on the power available, so an artifact that
-    # does not state its length cannot bound anything. Empty means a run predating the field.
+    # ADR-051: the history each planted-edge symbol was searched over, one per SEARCHED
+    # symbol. Power is measured at this length; unmatched histories do not establish a
+    # bound or comparable rate. Empty means an artifact predating the field.
     n_bars: list[_PositiveCalibrationBars] = []
     errors: dict[str, str]
     gate_config_version: str
