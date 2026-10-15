@@ -124,6 +124,14 @@ continuation through that missing completion. No partial power rate, interval
 or full-N inference is reported; the positive arm remains unmeasured. Original
 sources and checkpoints are preserved, without retry, redraw or historical pooling.
 
+FINDING-245 records session15's separate prospective v14 strong-AR attempt
+as incomplete:69 durable Experiments/70 started markers out of400 frozen
+sources (N200 per arm), unresolved NEG0069, no arm result or summary. No
+partial rates or intervals are inferred; the positive arm is unmeasured.
+Its frozen protocol forbids retry/redraw/budget renewal and further replacement
+attempts after incompletion. F242 remains separate; neither prefix is pooled
+or treated as a completed power measurement. Sources/checkpoints are preserved.
+
 FINDING-243 records a separate NEW fixed v14 Student-t5 stress at executed
 a8054a5d: all200/200 searches completed, zero errors/graduates/ADR018 survivors,
 one-sided95% zero-event upper1.4867% under the stated valid-source stress model.
