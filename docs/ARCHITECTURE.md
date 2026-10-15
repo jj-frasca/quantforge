@@ -168,12 +168,17 @@ conservative on known-false series; power determines what that conservatism can 
 
 **Walk-forward and purged CV are real as of 2026-08-19 — they used to be counts.** `ValidationReport`
 carried `n_walk_forward_splits` / `n_purged_folds` and nothing was ever trained or scored on those
-splits. Now `walk_forward_evaluate` (ADR-038) selects on each expanding train block and scores the
-block that follows — the only causal out-of-sample number besides the locked holdout, and the only
-one that measures the *selection procedure* — and `purged_cv_evaluate` (ADR-039) scores the purged
-folds with an embargo sized from the grid's longest lookback instead of a fixed 2 bars. Both are
-**diagnostics with explicit revisit triggers, and neither gates anything**; both are recorded per
-`Trial` and summarized by `scripts/pool_report.py` against the null. Their null distributions put
+splits. Now `walk_forward_evaluate` (ADR-038) selects on each expanding train block and scores
+the chosen config's continued return path on the forward block. These causal fixed-config
+window scores include supplied internal turnover costs, but do not reconcile the entry or
+switching trades of a self-financing account adopting successive configs (ADR-293 / FINDING-246).
+Their headline is an equal mean of window Sharpes, not Sharpe on stitched policy returns.
+`purged_cv_evaluate` (ADR-039) scores purged folds with an embargo sized from the grid's longest
+lookback instead of a fixed 2 bars; its selection deliberately sees later training observations.
+Both remain diagnostics with explicit revisit triggers and no separate graduation threshold.
+Nondefault `select_by="walk_forward"` can rank families by the WF statistic (ADR-069); default
+observed selection is unchanged. Both are recorded per `Trial` and summarized by
+`scripts/pool_report.py` against the null. Their null distributions put
 "indistinguishable from noise" at roughly **+1.0 annualized**, and purged CV sits above walk-forward
 because its selection sees the future — read them side by side, never averaged. Details:
 `.claude/context/validation-methodology.md` §3–§5.

@@ -60,15 +60,19 @@ class WalkForwardSplitResult(BaseModel):
 
 
 class WalkForwardResult(BaseModel):
-    """Prequential out-of-sample estimate for the SELECTION PROCEDURE (ADR-038).
+    """Causal train-selected fixed-config continuation-window diagnostic (ADR-293).
 
     Notes:
-        The locked holdout (ADR-016) scores one config that was chosen using the whole search set.
-        This scores the act of re-choosing: select on what you had, measure what came next, repeat.
-        ``mean_oos_sharpe`` and ``consistency`` are the headline numbers; ``efficiency`` (Pardo's
-        walk-forward efficiency) is undefined when the in-sample mean is not positive, because a
-        ratio of two negative Sharpes is positive and would read as "efficient" while both halves
-        lost money. Diagnostic only — nothing gates on it (ADR-038 §"Why not a gate — yet").
+        The locked holdout (ADR-016) scores one config chosen on the whole search set.
+        Here each train-selected config contributes its continued return path on the next block.
+        Engine-supplied net returns include that config's internal turnover; these slices do not
+        reconcile the entry or switching trades of one capital account adopting those configs.
+        ``mean_oos_sharpe`` is the equal mean of window Sharpes, not Sharpe on stitched returns.
+        ``consistency`` is the fraction of positive windows; ``efficiency`` (Pardo's walk-forward
+        efficiency) is undefined when mean in-sample Sharpe is not positive, because a ratio of
+        two negative Sharpes can be positive while both halves lost money.
+        No standalone graduation threshold uses this diagnostic. The nondefault
+        ``select_by="walk_forward"`` family selector can rank by it (ADR-069).
     """
 
     model_config = ConfigDict(frozen=True, revalidate_instances="always")
@@ -135,20 +139,22 @@ def walk_forward_evaluate(
     *,
     benchmark: FloatArray | None = None,
 ) -> WalkForwardResult:
-    """Select the best config on each train block, score it on the following test block (ADR-038).
+    """Select a config on train rows and score its continued path on forward rows (ADR-293).
 
     Args:
-        performance: (T observations, N configurations) matrix of per-bar returns — the same matrix
-            PBO consumes. Slicing it is equivalent to re-running the window because every catalog
-            strategy is causal (signal at t uses bars <= t only); see ADR-038.
+        performance: (T observations, N configurations) per-bar return matrix, also used by PBO.
+            Slices preserve each config's full-history state and any internal costs already in
+            its returns. Past-only signals permit causal fixed-config continuation; they do not
+            make these slices independent flat-start backtests or reconcile the entry/switching
+            trades of one account adopting successive configs.
         splits: expanding-window splits from ``walk_forward_splits``.
         benchmark: optional per-bar buy-and-hold returns for the same window, scored across the
             same test blocks (ADR-068). Pairing it here rather than at the call site is the point:
             a benchmark measured over a different window is the confound it exists to remove.
 
     Returns:
-        A ``WalkForwardResult``. Ties in the train-block argmax resolve to the lowest config index,
-        so the result is deterministic.
+        A ``WalkForwardResult`` with an equal mean of window Sharpes, not a stitched-policy Sharpe.
+        Train-block argmax ties resolve to the lowest config index, so the result is deterministic.
     """
     performance_source = performance
     benchmark_source = benchmark

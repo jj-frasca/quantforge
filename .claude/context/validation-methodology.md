@@ -302,10 +302,16 @@ step forward. `walk_forward_splits` returns `list[(train_idx, test_idx)]`;
 scores it on the following test block**, returning `mean_oos_sharpe`, `consistency` (share of
 windows with a positive OOS Sharpe) and Pardo `efficiency`.
 
-This is the only *causal* out-of-sample number in the system besides the locked holdout, and unlike
-the holdout it measures the **selection procedure** rather than one config chosen on the whole
-sample. It reuses the (T, N) matrix PBO already builds — valid because every catalog strategy is
-causal — so it costs no extra backtests. Sharpes are annualized, like everything else.
+Train-only selection gives a causal forward-window diagnostic alongside the locked holdout.
+Each window scores the chosen config's continued full-history return path. Engine-supplied net
+returns include that config's internal turnover; slices do not reconcile entry or switching
+trades for one account adopting successive configs (ADR-293 / FINDING-246). Causal signals
+justify fixed-config continuation, not equivalence to flat-start window backtests or a
+self-financing switched portfolio. `mean_oos_sharpe` remains the equal mean of annualized window
+Sharpes, not Sharpe on concatenated OOS returns. No separate WF threshold gates graduation;
+nondefault `select_by="walk_forward"` may rank families by this statistic (ADR-069), while the
+default remains observed selection. Arithmetic, averaging, selection, thresholds and v14
+accounting remain unchanged; historical measurements retain this diagnostic meaning.
 
 - **Invariant**: `max(train_idx) < min(test_idx)` for every split — never uses future data.
 - **Invariant**: a split's selection depends only on its own train rows. Stated PER SPLIT: the

@@ -84,11 +84,12 @@ def _select_index(trials: Sequence[Trial], select_by: SelectBy) -> int:
     """Which family is the finalist (ADR-069).
 
     Notes:
-        `observed` is the in-sample maximum this project has always used; `walk_forward` ranks the
-        SELECTION PROCEDURE instead of its luckiest draw, using ADR-038's mean OOS Sharpe over the
-        expanding train blocks — computed on the in-sample handle only, so it touches no sealed
-        holdout. A family carrying no walk-forward number falls back to its observed Sharpe rather
-        than ranking as a measured zero (ADR-067).
+        `observed` ranks by the existing in-sample maximum. Nondefault `walk_forward` ranks by
+        ADR-038's mean train-selected fixed-config continuation-window Sharpe, computed on the
+        in-sample handle only without touching the sealed holdout. That window diagnostic includes
+        supplied per-config internal costs, not cross-config rebalancing for an executable account
+        (ADR-293). A family with no walk-forward number falls back to observed Sharpe rather than
+        ranking as a measured zero (ADR-067). Selection rules and their fingerprints are unchanged.
     """
 
     def rank(trial: Trial) -> float:
