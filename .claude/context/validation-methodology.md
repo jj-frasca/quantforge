@@ -117,6 +117,13 @@ remain separately unmeasured; this local law-only result is not a threshold
 permission or complete ADR102 candidate comparison. See F241 for frozen hashes,
 checkpoint/source audits and pre-search reader-unit refusal/amendment.
 
+FINDING-242 records the separate new v14 paired strong-AR execution as
+incomplete: 95 durable Experiments and one unresolved started source out of
+400 frozen sources (N200 per arm). The frozen no-repeat protocol prevents
+continuation through that missing completion. No partial power rate, interval
+or full-N inference is reported; the positive arm remains unmeasured. Original
+sources and checkpoints are preserved, without retry, redraw or historical pooling.
+
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
 probability; margin/probability delegate to one guard. Valid formulas, counts and gates remain.
