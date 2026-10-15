@@ -112,8 +112,8 @@ FINDING-241 measures one NEW fixed local v14 iid-normal cohort at executed
 66c1c5d8: 200/200 sources, zero errors/graduates/ADR018 survivors, one-sided95%
 zero-event upper1.4867%. Full34/defaultGate/refine/nper3/7400/prior0/noStore;
 combinedN200 bar1.3432393159670402. Historical v10/v9 sources were not rerun or
-pooled. Current power, heavy-tail, bootstrap and published sole-writer artifacts
-remain separately unmeasured; this local law-only result is not a threshold
+pooled. F241 alone leaves power, heavy-tail, bootstrap and published sole-writer artifacts
+unmeasured; F243 subsequently measures the separate Student-t5 stress below. This local law-only result is not a threshold
 permission or complete ADR102 candidate comparison. See F241 for frozen hashes,
 checkpoint/source audits and pre-search reader-unit refusal/amendment.
 
@@ -123,6 +123,16 @@ incomplete: 95 durable Experiments and one unresolved started source out of
 continuation through that missing completion. No partial power rate, interval
 or full-N inference is reported; the positive arm remains unmeasured. Original
 sources and checkpoints are preserved, without retry, redraw or historical pooling.
+
+FINDING-243 records a separate NEW fixed v14 Student-t5 stress at executed
+a8054a5d: all200/200 searches completed, zero errors/graduates/ADR018 survivors,
+one-sided95% zero-event upper1.4867% under the stated valid-source stress model.
+All7000 retained compact Trial records were checked; no raw-config matrix rescan
+is claimed. Full34/defaultGate/refine/nper3/7400/prior0/noStore; all sources froze
+before search. Historical F163v10 and F241iid are not pooled or rerun. Finite fourth/
+infinite eighth moments limit kurtosis-precision assumptions; this does not certify
+bootstrap, power, markets or an ADR102 probability-gate change. See F243 for hashes
+and final verification receipts.
 
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
@@ -340,7 +350,8 @@ certify arbitrary numerator precision or universally exact rankings/rounding.
 Accounting advances to
 `whole-search-budgeted-robust-iqr-pbo-oos-sharpe-scaled-constant-moments-verified-zero-anchored-dispersion-pbo-exact-translation-sharpe-exact-translation-oos-exact-translation-v14`.
 At adoption current distributions were unmeasured; F241 subsequently supplies
-one local iid-normal cohort. Power/heavy-tail/bootstrap remain unmeasured; historical
+one local iid-normal cohort and F243 separately supplies one fixed Student-t5 stress.
+Power/bootstrap remain unmeasured; historical
 v13/v12/v11 and frozen v10 retain executed attribution without rerun/redraw/pooling
 or relabeling. Primary ADR-290 and PBO ADR-289 contracts remain independent.
 

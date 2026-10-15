@@ -8,8 +8,10 @@ Current search accounting is v14 via ADR-289's certified PBO translation,
 ADR-290's certified primary Sharpe translation and ADR-291's certified OOS
 selection/test/control translation. Version numbers inside earlier
 ADR summaries describe their adoption identity. F241 measures one new local fixed v14 iid-normal
-cohort (200/200, zero errors/graduates/ADR018 survivors); it does not certify power,
-heavy-tail, bootstrap or real markets. Historical v13/v12/v11 and frozen v10
+cohort (200/200, zero errors/graduates/ADR018 survivors). F243 separately measures
+a NEW fixed v14 Student-t5 stress (200/200, zero errors/graduates/ADR018 survivors),
+without rerunning historical sources. Neither certifies power, bootstrap or real markets.
+Historical v13/v12/v11 and frozen v10
 cohorts retain executed attribution.
 
 ---
