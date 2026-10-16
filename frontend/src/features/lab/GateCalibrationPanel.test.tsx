@@ -1,6 +1,6 @@
 // GateCalibrationPanel: the measured Type-I error of the whole gate (ADR-036/037). The number a
 // sceptical reader should see before any claim about a graduate.
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 
 import type { NullCalibration } from '../../types/lab'
 import { GateCalibrationPanel } from './GateCalibrationPanel'
@@ -63,4 +63,51 @@ test('says plainly that a positive deflated Sharpe is not sufficient on its own'
 test('renders nothing when the gate has never been calibrated', () => {
   const { container } = render(<GateCalibrationPanel calibrations={[]} />)
   expect(container).toBeEmptyDOMElement()
+})
+
+test('qualifies legacy calibration as unknown beside its measured rate', () => {
+  render(<GateCalibrationPanel calibrations={[calibration()]} />)
+  const row = screen.getByText('1.00%').closest('tr')!
+  expect(within(row).getByText(/Current default comparison unknown/)).toBeInTheDocument()
+  expect(screen.queryByText(/The unmodified search/)).not.toBeInTheDocument()
+})
+
+const context = (status: 'MATCHED' | 'DIFFERENT' | 'UNKNOWN') => ({
+  status, search: status, gate: status, history: status,
+  reasons: ['Manual comparison reason.'],
+  reference: {
+    search_config_version: 'current-search', gate_config_version: 'current-gate', n_bars: 7400,
+    strategy_names: ['manual'], n_per_param: 3, refine: true, refine_span: 0.25,
+    select_by: 'observed' as const,
+  },
+})
+
+test('qualifies each null row independently and exposes recorded/current identities', () => {
+  render(<GateCalibrationPanel calibrations={[
+    calibration({ null_mode: 'matched', compatibility: context('MATCHED') }),
+    calibration({ null_mode: 'different', compatibility: { ...context('DIFFERENT'), gate: 'MATCHED', history: 'UNKNOWN' } }),
+    calibration({ null_mode: 'unknown', compatibility: { ...context('UNKNOWN'), reference: null } }),
+  ]} />)
+  const matched = screen.getByText('matched').closest('tr')!
+  expect(within(matched).getByText(/Matches current default/)).toBeInTheDocument()
+  const different = screen.getByText('different').closest('tr')!
+  expect(within(different).getByText(/Different procedure or history/)).toBeInTheDocument()
+  expect(within(different).getByText(/Search: different; gate: matched; history: unknown/)).toBeInTheDocument()
+  expect(within(different).getByText('Manual comparison reason.')).toBeInTheDocument()
+  expect(within(different).getByText('Current default target: 7,400 bars.')).toBeInTheDocument()
+  expect(within(different).getByText('current-search')).toBeInTheDocument()
+  expect(within(different).getByText('current-gate')).toBeInTheDocument()
+  expect(within(different).getByText('abcdef0123456789')).toBeInTheDocument()
+  expect(within(different).getByText(/Grid points per parameter: 3/)).toHaveTextContent('selection: observed')
+  expect(within(different).getByText('1.00%')).toBeInTheDocument()
+  expect(within(different).getByText('200')).toBeInTheDocument()
+  const unknown = screen.getByText('unknown').closest('tr')!
+  expect(within(unknown).getByText(/Current default comparison unknown/)).toBeInTheDocument()
+  expect(within(unknown).getByText('Current default reference unavailable.')).toBeInTheDocument()
+})
+
+test('explicit null context also remains unknown', () => {
+  render(<GateCalibrationPanel calibrations={[calibration({ compatibility: null })]} />)
+  expect(screen.getByText(/Current default comparison unknown/)).toBeInTheDocument()
+  expect(screen.getByText(/do not guarantee performance in real markets/)).toBeInTheDocument()
 })

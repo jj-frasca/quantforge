@@ -1,4 +1,5 @@
 import type { PowerCell, PowerSweep } from '../../types/lab'
+import { CalibrationCompatibility } from './CalibrationCompatibility'
 
 const median = (values: number[]): number | null => {
   if (values.length === 0) {
@@ -34,10 +35,27 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
     <section aria-label="gate power" className="deflation-headline">
       <h3>Measured detection rate</h3>
       {sweeps.map((sweep) => (
-        <table key={sweep.edge}>
+        <div key={sweep.edge} className="table-scroll">
+        <table>
           <caption>
             {process(sweep.edge)} — a planted edge of measured strength, searched over{' '}
-            {sweep.n_bars.toLocaleString('en-US')} bars, the same history a real hunt gets
+            {sweep.n_bars.toLocaleString('en-US')} recorded bars
+            <p>Current default comparison covers the sweep and every measured cell.</p>
+            <CalibrationCompatibility
+              compatibility={sweep.compatibility}
+              recorded={[
+                {
+                  label: 'Sweep header',
+                  search_config_version: sweep.search_config_version,
+                  gate_config_version: sweep.gate_config_version,
+                },
+                ...sweep.cells.map((cell) => ({
+                  label: label(cell),
+                  search_config_version: cell.search_config_version,
+                  gate_config_version: cell.gate_config_version,
+                })),
+              ]}
+            />
             {sweep.edge === 'ar1' && (
               <p>
                 AR(1) scores use the historical reference sign strategy, which omits the drift
@@ -106,6 +124,7 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
             })}
           </tbody>
         </table>
+        </div>
       ))}
       <p data-testid="power-caveat">
         These stationary, always-on synthetic controls do not establish a bound on real-market

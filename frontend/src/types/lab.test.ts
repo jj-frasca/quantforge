@@ -4,6 +4,7 @@ import {
   leaderboardSchema,
   paperPortfolioSchema,
   nullCalibrationSchema,
+  powerSweepSchema,
   type LeaderboardRow,
   type PaperPosition,
 } from './lab'
@@ -246,3 +247,41 @@ test('exported types are usable', () => {
   }
   expect(row.symbol).toBe(pos.symbol)
 })
+
+const compatibility = {
+  status: 'DIFFERENT', search: 'DIFFERENT', gate: 'MATCHED', history: 'UNKNOWN',
+  reasons: ['Recorded search differs.'],
+  reference: {
+    search_config_version: 'current-search', gate_config_version: 'current-gate',
+    n_bars: 7400, strategy_names: ['manual'], n_per_param: 3,
+    refine: true, refine_span: 0.25, select_by: 'observed',
+  },
+}
+const manualNull = {
+  n_symbols: 1, n_graduates: 0, false_graduation_rate: 0,
+  n_clear_deflation_bar: 0, deflation_bar: 2, max_deflated_sharpe: -0.1,
+  max_holdout_sharpe: null, gate_config_version: 'recorded-gate', null_mode: 'manual',
+}
+const manualPower = {
+  edge: 'ar1', gate_config_version: 'recorded-gate', search_config_version: 'recorded-search',
+  n_bars: 5400, cells: [],
+}
+for (const [name, schema, measured] of [
+  ['null', nullCalibrationSchema, manualNull], ['power', powerSweepSchema, manualPower],
+] as const) {
+  test.each(['MATCHED', 'DIFFERENT', 'UNKNOWN'])(`${name} preserves %s compatibility`, (status) => {
+    const context = { ...compatibility, status }
+    expect(schema.parse({ ...measured, compatibility: context })).toMatchObject({ compatibility: context })
+  })
+  test(`${name} accepts older and unavailable metadata but rejects malformed metadata`, () => {
+    expect(schema.safeParse(measured).success).toBe(true)
+    expect(schema.safeParse({ ...measured, compatibility: null }).success).toBe(true)
+    expect(schema.safeParse({ ...measured, compatibility: { ...compatibility, reference: null } }).success).toBe(true)
+    expect(schema.safeParse({ ...measured, compatibility: { ...compatibility, reference: { ...compatibility.reference, select_by: 'walk_forward', refine: false } } }).success).toBe(true)
+    expect(schema.safeParse({ ...measured, compatibility: { ...compatibility, gate: 'CURRENT' } }).success).toBe(false)
+    expect(schema.safeParse({ ...measured, compatibility: { ...compatibility, reasons: 'missing identity' } }).success).toBe(false)
+    expect(schema.safeParse({ ...measured, compatibility: { ...compatibility, status: 'CURRENT' } }).success).toBe(false)
+    expect(schema.safeParse({ ...measured, compatibility: { ...compatibility, reference: {} } }).success).toBe(false)
+    expect(schema.safeParse({ ...measured, compatibility: { ...compatibility, reference: { ...compatibility.reference, n_bars: 0 } } }).success).toBe(false)
+  })
+}

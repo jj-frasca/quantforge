@@ -997,6 +997,15 @@ hunt's own ~5400 bars, `n_bars` is recorded on both artifact types, and a sweep 
 cells measured at different lengths. Any change to the estimator, the catalog, or the grids
 invalidates Type-I and both power results together — re-dispatch all three, at the same `n_bars`.
 
+**Displayed calibrations identify their relationship to the current default (ADR-294).**
+The null and power API lists retain historical measurements and add per-artifact
+search/gate/history compatibility, with one captured public default reference.
+Missing lineage or reference displays unknown; a known difference stays explicit.
+Complete histories and every nested power cell are checked before a match.
+Dashboard qualifications and identity details prevent old procedure measurements
+from silently certifying deployed code. No artifact, statistic, gate or calibration
+changes; custom procedures may intentionally differ from this default reference.
+
 **Null evidence is retained by history length (ADR-065).** The null workflow writes one artifact
 per `(null mode, median n_bars)` identity, such as `bootstrap_spy_7400.json`, rather than replacing
 the only file for that mode. A rerun at the same length still replaces the same measurement. This

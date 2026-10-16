@@ -320,3 +320,48 @@ test('an AR(1) cell shows a dash for the achievable oracle, because its state is
   render(<GatePowerPanel sweeps={[sweep()]} />)
   expect(screen.getAllByText('—')).toHaveLength(2)
 })
+
+test('qualifies legacy power as unknown and removes the same-hunt history claim', () => {
+  render(<GatePowerPanel sweeps={[sweep()]} />)
+  expect(screen.getByText(/Current default comparison unknown/)).toBeInTheDocument()
+  expect(screen.queryByText(/the same history a real hunt gets/)).not.toBeInTheDocument()
+  expect(screen.getByText(/5,400 recorded bars/)).toBeInTheDocument()
+})
+
+const context = (status: 'MATCHED' | 'DIFFERENT' | 'UNKNOWN') => ({
+  status, search: status, gate: status, history: status,
+  reasons: ['Manual comparison reason.'],
+  reference: {
+    search_config_version: 'current-search', gate_config_version: 'current-gate', n_bars: 7400,
+    strategy_names: ['manual'], n_per_param: 3, refine: true, refine_span: 0.25,
+    select_by: 'observed' as const,
+  },
+})
+
+test('qualifies each sweep independently and exposes every nested cell identity', () => {
+  render(<GatePowerPanel sweeps={[
+    sweep({ compatibility: context('DIFFERENT'), cells: [cell(), cell({ phi: 0.5, search_config_version: 'second-cell-search', gate_config_version: 'second-cell-gate' })] }),
+    { ...bandSweep(), compatibility: context('MATCHED') },
+  ]} />)
+  const table = screen.getByText(/Different procedure or history/).closest('table')!
+  expect(within(table).getByText(/covers the sweep and every measured cell/)).toBeInTheDocument()
+  expect(within(table).getByText('Recorded run: Sweep header')).toBeInTheDocument()
+  expect(within(table).getByText('Recorded run: phi +0.3')).toBeInTheDocument()
+  expect(within(table).getByText('Recorded run: phi +0.5')).toBeInTheDocument()
+  expect(within(table).getByText('second-cell-search')).toBeInTheDocument()
+  expect(within(table).getByText('second-cell-gate')).toBeInTheDocument()
+  expect(within(table).getByText('current-search')).toBeInTheDocument()
+  expect(within(table).getByText('Current default target: 7,400 bars.')).toBeInTheDocument()
+  expect(within(table).getAllByText('64%')).toHaveLength(2)
+  expect(within(table).getAllByText('32 / 50')).toHaveLength(2)
+  expect(within(table).getAllByText('+3.90')).toHaveLength(2)
+  expect(screen.getByText(/Matches current default/)).toBeInTheDocument()
+})
+
+test.each([null, { ...context('UNKNOWN'), reference: null }])('unknown power context retains historical numbers', (compatibility) => {
+  render(<GatePowerPanel sweeps={[sweep({ compatibility })]} />)
+  expect(screen.getByText(/Current default comparison unknown/)).toBeInTheDocument()
+  expect(screen.getByText('Current default reference unavailable.')).toBeInTheDocument()
+  expect(screen.getByText('64%')).toBeInTheDocument()
+  expect(screen.getByText('32 / 50')).toBeInTheDocument()
+})

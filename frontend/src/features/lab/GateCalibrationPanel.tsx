@@ -1,4 +1,5 @@
 import type { NullCalibration } from '../../types/lab'
+import { CalibrationCompatibility } from './CalibrationCompatibility'
 
 const asPercent = (value: number): string => `${(value * 100).toFixed(2)}%`
 
@@ -22,9 +23,10 @@ export function GateCalibrationPanel({ calibrations }: { calibrations: NullCalib
   return (
     <section aria-label="gate calibration" className="deflation-headline">
       <h3>Measured false-graduation rate</h3>
+      <div className="table-scroll">
       <table>
         <caption>
-          The unmodified search and gate, run over synthetic symbols with no edge by construction
+          Recorded search and gate, run over synthetic symbols with no edge by construction
         </caption>
         <thead>
           <tr>
@@ -35,6 +37,7 @@ export function GateCalibrationPanel({ calibrations }: { calibrations: NullCalib
             <th scope="col">Type-I error</th>
             <th scope="col">Clear the deflation bar</th>
             <th scope="col">Search version</th>
+            <th scope="col">Current default comparison</th>
           </tr>
         </thead>
         <tbody>
@@ -53,11 +56,22 @@ export function GateCalibrationPanel({ calibrations }: { calibrations: NullCalib
                     ? 'legacy'
                     : c.search_config_version.slice(0, 8)}
                 </td>
+                <td style={{ verticalAlign: 'top' }}>
+                  <CalibrationCompatibility
+                    compatibility={c.compatibility}
+                    recorded={[{
+                      label: c.null_mode,
+                      search_config_version: c.search_config_version,
+                      gate_config_version: c.gate_config_version,
+                    }]}
+                  />
+                </td>
               </tr>
             )
           })}
         </tbody>
       </table>
+      </div>
       <p data-testid="dsr-caveat">
         On this same edge-free data the pipeline still produced a deflated Sharpe as high as{' '}
         <strong>{worstDsr.toFixed(2)}</strong>. A positive deflated Sharpe is therefore necessary but{' '}

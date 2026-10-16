@@ -196,7 +196,29 @@ export type PoolReport = z.infer<typeof poolReportSchema>
 // search, DSR, PBO, MinTRL, holdout and beat-buy-and-hold together — which no single component's
 // guarantee implies. ADR-044 fingerprints both the gate and the resolved hypothesis family: a
 // catalog/grid change alters the procedure even when every threshold stays fixed.
+// Presentation-only comparison; the backend owns the compatibility verdict.
+const calibrationStatusSchema = z.enum(['MATCHED', 'DIFFERENT', 'UNKNOWN'])
+export const calibrationCompatibilitySchema = z.object({
+  status: calibrationStatusSchema,
+  search: calibrationStatusSchema,
+  gate: calibrationStatusSchema,
+  history: calibrationStatusSchema,
+  reasons: z.array(z.string()),
+  reference: z.object({
+    search_config_version: z.string(),
+    gate_config_version: z.string(),
+    n_bars: z.number().int().positive(),
+    strategy_names: z.array(z.string()),
+    n_per_param: z.number().int(),
+    refine: z.boolean(),
+    refine_span: z.number(),
+    select_by: z.enum(['observed', 'walk_forward']),
+  }).nullable(),
+})
+export type CalibrationCompatibility = z.infer<typeof calibrationCompatibilitySchema>
+
 export const nullCalibrationSchema = z.object({
+  compatibility: calibrationCompatibilitySchema.nullable().optional(),
   n_symbols: z.number().int(),
   n_graduates: z.number().int(),
   false_graduation_rate: z.number().min(0).max(1),
@@ -325,6 +347,7 @@ export const powerCellSchema = z.object({
 export type PowerCell = z.infer<typeof powerCellSchema>
 
 export const powerSweepSchema = z.object({
+  compatibility: calibrationCompatibilitySchema.nullable().optional(),
   edge: z.string(),
   gate_config_version: z.string(),
   search_config_version: z.string(),

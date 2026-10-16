@@ -382,6 +382,17 @@ parameter today. Reading them together is the fastest way to understand what the
   `symbol_diagnostics`, one record per searched null symbol tying nullable walk-forward/purged-CV
   OOS and hold values to their identity. The existing list fields remain backward-compatible raw
   projections; clients must not infer pairing from equal partial list lengths.
+- ADR-294 adds presentation-only `compatibility` to every `/null-calibration` row
+  and `/power-calibration` sweep, retaining existing fields/order/empty lists.
+  `status`, `search`, `gate`, `history` each use MATCHED/DIFFERENT/UNKNOWN;
+  `reasons` explains the dimensions and `reference` is a typed current-default
+  search/gate/history/settings object, or null when reference computation fails.
+  Known differences dominate unknowns. Complete exact per-symbol history and
+  every nested power cell are required for a match; raw missing lineage is not
+  supplied by scientific-model defaults. Historical data remains visible when
+  context is unavailable. Clients accept absent/null metadata from older servers
+  as UNKNOWN. This is default-procedure compatibility, not scientific validation
+  or the separate pool/null comparison below. Generated artifacts remain untouched.
 - `/null-comparison` serves the project's headline claim as a computation rather than a retyped
   sentence: the pool's finalist OOS diagnostics read against each null mode's own. Every row carries
   `comparable` and `mismatch` — a difference between two measurements that resolved different search

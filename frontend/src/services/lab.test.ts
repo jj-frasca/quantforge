@@ -312,3 +312,31 @@ test('requestPowerCalibration throws on a non-2xx response', async () => {
   )
   await expect(requestPowerCalibration()).rejects.toThrow(/Power calibration request failed \(500\)/)
 })
+
+const context = (status: 'MATCHED' | 'DIFFERENT' | 'UNKNOWN') => ({
+  status, search: status, gate: status, history: status,
+  reasons: ['Manual comparison reason.'],
+  reference: {
+    search_config_version: 'current-search', gate_config_version: 'current-gate', n_bars: 7400,
+    strategy_names: ['manual'], n_per_param: 3, refine: true, refine_span: 0.25,
+    select_by: 'observed' as const,
+  },
+})
+
+test.each([
+  ['null-calibration', requestNullCalibration, {
+    n_symbols: 1, n_graduates: 0, false_graduation_rate: 0, n_clear_deflation_bar: 0,
+    deflation_bar: 2, max_deflated_sharpe: -0.1, max_holdout_sharpe: null,
+    gate_config_version: 'recorded-gate', null_mode: 'manual',
+  }],
+  ['power-calibration', requestPowerCalibration, {
+    edge: 'ar1', gate_config_version: 'recorded-gate', search_config_version: 'recorded-search', n_bars: 5400, cells: [],
+  }],
+] as const)('%s preserves and validates compatibility at the service boundary', async (endpoint, request, measured) => {
+  const metadata = context('DIFFERENT')
+  server.use(http.get(`/api/v1/${endpoint}`, () => HttpResponse.json([{ ...measured, compatibility: metadata }])))
+  const rows = await request()
+  expect(rows[0]).toMatchObject({ ...measured, compatibility: metadata })
+  server.use(http.get(`/api/v1/${endpoint}`, () => HttpResponse.json([{ ...measured, compatibility: { ...metadata, status: 'CURRENT' } }])))
+  await expect(request()).rejects.toThrow()
+})

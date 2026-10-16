@@ -174,6 +174,7 @@ test('surfaces the measured false-graduation rate alongside the headline (ADR-03
 
   expect(await screen.findByLabelText('gate calibration')).toBeInTheDocument()
   expect(screen.getByText('1.00%')).toBeInTheDocument()
+  expect(screen.getByText(/Current default comparison unknown/)).toBeInTheDocument()
 })
 
 test('the dashboard still renders when the gate has never been calibrated', async () => {
@@ -277,4 +278,31 @@ test('leads with how the pool reads against a no-edge surrogate', async () => {
 
   expect(await screen.findByLabelText('null comparison')).toBeInTheDocument()
   expect(screen.getByText(/does not separate/i)).toBeInTheDocument()
+})
+
+const context = (status: 'MATCHED' | 'DIFFERENT' | 'UNKNOWN') => ({
+  status, search: status, gate: status, history: status,
+  reasons: ['Manual comparison reason.'],
+  reference: {
+    search_config_version: 'current-search', gate_config_version: 'current-gate', n_bars: 7400,
+    strategy_names: ['manual'], n_per_param: 3, refine: true, refine_span: 0.25,
+    select_by: 'observed' as const,
+  },
+})
+
+test('passes authoritative null/power compatibility through the dashboard client', async () => {
+  server.use(
+    http.get('/api/v1/null-calibration', () => HttpResponse.json([{
+      n_symbols: 1, n_graduates: 0, false_graduation_rate: 0, n_clear_deflation_bar: 0,
+      deflation_bar: 2, max_deflated_sharpe: -0.1, max_holdout_sharpe: null,
+      gate_config_version: 'recorded-gate', null_mode: 'manual', compatibility: context('DIFFERENT'),
+    }])),
+    http.get('/api/v1/power-calibration', () => HttpResponse.json([{
+      edge: 'ar1', gate_config_version: 'recorded-gate', search_config_version: 'recorded-search',
+      n_bars: 5400, cells: [], compatibility: context('MATCHED'),
+    }])),
+  )
+  renderWithClient(<LabDashboardPage />)
+  expect(await screen.findByText(/Different procedure or history/)).toBeInTheDocument()
+  expect(await screen.findByText(/Matches current default/)).toBeInTheDocument()
 })

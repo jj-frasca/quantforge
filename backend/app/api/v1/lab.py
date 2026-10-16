@@ -1,8 +1,15 @@
+import json
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
+from app.api.calibration_compatibility import (
+    PresentedNullCalibration,
+    PresentedPowerSweep,
+    available_calibration_reference,
+    calibration_compatibility,
+)
 from app.research.lab.calibration import NullCalibration, PowerSweep
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.paper import JsonFilePaperPortfolio, PaperPosition
@@ -77,16 +84,21 @@ def get_power_calibration_path() -> Path:
 # Sync + read-only: the measured Type-I error of the WHOLE gate (ADR-036/037), written by the
 # null-calibration workflow. Returns one row per measured (null mode, history) pair, or [] when none
 # has been measured — an empty list is honest, and a 500 here would take the dashboard down with it.
-@router.get("/null-calibration", response_model=list[NullCalibration])
+@router.get("/null-calibration", response_model=list[PresentedNullCalibration])
 def null_calibration(
     calibration_path: Annotated[Path, Depends(get_calibration_path)],
-) -> list[NullCalibration]:
+) -> list[PresentedNullCalibration]:
     if not calibration_path.is_dir():
         return []
-    return [
-        NullCalibration.model_validate_json(path.read_text())
-        for path in sorted(calibration_path.glob("*.json"))
-    ]
+    reference = available_calibration_reference()
+    rows = []
+    for path in sorted(calibration_path.glob("*.json")):
+        text = path.read_text()
+        NullCalibration.model_validate_json(text)
+        raw = json.loads(text)
+        context = calibration_compatibility(raw, reference)
+        rows.append(PresentedNullCalibration.model_validate({**raw, "compatibility": context}))
+    return rows
 
 
 # Sync + read-only: the project's headline claim, computed rather than retyped — how the pool's
@@ -140,13 +152,18 @@ def window_experiment(
 # Sync + read-only: the measured POWER of the whole gate (ADR-041/042/053), written by the two
 # power workflows. Served beside the Type-I error deliberately: a visible false-graduation rate
 # with no visible detection rate reads as strength when it is only conservatism.
-@router.get("/power-calibration", response_model=list[PowerSweep])
+@router.get("/power-calibration", response_model=list[PresentedPowerSweep])
 def power_calibration(
     power_calibration_path: Annotated[Path, Depends(get_power_calibration_path)],
-) -> list[PowerSweep]:
+) -> list[PresentedPowerSweep]:
     if not power_calibration_path.is_dir():
         return []
-    return [
-        PowerSweep.model_validate_json(path.read_text())
-        for path in sorted(power_calibration_path.glob("*.json"))
-    ]
+    reference = available_calibration_reference()
+    rows = []
+    for path in sorted(power_calibration_path.glob("*.json")):
+        text = path.read_text()
+        PowerSweep.model_validate_json(text)
+        raw = json.loads(text)
+        context = calibration_compatibility(raw, reference, power=True)
+        rows.append(PresentedPowerSweep.model_validate({**raw, "compatibility": context}))
+    return rows
