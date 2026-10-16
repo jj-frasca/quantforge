@@ -142,6 +142,15 @@ infinite eighth moments limit kurtosis-precision assumptions; this does not cert
 bootstrap, power, markets or an ADR102 probability-gate change. See F243 for hashes
 and final verification receipts.
 
+FINDING-247 records the prospective v14 bootstrap:SPY control at81e9429f as
+incomplete:52 durable Experiments/one-symbol shards,53 starts out of200 frozen
+sources, unresolved V14BOOTSPY_0052 and147 never started. No combined result,
+partial rates, intervals or full-N Type-I inference. The fixed5400s single-fresh-
+invocation protocol forbids unresolved retry, redraw, budget renewal or repeated
+attempts until a complete/preferred result appears. Exact8485-bar empirical SPY
+input/all305qualityissues/sources/checkpoints remain preserved. Current bootstrap
+remains unmeasured; F241iid/F243t5 and historical evidence are not pooled.
+
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
 probability; margin/probability delegate to one guard. Valid formulas, counts and gates remain.
