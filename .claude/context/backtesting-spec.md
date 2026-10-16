@@ -64,6 +64,17 @@ kernels already refuse the malformed source downstream. No score, threshold,
 accounting-v14 or frozen/generated evidence changes.
 
 
+ADR-303 binds daily discovery to one current-master revision prepared after its
+workflow concurrency wait. All shards and consolidation consume the same full SHA
+and current-attempt binding before checkout; stale failed-only reruns require all
+jobs to rerun. Upload/download names isolate attempts while current-attempt partial
+shard handling remains. Manual dispatch uses master science code/universe files,
+independently of its event-selected workflow DAG. Experiments retain actual git
+lineage; publication uses a runner-local branch and explicit HEAD:master. This
+protects the committed prior used by search (F258), not missing historical counts
+or synchronized vendor retrieval. Search math, thresholds and v14 remain.
+
+
 ---
 
 ## 1. Price frame convention

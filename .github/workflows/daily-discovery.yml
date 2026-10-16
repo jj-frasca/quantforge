@@ -31,7 +31,31 @@ env:
   N_SHARDS: "10"
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      revision: ${{ steps.freeze.outputs.revision }}
+      attempt: ${{ steps.freeze.outputs.attempt }}
+    steps:
+      # Resolve master after the concurrency wait, once for the entire attempt (ADR-303).
+      - uses: actions/checkout@v5
+        with:
+          ref: master
+      - name: Freeze shared discovery revision
+        id: freeze
+        run: |
+          set -euo pipefail
+          revision=$(git rev-parse HEAD)
+          attempt="${GITHUB_RUN_ATTEMPT:-}"
+          if [[ ! "$revision" =~ ^[0-9a-f]{40}$ || ! "$attempt" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::Discovery preparation requires a full revision and positive run attempt"
+            exit 1
+          fi
+          printf 'revision=%s\nattempt=%s\n' "$revision" "$attempt" >> "$GITHUB_OUTPUT"
+
   discover:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -39,7 +63,22 @@ jobs:
       matrix:
         shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     steps:
+      - name: Validate shared discovery revision
+        env:
+          SHARED_REVISION: ${{ needs.prepare.outputs.revision }}
+          PREPARED_ATTEMPT: ${{ needs.prepare.outputs.attempt }}
+        run: |
+          set -euo pipefail
+          revision="${SHARED_REVISION:-}"
+          prepared="${PREPARED_ATTEMPT:-}"
+          current="${GITHUB_RUN_ATTEMPT:-}"
+          if [[ ! "$revision" =~ ^[0-9a-f]{40}$ || ! "$prepared" =~ ^[1-9][0-9]*$ || ! "$current" =~ ^[1-9][0-9]*$ || "$prepared" != "$current" ]]; then
+            echo "::error::Discovery revision/attempt is invalid or stale; rerun all jobs"
+            exit 1
+          fi
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.revision }}
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.0
       - name: Sync dependencies
@@ -65,17 +104,32 @@ jobs:
         if: ${{ always() && hashFiles(format('shard_{0}.json', matrix.shard)) != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: pool-shard-${{ matrix.shard }}
+          name: pool-${{ github.run_attempt }}-shard-${{ matrix.shard }}
           path: shard_${{ matrix.shard }}.json
           retention-days: 3
 
   consolidate:
-    needs: discover
-    if: ${{ always() }}
+    needs: [prepare, discover]
+    if: ${{ always() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
+      - name: Validate shared discovery revision
+        env:
+          SHARED_REVISION: ${{ needs.prepare.outputs.revision }}
+          PREPARED_ATTEMPT: ${{ needs.prepare.outputs.attempt }}
+        run: |
+          set -euo pipefail
+          revision="${SHARED_REVISION:-}"
+          prepared="${PREPARED_ATTEMPT:-}"
+          current="${GITHUB_RUN_ATTEMPT:-}"
+          if [[ ! "$revision" =~ ^[0-9a-f]{40}$ || ! "$prepared" =~ ^[1-9][0-9]*$ || ! "$current" =~ ^[1-9][0-9]*$ || "$prepared" != "$current" ]]; then
+            echo "::error::Discovery revision/attempt is invalid or stale; rerun all jobs"
+            exit 1
+          fi
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.revision }}
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.0
       - name: Sync dependencies
@@ -84,7 +138,7 @@ jobs:
       - name: Download shard pools
         uses: actions/download-artifact@v4
         with:
-          pattern: pool-shard-*
+          pattern: pool-${{ github.run_attempt }}-shard-*
           path: shards
           merge-multiple: true
       - name: Consolidate pool
@@ -114,11 +168,12 @@ jobs:
             echo "no pool change"
             exit 0
           fi
+          git switch -c discovery-publication
           git config user.name "quantforge-discovery-bot"
           git config user.email "actions@users.noreply.github.com"
           git commit -m "chore(discovery): daily sharded hunt $(date +%F)"
           for attempt in 1 2 3; do
-            if git pull --rebase --autostash origin master && git push; then
+            if git pull --rebase --autostash origin master && git push origin HEAD:master; then
               echo "pushed on attempt $attempt"
               exit 0
             fi

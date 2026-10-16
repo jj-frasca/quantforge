@@ -1009,6 +1009,18 @@ prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experime
 counter per symbol. Summing all retained cumulative rows would double-count earlier trials; the
 headline is the sum of per-symbol denominators, not one global DSR denominator.
 
+**Queued discovery freezes a fresh shared revision per attempt (ADR-303).**
+After receiving its existing concurrency group, preparation resolves current
+master once. Every shard and consolidation checks out that same validated SHA
+with a matching attempt; earlier successful preparation cannot silently survive
+a failed-only rerun. Artifact names/downloads isolate attempts while preserving
+current-attempt partial-shard policy. Manual other-ref dispatch deliberately uses
+master science code and universe files; event workflow identity differs from the
+actual git-derived experiment lineage. Detached consolidation creates a runner-local
+publication branch and pushes HEAD:master. No scientific formula, threshold, v14
+identity or generated evidence changes; no historical missing count is inferred
+(FINDING-258).
+
 **Recorded candidate counts bound their own lifetime (ADR-299).** Trial counters
 are original positive nonboolean integers; both experiment lifetimes are original
 nonnegative integers and must cover the local sum of recorded evaluations. Missing
