@@ -70,10 +70,13 @@ def split_holdout(
     """Split a time-ordered daily frame into an in-sample search head and a sealed holdout tail.
 
     The holdout is always the calendar-latest `max(holdout_fraction·N, min_holdout_bars)` bars.
+    The original whole source index must be unique and ascending (ADR-302).
     Raises if the remaining search head would be shorter than `min_search_bars`.
     """
     if not 0.0 < holdout_fraction < 1.0:
         raise ValueError("holdout_fraction must be in (0, 1)")
+    if not frame.index.is_unique or not frame.index.is_monotonic_increasing:
+        raise ValueError("holdout source index must be unique and ascending")
     n = len(frame)
     holdout_n = max(int(holdout_fraction * n), min_holdout_bars)
     search_n = n - holdout_n

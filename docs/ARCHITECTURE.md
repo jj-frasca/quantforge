@@ -197,6 +197,16 @@ infinity remains the intentional MinTRL requirement for a non-positive observed 
 probability-DSR comparison reconstructs its enclosing artifacts before inference, so unchecked
 gate copies fail closed. No component predicate, threshold, reason text, or MinTRL formula changed.
 
+**Holdout chronology validates the whole source before splitting (ADR-302).**
+Both public splitters require unique ascending original indexes, after fraction
+validation and before positional slicing. Separate engine checks cannot detect
+sorted halves in reversed time or shared timestamps across the cut. Normal
+ResearchDataset protects vendor hunts; direct single-name DataFrame search could
+complete the inverted case, while the cross-sectional full-panel kernel already
+refused it. Original valid ordered slices, generic/naive compatibility, floors,
+scoring, thresholds and v14 identity remain. No actual production occurrence or
+false graduate is established (FINDING-257).
+
 **Original holdout bundles are checked before gate predicates (ADR-301).**
 The evaluator requires positive original integral history and finite nonboolean
 real Sharpe, return and benchmark evidence, with original return greater than -1.

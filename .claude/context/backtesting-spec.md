@@ -53,6 +53,17 @@ persisted fields remain. This is scalar validity, not benchmark provenance or
 proof that float projection replays exact-real predicates (OpenF256; F255).
 
 
+ADR-302 requires unique ascending original whole indexes at both public holdout
+splitters, after existing fraction validation and before length/slicing/size work.
+Checking only each slice misses inverted sorted halves or duplicate dates across
+the cut. Valid ordered generic/naive/aware indexes retain exact original slices
+and size behavior; no sorting, deduplication, timezone/cadence or floor arithmetic
+changes. Normal ResearchDataset already protects production chronology; direct
+single-name search was independently vulnerable (F257). Cross-sectional full-panel
+kernels already refuse the malformed source downstream. No score, threshold,
+accounting-v14 or frozen/generated evidence changes.
+
+
 ---
 
 ## 1. Price frame convention

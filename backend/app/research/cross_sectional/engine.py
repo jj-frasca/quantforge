@@ -101,10 +101,13 @@ def split_panel_holdout(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Split a date-ordered price panel into an in-sample head and a sealed holdout tail — the
     panel analog of `holdout.split_holdout` (same fractions/floors). The holdout is always the
-    calendar-latest ``max(holdout_fraction·N, min_holdout_bars)`` rows. Raises if the remaining
-    search head would be shorter than ``min_search_bars``."""
+    calendar-latest ``max(holdout_fraction·N, min_holdout_bars)`` rows. Original source index
+    must be unique and ascending (ADR-302). Raises if the remaining search head would be
+    shorter than ``min_search_bars``."""
     if not 0.0 < holdout_fraction < 1.0:
         raise ValueError("holdout_fraction must be in (0, 1)")
+    if not prices.index.is_unique or not prices.index.is_monotonic_increasing:
+        raise ValueError("holdout source index must be unique and ascending")
     n = len(prices)
     holdout_n = max(int(holdout_fraction * n), min_holdout_bars)
     search_n = n - holdout_n
