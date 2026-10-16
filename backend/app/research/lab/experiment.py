@@ -323,9 +323,9 @@ class ExperimentStore(Protocol):
 def _trials_for_symbol(experiments: list[Experiment], symbol: str) -> int:
     """Lifetime candidate count for a symbol — the DSR/MinTRL penalty denominator. The MAX cumulative
     ``lifetime_trials`` across the symbol's experiments (each is prior + this run's trials, so it is
-    cumulative and non-decreasing). Max, not a sum of trial-list lengths, so the count SURVIVES pool
-    pruning: dropping old experiments never lowers the bar as long as the most-recent (max) one is
-    kept (ADR-026 pool-size fix). Records before ADR-046 counted family summaries rather than
+    cumulative in ordinary production). Max, not a sum of trial-list lengths, so the count SURVIVES
+    pool pruning when a maximum-count witness is kept, even with legacy resets or clock skew
+    (ADR-300). Records before ADR-046 counted family summaries rather than
     concrete configurations, so their carried-forward value is a conservative lower bound."""
     return max((e.lifetime_trials for e in experiments if e.symbol == symbol), default=0)
 
@@ -389,20 +389,30 @@ def _partition_name(symbol: str) -> str:
 def retain_recent(
     experiments: list[Experiment], keep_non_graduate_per_symbol: int
 ) -> list[Experiment]:
-    """Bound a pool: keep ALL graduates (the valuable output, cheap) plus the most-recent
-    `keep_non_graduate_per_symbol` NON-graduate experiments per symbol. Honest because the MinTRL
-    denominator is the MAX cumulative `lifetime_trials` and the most-recent experiment — always
-    kept — carries that max, so retention can never lower the graduation bar."""
+    """Keep all graduates, latest N nongraduates and any necessary maximum-count witness.
+
+    ADR-300 preserves each represented prior with at most N+1 nongraduates per symbol;
+    the first original maximum breaks witness ties. Existing output order stays intact.
+    """
+    keep = require_trial_count(
+        keep_non_graduate_per_symbol, minimum=0, parameter="keep_non_graduate_per_symbol"
+    )
     graduates = [e for e in experiments if e.graduate is not None]
     by_symbol: dict[str, list[Experiment]] = defaultdict(list)
+    graduate_max: dict[str, int] = defaultdict(int)
     for e in experiments:
         if e.graduate is None:
             by_symbol[e.symbol].append(e)
+        else:
+            graduate_max[e.symbol] = max(graduate_max[e.symbol], e.lifetime_trials)
     kept: list[Experiment] = list(graduates)
     for exps in by_symbol.values():
-        kept.extend(
-            sorted(exps, key=lambda e: e.created_at, reverse=True)[:keep_non_graduate_per_symbol]
-        )
+        recent = sorted(exps, key=lambda e: e.created_at, reverse=True)[:keep]
+        kept.extend(recent)
+        witness = max(exps, key=lambda e: e.lifetime_trials)
+        represented = max((e.lifetime_trials for e in recent), default=graduate_max[witness.symbol])
+        if witness.lifetime_trials > max(represented, graduate_max[witness.symbol]):
+            kept.append(witness)
     return kept
 
 
@@ -414,8 +424,10 @@ class PartitionedExperimentStore:
     rather than orchestrated around."""
 
     def __init__(self, directory: Path | str, keep_non_graduate_per_symbol: int = 5) -> None:
+        self._keep = require_trial_count(
+            keep_non_graduate_per_symbol, minimum=0, parameter="keep_non_graduate_per_symbol"
+        )
         self._dir = Path(directory)
-        self._keep = keep_non_graduate_per_symbol
 
     def _partition(self, symbol: str) -> Path:
         return self._dir / f"{_partition_name(symbol)}.json"

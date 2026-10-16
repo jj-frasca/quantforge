@@ -32,6 +32,17 @@ experiments were compatible in F253's fresh read-only audit; no hidden counts or
 generated-file migration is inferred.
 
 
+ADR-300 preserves represented per-symbol lifetime maxima during retention. Keep all
+graduates and the newest N nongraduates, plus the first original maximum-count
+nongraduate only when that maximum would otherwise disappear. At most N+1
+nongraduates remain; quota0 still retains a positive prior. Records and the prior
+policy's output order stay intact; witnesses append after their symbol's recent
+rows. Both bounded interfaces require original nonnegative nonboolean Integral
+quotas before iteration/path access. Migration still resolves None to the input
+count for lossless movement. No discarded historical count is inferred, and
+search formulas, max aggregation, thresholds and v14 identity remain (F254).
+
+
 ---
 
 ## 1. Price frame convention

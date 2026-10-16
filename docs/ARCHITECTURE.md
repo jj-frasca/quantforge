@@ -999,6 +999,16 @@ priors, empty-trial zero, max aggregation and retention remain. The fresh3318-ro
 compatibility audit found no incompatibility; no historical count is inferred and
 no generated record, estimator, threshold or v14 identity changes (FINDING-253).
 
+**Retention preserves represented trial-count maxima (ADR-300).** Latest-N
+nongraduates need not carry the highest lifetime count after legacy resets or
+clock skew. Retention now keeps one original maximum-count witness per symbol
+only when all graduates and latest-N would lose it, bounding nongraduates by N+1.
+Quota0 retains a positive prior; zero-only history can drop. Original records
+stay intact, and bounded quotas reject coercible or negative values before work.
+Migration's lossless None wrapper, max aggregation, estimators, thresholds,
+accounting-v14 and generated records remain unchanged. This prevents future
+pruning loss; it cannot reconstruct discarded history (FINDING-254).
+
 **Whole-search dispersion is robust as of ADR-050.** Sample standard deviation made the supposed
 null haircut grow without bound when a subset of heterogeneous strategies captured a planted edge;
 DSR consequently passed 0/50 even at median oracle Sharpe +3.92. Whole-search pricing now estimates
