@@ -197,6 +197,15 @@ infinity remains the intentional MinTRL requirement for a non-positive observed 
 probability-DSR comparison reconstructs its enclosing artifacts before inference, so unchecked
 gate copies fail closed. No component predicate, threshold, reason text, or MinTRL formula changed.
 
+**Original holdout bundles are checked before gate predicates (ADR-301).**
+The evaluator requires positive original integral history and finite nonboolean
+real Sharpe, return and benchmark evidence, with original return greater than -1.
+The complete bundle validates even when benchmark comparison is disabled; valid
+configuration behavior and native comparisons stay unchanged. No field/schema,
+threshold, hash, estimator or v14 identity changes. This prevents malformed scalar
+acceptance (FINDING-255), without certifying source provenance or exact-real float
+projection replay (separate Open FINDING-256).
+
 **Standalone MinBTL validates original Sharpe evidence (ADR-297).** After count
 validation, the public primitive rejects nonfinite, boolean and non-real score
 inputs before its nonpositive shortcut. Accepted operands retain original native

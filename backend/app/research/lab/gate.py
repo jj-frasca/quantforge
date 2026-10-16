@@ -149,6 +149,22 @@ class GraduationGate:
         if not finite_duration or duration_evidence < 0:
             raise ValueError(duration_error)
 
+        # ADR-301: validate the complete original bundle without replacing score operands.
+        holdout_n_bars = require_trial_count(holdout.n_bars, minimum=1, parameter="holdout.n_bars")
+        for field in ("sharpe", "total_return", "buy_and_hold_sharpe"):
+            evidence: object = getattr(holdout, field)
+            evidence_error = f"holdout.{field} must be a finite real nonboolean scalar"
+            if isinstance(evidence, bool) or not isinstance(evidence, Real):
+                raise ValueError(evidence_error)
+            try:
+                finite_evidence = math.isfinite(float(evidence))
+            except (OverflowError, ValueError, TypeError) as exc:
+                raise ValueError(evidence_error) from exc
+            if not finite_evidence:
+                raise ValueError(evidence_error)
+        if holdout.total_return <= -1:
+            raise ValueError("holdout.total_return must be greater than -1")
+
         dsr_ok = report.deflated_sharpe > config.dsr_min
         pbo_ok = report.pbo < config.pbo_max
         stability_ok = report.parameter_stability_score >= config.stability_min
@@ -212,5 +228,5 @@ class GraduationGate:
             gate_config_version=config.version_hash,
             reasons=reasons,
             holdout_sharpe=holdout.sharpe,
-            holdout_n_bars=holdout.n_bars,
+            holdout_n_bars=holdout_n_bars,
         )

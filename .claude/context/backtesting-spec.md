@@ -43,6 +43,16 @@ count for lossless movement. No discarded historical count is inferred, and
 search formulas, max aggregation, thresholds and v14 identity remain (F254).
 
 
+ADR-301 validates the complete original HoldoutScore at gate consumption after
+report/count/duration validation: positive nonboolean Integral bars, finite original
+nonboolean Real score/return/benchmark values, original total return > -1. Checks
+apply even when benchmark comparison is disabled; valid disabled comparison still
+stays disabled. Float inspection preserves native operands and local bar count
+normalizes to Python int. Construction, math, thresholds, config hash, v14 and
+persisted fields remain. This is scalar validity, not benchmark provenance or
+proof that float projection replays exact-real predicates (OpenF256; F255).
+
+
 ---
 
 ## 1. Price frame convention
