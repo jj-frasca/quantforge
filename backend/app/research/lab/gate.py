@@ -5,11 +5,14 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.claim_graph import FrozenClaimList
 from app.research.lab.holdout import HoldoutScore
+from app.research.trial_counts import require_trial_count
 from app.validation.report import ValidationReport, revalidate_validation_report
 
 
 def minbtl_years(n_trials: int, annualized_sharpe: float) -> float:
     """Minimum Backtest Length in years (Bailey & López de Prado, approximation 2·ln(N)/SR²).
+
+    Requires an original positive nonboolean integral count, normalized to Python int.
 
     Notes:
         The track record a claimed Sharpe needs to be credible *given how many strategies were
@@ -17,8 +20,7 @@ def minbtl_years(n_trials: int, annualized_sharpe: float) -> float:
         trial (N=1) carries no selection penalty (ln 1 = 0); a non-positive Sharpe can never be
         justified (∞). See ADR-015. Cite Bailey, Borwein, López de Prado, Zhu (2014).
     """
-    if n_trials < 1:
-        raise ValueError("n_trials must be >= 1")
+    n_trials = require_trial_count(n_trials, minimum=1, parameter="n_trials")
     if annualized_sharpe <= 0.0:
         return math.inf
     return 2.0 * math.log(n_trials) / (annualized_sharpe**2)

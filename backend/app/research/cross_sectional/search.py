@@ -32,6 +32,7 @@ from app.research.lab.trial_accounting import (
     whole_search_deflated_sharpe_probabilities,
     whole_search_deflated_sharpes,
 )
+from app.research.trial_counts import require_trial_count
 from app.validation.deflated_sharpe import deflated_sharpe
 from app.validation.parameter_stability import parameter_stability
 from app.validation.pbo import probability_of_backtest_overfitting
@@ -303,10 +304,14 @@ def run_cross_sectional_search(
     """Search the cross-sectional strategies over a price panel and apply the graduation gate
     (ADR-024). For each strategy: build config = (signal params x quantile), run the engine on the
     in-sample panel to get one portfolio return series per config, and validate the (T, N) matrix.
+    Original prior_trials must be a nonnegative nonboolean integral count and is
+    normalized to Python int before arithmetic or search work.
+
     Family finalists receive one whole-search lifetime DSR haircut before the best strategy overall
     is scored once on the sealed holdout and fed to the unmodified GraduationGate (ADR-046). Their
     shared PBO is likewise computed over every current concrete config (ADR-104).
     """
+    prior_trials = require_trial_count(prior_trials, minimum=0, parameter="prior_trials")
     gate_config = config or GateConfig()
     frozen_value_scores = _project_score_snapshot(value_scores, prices.columns)
     frozen_quality_scores = _project_score_snapshot(quality_scores, prices.columns)

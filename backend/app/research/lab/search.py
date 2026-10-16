@@ -27,6 +27,7 @@ from app.research.lab.trial_accounting import (
 )
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.grid_generator import find_catalog_entry, refine_grid
+from app.research.trial_counts import require_trial_count
 from app.validation.engine import ValidationEngine
 from app.validation.pbo import probability_of_backtest_overfitting
 from app.validation.report import ValidationReport
@@ -120,6 +121,9 @@ def run_search(
     """Run one search: validate each catalog strategy on the in-sample split, pick the best by
     deflated Sharpe, score it on the sealed holdout, and apply the graduation gate (ADR-014/016).
 
+    Original prior_trials must be a nonnegative nonboolean integral count and is
+    normalized to Python int before arithmetic or search work.
+
     The holdout is split here and never handed to any per-strategy step — only `score_on_holdout`
     touches it, once, for the finalist. Every family's finalist is recorded as a Trial; the best
     candidate's verdict (pass or fail) is always attached so failures are legible.
@@ -127,6 +131,7 @@ def run_search(
     those compact summaries (ADR-046), and their shared PBO measures the complete current candidate
     matrix rather than resetting inside the selected family (ADR-104).
     """
+    prior_trials = require_trial_count(prior_trials, minimum=0, parameter="prior_trials")
     gate_config = config or GateConfig()
     handle, sealed = split_holdout(frame, symbol)
     engine = BacktestEngine()

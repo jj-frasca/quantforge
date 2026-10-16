@@ -13,6 +13,12 @@ a NEW fixed v14 Student-t5 stress (200/200, zero errors/graduates/ADR018 survivo
 without rerunning historical sources. Neither certifies power, bootstrap or real markets.
 Historical v13/v12/v11 and frozen v10
 cohorts retain executed attribution.
+ADR-295 enforces original nonnegative nonboolean Integral prior counts at both
+search entries and positive counts at MinBTL before shortcuts. Python-int
+normalization precedes cumulative addition, avoiding NumPy scalar wrap. Valid
+Python accounting/math and v14 fingerprints remain; historical counter schemas
+and generated/frozen records are unchanged. See F249 for manual evidence and limits.
+
 
 ---
 

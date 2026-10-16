@@ -207,6 +207,14 @@ strings/booleans. Both native std/IQR branches require finite dispersion before 
 unchanged degenerate floor. It refuses extreme arithmetic without estimator recovery;
 counts, ordinary formulas, thresholds and calibration identity remain unchanged.
 
+ADR-295 validates original caller trial counts before arithmetic: MinBTL requires
+positive nonboolean Integral counts; both public searches require nonnegative
+nonboolean Integral priors before any work. Accepted NumPy integrals normalize
+to Python int before cumulative addition, preventing fixed-width wrap. Valid
+Python-count formulas, thresholds, v14 identity and calibration prior=0 remain.
+F249's manual negative-prior counterexample is not observed production corruption;
+historical schemas, lower-bound counters and frozen/generated evidence are untouched.
+
 **Pool reporting (ADR-066).** `Experiment.lifetime_trials` is already cumulative per symbol. The
 programme-wide trial headline therefore sums the maximum counter once per symbol; summing every
 retained experiment would count the same prior trials repeatedly. The aggregate is the sum of the
