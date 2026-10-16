@@ -25,7 +25,8 @@ class InMemoryCrossSectionalStore:
         self._experiments: list[CrossSectionalExperiment] = []
 
     def add(self, experiment: CrossSectionalExperiment) -> None:
-        self._experiments.append(experiment)
+        validated = CrossSectionalExperiment.model_validate(experiment.model_dump(round_trip=True))
+        self._experiments.append(validated)
 
     def all(self) -> list[CrossSectionalExperiment]:
         return list(self._experiments)

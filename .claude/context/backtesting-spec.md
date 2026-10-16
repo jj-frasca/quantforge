@@ -20,6 +20,18 @@ Python accounting/math and v14 fingerprints remain; historical counter schemas
 and generated/frozen records are unchanged. See F249 for manual evidence and limits.
 
 
+ADR-299 extends original count validity to persisted research claims: Trial and
+its cross-sectional subtype require positive nonboolean Integral evaluated counts,
+with omitted legacy default1 retained. Both experiment lifetimes are nonnegative
+original Integral counts and cover the sum of recorded trial evaluations after
+existing lineage validation. Accepted scalars normalize to Python int; larger
+priors and empty-trial zero remain. Memory stores retain equal canonical snapshots
+before append; JSON writers already revalidate. No field shape, aggregation,
+retention, search math, threshold or v14 identity changes. All3318 committed
+experiments were compatible in F253's fresh read-only audit; no hidden counts or
+generated-file migration is inferred.
+
+
 ---
 
 ## 1. Price frame convention

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Protocol
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.data.fundamentals import FundamentalScreen, FundamentalSnapshot
 from app.data.models import DataQualityReport
@@ -16,6 +16,7 @@ from app.research.backtesting.manifest import ExperimentManifest, compute_parame
 from app.research.claim_graph import FrozenClaimDict, FrozenClaimList, freeze_claim_model
 from app.research.fundamentals.distress import DistressScreen
 from app.research.lab.gate import GateConfig, GateResult
+from app.research.trial_counts import require_trial_count
 from app.research.valuation import UndervaluationScore
 
 
@@ -58,6 +59,11 @@ class Trial(BaseModel):
     deflated_sharpe_probability: float | None = Field(
         default=None, ge=0.0, le=1.0, allow_inf_nan=False
     )
+
+    @field_validator("n_evaluated_configs", mode="before")
+    @classmethod
+    def _validate_evaluated_count(cls, value: object) -> int:
+        return require_trial_count(value, minimum=1, parameter="n_evaluated_configs")
 
     @model_validator(mode="after")
     def _validate_and_freeze_claim(self) -> "Trial":
@@ -171,6 +177,11 @@ class Experiment(BaseModel):
     manifest: ExperimentManifest | None = None
     data_quality_report: DataQualityReport | None = None
 
+    @field_validator("lifetime_trials", mode="before")
+    @classmethod
+    def _validate_lifetime_count(cls, value: object) -> int:
+        return require_trial_count(value, minimum=0, parameter="lifetime_trials")
+
     @model_validator(mode="after")
     def _validate_quality_lineage(self) -> "Experiment":
         # `frozen=True` prevents field reassignment but not mutation of nested lists/dictionaries.
@@ -272,6 +283,12 @@ class Experiment(BaseModel):
             raise ValueError("manifest validation config must match experiment")
         return self
 
+    @model_validator(mode="after")
+    def _validate_trial_accounting(self) -> "Experiment":
+        if self.lifetime_trials < sum(trial.n_evaluated_configs for trial in self.trials):
+            raise ValueError("lifetime_trials must cover the recorded evaluated configurations")
+        return self
+
 
 def selected_trial(experiment: Experiment) -> Trial:
     """Resolve the persisted production finalist; reconstruct max DSR only for legacy rows."""
@@ -320,7 +337,8 @@ class InMemoryExperimentStore:
         self._experiments: list[Experiment] = []
 
     def add(self, experiment: Experiment) -> None:
-        self._experiments.append(experiment)
+        validated = Experiment.model_validate(experiment.model_dump(round_trip=True))
+        self._experiments.append(validated)
 
     def all(self) -> list[Experiment]:
         return list(self._experiments)

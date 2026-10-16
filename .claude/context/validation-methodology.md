@@ -215,6 +215,16 @@ Python-count formulas, thresholds, v14 identity and calibration prior=0 remain.
 F249's manual negative-prior counterexample is not observed production corruption;
 historical schemas, lower-bound counters and frozen/generated evidence are untouched.
 
+ADR-299 validates recorded trial counters before coercion: original positive
+nonboolean Integral n_evaluated_configs (missing legacy default1 unchanged), and
+original nonnegative Integral lifetime_trials on both experiment families.
+After existing lineage checks, lifetime must cover the sum of current recorded
+trial counts. Both memory stores reconstruct incoming models before append;
+JSON writers already do. Higher priors, empty-trial zero, max aggregation,
+retention and historical lower-bound meaning remain. F253 is synthetic
+model/store evidence; fresh all3318 committed rows were compatible without data
+writes or invented counts. No estimator, threshold, schema field or v14 change.
+
 ADR-297 validates original MinBTL annualized_sharpe after count validation
 and before its nonpositive shortcut: finite float-representable nonboolean Real.
 The original score operand/sign/square/division remain; ADR-298 below separately

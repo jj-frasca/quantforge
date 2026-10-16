@@ -990,6 +990,15 @@ prior, so DSR/MinTRL no longer reset on every daily hunt. Because every experime
 counter per symbol. Summing all retained cumulative rows would double-count earlier trials; the
 headline is the sum of per-symbol denominators, not one global DSR denominator.
 
+**Recorded candidate counts bound their own lifetime (ADR-299).** Trial counters
+are original positive nonboolean integers; both experiment lifetimes are original
+nonnegative integers and must cover the local sum of recorded evaluations. Missing
+legacy trial counts remain default1, an honest lower bound. Both memory stores now
+validate canonical snapshots before append, matching JSON writers. Larger carried
+priors, empty-trial zero, max aggregation and retention remain. The fresh3318-row
+compatibility audit found no incompatibility; no historical count is inferred and
+no generated record, estimator, threshold or v14 identity changes (FINDING-253).
+
 **Whole-search dispersion is robust as of ADR-050.** Sample standard deviation made the supposed
 null haircut grow without bound when a subset of heterogeneous strategies captured a planted edge;
 DSR consequently passed 0/50 even at median oracle Sharpe +3.92. Whole-search pricing now estimates

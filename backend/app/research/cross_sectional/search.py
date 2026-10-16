@@ -5,7 +5,14 @@ from uuid import UUID, uuid4
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from app.data.models import DataQualityReport
 from app.research.backtesting.manifest import compute_parameter_hash
@@ -86,6 +93,11 @@ class CrossSectionalExperiment(BaseModel):
         self, scores: Mapping[str, float] | None
     ) -> dict[str, float] | None:
         return None if scores is None else dict(scores)
+
+    @field_validator("lifetime_trials", mode="before")
+    @classmethod
+    def _validate_lifetime_count(cls, value: object) -> int:
+        return require_trial_count(value, minimum=0, parameter="lifetime_trials")
 
     @model_validator(mode="after")
     def _validate_panel_lineage(self) -> "CrossSectionalExperiment":
@@ -196,6 +208,12 @@ class CrossSectionalExperiment(BaseModel):
             raise ValueError("panel manifest strategy must match selected trial")
         if manifest.parameter_hash != compute_parameter_hash(selected.parameters):
             raise ValueError("panel manifest parameter hash must match selected trial")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_trial_accounting(self) -> "CrossSectionalExperiment":
+        if self.lifetime_trials < sum(trial.n_evaluated_configs for trial in self.trials):
+            raise ValueError("lifetime_trials must cover the recorded evaluated configurations")
         return self
 
 
