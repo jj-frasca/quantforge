@@ -13,7 +13,9 @@ from app.validation.report import ValidationReport, revalidate_validation_report
 def minbtl_years(n_trials: int, annualized_sharpe: float) -> float:
     """Minimum Backtest Length in years (Bailey & López de Prado, approximation 2·ln(N)/SR²).
 
-    Requires an original positive nonboolean integral count, normalized to Python int.
+    Requires an original positive nonboolean integral count, normalized to Python int,
+    and finite float-representable nonboolean real Sharpe evidence (ADR-297).
+    Score inspection preserves the original operand; finite native arithmetic may still fail.
 
     Notes:
         The track record a claimed Sharpe needs to be credible *given how many strategies were
@@ -22,6 +24,16 @@ def minbtl_years(n_trials: int, annualized_sharpe: float) -> float:
         justified (∞). See ADR-015. Cite Bailey, Borwein, López de Prado, Zhu (2014).
     """
     n_trials = require_trial_count(n_trials, minimum=1, parameter="n_trials")
+    score_evidence: object = annualized_sharpe
+    score_error = "annualized_sharpe must be a finite real nonboolean scalar"
+    if isinstance(score_evidence, bool) or not isinstance(score_evidence, Real):
+        raise ValueError(score_error)
+    try:
+        finite_score = math.isfinite(float(score_evidence))
+    except (OverflowError, ValueError) as exc:
+        raise ValueError(score_error) from exc
+    if not finite_score:
+        raise ValueError(score_error)
     if annualized_sharpe <= 0.0:
         return math.inf
     return 2.0 * math.log(n_trials) / (annualized_sharpe**2)

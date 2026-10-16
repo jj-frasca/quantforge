@@ -215,6 +215,13 @@ Python-count formulas, thresholds, v14 identity and calibration prior=0 remain.
 F249's manual negative-prior counterexample is not observed production corruption;
 historical schemas, lower-bound counters and frozen/generated evidence are untouched.
 
+ADR-297 validates original MinBTL annualized_sharpe after count validation
+and before its nonpositive shortcut: finite float-representable nonboolean Real.
+The original score operand/sign/square/division remain, including existing native
+extreme arithmetic faults recorded separately in FINDING-252. F251 is standalone
+synthetic evidence; gate reports already provide finite Python floats. No formula,
+threshold, configuration hash, accounting-v14 or calibration procedure changes.
+
 ADR-296 validates original available track_record_years at GraduationGate after
 report reconstruction and MinBTL/count evaluation. Require finite float-representable
 nonboolean Real and original nonnegativity; retain the original comparison operand.

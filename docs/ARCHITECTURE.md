@@ -197,6 +197,13 @@ infinity remains the intentional MinTRL requirement for a non-positive observed 
 probability-DSR comparison reconstructs its enclosing artifacts before inference, so unchecked
 gate copies fail closed. No component predicate, threshold, reason text, or MinTRL formula changed.
 
+**Standalone MinBTL validates original Sharpe evidence (ADR-297).** After count
+validation, the public primitive rejects nonfinite, boolean and non-real score
+inputs before its nonpositive shortcut. Accepted operands retain original native
+arithmetic; finite squaring failures and integer wrap remain open (FINDING-252).
+Gate reports already supply finite Python floats; no estimator, threshold,
+configuration hash, accounting-v14 or calibration procedure changes (FINDING-251).
+
 **Available track-record history is finite original evidence (ADR-296).** The gate
 requires a finite nonnegative nonboolean real duration after report/count validation,
 retaining the original numeric comparison. Infinite available history cannot satisfy
