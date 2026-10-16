@@ -217,10 +217,21 @@ historical schemas, lower-bound counters and frozen/generated evidence are untou
 
 ADR-297 validates original MinBTL annualized_sharpe after count validation
 and before its nonpositive shortcut: finite float-representable nonboolean Real.
-The original score operand/sign/square/division remain, including existing native
-extreme arithmetic faults recorded separately in FINDING-252. F251 is standalone
+The original score operand/sign/square/division remain; ADR-298 below separately
+refuses native extreme arithmetic faults recorded in FINDING-252. F251 is standalone
 synthetic evidence; gate reports already provide finite Python floats. No formula,
 threshold, configuration hash, accounting-v14 or calibration procedure changes.
+
+ADR-298 refuses unmeasurable positive-score MinBTL arithmetic (FINDING-252).
+Keep native numerator/square/division order and operands; require the square's
+float inspection finite and positive, verify original Integral squares against
+exact Python-int multiplication, then require a finite nonnegative result.
+Native arithmetic exceptions become ValueError; caller NumPy policy/warnings
+remain. Binary64 inspection deliberately refuses some finite Fraction/wider
+squares outside its range. No N=1 shortcut or numerical recovery; ordinary
+supported native results, nonpositive infinity and huge Python trial counts
+retain their meanings. Thresholds, config hash, v14 identity and frozen/generated
+evidence remain unchanged; no new rates or universal precision claims.
 
 ADR-296 validates original available track_record_years at GraduationGate after
 report reconstruction and MinBTL/count evaluation. Require finite float-representable

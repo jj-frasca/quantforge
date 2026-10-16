@@ -1,5 +1,5 @@
 import math
-from numbers import Real
+from numbers import Integral, Real
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -15,7 +15,8 @@ def minbtl_years(n_trials: int, annualized_sharpe: float) -> float:
 
     Requires an original positive nonboolean integral count, normalized to Python int,
     and finite float-representable nonboolean real Sharpe evidence (ADR-297).
-    Score inspection preserves the original operand; finite native arithmetic may still fail.
+    Score inspection preserves the original operand. Unmeasurable native squares,
+    integer wrap and nonfinite results refuse without numerical recovery (ADR-298).
 
     Notes:
         The track record a claimed Sharpe needs to be credible *given how many strategies were
@@ -36,7 +37,25 @@ def minbtl_years(n_trials: int, annualized_sharpe: float) -> float:
         raise ValueError(score_error)
     if annualized_sharpe <= 0.0:
         return math.inf
-    return 2.0 * math.log(n_trials) / (annualized_sharpe**2)
+    arithmetic_error = "MinBTL arithmetic must be measurable without overflow, underflow or wrap"
+    try:
+        numerator = 2.0 * math.log(n_trials)
+        square = annualized_sharpe**2
+        inspected_square = float(square)
+    except (OverflowError, ZeroDivisionError, FloatingPointError, ValueError) as exc:
+        raise ValueError(arithmetic_error) from exc
+    if not math.isfinite(inspected_square) or inspected_square <= 0.0:
+        raise ValueError(arithmetic_error)
+    if isinstance(score_evidence, Integral) and int(square) != int(score_evidence) ** 2:
+        raise ValueError(arithmetic_error)
+    try:
+        result = numerator / square
+        finite_result = math.isfinite(float(result))
+    except (OverflowError, ZeroDivisionError, FloatingPointError, ValueError) as exc:
+        raise ValueError(arithmetic_error) from exc
+    if not finite_result or result < 0:
+        raise ValueError(arithmetic_error)
+    return result
 
 
 class GateConfig(BaseModel):

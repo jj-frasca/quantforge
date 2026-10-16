@@ -1,10 +1,10 @@
 # FINDING-252: Finite MinBTL operands can fail or wrap while squaring
 
 - **Date:** 2026-10-16
-- **Status:** Open — conservative arithmetic policy not yet adopted
+- **Status:** Resolved — ADR-298
 - **Area:** minbtl_years native positive-Sharpe arithmetic
 
-## Reproduction
+## Pre-fix reproduction at `b4addff4`
 
 Independent read-only parent/research-expert review of the unchanged positive-score
 kernel `2*log(N)/(SR**2)` at N=2 found:
@@ -44,7 +44,7 @@ for score in (1e200, 1e-200, np.float64(1e160), np.float64(1e-200),
         print(type(score).__name__, score, type(exc).__name__)
 ```
 
-## Scope and next decision
+## Governed correction and limits
 
 These are manual standalone synthetic API counterexamples, not observed production
 false graduates or a calibration measurement. Normal gate reports normalize scores
@@ -52,13 +52,50 @@ to Python float and GateResult rejects negative/NaN requirements; those downstre
 guards do not establish correctness of this public primitive or eliminate abrupt
 search failures on extreme finite evidence.
 
-ADR-297's original score guard does not correct this finite arithmetic. A later
-ADR must choose explicit refusal versus stable recovery, define original Integral
-square-wrap detection and portable wider-floating semantics, retain ordinary native
-behavior and protect caller NumPy error policy. A generic float64 inspection must
-not silently claim that all finite extended-precision intermediates are unchanged.
-Do not clip, cap, redraw a cohort or weaken a validation threshold.
+ADR-297's original score guard did not correct this finite arithmetic. ADR-298
+separately adopts conservative refusal: inspect the original native square for
+positive finite binary64 representation, compare Integral squares with exact
+Python-int squares, divide the original operands and refuse nonfinite results.
+Native arithmetic exceptions become ValueError. No N=1 shortcut or recovery.
+Ordinary supported native operations/results retain their order and values.
+Caller NumPy warnings and error settings remain unchanged.
 
-No runtime correction, source draws, searches, generated writes or frozen-cohort
-remeasurement is part of this finding. Scratch evidence and independent review
-are summarized in `/tmp/qf-w42-s21-minbtl-followup.md`.
+This intentionally refuses some mathematically recoverable cases and some native
+finite Fraction/wider-floating squares above or below binary64's inspection
+range. It does not certify universal precision or correct rounding. Positive
+scores whose division previously returned infinity now refuse as unmeasurable;
+only nonpositive original scores retain the intentional infinite requirement.
+No finite valid Python-float requirement changes. No threshold, configuration
+hash, accounting-v14, frozen-source or generated-record changes are made, and
+no calibration rate is remeasured or inferred.
+
+## Verification
+
+Initial test draft
+observed 94 failures/69 controls. Before production changes, the parent corrected
+a NumPy N=1 subnormal-square control to exercise its requested strict policy,
+rather than testing it outside that context. Final pre-implementation run:
+95 genuine failures/68 preserved controls in 2.77 seconds
+(`/tmp/qf-w42-s21-native-final-red.log`), with the initial receipt preserved.
+After correction, all 502 affected tests passed, including the new 163 cases,
+exact-square Hypothesis property and existing count/scaling properties.
+Scratch original evidence: `/tmp/qf-w42-s21-minbtl-followup.md`.
+
+Independent research review initially reran all 502 affected tests successfully.
+The first full gate passed 11,894 backend and 381 frontend tests. Coverage review
+then showed the division-exception handler unexercised: earlier strict NumPy cases
+failed at their square. Three post-green tests were added for a normal float32
+square followed by quotient overflow at N=10,000, exercising ignore/warn/raise
+behavior without production changes. Final focused and independent runs each
+passed all 505 tests (166 new cases). These three additions are verification
+enhancements, not part of the pre-implementation RED count.
+
+Parent source/compatibility audit verified native numerator/square syntax, all
+other gate syntax, and 672 exact supported finite results/types against the prior
+implementation (`/tmp/qf-w42-s21-source298.json`).
+
+Final foreground `make check-all PYTEST_WORKERS=8` completed successfully: 11,897
+backend tests, 97.39% coverage; 381 frontend tests, 97.66% statement coverage.
+Gate module line coverage is 100%. Ruff lint/format, mypy, ESLint and TypeScript
+passed. Receipt: `/tmp/qf-w42-s21-check298-final.log`. Exact master CI is checked
+after individual push.

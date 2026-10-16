@@ -200,9 +200,17 @@ gate copies fail closed. No component predicate, threshold, reason text, or MinT
 **Standalone MinBTL validates original Sharpe evidence (ADR-297).** After count
 validation, the public primitive rejects nonfinite, boolean and non-real score
 inputs before its nonpositive shortcut. Accepted operands retain original native
-arithmetic; finite squaring failures and integer wrap remain open (FINDING-252).
+arithmetic; ADR-298 separately refuses invalid square/division evidence (FINDING-252).
 Gate reports already supply finite Python floats; no estimator, threshold,
 configuration hash, accounting-v14 or calibration procedure changes (FINDING-251).
+
+**MinBTL refuses unmeasurable native arithmetic (ADR-298).** Positive-score
+squares must have finite positive binary64 inspection; Integral squares must
+also match exact Python-int arithmetic. Native division must yield a finite
+nonnegative result. Caller NumPy policy/warnings and ordinary native operations
+remain; unsupported Fraction/wider squares may conservatively refuse. No new
+N=1 shortcut, numerical recovery, threshold, config hash, accounting-v14 or
+historical calibration claim is introduced (FINDING-252).
 
 **Available track-record history is finite original evidence (ADR-296).** The gate
 requires a finite nonnegative nonboolean real duration after report/count validation,
