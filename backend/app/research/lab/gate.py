@@ -1,4 +1,5 @@
 import math
+from numbers import Real
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -104,6 +105,18 @@ class GraduationGate:
     ) -> GateResult:
         report = revalidate_validation_report(report)
         required = minbtl_years(n_trials, report.observed_sharpe)
+
+        # Available history must be measured; only the *required* history may be infinite.
+        duration_evidence: object = track_record_years
+        duration_error = "track_record_years must be a finite nonnegative real nonboolean scalar"
+        if isinstance(duration_evidence, bool) or not isinstance(duration_evidence, Real):
+            raise ValueError(duration_error)
+        try:
+            finite_duration = math.isfinite(float(duration_evidence))
+        except (OverflowError, ValueError) as exc:
+            raise ValueError(duration_error) from exc
+        if not finite_duration or duration_evidence < 0:
+            raise ValueError(duration_error)
 
         dsr_ok = report.deflated_sharpe > config.dsr_min
         pbo_ok = report.pbo < config.pbo_max

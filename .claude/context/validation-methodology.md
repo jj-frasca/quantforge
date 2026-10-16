@@ -215,6 +215,13 @@ Python-count formulas, thresholds, v14 identity and calibration prior=0 remain.
 F249's manual negative-prior counterexample is not observed production corruption;
 historical schemas, lower-bound counters and frozen/generated evidence are untouched.
 
+ADR-296 validates original available track_record_years at GraduationGate after
+report reconstruction and MinBTL/count evaluation. Require finite float-representable
+nonboolean Real and original nonnegativity; retain the original comparison operand.
+F250's direct synthetic infinite-duration graduation is refused, without inferring
+production misuse. Zero available history and intentional infinite required history
+keep their meanings. Formula, thresholds, reason text, hashes and v14 stay unchanged.
+
 **Pool reporting (ADR-066).** `Experiment.lifetime_trials` is already cumulative per symbol. The
 programme-wide trial headline therefore sums the maximum counter once per symbol; summing every
 retained experiment would count the same prior trials repeatedly. The aggregate is the sum of the

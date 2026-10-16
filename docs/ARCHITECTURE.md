@@ -197,6 +197,13 @@ infinity remains the intentional MinTRL requirement for a non-positive observed 
 probability-DSR comparison reconstructs its enclosing artifacts before inference, so unchecked
 gate copies fail closed. No component predicate, threshold, reason text, or MinTRL formula changed.
 
+**Available track-record history is finite original evidence (ADR-296).** The gate
+requires a finite nonnegative nonboolean real duration after report/count validation,
+retaining the original numeric comparison. Infinite available history cannot satisfy
+MinTRL; its intentional infinite *requirement* for nonpositive Sharpe remains valid.
+Zero history, estimator, thresholds, configuration hash and v14 accounting stay unchanged.
+This guards direct input validity, not the provenance of elapsed years (FINDING-250).
+
 **Trial and graduate leaves enforce their own evidence contracts (ADR-162).** Strategy parameters
 are defensive immutable JSON mappings; statistics are finite and bounded where mathematically
 required; and a graduate carries a passing gate, positive holdout length, wealth-preserving return,
