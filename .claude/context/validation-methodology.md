@@ -1703,3 +1703,12 @@ standalone helper does not replace the historical filter, alter any generator or
 score, infer source provenance, or wire a production reference. F159 remains Open
 for separately attributed simple-return references; posterior correctness does
 not certify strategy optimality or measured power.
+
+### Horizon power CLI positional identity (ADR-311 / FINDING-263)
+
+The horizon driver follows ADR-307's token-position policy for --out, --half-life,
+--deviation-share and --n-bars. Equal count/seed text remains independent; every
+repeated option value is excluded by position while first-option lookup stays.
+Defaults, source/scorer/measurement calls, seed+i, report/output behavior and
+scientific identity remain. No historical affected cohort is established and
+no source retry or artifact rewrite follows from this parser correction.

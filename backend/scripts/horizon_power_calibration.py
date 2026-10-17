@@ -116,8 +116,15 @@ def main() -> None:
     half_life_flag = _flag("--half-life")
     share_flag = _flag("--deviation-share")
     n_bars_flag = _flag("--n-bars")
-    consumed = {out, half_life_flag, share_flag, n_bars_flag} - {None}
-    positional = [a for a in sys.argv[1:] if not a.startswith("--") and a not in consumed]
+    value_options = {"--out", "--half-life", "--deviation-share", "--n-bars"}
+    consumed_positions = {
+        i + 1 for i, arg in enumerate(sys.argv[1:], start=1) if arg in value_options
+    }
+    positional = [
+        arg
+        for i, arg in enumerate(sys.argv[1:], start=1)
+        if not arg.startswith("--") and i not in consumed_positions
+    ]
 
     n_symbols = int(positional[0]) if positional else 50
     seed = int(positional[1]) if len(positional) > 1 else 0
