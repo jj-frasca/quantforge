@@ -440,6 +440,14 @@ parameter today. Reading them together is the fastest way to understand what the
   pays (ADR-055). A capture ratio must be taken against the NET one — the finalist Sharpe in the
   numerator already paid those costs — and an empty `net_oracle_sharpes` means a cell measured
   before the correction, never an oracle of zero.
+  ADR-308 adds optional nullable `ar1_reference` at both sweep and cell. Known
+  `ar1_phi_lag_sign_v1` has null drift; `ar1_conditional_mean_sign_v1` has explicit
+  finite drift. Missing historical metadata stays unknown; edge ar1 does not
+  establish a method or source-law drift. Authoritative models bind header/cell
+  identities. API inheritance retains the object; compatibility MATCHED still
+  describes only search/gate/history. Frontend parsing preserves this closed
+  shape and captions distinguish legacy, conditional with exact served drift,
+  and unknown. Neither reference establishes cost-aware or sample optimality.
   Each cell also carries **who won and what kind of strategy they were**: `finalist_strategy_names`
   with the served `finalist_strategy_counts` (ADR-057) and `finalist_sharpes_by_category` with the
   served `net_capture_by_category` (ADR-059). Both are empty on artifacts predating them, which

@@ -285,3 +285,31 @@ for (const [name, schema, measured] of [
     expect(schema.safeParse({ ...measured, compatibility: { ...compatibility, reference: { ...compatibility.reference, n_bars: 0 } } }).success).toBe(false)
   })
 }
+
+const referenceCell = {
+  n_symbols: 2, n_detected: 1, detection_rate: 0.5, n_clear_deflation_bar: 1,
+  deflation_bar: 2, edge: 'ar1', phi: 0.3, gate_config_version: 'v1',
+}
+test.each([
+  { method: 'ar1_phi_lag_sign_v1', drift: null },
+  ...[0, -0.0004, 1e-12].map((drift) => ({ method: 'ar1_conditional_mean_sign_v1', drift })), null,
+])('retains explicit sweep and cell reference %j', (ar1_reference) => {
+  expect(powerSweepSchema.parse({ ...manualPower, ar1_reference,
+    cells: [{ ...referenceCell, ar1_reference }] })).toMatchObject({ ar1_reference, cells: [{ ar1_reference }] })
+})
+test.each([
+  {}, { method: 'future', drift: 0 }, { method: 'ar1_phi_lag_sign_v1', drift: 0 },
+  { method: 'ar1_conditional_mean_sign_v1', drift: null },
+  { method: 'ar1_conditional_mean_sign_v1', drift: '0' },
+  { method: 'ar1_conditional_mean_sign_v1', drift: true },
+  { method: 'ar1_conditional_mean_sign_v1', drift: Infinity },
+  { method: 'ar1_conditional_mean_sign_v1', drift: 0, extra: true },
+])('rejects malformed reference at either boundary: %j', (ar1_reference) => {
+  expect(powerSweepSchema.safeParse({ ...manualPower, ar1_reference }).success).toBe(false)
+  expect(powerSweepSchema.safeParse({ ...manualPower, cells: [{ ...referenceCell, ar1_reference }] }).success).toBe(false)
+})
+test('preserves historical absence without scientific shadow validation', () => {
+  expect(powerSweepSchema.parse(manualPower)).not.toHaveProperty('ar1_reference')
+  expect(powerSweepSchema.parse({ ...manualPower, cells: [{ ...referenceCell, phi: 3,
+    ar1_reference: { method: 'ar1_conditional_mean_sign_v1', drift: 0 } }] }).cells[0]).toMatchObject({ phi: 3, ar1_reference: { drift: 0 } })
+})

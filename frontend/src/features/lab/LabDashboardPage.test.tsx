@@ -200,6 +200,7 @@ test('shows the power calibration panel once the endpoint has data (ADR-041/042/
       HttpResponse.json([
         {
           edge: 'ar1',
+          ar1_reference: { method: 'ar1_conditional_mean_sign_v1', drift: 1e-12 },
           gate_config_version: 'v1',
           search_config_version: 'abcdef0123456789',
           n_bars: 5400,
@@ -211,6 +212,7 @@ test('shows the power calibration panel once the endpoint has data (ADR-041/042/
               n_clear_deflation_bar: 32,
               deflation_bar: 2.11,
               edge: 'ar1',
+              ar1_reference: { method: 'ar1_conditional_mean_sign_v1', drift: 1e-12 },
               phi: 0.3,
               gate_config_version: 'v1',
             },
@@ -223,6 +225,7 @@ test('shows the power calibration panel once the endpoint has data (ADR-041/042/
 
   expect(await screen.findByLabelText('gate power')).toBeInTheDocument()
   expect(screen.getByText('64%')).toBeInTheDocument()
+  expect(screen.getByText(/conditional-mean sign reference/)).toHaveTextContent('drift 1e-12')
 })
 
 test('shows the window comparison panel once the endpoint has data (ADR-074)', async () => {

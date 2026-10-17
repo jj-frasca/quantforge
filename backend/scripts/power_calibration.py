@@ -2,7 +2,9 @@
 
 Usage: PYTHONPATH=. uv run python scripts/power_calibration.py [N_SYMBOLS] [SEED] [--phi P]
            [--shard I/N] [--out PATH] [--select-by observed|walk_forward]
-       (default: 50 symbols, seed 0, phi -0.20, whole run, print only)
+           [--ar1-reference-method legacy|conditional_mean] [--drift D]
+       (default: 50 symbols, seed 0, phi -0.20, legacy reference, whole run, print only)
+       conditional_mean requires explicit --drift; legacy forbids --drift.
 
 Plants an AR(1) edge of known strength, runs the UNMODIFIED search + gate, and reports how often
 it is DETECTED. `phi < 0` is mean reversion, `phi > 0` is trend persistence — sweep both signs, or
@@ -22,7 +24,13 @@ import sys
 from pathlib import Path
 from statistics import median
 
-from app.research.lab.calibration import PowerCalibration, autocorrelated_edge, measure_power
+from app.research.lab.calibration import (
+    AR1Reference,
+    PowerCalibration,
+    ar1_reference_description,
+    autocorrelated_edge,
+    measure_power,
+)
 from app.research.lab.history import CALIBRATION_N_BARS
 from app.research.lab.search import SelectBy
 from app.research.strategies.catalog import STRATEGY_CATALOG
@@ -54,12 +62,14 @@ def _report(result: PowerCalibration) -> None:
     print(
         f"planted phi         : {result.phi:+.3f} ({'mean-reverting' if result.phi < 0 else 'trending'})"
     )
+    print(f"AR sign reference   : {ar1_reference_description(result.ar1_reference)}")
+    print("Ratios: selected in-sample reference-relative; not cost-aware or sample optimality.")
     print(f"gate config version : {result.gate_config_version}")
     print(f"search config version: {result.search_config_version}")
     print(f"adaptive refinement : {result.refine} (span {result.refine_span:.2f})")
     print(f"symbols searched    : {result.n_symbols}")
     if result.n_bars:
-        print(f"bars per symbol     : {median(result.n_bars):.0f} (the hunt's own history length)")
+        print(f"bars per symbol     : {median(result.n_bars):.0f} (recorded history length)")
     print(f"detected            : {result.n_detected}")
     print(f"DETECTION RATE      : {result.detection_rate:.1%}  <- power of the gate as such")
     if result.gate_pass_counts:
@@ -75,7 +85,7 @@ def _report(result: PowerCalibration) -> None:
     if pct is not None:
         print(
             f"oracle Sharpe       : median {pct[0]:+.2f} | p95 {pct[1]:+.2f} | max {pct[2]:+.2f} "
-            "(the effect size actually planted, measured not derived)"
+            "(realized gross sign-reference Sharpe)"
         )
     net_pct = result.net_oracle_sharpe_percentiles
     if net_pct is not None:
@@ -86,7 +96,7 @@ def _report(result: PowerCalibration) -> None:
     capture = result.capture_ratio
     if capture is not None:
         print(
-            f"CAPTURE UPPER BOUND : {capture:.1%}  <- median finalist in-sample Sharpe / "
+            f"REFERENCE RATIO     : {capture:.1%}  <- median finalist in-sample Sharpe / "
             "median oracle Sharpe (selection-biased)"
         )
     net_capture = result.net_capture_ratio
@@ -105,7 +115,29 @@ def main() -> None:
     phi_flag = _flag("--phi")
     n_bars_flag = _flag("--n-bars")
     select_by = _select_by()
-    value_options = {"--shard", "--out", "--phi", "--n-bars", "--select-by"}
+    method_flag = _flag("--ar1-reference-method")
+    method = "legacy" if method_flag is None else method_flag
+    drift_flag = _flag("--drift")
+    if method not in {"legacy", "conditional_mean"}:
+        raise SystemExit("--ar1-reference-method must be legacy or conditional_mean")
+    if method == "legacy" and drift_flag is not None:
+        raise SystemExit("legacy reference forbids --drift")
+    if method == "conditional_mean" and drift_flag is None:
+        raise SystemExit("conditional_mean reference requires explicit --drift")
+    reference = (
+        AR1Reference(method="ar1_conditional_mean_sign_v1", drift=float(drift_flag))
+        if drift_flag is not None
+        else None
+    )
+    value_options = {
+        "--shard",
+        "--out",
+        "--phi",
+        "--n-bars",
+        "--select-by",
+        "--ar1-reference-method",
+        "--drift",
+    }
     consumed_positions = {
         i + 1 for i, arg in enumerate(sys.argv[1:], start=1) if arg in value_options
     }
@@ -122,14 +154,30 @@ def main() -> None:
     n_bars = int(n_bars_flag) if n_bars_flag else CALIBRATION_N_BARS
     indices = [i for i in range(n_symbols) if i % n_shards == shard]
 
-    frames = {f"EDGE{i:04d}": autocorrelated_edge(n_bars, seed=seed + i, phi=phi) for i in indices}
+    if reference is None:
+        frames = {
+            f"EDGE{i:04d}": autocorrelated_edge(n_bars, seed=seed + i, phi=phi) for i in indices
+        }
+    else:
+        assert reference.drift is not None  # validated explicit conditional reference
+        frames = {
+            f"EDGE{i:04d}": autocorrelated_edge(
+                n_bars, seed=seed + i, phi=phi, drift=reference.drift
+            )
+            for i in indices
+        }
     strategies = [entry.name for entry in STRATEGY_CATALOG]
     print(
         f"measuring power against {len(indices)} of {n_symbols} planted-edge symbols x {n_bars} "
         f"bars over {len(strategies)} strategies (phi {phi:+.3f}, seed {seed}, "
         f"shard {shard}/{n_shards}, select_by {select_by})...\n"
     )
-    result = measure_power(frames, strategies, phi=phi, select_by=select_by)
+    if reference is None:
+        result = measure_power(frames, strategies, phi=phi, select_by=select_by)
+    else:
+        result = measure_power(
+            frames, strategies, phi=phi, select_by=select_by, ar1_reference=reference
+        )
     _report(result)
 
     if out:

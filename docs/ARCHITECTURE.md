@@ -325,6 +325,17 @@ AR(1) cell detected 22% of the time (+1.15), and capture rises monotonically wit
 (31% → 58%). A capture ratio is refused outright when the net oracle sits inside its own standard
 error, so a denominator within its stated uncertainty refusal reports no fraction rather than a ratio against noise.
 
+**ADR-308 adds an explicit conditional-mean AR reference opt-in.** Cells and
+sweeps retain method/drift identity through collection, capture comparison,
+reports, API and UI. Legacy defaults preserve their arithmetic and identify new
+ordinary AR results as legacy; historical missing metadata stays unknown.
+Conditional mode requires explicit known-law drift and stationary phi, then uses
+the unchanged ADR-223 helper for gross/net scores. Incompatible reference
+identities refuse capture deltas rather than attributing denominator changes to
+a catalog. Detection-only joint-count semantics and gate/search identities stay
+unchanged. This is supported wiring, not a new power measurement, cost-aware
+optimum or sample maximum; historical artifacts and frozen cohorts remain intact.
+
 **ADR-056/057/058 resolved what that gap actually is, and it is not what the wording above implied.**
 ADR-056 added `two_timescale_reversion` — a strategy whose entire design is to estimate the level and
 the deviation on independent timescales — and re-dispatched all three calibrations. Type-I error

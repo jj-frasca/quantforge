@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-07
 - **Severity:** Medium — effect-size/capture interpretation misidentifies its benchmark
-- **Status:** Open; no production correction or historical relabeling
+- **Status:** Resolved by ADR-308 explicit production opt-in; historical reference meanings retained
 
 ## Evidence
 
@@ -94,3 +94,59 @@ TDD observed 45 failing cases before the helper existed; the same 45 pass after
 implementation, including both recorded opposite-sign examples, phi zero/nonzero
 drift, exact zero-drift historical equivalence, first-lag and causal-prefix
 checks, scalar turnover accounting and a bounded independent Hypothesis oracle.
+
+## Explicit production opt-in (ADR-308)
+
+ADR-308 supplies a separately attributed conditional-mean sign reference rather
+than silently replacing the historical rule. Optional nullable `ar1_reference`
+records a closed method/drift identity on both cells and their sweep. Conditional
+mode requires explicit known-law drift and stationary phi; ordinary new default
+AR measurements identify the legacy method with unknown drift. Historical missing
+metadata and externally supplied scores remain explicitly unknown. No source law
+is inferred from price frames or historical labels.
+
+Collection and authoritative reconstruction bind header and cell reference
+identity. Capture comparison refuses incompatible methods or drift, including
+known versus unknown, so a changed denominator cannot masquerade as improved
+catalog capture. The AR CLI passes one explicit drift to source and scorer.
+Reports, API and frontend retain that attribution; search compatibility still
+means only search/gate/history compatibility. Detection-only joint-count
+semantics and all search/gate decisions remain unchanged.
+
+This closes the supported production opt-in gap when verification below is
+complete; it does not correct historical measurements, certify caller source-law
+provenance, establish cost-aware or realized-sample optimality, or measure new
+power. Frozen cohorts remain intact and FINDING-159 remains separately open.
+
+Session 27 observed the new metadata-retention test fail with KeyError before
+backend implementation. The first 35 cases were prewritten; one was executed
+RED before the patch. Later isolated execution against the original source
+confirmed 29 failures and six preserved controls (this was a post-patch
+original-code check, not the initial TDD run). Separate report-wording and
+explicit-empty CLI-method tests each failed before their narrow corrections.
+The frontend observed 21 failures and 58 preserved cases before implementation.
+
+Final focused verification passed 130 backend tests, including 53 new cases,
+plus 79 frontend tests; Ruff, formatting, mypy, ESLint and TypeScript passed.
+Independent review approved the complete change and independently repeated
+65 backend cases. API tests retain header/cell identity for zero, negative and
+tiny drift without changing compatibility, scores or file bytes. Fixed hand-built
+joint records prove complete detection-only comparison result equality with
+and without known reference metadata. These are unit mechanics, not power data.
+
+The frozen pre-change historical fixture matches both sweeps and all twelve cells
+exactly after excluding only the new nullable metadata field. Both generated
+JSON hashes remain unchanged. Parent AST checks preserve 33 original definitions,
+including every scorer, generator and search fingerprint, and the exact
+measurement search/count/joint tail and prior result keywords. Receipts:
+`/tmp/qf-w42-s27-independent-ar1-fixture-receipt.json`,
+`/tmp/qf-w42-s27-source-audit.json`, and
+`/tmp/qf-w42-s27-ar1-original-confirmation/receipt.txt`.
+Session 28 fresh full foreground `make check-all` closed successfully: 12,560
+backend tests (97.40% coverage), 401 frontend tests (97.68% statements),
+with lint, formatting and strict types green. Independent final backend/frontend
+reviews approved; their fresh focused runs passed 53 and 79 tests. Fresh parent
+source and historical-payload audits also passed with the same source/artifact
+hashes: `/tmp/qf-w42-s28-source-audit.json` and
+`/tmp/qf-w42-s28-ar1-fixture-receipt.json`. No verification remains running.
+The supported opt-in gap is closed; exact master CI is checked after publishing.

@@ -7,7 +7,7 @@ from math import isfinite
 from numbers import Integral, Real
 from operator import le
 from statistics import median
-from typing import Annotated, Any, NamedTuple
+from typing import Annotated, Any, Literal, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
@@ -672,6 +672,44 @@ def bootstrap_null(
     )
 
 
+class AR1Reference(BaseModel):
+    """Closed, explicit reference-strategy identity (ADR-308), never inferred from prices."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", revalidate_instances="always")
+
+    method: Literal["ar1_phi_lag_sign_v1", "ar1_conditional_mean_sign_v1"]
+    drift: _FiniteCalibrationScore | None
+
+    @model_validator(mode="after")
+    def _bind_drift(self) -> "AR1Reference":
+        if self.method == "ar1_phi_lag_sign_v1" and self.drift is not None:
+            raise ValueError("legacy AR reference requires null drift")
+        if self.method == "ar1_conditional_mean_sign_v1" and self.drift is None:
+            raise ValueError("conditional AR reference requires explicit drift")
+        return self
+
+
+def _bind_ar1_reference(reference: AR1Reference | None, edge: str, phi: float | None) -> None:
+    if reference is None:
+        return
+    if edge != "ar1":
+        raise ValueError("AR reference requires edge ar1")
+    if phi is None:
+        raise ValueError("known AR reference requires phi")
+    coefficient = _finite_leaf_score(phi)
+    if reference.method == "ar1_conditional_mean_sign_v1" and not (
+        -1.0 < phi < 1.0 and -1.0 < coefficient < 1.0
+    ):
+        raise ValueError("conditional AR reference requires stationary phi in (-1, 1)")
+
+
+def ar1_reference_description(reference: AR1Reference | None) -> str:
+    """Exact served reference identity for human-readable calibration reports."""
+    if reference is None:
+        return "unknown (historical or externally supplied reference)"
+    return f"{reference.method}; drift={reference.drift}"
+
+
 class PowerCalibration(BaseModel):
     """The gate's measured ability to DETECT a planted edge (ADR-041) — the Type-II half.
 
@@ -694,6 +732,7 @@ class PowerCalibration(BaseModel):
     # describes ADR-041's AR(1); `half_life`/`deviation_share` describe ADR-042's band reversion.
     edge: str = "ar1"
     phi: float | None = None
+    ar1_reference: AR1Reference | None = None
     half_life: float | None = None
     deviation_share: float | None = None
     oracle_sharpes: list[_FiniteCalibrationScore]
@@ -773,6 +812,7 @@ class PowerCalibration(BaseModel):
 
     @model_validator(mode="after")
     def _validate_symbol_verdicts(self) -> "PowerCalibration":
+        _bind_ar1_reference(self.ar1_reference, self.edge, self.phi)
         if not (self.n_clear_deflation_bar <= self.n_detected <= self.n_symbols):
             raise ValueError("power survivor/detected/searched counts are inconsistent")
         if self.detection_rate != self.n_detected / self.n_symbols:
@@ -1293,6 +1333,7 @@ def measure_power(
     strategy_names: Sequence[str],
     *,
     phi: float | None = None,
+    ar1_reference: AR1Reference | Mapping[str, Any] | None = None,
     oracle_sharpes: Mapping[str, float] | None = None,
     net_oracle_sharpes: Mapping[str, float] | None = None,
     achievable_oracle_sharpes: Mapping[str, float] | None = None,
@@ -1319,17 +1360,44 @@ def measure_power(
     """
     if not frames:
         raise ValueError("need at least one symbol to measure power")
+    reference = AR1Reference.model_validate(ar1_reference) if ar1_reference is not None else None
+    _bind_ar1_reference(reference, edge, phi)
+    if reference is not None:
+        if oracle_sharpes is not None or net_oracle_sharpes is not None:
+            raise ValueError("explicit AR reference forbids external oracle arrays")
+        if (
+            reference.method == "ar1_conditional_mean_sign_v1"
+            and achievable_oracle_sharpes is not None
+        ):
+            raise ValueError("conditional AR reference forbids achievable oracle arrays")
+    elif phi is not None and edge == "ar1" and oracle_sharpes is None:
+        reference = AR1Reference(method="ar1_phi_lag_sign_v1", drift=None)
     one_source = "pass exactly one of phi (AR(1)) or oracle_sharpes (any other process)"
     if oracle_sharpes is None:
         if phi is None:
             raise ValueError(one_source)
         if net_oracle_sharpes is not None:
             raise ValueError("net_oracle_sharpes belongs with oracle_sharpes, not with phi")
-        oracle_sharpes = {symbol: oracle_sharpe(frame, phi=phi) for symbol, frame in frames.items()}
-        net_oracle_sharpes = {
-            symbol: oracle_sharpe(frame, phi=phi, cost_rate=DEFAULT_COST_RATE)
-            for symbol, frame in frames.items()
-        }
+        if reference is not None and reference.method == "ar1_conditional_mean_sign_v1":
+            assert reference.drift is not None  # validated explicit source law
+            oracle_sharpes = {
+                symbol: ar1_conditional_mean_sign_sharpe(frame, phi=phi, drift=reference.drift)
+                for symbol, frame in frames.items()
+            }
+            net_oracle_sharpes = {
+                symbol: ar1_conditional_mean_sign_sharpe(
+                    frame, phi=phi, drift=reference.drift, cost_rate=DEFAULT_COST_RATE
+                )
+                for symbol, frame in frames.items()
+            }
+        else:
+            oracle_sharpes = {
+                symbol: oracle_sharpe(frame, phi=phi) for symbol, frame in frames.items()
+            }
+            net_oracle_sharpes = {
+                symbol: oracle_sharpe(frame, phi=phi, cost_rate=DEFAULT_COST_RATE)
+                for symbol, frame in frames.items()
+            }
     elif phi is not None:
         raise ValueError(one_source)
     else:
@@ -1410,6 +1478,7 @@ def measure_power(
         deflation_bar=expected_max_sharpe_under_null(n_symbols, median(holdout_years)),
         edge=edge,
         phi=phi,
+        ar1_reference=reference,
         half_life=half_life,
         deviation_share=deviation_share,
         oracle_sharpes=oracles,
@@ -1666,6 +1735,7 @@ class PowerSweep(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     edge: str
+    ar1_reference: AR1Reference | None = None
     gate_config_version: str
     search_config_version: str
     n_bars: int
@@ -1673,6 +1743,15 @@ class PowerSweep(BaseModel):
 
     @model_validator(mode="after")
     def _freeze_cells(self) -> "PowerSweep":
+        if self.ar1_reference is not None and self.edge != "ar1":
+            raise ValueError("AR reference requires edge ar1")
+        for cell in self.cells:
+            # Reconstruct before reading identity: unchecked model copies are untrusted.
+            validated = PowerCalibration.model_validate(cell.model_dump(round_trip=True))
+            if validated.ar1_reference != self.ar1_reference:
+                raise ValueError("power cell AR reference differs from its sweep reference")
+            if validated.ar1_reference is not None and validated.edge != self.edge:
+                raise ValueError("power cell reference edge differs from its sweep")
         object.__setattr__(
             self,
             "cells",
@@ -1692,6 +1771,9 @@ def collect_power_sweep(cells: Sequence[PowerCalibration]) -> PowerSweep:
     cells = [PowerCalibration.model_validate(cell.model_dump(round_trip=True)) for cell in cells]
     if not cells:
         raise ValueError("need at least one power cell to collect a sweep")
+    reference = cells[0].ar1_reference
+    if any(cell.ar1_reference != reference for cell in cells):
+        raise ValueError("cannot collect cells with different AR reference identities")
     edges = {c.edge for c in cells}
     if len(edges) > 1:
         raise ValueError(f"cannot collect cells with different edge: {sorted(edges)}")
@@ -1715,6 +1797,7 @@ def collect_power_sweep(cells: Sequence[PowerCalibration]) -> PowerSweep:
 
     return PowerSweep(
         edge=edges.pop(),
+        ar1_reference=reference,
         gate_config_version=versions.pop(),
         search_config_version=search_versions.pop(),
         n_bars=lengths.pop() if lengths else 0,
@@ -1771,6 +1854,9 @@ def compare_power_sweeps(before: PowerSweep, after: PowerSweep) -> list[PowerSwe
             "cannot compare sweeps with the same search_config_version — there is no catalog "
             "change to read, so any capture delta is noise"
         )
+
+    if before.ar1_reference != after.ar1_reference:
+        raise ValueError("cannot compare sweeps with different or known/unknown AR reference")
 
     def _key(cell: PowerCalibration) -> float:
         return cell.phi if cell.phi is not None else (cell.half_life or 0.0)

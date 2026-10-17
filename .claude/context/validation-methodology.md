@@ -1635,3 +1635,28 @@ seed/shard arithmetic, generators and search remain. Repeated option values are
 all excluded from positionals while the first wins; new value flags must join the
 registry. Mocked CLI evidence establishes the parser defect, not an affected
 historical cohort. No source/cohort retry, threshold or v14 change (F262).
+
+
+### Explicit AR reference attribution (ADR-308)
+
+The supported production opt-in carries `ar1_reference` on cells and sweep.
+Known legacy phi-lag sign has null drift; conditional-mean sign requires explicit
+original finite float-representable nonboolean Real drift and stationary phi.
+The driver passes the same explicit drift to source and reference; arbitrary
+supplied-frame law correspondence remains the caller's responsibility. Default
+legacy math/calls remain. Historical absent/null metadata remains unknown.
+
+Authoritative model reconstruction and collection bind header/cell identity;
+capture comparison refuses known/unknown or unequal method/drift after its
+existing header/search guards. None/None retains historical comparison semantics.
+Detection-only probability-DSR comparison retains joint-count math and existing
+identity rules; central sweep coherence still applies. Method is not a search
+fingerprint or gate threshold. Reports/API/UI retain attribution and describe
+selected in-sample reference-relative ratios, with gross/net cost distinctions.
+
+ADR-223 and F173 paragraphs above record their historical adoption boundaries;
+ADR-308 supplies the separately governed production opt-in. No historical scores,
+source draws, generated artifacts, accounting-v14, gate/search or thresholds are
+changed. No new power estimate is claimed. Neither sign reference certifies
+cost-aware optimality, a sample maximum or absence of tradeable edge. F159's
+band-reference issue remains separate and open.

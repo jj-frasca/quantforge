@@ -1,6 +1,7 @@
 // GatePowerPanel: the measured POWER of the whole gate (ADR-041/042/053). The Type-I error says
 // how often the gate is wrong when there is nothing there; this says how often it is right when
 // there is. Showing one without the other reads conservatism as strength.
+import { vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
 import type { PowerCell, PowerSweep } from '../../types/lab'
@@ -46,8 +47,8 @@ test('states the detection rate against the effect size that produced it', () =>
   expect(screen.getByText('32 / 50')).toBeInTheDocument()
 })
 
-test('identifies AR(1) scores as historical reference scores without asserting optimality', () => {
-  render(<GatePowerPanel sweeps={[sweep()]} />)
+test('identifies explicit legacy AR(1) reference without asserting optimality', () => {
+  render(<GatePowerPanel sweeps={[sweep({ ar1_reference: { method: 'ar1_phi_lag_sign_v1', drift: null } })]} />)
   expect(screen.getByRole('columnheader', { name: 'Reference Sharpe' })).toBeInTheDocument()
   expect(screen.getByRole('columnheader', { name: 'Reference net of costs' })).toBeInTheDocument()
   expect(screen.getByText(/historical reference sign strategy/)).toHaveTextContent(
@@ -96,7 +97,7 @@ test('identifies historical band scores as latent and filtered references withou
 })
 
 test('scopes drift and log-return qualifications to their own processes in mixed sweeps', () => {
-  render(<GatePowerPanel sweeps={[sweep(), bandSweep()]} />)
+  render(<GatePowerPanel sweeps={[sweep({ ar1_reference: { method: 'ar1_phi_lag_sign_v1', drift: null } }), bandSweep()]} />)
   const tables = screen.getAllByRole('table')
   expect(within(tables[0]).getByText(/historical reference sign strategy/)).toBeInTheDocument()
   expect(within(tables[1]).queryByText(/historical reference sign strategy/)).not.toBeInTheDocument()
@@ -364,4 +365,30 @@ test.each([null, { ...context('UNKNOWN'), reference: null }])('unknown power con
   expect(screen.getByText('Current default reference unavailable.')).toBeInTheDocument()
   expect(screen.getByText('64%')).toBeInTheDocument()
   expect(screen.getByText('32 / 50')).toBeInTheDocument()
+})
+
+test.each([undefined, null])('historical AR reference remains unknown: %s', (ar1_reference) => {
+  render(<GatePowerPanel sweeps={[sweep({ ar1_reference })]} />)
+  expect(screen.getByText(/AR\(1\) reference method and drift unknown/)).toBeInTheDocument()
+  expect(screen.queryByText(/omits the drift intercept/)).not.toBeInTheDocument()
+})
+test.each([0, -0.0004, 1e-12])('renders exact conditional drift %s and qualifications', (drift) => {
+  render(<GatePowerPanel sweeps={[sweep({ ar1_reference: { method: 'ar1_conditional_mean_sign_v1', drift } })]} />)
+  expect(screen.getByText(/conditional-mean sign reference/)).toHaveTextContent(`drift ${String(drift)}`)
+  expect(screen.getByText(/conditional-mean sign reference/)).toHaveTextContent('ar1_conditional_mean_sign_v1')
+  expect(screen.getByText(/conditional-mean sign reference/)).toHaveTextContent('do not certify cost-aware optimality or a realized-sample maximum Sharpe')
+  expect(screen.getByText('32 / 50')).toBeInTheDocument()
+})
+test('keeps multiple and duplicate AR sweeps and cells without duplicate React keys', () => {
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    const legacy = sweep({ ar1_reference: { method: 'ar1_phi_lag_sign_v1', drift: null },
+      cells: [cell({ net_capture_by_category: { Trend: 0.5 } }), cell({ net_capture_by_category: { Trend: 0.5 } })] })
+    const conditional = sweep({ ar1_reference: { method: 'ar1_conditional_mean_sign_v1', drift: 1e-12 } })
+    render(<GatePowerPanel sweeps={[legacy, conditional, conditional]} />)
+    expect(screen.getAllByRole('table')).toHaveLength(3)
+    expect(screen.getAllByText('32 / 50')).toHaveLength(4)
+    expect(screen.getAllByTestId('capture-by-category')).toHaveLength(2)
+    expect(errors).not.toHaveBeenCalled()
+  } finally { errors.mockRestore() }
 })

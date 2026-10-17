@@ -906,3 +906,21 @@ and alpha. Early closes are conservatively unavailable until 16:00; an intraday 
 establish this proxy at all. The first snapshot is unmeasured; identical completed-close endpoints
 yield zero. Account endpoints remain observed marks, so this proxy is not exact intraday/after-hours
 attribution. Existing ledger values and ADR-141's account denominator are not restated.
+
+
+### AR reference identity (ADR-308)
+
+PowerCalibration and PowerSweep retain optional nullable `ar1_reference`. The
+frozen/revalidated closed object distinguishes legacy phi-lag sign (null drift)
+from conditional-mean sign (explicit finite original nonboolean Real drift).
+Known-reference cells require AR edge and phi; conditional cells require
+stationarity. Sweep headers bind edge/reference and centrally require the same
+reference identity in every cell, including reconstructed unchecked copies.
+
+Conditional measurement dispatches gross/net to the unchanged ADR-223 helper;
+default scorer/source/search calls remain. New ordinary phi+ar1 default results
+record known legacy method; historical missing metadata and externally scored
+arrays stay unknown. Odd legacy custom-edge phi remains unknown. Reject explicit
+contradictions before scoring/search. Collector and capture comparisons cannot
+mix denominators; detection-only joint-count semantics remain unchanged.
+No search/gate threshold, fingerprint/accounting-v14, source or artifact rewrite.

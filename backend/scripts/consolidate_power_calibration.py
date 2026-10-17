@@ -14,7 +14,12 @@ script is the sole writer of its output file (ADR-030).
 import sys
 from pathlib import Path
 
-from app.research.lab.calibration import PowerCalibration, PowerSweep, collect_power_sweep
+from app.research.lab.calibration import (
+    PowerCalibration,
+    PowerSweep,
+    ar1_reference_description,
+    collect_power_sweep,
+)
 
 
 def _top_finalist(cell: PowerCalibration) -> str:
@@ -28,6 +33,9 @@ def _top_finalist(cell: PowerCalibration) -> str:
 
 def _report(sweep: PowerSweep) -> None:
     print(f"planted process     : {sweep.edge}")
+    if sweep.edge == "ar1":
+        print(f"AR sign reference   : {ar1_reference_description(sweep.ar1_reference)}")
+    print("Ratios: selected in-sample reference-relative; not cost-aware or sample optimality.")
     print(f"gate config version : {sweep.gate_config_version}")
     print(f"search config version: {sweep.search_config_version}")
     print(f"bars per symbol     : {sweep.n_bars} (the hunt's own history length)")

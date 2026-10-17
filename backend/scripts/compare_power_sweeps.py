@@ -14,7 +14,11 @@ the finalist mix moved with it — otherwise the rise is the in-sample maximum o
 import sys
 from pathlib import Path
 
-from app.research.lab.calibration import PowerSweep, compare_power_sweeps
+from app.research.lab.calibration import (
+    PowerSweep,
+    ar1_reference_description,
+    compare_power_sweeps,
+)
 
 
 def _pct(value: float | None) -> str:
@@ -31,6 +35,9 @@ def main() -> None:
     print("=" * 78)
     print(f"QUANTFORGE — paired power sweep, planted process: {before.edge} (ADR-057)")
     print("=" * 78)
+    if before.edge == "ar1":
+        print(f"AR sign reference    : {ar1_reference_description(before.ar1_reference)}")
+    print("Ratios: selected in-sample reference-relative; not cost-aware or sample optimality.")
     print(f"before search family : {before.search_config_version}")
     print(f"after  search family : {after.search_config_version}")
     print(f"bars per symbol      : {before.n_bars}")

@@ -19,6 +19,16 @@ const percent = (value: number | null): string =>
 const label = (cell: PowerCell): string =>
   cell.phi !== null ? `phi ${cell.phi > 0 ? '+' : ''}${cell.phi}` : `half-life ${cell.half_life}`
 
+const ar1Caption = (reference: PowerSweep['ar1_reference']): string => {
+  if (!reference) {
+    return 'AR(1) reference method and drift unknown: historical metadata does not identify the sign rule or source drift. These scores do not certify cost-aware optimality or a realized-sample maximum Sharpe.'
+  }
+  if (reference.method === 'ar1_phi_lag_sign_v1') {
+    return 'AR(1) scores use the historical reference sign strategy (ar1_phi_lag_sign_v1; drift null, source drift unspecified), which omits the drift intercept; these are not conditional-mean optimal or realized-sample maximum Sharpes, and do not certify cost-aware optimality.'
+  }
+  return `AR(1) scores use the conditional-mean sign reference (ar1_conditional_mean_sign_v1), drift ${String(reference.drift)}. These scores do not certify cost-aware optimality or a realized-sample maximum Sharpe.`
+}
+
 const process = (edge: string): string =>
   edge === 'ar1' ? 'AR(1) on returns' : 'band reversion around a random-walk level'
 
@@ -34,8 +44,8 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
   return (
     <section aria-label="gate power" className="deflation-headline">
       <h3>Measured detection rate</h3>
-      {sweeps.map((sweep) => (
-        <div key={sweep.edge} className="table-scroll">
+      {sweeps.map((sweep, sweepIndex) => (
+        <div key={`${sweep.edge}-${sweepIndex}`} className="table-scroll">
         <table>
           <caption>
             {process(sweep.edge)} — a planted edge of measured strength, searched over{' '}
@@ -57,10 +67,10 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
               ]}
             />
             {sweep.edge === 'ar1' && (
-              <p>
-                AR(1) scores use the historical reference sign strategy, which omits the drift
-                intercept; these are not conditional-mean optimal or realized-sample maximum Sharpes.
-              </p>
+              <>
+                <p>{ar1Caption(sweep.ar1_reference)}</p>
+                <p>Search compatibility MATCHED does not certify reference equivalence.</p>
+              </>
             )}
             {sweep.edge === 'band_reversion' && (
               <p>
@@ -90,9 +100,9 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
             </tr>
           </thead>
           <tbody>
-            {sweep.cells.map((cell) => {
+            {sweep.cells.map((cell, cellIndex) => {
               return (
-                <tr key={label(cell)}>
+                <tr key={`${label(cell)}-${cellIndex}`}>
                   <td>{label(cell)}</td>
                   <td>{sharpe(median(cell.oracle_sharpes))}</td>
                   <td>{sharpe(median(cell.net_oracle_sharpes))}</td>
@@ -105,13 +115,13 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
                 </tr>
               )
             })}
-            {sweep.cells.map((cell) => {
+            {sweep.cells.map((cell, cellIndex) => {
               const split = Object.entries(cell.net_capture_by_category)
               if (split.length === 0) {
                 return null
               }
               return (
-                <tr key={`${label(cell)}-split`} data-testid="capture-by-category">
+                <tr key={`${label(cell)}-${cellIndex}-split`} data-testid="capture-by-category">
                   <td colSpan={9}>
                     {label(cell)} — net capture by category:{' '}
                     {split

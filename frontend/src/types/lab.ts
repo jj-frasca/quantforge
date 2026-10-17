@@ -308,9 +308,16 @@ export const windowExperimentSchema = z.object({
 
 export type WindowExperiment = z.infer<typeof windowExperimentSchema>
 
+// ADR-308: retain closed reference metadata; scientific coherence belongs to the backend.
+export const ar1ReferenceSchema = z.discriminatedUnion('method', [
+  z.object({ method: z.literal('ar1_phi_lag_sign_v1'), drift: z.null() }).strict(),
+  z.object({ method: z.literal('ar1_conditional_mean_sign_v1'), drift: z.number() }).strict(),
+])
+
 // ADR-041/042/053: one cell of a power sweep — a planted process at one effect size, judged at its
 // own N. `phi` indexes an AR(1) sweep and `half_life` a band-reversion one; exactly one is set.
 export const powerCellSchema = z.object({
+  ar1_reference: ar1ReferenceSchema.nullable().optional(),
   n_symbols: z.number().int(),
   n_detected: z.number().int(),
   detection_rate: z.number().min(0).max(1),
@@ -347,6 +354,7 @@ export const powerCellSchema = z.object({
 export type PowerCell = z.infer<typeof powerCellSchema>
 
 export const powerSweepSchema = z.object({
+  ar1_reference: ar1ReferenceSchema.nullable().optional(),
   compatibility: calibrationCompatibilitySchema.nullable().optional(),
   edge: z.string(),
   gate_config_version: z.string(),
