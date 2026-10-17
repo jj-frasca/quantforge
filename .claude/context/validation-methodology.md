@@ -1685,3 +1685,21 @@ An inactive benchmark remains inactive. Original total-return wealth validity
 and exact integral count normalization stay; downstream wealth projection is
 separate. The guard acts while source/config are available and does not make
 GateResult, which lacks benchmark/floor fields, a complete replay record.
+
+### Explicit full-price band posterior (ADR-310)
+
+`research/lab/band_posterior.py::band_price_posterior` takes explicit rho,
+level/deviation volatility, drift and known pre-shock start price. Under known
+zero pre-shock level/deviation it returns owned posterior mean/variance arrays,
+conditioning on all prices through each index, including the first price.
+It computes a declared binary64 law from validated original scalars and a copied
+complete real numeric ndarray. Empty valid sources return empty arrays after
+law validation; singletons assimilate their first observation. Genuine zero
+level noise remains valid; positive noise/uncertainty lost to zero refuses.
+
+The fixed variance recurrence uses a nonnegative determinant expression rather
+than cancellation/clipping. ADR-310 records formulas and precision limits. This
+standalone helper does not replace the historical filter, alter any generator or
+score, infer source provenance, or wire a production reference. F159 remains Open
+for separately attributed simple-return references; posterior correctness does
+not certify strategy optimality or measured power.

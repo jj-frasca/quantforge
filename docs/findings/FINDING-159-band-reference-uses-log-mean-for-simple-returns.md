@@ -179,3 +179,63 @@ conditioning calculations. Fresh full foreground `make check-all` passed 12,560
 backend tests (97.40% coverage) and 401 frontend tests (97.68% statements), with
 lint, formatting and strict types green. Backend, frontend and generated-data
 paths are unchanged; no wording-mirroring tests were added.
+
+## Additive known-start posterior prerequisite (ADR-310)
+
+ADR-310 supplies a separately named `band_price_posterior` in
+`app/research/lab/band_posterior.py`, leaving the historical filter and generator
+intact. It requires explicit rho, level/deviation volatility, drift and source
+start price. Its law has known zero level and deviation before the first shock;
+the start price is the pre-shock scale, not the observed first close. Every output
+conditions on all observed prices through its own index, including index 0.
+
+The two owned output arrays contain posterior deviation means and variances.
+The scalar variance update uses the nonnegative covariance-determinant identity
+recorded in ADR-310, without subtracting nearly equal variances, clipping or
+introducing artificial noise. Genuine zero level noise yields zero posterior
+variance and an observable deviation. Positive noise or posterior variance lost
+to zero through the selected arithmetic refuses rather than claiming certainty.
+
+This new helper explicitly computes a normalized binary64 model, not preserved
+native wide/exact arithmetic. Original finite nonboolean scalars/ranges and
+original complete real numeric ndarray evidence validate before conversion;
+normalization does not certify prior caller coercions or source-law provenance.
+Derived law validates even for empty input. Finite checks may conservatively
+refuse mathematically representable results when fixed intermediates fail; finite
+output does not certify arbitrary numerical conditioning or universal accuracy.
+
+A precode independent exact Fraction calculation matched scalar posterior mean
+and variance to full joint-Gaussian conditioning for 96 hand-built prefix cases,
+including negative/zero rho, nonzero drift and zero level noise. It verifies the
+mathematical identity on that grid, not the eventual binary64 implementation.
+No generator, source draw, scorer, search, data artifact or frozen cohort is used.
+
+This is a posterior component, not the corrected simple-return reference or its
+production opt-in. Historical meanings, source/filter/scorer bodies, schemas,
+defaults, search/gate accounting and thresholds stay unchanged. F159 remains Open;
+future use still needs predictive variance, explicit method/law/startup/observation
+attribution and separate governance. No cost-aware optimum, realized-sample Sharpe
+maximum, recoverable-edge bound or new power result is established.
+
+Actual behavioral RED closed with 83 failed cases before the implementation
+module existed (`/tmp/qf-w42-s28-posterior-red.log`); failure occurred in test
+bodies, not collection/setup. Final focused verification passed 91 cases; eight
+boundary cases were added after green and are not claimed as pre-code RED.
+Ruff, formatting and mypy passed. Tests independently condition full exact
+Gaussian covariance matrices, check causal prefixes and path-independent
+variances, and cover first-price assimilation, zero level noise, original versus
+normalized scalar/source validity, underflow, ownership and NumPy policy.
+
+Parent independent review approved the source and tests. A separate exact
+Fraction joint-conditioning audit compared 96 prefix mean/variance pairs with
+the binary64 helper: maximum absolute differences were 2.61e-18 for means and
+8.14e-20 for variances. This bounded tolerance comparison does not assert
+universal or bitwise numerical accuracy. Receipt:
+`/tmp/qf-w42-s28-posterior-parent-audit.json`, source SHA256
+`6f4138d73fbeec187859098768b9a595b714720f803e80f3dabb42112d68baa9`.
+All existing backend, frontend and data paths remain byte-unchanged; only the
+standalone module and its tests are new. Fresh full foreground `make check-all`
+passed 12,689 backend tests (97.40% coverage) and 401 frontend tests (97.68%
+statements), with lint, formatting and strict types green. All local verification
+is closed; exact master CI is checked after individual publication. F159 remains
+Open for separately attributed simple-return references and production wiring.
