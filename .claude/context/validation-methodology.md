@@ -1673,3 +1673,15 @@ power results. F159 records the matrices, probe and independent reproduction.
 No filter correction, historical remeasurement or source-law inference is made;
 a future posterior/reference contract must explicitly choose startup law and
 observations and retain posterior variance for simple-return prediction.
+
+### Holdout predicate projection (ADR-309 / FINDING-256)
+
+The gate retains original native comparisons but refuses a result if converting
+Sharpe and the active benchmark to binary64 changes either holdout predicate.
+The checked Sharpe snapshot is published. This accepts same-side rounding and
+refuses both exact positive underflow and NumPy-native false/projected-true
+threshold mismatches, without changing thresholds or using projected decisions.
+An inactive benchmark remains inactive. Original total-return wealth validity
+and exact integral count normalization stay; downstream wealth projection is
+separate. The guard acts while source/config are available and does not make
+GateResult, which lacks benchmark/floor fields, a complete replay record.

@@ -245,7 +245,14 @@ The complete bundle validates even when benchmark comparison is disabled; valid
 configuration behavior and native comparisons stay unchanged. No field/schema,
 threshold, hash, estimator or v14 identity changes. This prevents malformed scalar
 acceptance (FINDING-255), without certifying source provenance or exact-real float
-projection replay (separate Open FINDING-256).
+projection replay (separately governed by ADR-309 / FINDING-256).
+
+**Holdout predicates must survive their binary64 score projection (ADR-309).**
+The evaluator preserves native comparisons and refuses either-direction
+holdout/active-benchmark projection disagreement before issuing a verdict.
+Coherent rounding remains valid; disabled benchmark, original return/count
+contracts, thresholds and v14 stay. This checks evaluator-issued predicates
+while source/config are available, not standalone result replay or provenance.
 
 **Standalone MinBTL validates original Sharpe evidence (ADR-297).** After count
 validation, the public primitive rejects nonfinite, boolean and non-real score

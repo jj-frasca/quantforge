@@ -174,6 +174,15 @@ class GraduationGate:
             holdout.sharpe > holdout.buy_and_hold_sharpe
         )
 
+        # ADR-309: retain native verdicts only when their binary64 evidence agrees.
+        holdout_sharpe = float(holdout.sharpe)
+        projected_holdout_ok = holdout_sharpe > config.holdout_sharpe_min
+        projected_benchmark_ok = (not config.require_beat_buy_and_hold) or (
+            holdout_sharpe > float(holdout.buy_and_hold_sharpe)
+        )
+        if holdout_ok != projected_holdout_ok or beats_buy_and_hold_ok != projected_benchmark_ok:
+            raise ValueError("holdout predicate changes under float projection")
+
         reasons: list[str] = []
         if not dsr_ok:
             reasons.append(
@@ -227,6 +236,6 @@ class GraduationGate:
             required_track_record_years=required,
             gate_config_version=config.version_hash,
             reasons=reasons,
-            holdout_sharpe=holdout.sharpe,
+            holdout_sharpe=holdout_sharpe,
             holdout_n_bars=holdout_n_bars,
         )

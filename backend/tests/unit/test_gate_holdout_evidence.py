@@ -126,10 +126,10 @@ def test_gate_original_fraction_return_above_minus_one_remains_valid() -> None:
 def test_gate_f256_tiny_exact_positive_score_projection_control_remains() -> None:
     tiny = Fraction(1, 10**400)
     score = HoldoutScore(tiny, 0.1, 252, 0)  # type: ignore[arg-type]
-    verdict = _evaluate(score)
     assert tiny > 0 and float(tiny) == 0.0
-    assert verdict.passed and verdict.holdout_ok and verdict.beats_buy_and_hold_ok
-    assert verdict.holdout_sharpe == 0.0 and score.sharpe is tiny
+    with pytest.raises(ValueError, match="projection"):
+        _evaluate(score)
+    assert score.sharpe is tiny
 
 
 @pytest.mark.parametrize("stage", ["report", "count", "duration", "bars", "sharpe", "return"])
