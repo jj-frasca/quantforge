@@ -1660,3 +1660,16 @@ source draws, generated artifacts, accounting-v14, gate/search or thresholds are
 changed. No new power estimate is claimed. Neither sign reference certifies
 cost-aware optimality, a sample maximum or absence of tradeable edge. F159's
 band-reference issue remains separate and open.
+
+### Band-filter startup evidence (FINDING-159, 2026-10-17)
+
+The zero-initialized band generator has first deviation variance
+`q=deviation_vol²*(1-rho²)`, while the historical filter's first difference
+update uses a stationary deviation prior. Exact Gaussian conditioning of a
+hand-built two-price example gives different gains (historical 0.4 versus
+zero-init differences-only 9/19). Including the first price with a known source
+start gives a third gain 45/67. These are distinct information sets, not empirical
+power results. F159 records the matrices, probe and independent reproduction.
+No filter correction, historical remeasurement or source-law inference is made;
+a future posterior/reference contract must explicitly choose startup law and
+observations and retain posterior variance for simple-return prediction.

@@ -115,3 +115,67 @@ module AST and table comparisons, and the retained historical finalist shares
 (18% Mean Reversion versus 68% Trend at half-life1). Full foreground
 `make check-all` passed 11,311 backend tests (97.38% coverage) and 363 frontend
 tests (97.63% statement coverage), with lint, formatting and strict typing green.
+
+## Concrete startup covariance mismatch — 2026-10-17
+
+A deterministic source review at `fcf6ef10` establishes a specific initialization
+mismatch, without drawing a source or measuring a score. Write
+`s² = deviation_vol²`, `q = s²(1-rho²)` and `R = level_vol²`.
+The generator starts `d[-1]=0` and draws `d[i]=rho*d[i-1]+epsilon[i]`,
+with independent Gaussian innovations of variance `q`. Consequently
+`Var(d[0])=q`, rather than stationary variance `s²`.
+
+The historical filter ignores the first absolute log price and first updates on
+`z[1]=y[1]-y[0]-drift=d[1]-d[0]+eta[1]`. Its initialized diagonal
+covariance `diag(s²,s²)`, followed by its transition, instead supplies
+
+```text
+P_historical([d[1], d[0]]) = [[s², rho*s²], [rho*s², s²]].
+P_zero_init([d[1], d[0]])  = [[rho²*q+q, rho*q], [rho*q, q]].
+```
+
+For `P=[[a,c],[c,b]]` and observation vector `[1,-1]`, elementary Gaussian
+conditioning gives gain `(a-c)/(a+b-2*c+R)` for the current deviation. The two
+matrices therefore produce different posterior means even using only observed
+differences. This is a startup-law discrepancy, independent of the separate
+log-return/simple-return mismatch.
+
+There is a further information-set choice. If the source start price is known,
+`w[0]=y[0]-log(start_price)-drift=d[0]+eta[0]` is already informative.
+Conditioning on it gives initial posterior mean `q/(q+R)*w[0]` and variance
+`p=q*R/(q+R)`. Before the first difference update the corresponding matrix is
+`[[rho²*p+q, rho*p], [rho*p, p]]`. A differences-only correction would still
+exclude this first-price information. Arbitrary supplied prices do not establish
+a known start price or this source law; a future corrected reference must declare
+its information set explicitly.
+
+A finite hand-built example uses log prices `[0, 0.01]`, `rho=0.5`,
+`deviation_vol=0.02`, `level_vol=0.01`, `drift=0`, and, for the full-price
+interpretation, `start_price=1`. The historical function returns first estimate
+NaN and second estimate `0.004`, a gain of `0.4`. Independent exact Fraction
+conditioning gives gain `9/19` (approximately `0.473684`) from differences only,
+and `45/67` (approximately `0.671642`) from both prices with the known start.
+Here `w[0]=0`, so both correct initial means are zero; the unequal gains result
+from the different covariance assumptions. The returned posterior is at index 1;
+the generator's existing shift uses it to predict index 2.
+
+Parent and independent research review reproduced these calculations. Receipts:
+`/tmp/qf-w42-s28-band-startup-review.md` (derivation and executable probe;
+SHA256 `c84a7041a6e33a709e659d3e92e8580e7c16db48a854ccce5adabd52184752b3`)
+and `/tmp/qf-w42-s28-band-startup-parent-receipt.json`. No RNG, generator,
+reference scorer, search, artifact rewrite or frozen cohort was invoked.
+
+This does not quantify any historical score, sign, power or long-run effect, and
+does not certify a replacement filter. The existing filter and its historical
+measurements retain their meanings. A future separately governed helper should
+specify startup law and available observations, and expose posterior variance as
+well as mean: a filtered simple-return prediction needs predictive log variance
+`q+R+(rho-1)²*posterior_variance`. Correcting only latent innovation variance
+would omit state uncertainty. Even exact conditional means do not establish a
+cost-aware optimum or a realized-sample maximum. This finding remains Open.
+
+Final independent research review approved both documentation paths and the exact
+conditioning calculations. Fresh full foreground `make check-all` passed 12,560
+backend tests (97.40% coverage) and 401 frontend tests (97.68% statements), with
+lint, formatting and strict types green. Backend, frontend and generated-data
+paths are unchanged; no wording-mirroring tests were added.
