@@ -17,16 +17,9 @@ from app.data.models import DataQualityReport, PriceBar, Source
 from app.data.quality.engine import DataQualityEngine
 from app.data.sources.base import DataSourceAdapter
 from app.research.frames import bars_to_frame
+from app.research.frames import copy_frame as _copy_frame
 
 _FULL_GIT_SHA = re.compile(r"[0-9a-f]{40}")
-
-
-def _copy_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    """Isolate canonical numeric data and axes, including pandas' shared index storage."""
-    copied = frame.copy(deep=True)
-    copied.index = frame.index.copy(deep=True)
-    copied.columns = frame.columns.copy(deep=True)
-    return copied
 
 
 class _DatasetFrame:

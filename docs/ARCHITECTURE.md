@@ -197,6 +197,17 @@ infinity remains the intentional MinTRL requirement for a non-positive observed 
 probability-DSR comparison reconstructs its enclosing artifacts before inference, so unchecked
 gate copies fail closed. No component predicate, threshold, reason text, or MinTRL formula changed.
 
+**Holdout split portions own separate numeric buffers and axes (ADR-304).**
+Readonly pandas views still expose their full writable NumPy owner, allowing a
+search slice to reach or alter held-out prices. Both splitters now materialize
+independent copies through the shared existing dataset snapshot recipe, including
+explicit axis copies. Dataset retention/copy-on-read semantics remain unchanged.
+Logical values, geometry and scoring formulas stay; extra source-size allocations
+are accepted. Direct constructors, arbitrary object/attrs graphs and hostile-code
+sandboxing remain separate. No current catalog use or affected graduate/cohort is
+established, and limited baseline matches are not universal bitwise equivalence
+(FINDING-259).
+
 **Holdout chronology validates the whole source before splitting (ADR-302).**
 Both public splitters require unique ascending original indexes, after fraction
 validation and before positional slicing. Separate engine checks cannot detect

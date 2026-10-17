@@ -6,6 +6,7 @@ import pandas as pd
 from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 
 from app.research.cross_sectional.panel import long_short_weights
+from app.research.frames import copy_frame
 
 
 def asset_returns(prices: pd.DataFrame) -> pd.DataFrame:
@@ -116,4 +117,4 @@ def split_panel_holdout(
             f"insufficient data: {search_n} search bars after a {holdout_n}-bar holdout "
             f"(need >= {min_search_bars})"
         )
-    return prices.iloc[:search_n], prices.iloc[search_n:]
+    return copy_frame(prices.iloc[:search_n]), copy_frame(prices.iloc[search_n:])

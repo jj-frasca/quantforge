@@ -5,6 +5,14 @@ from app.data.models import PriceBar
 _COLUMNS = ["open", "high", "low", "close", "volume"]
 
 
+def copy_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    """Isolate canonical numeric data and axes, including pandas' shared index storage."""
+    copied = frame.copy(deep=True)
+    copied.index = frame.index.copy(deep=True)
+    copied.columns = frame.columns.copy(deep=True)
+    return copied
+
+
 def bars_to_frame(bars: list[PriceBar]) -> pd.DataFrame:
     """Convert canonical PriceBars to a price frame for the research engine.
 

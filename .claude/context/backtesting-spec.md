@@ -75,6 +75,18 @@ protects the committed prior used by search (F258), not missing historical count
 or synchronized vendor retrieval. Search math, thresholds and v14 remain.
 
 
+ADR-304 gives both portions from both public holdout splitters independent deep
+numeric buffers and explicitly copied axes. A readonly pandas column view can
+otherwise expose the full writable source owner through public NumPy.base,
+including held-out prices. research.frames.copy_frame reuses the exact ADR-165
+copy recipe; dataset retains its private alias and descriptor semantics. Logical
+values/dtypes/axes, geometry, guards and scoring formulas remain. Extra O(source)
+allocation is intentional. This is numeric/axis separation, not recursive object
+or attrs isolation, direct-constructor freezing or a hostile-code sandbox. No
+actual catalog lookahead/cohort effect is established; measured standalone payload
+matches cannot certify universal layout-independent bitwise math (F259).
+
+
 ---
 
 ## 1. Price frame convention

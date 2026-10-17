@@ -4,6 +4,7 @@ import pandas as pd
 
 from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.metrics import sharpe_ratio
+from app.research.frames import copy_frame
 from app.research.strategies.base import BaseStrategy
 
 
@@ -85,8 +86,8 @@ def split_holdout(
             f"insufficient data: {search_n} search bars after a {holdout_n}-bar holdout "
             f"(need >= {min_search_bars})"
         )
-    search_frame = frame.iloc[:search_n]
-    holdout_frame = frame.iloc[search_n:]
+    search_frame = copy_frame(frame.iloc[:search_n])
+    holdout_frame = copy_frame(frame.iloc[search_n:])
     return SearchDataHandle(frame=search_frame, symbol=symbol), SealedHoldout(holdout_frame, symbol)
 
 
