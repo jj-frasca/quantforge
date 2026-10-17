@@ -1109,6 +1109,13 @@ Dashboard qualifications and identity details prevent old procedure measurements
 from silently certifying deployed code. No artifact, statistic, gate or calibration
 changes; custom procedures may intentionally differ from this default reference.
 
+**AR power CLI positionals retain their identity (ADR-307).** Known option values
+are excluded by argv position, preserving equal count/seed tokens. Value-based
+filtering could silently replace a requested seed or population with defaults.
+First-option lookup, defaults, source/seed/shard calculations and search stay.
+Mocked evidence does not establish an affected historical calibration; frozen and
+generated records, thresholds and v14 remain unchanged (FINDING-262).
+
 **Null evidence is retained by history length (ADR-065).** The null workflow writes one artifact
 per `(null mode, median n_bars)` identity, such as `bootstrap_spy_7400.json`, rather than replacing
 the only file for that mode. A rerun at the same length still replaces the same measurement. This

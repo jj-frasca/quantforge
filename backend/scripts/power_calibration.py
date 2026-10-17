@@ -105,8 +105,15 @@ def main() -> None:
     phi_flag = _flag("--phi")
     n_bars_flag = _flag("--n-bars")
     select_by = _select_by()
-    consumed = {shard_spec, out, phi_flag, n_bars_flag, select_by} - {None}
-    positional = [a for a in sys.argv[1:] if not a.startswith("--") and a not in consumed]
+    value_options = {"--shard", "--out", "--phi", "--n-bars", "--select-by"}
+    consumed_positions = {
+        i + 1 for i, arg in enumerate(sys.argv[1:], start=1) if arg in value_options
+    }
+    positional = [
+        arg
+        for i, arg in enumerate(sys.argv[1:], start=1)
+        if not arg.startswith("--") and i not in consumed_positions
+    ]
 
     n_symbols = int(positional[0]) if positional else 50
     seed = int(positional[1]) if len(positional) > 1 else 0

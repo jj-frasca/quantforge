@@ -1625,3 +1625,13 @@ existing meaning; probability strong-cell completeness is not imported. Native
 summary overflow refuses without changing the median. Earlier header/duplicate
 refusals persist. Synthetic mislabeled wrappers do not establish corrupt artifacts
 or revised rates; no reference, threshold, source, search or artifact changes.
+
+### AR power CLI positional identity (ADR-307)
+
+The AR driver excludes known option values by token position rather than their
+text. Otherwise seed7400 with --n-bars7400 silently becomes seed0, and an equal
+symbol-count token can disappear. First-option lookup, defaults, positional order,
+seed/shard arithmetic, generators and search remain. Repeated option values are
+all excluded from positionals while the first wins; new value flags must join the
+registry. Mocked CLI evidence establishes the parser defect, not an affected
+historical cohort. No source/cohort retry, threshold or v14 change (F262).
