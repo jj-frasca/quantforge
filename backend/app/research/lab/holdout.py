@@ -6,6 +6,7 @@ from app.research.backtesting.engine import BacktestEngine
 from app.research.backtesting.metrics import sharpe_ratio
 from app.research.frames import copy_frame
 from app.research.strategies.base import BaseStrategy
+from app.research.trial_counts import require_trial_count
 
 
 @dataclass(frozen=True)
@@ -72,12 +73,18 @@ def split_holdout(
 
     The holdout is always the calendar-latest `max(holdout_fraction·N, min_holdout_bars)` bars.
     The original whole source index must be unique and ascending (ADR-302).
+    Original floors must be nonnegative nonboolean integers; both actual portions
+    must be nonempty (ADR-305). Zero floors are allowed when the fraction suffices.
     Raises if the remaining search head would be shorter than `min_search_bars`.
     """
     if not 0.0 < holdout_fraction < 1.0:
         raise ValueError("holdout_fraction must be in (0, 1)")
     if not frame.index.is_unique or not frame.index.is_monotonic_increasing:
         raise ValueError("holdout source index must be unique and ascending")
+    min_holdout_bars = require_trial_count(
+        min_holdout_bars, minimum=0, parameter="min_holdout_bars"
+    )
+    min_search_bars = require_trial_count(min_search_bars, minimum=0, parameter="min_search_bars")
     n = len(frame)
     holdout_n = max(int(holdout_fraction * n), min_holdout_bars)
     search_n = n - holdout_n
@@ -86,6 +93,8 @@ def split_holdout(
             f"insufficient data: {search_n} search bars after a {holdout_n}-bar holdout "
             f"(need >= {min_search_bars})"
         )
+    if holdout_n < 1 or search_n < 1:
+        raise ValueError("holdout split requires nonempty search and holdout portions")
     search_frame = copy_frame(frame.iloc[:search_n])
     holdout_frame = copy_frame(frame.iloc[search_n:])
     return SearchDataHandle(frame=search_frame, symbol=symbol), SealedHoldout(holdout_frame, symbol)

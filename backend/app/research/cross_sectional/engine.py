@@ -7,6 +7,7 @@ from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 
 from app.research.cross_sectional.panel import long_short_weights
 from app.research.frames import copy_frame
+from app.research.trial_counts import require_trial_count
 
 
 def asset_returns(prices: pd.DataFrame) -> pd.DataFrame:
@@ -104,11 +105,17 @@ def split_panel_holdout(
     panel analog of `holdout.split_holdout` (same fractions/floors). The holdout is always the
     calendar-latest ``max(holdout_fraction·N, min_holdout_bars)`` rows. Original source index
     must be unique and ascending (ADR-302). Raises if the remaining search head would be
-    shorter than ``min_search_bars``."""
+    shorter than ``min_search_bars``. Original floors must be nonnegative nonboolean
+    integers, and both actual portions must be nonempty (ADR-305); zero floors are
+    allowed when the fraction suffices."""
     if not 0.0 < holdout_fraction < 1.0:
         raise ValueError("holdout_fraction must be in (0, 1)")
     if not prices.index.is_unique or not prices.index.is_monotonic_increasing:
         raise ValueError("holdout source index must be unique and ascending")
+    min_holdout_bars = require_trial_count(
+        min_holdout_bars, minimum=0, parameter="min_holdout_bars"
+    )
+    min_search_bars = require_trial_count(min_search_bars, minimum=0, parameter="min_search_bars")
     n = len(prices)
     holdout_n = max(int(holdout_fraction * n), min_holdout_bars)
     search_n = n - holdout_n
@@ -117,4 +124,6 @@ def split_panel_holdout(
             f"insufficient data: {search_n} search bars after a {holdout_n}-bar holdout "
             f"(need >= {min_search_bars})"
         )
+    if holdout_n < 1 or search_n < 1:
+        raise ValueError("holdout split requires nonempty search and holdout portions")
     return copy_frame(prices.iloc[:search_n]), copy_frame(prices.iloc[search_n:])

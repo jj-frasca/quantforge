@@ -87,6 +87,17 @@ actual catalog lookahead/cohort effect is established; measured standalone paylo
 matches cannot certify universal layout-independent bitwise math (F259).
 
 
+ADR-305 validates original min_holdout_bars and min_search_bars as nonnegative
+nonboolean Integral counts after fraction/calendar checks, normalizing accepted
+scalars to Python int before arithmetic. Unsigned native subtraction could otherwise
+wrap an impossible holdout into a full-source search and empty tail. The original
+fraction/floor recipe and insufficient-search error remain; an additional guard
+requires both actual portions nonempty before copy/slicing. Zero floors remain
+valid when fractional geometry is nonempty. Default search callers already use
+safe fixed floors; no production occurrence, false graduate or cohort effect is
+established. Scores, defaults, thresholds, fingerprints and v14 remain (F260).
+
+
 ---
 
 ## 1. Price frame convention

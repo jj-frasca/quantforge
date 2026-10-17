@@ -208,6 +208,16 @@ sandboxing remain separate. No current catalog use or affected graduate/cohort i
 established, and limited baseline matches are not universal bitwise equivalence
 (FINDING-259).
 
+**Holdout floors are original counts and both portions are nonempty (ADR-305).**
+Both splitters validate nonnegative nonboolean Integral floors after their existing
+fraction/calendar guards and normalize them to Python int before arithmetic.
+An unsigned maximum could otherwise wrap into full-source search and an empty
+holdout. The original fraction/floor recipe and insufficient-search refusal remain,
+followed by explicit nonempty-portion validation before copying/slicing. Zero floors
+with nonempty fractional geometry remain valid. Default search callers already use
+safe fixed floors; no production occurrence or affected graduate/cohort is
+established. Scoring, thresholds, defaults and accounting-v14 stay (FINDING-260).
+
 **Holdout chronology validates the whole source before splitting (ADR-302).**
 Both public splitters require unique ascending original indexes, after fraction
 validation and before positional slicing. Separate engine checks cannot detect
