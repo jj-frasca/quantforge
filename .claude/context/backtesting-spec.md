@@ -98,6 +98,17 @@ safe fixed floors; no production occurrence, false graduate or cohort effect is
 established. Scores, defaults, thresholds, fingerprints and v14 remain (F260).
 
 
+ADR-306 extends the shared frame snapshot's axis recipe to categorical definitions.
+Pandas deep copying separates codes but can retain writable numeric category owners,
+allowing search-side category writes to change source/holdout labels even while
+prices remain isolated. CategoricalIndex reconstruction copies codes/categories;
+MultiIndex copies recursively replace every level through public pandas APIs.
+Original values, category/level order, names, ordered flags, NA codes and unused
+metadata remain. Ordinary axis/numeric copying, dataset alias/descriptor, split
+guards, scoring, thresholds and v14 stay. Bounded common-axis controls found only
+the category alias; this is not universal extension/object isolation (F261).
+
+
 ---
 
 ## 1. Price frame convention

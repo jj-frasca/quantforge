@@ -1,3 +1,5 @@
+from typing import Any
+
 import pandas as pd
 
 from app.data.models import PriceBar
@@ -5,11 +7,25 @@ from app.data.models import PriceBar
 _COLUMNS = ["open", "high", "low", "close", "volume"]
 
 
+def _copy_axis(axis: "pd.Index[Any]") -> "pd.Index[Any]":
+    """Copy numeric axis storage, including categorical definitions (ADR-306)."""
+    if isinstance(axis, pd.CategoricalIndex):
+        categorical = pd.Categorical.from_codes(
+            axis.codes.copy(), categories=_copy_axis(axis.categories), ordered=axis.ordered
+        )
+        return pd.CategoricalIndex(categorical, name=axis.name)
+    if isinstance(axis, pd.MultiIndex):
+        return axis.copy(deep=True).set_levels(
+            [_copy_axis(level) for level in axis.levels], verify_integrity=False
+        )
+    return axis.copy(deep=True)
+
+
 def copy_frame(frame: pd.DataFrame) -> pd.DataFrame:
     """Isolate canonical numeric data and axes, including pandas' shared index storage."""
     copied = frame.copy(deep=True)
-    copied.index = frame.index.copy(deep=True)
-    copied.columns = frame.columns.copy(deep=True)
+    copied.index = _copy_axis(frame.index)
+    copied.columns = _copy_axis(frame.columns)
     return copied
 
 

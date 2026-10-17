@@ -208,6 +208,16 @@ sandboxing remain separate. No current catalog use or affected graduate/cohort i
 established, and limited baseline matches are not universal bitwise equivalence
 (FINDING-259).
 
+**Categorical axis definitions own their numeric buffers too (ADR-306).**
+Pandas deep copying retains categorical definition owners even when codes and
+prices are independent. The shared snapshot recipe now copies category definitions
+and every MultiIndex level through public APIs, preserving exact codes, names,
+order, unused metadata and dtype. Ordinary datetime and other axis copying stays;
+no category pruning, source validation, scoring, threshold or v14 change. Numeric
+price buffers remain isolated, and no canonical production occurrence or affected
+graduate/cohort is established. Bounded family checks do not certify arbitrary
+extension internals or recursive Python objects (FINDING-261).
+
 **Holdout floors are original counts and both portions are nonempty (ADR-305).**
 Both splitters validate nonnegative nonboolean Integral floors after their existing
 fraction/calendar guards and normalize them to Python int before arithmetic.
