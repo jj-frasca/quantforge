@@ -1,4 +1,6 @@
+import math
 from dataclasses import dataclass
+from numbers import Real
 
 import numpy as np
 
@@ -16,6 +18,11 @@ class ParameterStability:
 def parameter_stability(sharpes: list[float]) -> ParameterStability:
     """Summarize how robust performance is across a parameter grid.
 
+    Original observations must be nonboolean real scalars with finite Float64
+    inspection, and converted evidence must be one-dimensional. Decimal and
+    coercible non-real objects are unsupported. Native reduction arithmetic
+    and finite projection precision are not certified by these input guards.
+
     Notes:
         A strategy whose Sharpe swings wildly with small parameter changes is likely overfit.
         stability_score = 1 / (1 + CV) where CV is the coefficient of variation of Sharpe
@@ -25,7 +32,20 @@ def parameter_stability(sharpes: list[float]) -> ParameterStability:
     if len(sharpes) < 2:
         raise ValueError("need >= 2 configurations")
 
+    for value in sharpes:
+        score: object = value
+        if isinstance(score, (bool, np.bool_)) or not isinstance(score, Real):
+            raise ValueError("Sharpe observations must be finite real nonboolean scalars")
+        try:
+            inspected = float(score)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("Sharpe observations must be finite real scalars") from exc
+        if not math.isfinite(inspected):
+            raise ValueError("Sharpe observations must be finite real scalars")
+
     arr = np.asarray(sharpes, dtype=np.float64)
+    if arr.ndim != 1:
+        raise ValueError("Sharpe observations must be one-dimensional")
     mean = float(arr.mean())
     std = float(arr.std(ddof=1))
     cv = std / (abs(mean) + 1e-9)

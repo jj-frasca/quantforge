@@ -559,6 +559,16 @@ distribution (charter §4).
 Parameter stability and regime analysis (`parameter_stability.py`, `regime_analysis.py`) are
 secondary and added after the core four are solid.
 
+ADR-317 / FINDING-268 validates original parameter-stability observations before
+Float64 conversion: nonboolean Real scalars with finite binary64 inspection,
+then exactly one converted dimension before reductions. Minimum-two-config
+precedence and all existing numerical operations remain. Decimal and arbitrary
+coercible non-Real objects are intentionally unsupported; signed integers,
+Fraction, NumPy reals and one-dimensional real sequences retain the estimator.
+Native finite-input reduction overflow/underflow and finite projection precision
+remain separate. No production corruption is established; current callers build
+computed Sharpe lists. No threshold, search identity or accounting-v14 change.
+
 ---
 
 ## 6. Rank information coefficient (cross-sectional only)
