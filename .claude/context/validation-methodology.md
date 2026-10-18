@@ -569,6 +569,16 @@ Native finite-input reduction overflow/underflow and finite projection precision
 remain separate. No production corruption is established; current callers build
 computed Sharpe lists. No threshold, search identity or accounting-v14 change.
 
+ADR-318 / FINDING-269 requires original nonnegative nonboolean Integral regime
+horizons through the unchanged shared count helper, normalizing to Python int
+before alignment. Negative pct_change periods labeled earlier strategy returns
+with future market prices at direct entry. Fixed default20 and all numerical
+operations stay; zero retains the degenerate all-bull horizon on finite positive
+sources. Current production caller uses20; no affected production result is
+established. Regime partitions remain retrospective diagnostics, not executable
+switching accounts. Calendar/source/alignment validity and arbitrary huge pandas
+horizons remain separate; no threshold, schema, search identity or v14 change.
+
 ---
 
 ## 6. Rank information coefficient (cross-sectional only)

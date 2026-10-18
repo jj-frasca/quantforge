@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from app.research.backtesting.metrics import sharpe_ratio
+from app.research.trial_counts import require_trial_count
 
 
 @dataclass(frozen=True)
@@ -17,11 +18,16 @@ def analyze_regimes(
 ) -> dict[str, RegimeMetrics]:
     """Break a strategy's performance down by market regime (validation-methodology.md §5).
 
+    The horizon is an original nonnegative nonboolean integer, normalized before
+    alignment. Zero retains the degenerate all-bull partition on finite positive
+    prices. Calendar/source validity and executable switching accounts are separate.
+
     Notes:
         Each bar is labelled by the sign of the market's trailing ``window`` return: "bull"
         (>= 0, also the warmup default) or "bear" (< 0). A strategy that only works in one
         regime is fragile. Regimes partition every bar exactly once.
     """
+    window = require_trial_count(window, minimum=0, parameter="window")
     strat, market = strategy_returns.align(market_prices, join="inner")
     trailing = market.pct_change(window)
     regime = pd.Series("bull", index=strat.index)
