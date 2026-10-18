@@ -151,7 +151,8 @@ attempts until a complete/preferred result appears. Exact8485-bar empirical SPY
 input/all305qualityissues/sources/checkpoints remain preserved. Current bootstrap
 remains unmeasured; F241iid/F243t5 and historical evidence are not pooled.
 
-ADR-316 preregisters one distinct, still unmeasured local heteroskedastic null:
+ADR-316 preregistered one distinct local heteroskedastic null, now recorded
+as incomplete by FINDING-267:
 N200, 7400 bars, initial100 and7399 independent Uniform[-sqrt(3),sqrt(3)]
 innovations scaled by .005/.04 alternating every252returns, starting low.
 Ideal-law conditional simple-return mean is zero; variance is predictable.
@@ -164,6 +165,14 @@ retry, redraw, replace or infer rates from a prefix. Rates require200complete/
 zeroerrors and final source/count/model audits; original incomplete AR/bootstrap
 attempts remain frozen. Custom null-mode evidence cannot authorize ADR102 or
 any threshold change. At adoption, no actual cohort draw or search had occurred.
+FINDING-267 records its subsequent single-use execution as incomplete: all200
+sources froze and passed independent pre-search audit; only3 Experiments/shards
+and4 START markers are durable, with V14HET31_0003 unresolved and196 never
+started. No combined result, summary, durable error or invalidation is recorded;
+these absences establish no cause or activity state. No endpoint counts, partial
+rates, intervals or full-N inference are reported. Preserve all original bytes;
+no retry/redraw/fresh continuation/budget renewal/replacement attempt. This
+variance-schedule control remains unmeasured, separate from all earlier cohorts.
 
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
