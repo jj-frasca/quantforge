@@ -166,7 +166,7 @@ at the hunt's own 5400-bar history rather than the old 3000 (ADR-051), measured 
 / max +0.92 result describes the pre-accounting, uncapped selector only. The repaired composite is
 conservative on known-false series; power determines what that conservatism can actually detect.
 
-**Walk-forward and purged CV are real as of 2026-08-19 — they used to be counts.** `ValidationReport`
+**Longitudinal walk-forward and purged CV are evaluated as of 2026-08-19 — they used to be counts.** `ValidationReport`
 carried `n_walk_forward_splits` / `n_purged_folds` and nothing was ever trained or scored on those
 splits. Now `walk_forward_evaluate` (ADR-038) selects on each expanding train block and scores
 the chosen config's continued return path on the forward block. These causal fixed-config
@@ -177,11 +177,20 @@ Their headline is an equal mean of window Sharpes, not Sharpe on stitched policy
 lookback instead of a fixed 2 bars; its selection deliberately sees later training observations.
 Both remain diagnostics with explicit revisit triggers and no separate graduation threshold.
 Nondefault `select_by="walk_forward"` can rank families by the WF statistic (ADR-069); default
-observed selection is unchanged. Both are recorded per `Trial` and summarized by
+observed selection is unchanged. Both are recorded per longitudinal `Trial` and summarized by
 `scripts/pool_report.py` against the null. Their null distributions put
 "indistinguishable from noise" at roughly **+1.0 annualized**, and purged CV sits above walk-forward
 because its selection sees the future — read them side by side, never averaged. Details:
 `.claude/context/validation-methodology.md` §3–§5.
+
+**Cross-sectional reports still record split geometry without scoring those splits
+(FINDING-265).** Their separate search assembler records walk-forward split and
+purged-fold counts, but leaves both diagnostic objects and inherited per-trial
+OOS fields null. Those counts establish no evaluated selection, OOS Sharpe or
+matched benchmark. Null means unmeasured, never zero. Cross-sectional PBO, DSR,
+stability and locked-holdout evaluation remain implemented; the UI already labels
+missing diagnostics. Integrating these evaluators needs its own methodology
+decision; longitudinal measurements do not certify the cross-sectional path.
 
 **Those validation claims are now durable after construction (ADR-159).** The report, split/fold
 records, flags, interpretations, and regime map are defensively copied into immutable JSON-shaped

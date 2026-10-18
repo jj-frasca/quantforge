@@ -513,10 +513,21 @@ audit; no estimator, selector, predicate, threshold, or JSON shape changed.
 human-readable cautions), `passed` (computed: e.g. `pbo < 0.5 and deflated_sharpe > 0`). The
 report is the MVP deliverable rendered by the frontend (Phase 5).
 
-Both diagnostics are also recorded per `Trial` (`walk_forward_oos_sharpe` /
+For longitudinal searches, both diagnostics are also recorded per `Trial` (`walk_forward_oos_sharpe` /
 `purged_cv_oos_sharpe`) so they reach the research pool, and summarized for gate passers by
 `scripts/pool_report.py` — which prints them next to `data/null_calibration/` so the
 "passers vs null" comparison is two commands, not a fresh script every session.
+
+The separate cross-sectional search currently generates split geometry only:
+`cross_sectional/search.py::_build_report` records lengths from the splitters,
+without calling either evaluator. Its `walk_forward` / `purged_cv` objects and
+the inherited `CrossSectionalTrial` OOS fields remain null, even with nonzero
+split/fold counts. No selected-test Sharpe or paired benchmark was measured by
+that path. Null remains unmeasured; PBO, DSR, stability and locked holdout still
+run. FINDING-265 records this implementation gap under ADR-038/039's broader
+intent. Evaluator integration requires a separate methodology decision covering
+factor selection, benchmark pairing and embargo geometry; existing longitudinal
+evidence supplies no cross-sectional measurement.
 
 **Neither gates anything.** Both are diagnostics with an explicit, measurable trigger for
 revisiting, recorded in their ADRs. Do not add a floor without arguing it from the null
@@ -856,7 +867,7 @@ all finalist-level pool statistics resolve it through one checked helper. Legacy
 historical max-DSR reading; no old non-default identity is invented.
 
 ### 7.5 The real universe against the null (ADR-051) — `scripts/pool_report.py`
-ADR-038/039 recorded a walk-forward and a purged-CV OOS Sharpe on every trial with a stated revisit
+ADR-038/039 recorded a walk-forward and a purged-CV OOS Sharpe on longitudinal trials with a stated revisit
 trigger: read them against `data/null_calibration/*.json`. Two things had to be repaired before that
 was possible, and both are the general lesson.
 
