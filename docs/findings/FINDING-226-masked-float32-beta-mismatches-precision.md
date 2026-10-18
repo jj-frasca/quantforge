@@ -1,11 +1,11 @@
 # FINDING-226: Masked Float32 beta mixes two moment precisions
 
-- **Status:** Open
+- **Status:** Resolved by ADR-277; preserved by ADR-278 low-width extension
 - **Date:** 2026-10-13
 - **Review:** Codex autonomous session 6, ISO 2026-W42
 - **Decision:** ADR-277
 
-## Finding and mechanism
+## Original finding and mechanism
 
 Classic masked Float32 .1 and its next two native ULP neighbors compared against itself
 publishes beta0.4 and annual alpha15.120002746582031 instead of beta1/alpha0.
@@ -48,3 +48,31 @@ pass; no whole-comparator strict-state claim is made. Full foreground
 `make check-all PYTEST_WORKERS=4` passed: 8,690 backend tests, 97.71% coverage;
 363 frontend tests, 97.63% statement coverage. All verification completed before
 commit. No generated records, thresholds or calibration changed.
+
+## Status reconciliation — 2026-10-18
+
+The Open header contradicted this report's implemented correction and recorded
+verification, and ADR-277's explicit Resolves designation (`7392bdde`). ADR-278
+extends the matched-precision branch to native low-width benchmarks without
+reversing the masked Float32 correction.
+
+Parent replay of the original Float32 .1/next-two-ULP self-comparison returns
+beta 1 and annual alpha 0, retaining the Float32 source type. Receipt:
+`/tmp/qf-w42-s30-f226-parent.json`. Independent research replay under strict NumPy
+policy returned the same values, preserved the input and emitted no public-call
+warnings. The superseded raw covariance/native-variance ratio still gives 0.4,
+confirming the original mechanism without identifying a remaining public defect.
+Review: `/tmp/qf-w42-s30-stale-finding-review.md`.
+
+This closure covers the documented moment-precision mismatch only. It does not
+certify arbitrary centering/cancellation, source representation, partner
+compatibility, alpha/excess precision or whole-comparator strict-state behavior.
+The status correction changes no implementation, threshold, generated record or
+historical market-impact claim. Full verification is recorded below.
+
+Independent final review approved this documentation-only reconciliation. Fresh
+full foreground `make check-all PYTEST_WORKERS=4` passed 12,787 backend tests
+(97.39% coverage) and 438 frontend tests (97.69% statements), with lint, formatting
+and strict types green. Receipt: `/tmp/qf-w42-s30-check-status.log`. Only these two
+finding documents change; production, frontend, tests and generated records stay
+byte-identical. Exact master CI is verified after individual publication.
