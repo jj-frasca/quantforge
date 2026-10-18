@@ -829,6 +829,15 @@ selection-biased ones.**
 **The backend gate runs in parallel (ADR-040).** `make test` uses `pytest -n auto`; `make check`
 went 8:45 → 4:01. Tests must therefore be order-independent and must not write fixed paths.
 
+**Cross-sectional shift counts cannot read future prices (ADR-314).** Direct
+momentum lookback/skip, reversal lookback, residual skip and Alpha19 change_lag
+require nonnegative nonboolean integers before panel access. Normalize to Python
+int before adding momentum periods; zero shifts remain valid. Existing registry
+int coercion is retained and does not certify original factory scalar identity.
+Shipped grids already satisfy this contract; no affected production graduate is
+established. Signal formulas, ranking, lag, costs, thresholds and longitudinal v14
+identity stay unchanged (FINDING-264).
+
 **DSR prices the whole search as of ADR-046.** The original StrategyLab reduced each family grid to
 one stored finalist, counted those summaries as lifetime trials, and then compared family-local
 DSRs. A 34-family full-catalog run therefore recorded 34 trials after evaluating 667 concrete

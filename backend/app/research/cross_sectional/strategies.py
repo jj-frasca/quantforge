@@ -4,6 +4,8 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
+from app.research.trial_counts import require_trial_count
+
 
 def cs_rank(df: pd.DataFrame) -> pd.DataFrame:
     """Cross-sectional (per-date) rank of a panel: ``df.rank(axis=1, pct=True)`` — each row is ranked
@@ -68,6 +70,7 @@ def alpha19_signal(
     scaled by (1 + cross-sectional rank of (1 + trailing-sum of returns over sum_window)). Fades the
     recent `change_lag`-bar move, weighted up for names with strong long-horizon cumulative return.
     Trailing sum + shift -- no look-ahead; the first sum_window rows are NaN."""
+    change_lag = require_trial_count(change_lag, minimum=0, parameter="change_lag")
     returns = prices.pct_change()
     change = prices - prices.shift(change_lag)
     long_sum = returns.rolling(sum_window).sum()
@@ -118,6 +121,8 @@ def momentum_signal(prices: pd.DataFrame, lookback: int, skip: int = 0) -> pd.Da
     ending ``skip`` bars ago. ``skip`` (typically ~1 month) sidesteps the short-term reversal that
     would otherwise contaminate the momentum signal. Built with ``.shift`` so row t uses only
     prices <= t; the first ``lookback + skip`` rows are NaN (no window yet)."""
+    lookback = require_trial_count(lookback, minimum=0, parameter="lookback")
+    skip = require_trial_count(skip, minimum=0, parameter="skip")
     return prices.shift(skip) / prices.shift(skip + lookback) - 1.0
 
 
@@ -126,6 +131,7 @@ def reversal_signal(prices: pd.DataFrame, lookback: int) -> pd.DataFrame:
     ``lookback`` bars -- long recent losers, short recent winners. The caller picks the horizon: a
     short ``lookback`` (~5 bars) is weekly reversal, ~21 bars is the 1-month (monthly) reversal of
     Jegadeesh (1990)."""
+    lookback = require_trial_count(lookback, minimum=0, parameter="lookback")
     return -(prices / prices.shift(lookback) - 1.0)
 
 
@@ -149,6 +155,7 @@ def residual_momentum_signal(
     less crash-prone than raw price momentum. Every term is trailing / shifted -- no look-ahead.
     Documented proxy: this removes own-drift, not a market beta (there is no market series in a
     self-contained panel)."""
+    skip = require_trial_count(skip, minimum=0, parameter="skip")
     returns = prices.pct_change()
     residual = returns - returns.rolling(mean_window).mean()
     return residual.rolling(lookback).sum().shift(skip)

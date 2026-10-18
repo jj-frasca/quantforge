@@ -304,6 +304,17 @@ rejects bad claims before writes. Finite-only mean preserves coherent historical
 roundoff; impossible-but-coherent finite metadata remains an explicit limitation. No
 statistic repair, generated record rewrite, schema-field, selector or gate change.
 
+ADR-314 validates cross-sectional shift-producing counts before panel access:
+momentum lookback/skip, reversal lookback, residual momentum skip and Alpha19
+change_lag must be original nonnegative nonboolean Integral scalars at the direct
+function boundary. Python-int normalization precedes momentum period addition;
+zero shifts remain causal and valid. Registry factories retain their existing int
+coercion, so original factory scalar type/identity is not certified. Other rolling
+parameters retain pandas policy. Shipped grids, signal formulas, ranking, lag,
+costs, scoring, thresholds and longitudinal v14 identity remain unchanged.
+This closes malformed negative-window lookahead in forward reconstruction;
+arbitrary custom signal causality and point-in-time fundamentals remain separate.
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 
