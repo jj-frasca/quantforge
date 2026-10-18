@@ -17,6 +17,7 @@ from pathlib import Path
 from app.research.lab.calibration import (
     PowerSweep,
     ar1_reference_description,
+    band_reference_description,
     compare_power_sweeps,
 )
 
@@ -37,6 +38,21 @@ def main() -> None:
     print("=" * 78)
     if before.edge == "ar1":
         print(f"AR sign reference    : {ar1_reference_description(before.ar1_reference)}")
+    if before.edge == "band_reversion":
+        print(f"band sign reference  : {band_reference_description(before.band_reference)}")
+        if before.band_reference is not None:
+            print(
+                "Reference scores: latent gross/net and full-price observed NET simple-mean sign references."
+            )
+        else:
+            print(
+                "Historical convention: log-mean signs scored on simple returns; filter startup/posterior uncertified."
+            )
+        for label, sweep in (("before", before), ("after", after)):
+            for cell in sweep.cells:
+                print(
+                    f"{label} band cell: half-life {cell.half_life} bars, deviation share {cell.deviation_share}"
+                )
     print("Ratios: selected in-sample reference-relative; not cost-aware or sample optimality.")
     print(f"before search family : {before.search_config_version}")
     print(f"after  search family : {after.search_config_version}")

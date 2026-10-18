@@ -432,7 +432,7 @@ parameter today. Reading them together is the fastest way to understand what the
   sequence is closed. `at_look_one_alpha` is the same estimator at 0.05 and is for continuity only.
   Absent file → `null` → *has not been run*, never a delta of zero (ADR-067).
 - `/power-calibration` returns the other half of the same question: how often the gate detects a
-  PLANTED edge (ADR-041/042/053), one sweep per planted process, cells listed rather than merged
+  PLANTED edge (ADR-041/042/053), with separately identified sweeps and cells listed rather than merged
   because each plants a different effect size and is judged at its own N. Same `[]`-and-200
   contract. Serving it beside `/null-calibration` is deliberate — a false-graduation rate with no
   detection rate beside it reads conservatism as strength. Each cell carries **two** effect sizes:
@@ -448,6 +448,23 @@ parameter today. Reading them together is the fastest way to understand what the
   describes only search/gate/history. Frontend parsing preserves this closed
   shape and captions distinguish legacy, conditional with exact served drift,
   and unknown. Neither reference establishes cost-aware or sample optimality.
+  ADR-313 adds optional nullable `band_reference` at sweep and cell. Its closed
+  shape requires method `band_conditional_simple_mean_sign_zero_start_v1` and
+  explicit finite `drift`, `total_vol`, `start_price`. Backend authority binds
+  common header/cell law, band edge, absent phi, present positive half-life/share
+  coordinates and AR/band exclusivity. Missing/null metadata remains unknown,
+  including arbitrary supplied arrays; an edge label does not certify provenance.
+  The frontend retains per-cell optional nullable `deviation_share` alongside
+  half-life without imposing backend scientific range/coherence checks. Multiple
+  or duplicate process/reference identities remain visible in source order.
+  Known captions identify latent gross/net and full-price observed NET
+  conditional-simple-mean sign references under a nominal zero-start Gaussian
+  law; sign-score magnitudes are not expected returns. Unknown captions qualify
+  the historical driver convention without certifying arbitrary arrays. Captions
+  show the exact served common law and coordinates, preserve AR-308 and all
+  served numbers/counts, and retain selection-bias/nonoptimality qualifications.
+  API compatibility MATCHED describes search/gate/history, not reference
+  equivalence. No historical artifact is migrated or relabeled by this addition.
   Each cell also carries **who won and what kind of strategy they were**: `finalist_strategy_names`
   with the served `finalist_strategy_counts` (ADR-057) and `finalist_sharpes_by_category` with the
   served `net_capture_by_category` (ADR-059). Both are empty on artifacts predating them, which

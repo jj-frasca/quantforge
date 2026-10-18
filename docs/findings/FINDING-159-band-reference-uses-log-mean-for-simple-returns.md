@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-08
 - **Severity:** High — reference optimality and power interpretation
-- **Status:** Open
+- **Status:** Resolved by ADR-313 explicit production opt-in; historical reference meanings retained
 - **Reviewed implementation:** `bb3ef2e0`; unchanged at `1c319fdf`
 
 ## Reproduction and derivation
@@ -286,3 +286,84 @@ Fresh full foreground `make check-all PYTEST_WORKERS=4` completed successfully:
 with lint, formatting and strict types green. Receipt:
 `/tmp/qf-w42-s30-check312.log`. All local verification is closed. This reporting
 correction leaves F159 Open and does not activate a conditional reference mode.
+
+## Explicit conditional-simple-mean sign opt-in (ADR-313)
+
+ADR-313 governs the complete production correction separately from historical
+reporting. One explicit versioned known-law mode retains drift, total volatility
+and pre-shock start, alongside per-cell half-life/share. Historical missing method
+metadata remains unknown; no old array, artifact or frozen cohort is rewritten.
+Known cells cannot also carry AR metadata or phi, and reconstructed sweep headers
+and cells must agree. Capture deltas refuse changed common reference identity or
+changed paired-cell share rather than attributing a new denominator to a catalog.
+Detection-only probability comparison retains its existing statistical meaning.
+
+Under the declared nominal zero-initialized Gaussian law, latent prediction uses
+the preceding supplied deviation; observed prediction uses ADR-310's full-price
+posterior through the preceding bar. Predictive log variance is q+R for the latent
+rule and q+R+(rho-1)^2*p for the observed rule. The latter assimilates the first
+price, so its first scored return can be at index1, with no extra startup lag.
+Index0 remains unavailable under the established cost/return convention.
+
+The new rule supplies the finite binary64 sign score `2*m+V`, not a conditional
+mean magnitude. Gaussian monotonicity makes its sign that of the conditional
+simple-return mean. Finite doubling is exact and the binary64 subnormal lattice
+preserves nonzero exact addition signs under gradual underflow. This avoids
+half-variance/expm1 underflow without a fallback or tolerance, but certifies only
+the already-computed binary64 m,V. Earlier posterior/law/source rounding remains
+explicit. Positive posterior uncertainty lost to a zero product refuses; ordinary
+finite rounding otherwise remains accepted. Fixed nonfinite intermediates refuse
+rather than applying clipping, jitter or a preferred-sign repair.
+
+The original generator, historical filter and generic scorer remain intact.
+The nominal q convention and rounded sampling-scale arithmetic are not claimed
+universally bitwise equivalent. All conditional source/deviation evidence is
+snapshotted and validated for every symbol before scoring/search; explicit CLI
+law validates before generation. The new source domain uses NumPy-backed numeric
+columns; object-backed or unsupported extension evidence conservatively refuses. These checks establish dispatch and evidence
+coherence, not arbitrary latent/source provenance. Latent gross/net and full-price
+observed net scores use the established scorer and turnover costs.
+
+The supported correction still establishes neither cost-aware optimality nor a
+realized-sample maximum, recoverable-edge bound, absence of tradeable edge or new
+power measurement. Historical results retain their original scientific limits.
+Verification of the complete production opt-in is recorded below when complete.
+
+ADR-313 verification completed after the following actual RED observations:
+seven central behavioral cases before implementation, one later categorical-axis
+ownership failure and one scalar-conversion failure before their respective
+corrections; 15 mocked CLI/report failures; three API retention failures; and
+35 frontend schema/panel failures plus one dashboard failure. Expanded boundary
+cases were added after green and are not claimed as pre-code RED.
+
+Final central verification passed 111 focused cases with 97.56% utility coverage
+against the unchanged 85% floor; CLI/report regression verification passed 105;
+frontend focused verification passed 116. Independent final research review
+approved frozen source/tests/docs and independently passed 77 new-suite cases.
+Frontend integrated review approved transport/presentation and API contracts.
+Fresh full foreground `make check-all PYTEST_WORKERS=4` passed 12,787 backend tests
+(97.39% coverage) and 438 frontend tests (97.69% statements), with lint, formatting
+and strict typing green. The first full attempt stopped at a new API-test
+formatting issue before tests; formatting was corrected before the fresh gate.
+Receipt: `/tmp/qf-w42-s30-check313-final.log`.
+
+Parent exact Fraction full-joint Gaussian conditioning independently compared
+48 prefix sign scores: maximum absolute difference 8.67e-19 against the stated
+2e-12 tolerance (`/tmp/qf-w42-s30-band-math-audit.json`). This bounded arithmetic
+check is not universal accuracy or source correspondence certification. A separate
+successful mocked measurement retained explicit known metadata and matched every
+non-reference payload field to an equivalent supplied-array control; all three
+reference scoring calls and both searches were mocked, with no source generation
+(`/tmp/qf-w42-s30-band-dispatch-audit.json`). It is one no-graduate control,
+not a power result.
+
+Fresh audits preserved both historical sweeps' 12 semantic cells and raw hashes,
+36 existing calibration definitions, the entire ADR-310 helper bytes, the original
+measurement/search/count tail and exact legacy horizon generator/scorer/measurement
+calls. All prior frontend test bytes remain; new cases are appended. Receipts:
+`/tmp/qf-w42-s30-band-compat-receipt.json`,
+`/tmp/qf-w42-s30-band-source-guard.json`, and frozen production hashes in
+`/tmp/qf-w42-s30-band-source-hashes.json`. No generated JSON, frozen cohort,
+threshold, accounting-v14 or search/gate identity was authored or changed.
+This resolves the supported explicit production correction gap; historical
+qualifications and arbitrary provenance/optimality limitations remain.

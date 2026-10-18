@@ -18,6 +18,7 @@ from app.research.lab.calibration import (
     PowerCalibration,
     PowerSweep,
     ar1_reference_description,
+    band_reference_description,
     collect_power_sweep,
 )
 
@@ -35,6 +36,16 @@ def _report(sweep: PowerSweep) -> None:
     print(f"planted process     : {sweep.edge}")
     if sweep.edge == "ar1":
         print(f"AR sign reference   : {ar1_reference_description(sweep.ar1_reference)}")
+    if sweep.edge == "band_reversion":
+        print(f"band sign reference : {band_reference_description(sweep.band_reference)}")
+        if sweep.band_reference is not None:
+            print(
+                "Reference scores: latent gross/net and full-price observed NET simple-mean sign references."
+            )
+        else:
+            print(
+                "Historical convention: log-mean signs scored on simple returns; filter startup/posterior uncertified."
+            )
     print("Ratios: selected in-sample reference-relative; not cost-aware or sample optimality.")
     print(f"gate config version : {sweep.gate_config_version}")
     print(f"search config version: {sweep.search_config_version}")
@@ -50,6 +61,10 @@ def _report(sweep: PowerSweep) -> None:
         f"{'capture':>9}{'net cap':>9}{'ach cap':>9}  DSR passes  top finalist"
     )
     for cell in sweep.cells:
+        if sweep.edge == "band_reversion":
+            print(
+                f"band cell: half-life {cell.half_life} bars, deviation share {cell.deviation_share}"
+            )
         key = cell.phi if cell.phi is not None else cell.half_life
         percentiles = cell.oracle_sharpe_percentiles
         oracle = percentiles[0] if percentiles else float("nan")

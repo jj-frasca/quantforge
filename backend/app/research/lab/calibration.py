@@ -26,6 +26,20 @@ from pydantic import (
 from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.claim_graph import FrozenClaimDict, FrozenClaimList, freeze_claim_model
+from app.research.lab.band_reference import (
+    BandReference as BandReference,
+)
+from app.research.lab.band_reference import BandReferenceLaw as BandReferenceLaw
+from app.research.lab.band_reference import (
+    _positive,
+    _share,
+    band_reference_preflight,
+)
+from app.research.lab.band_reference import band_reference_description as band_reference_description
+from app.research.lab.band_reference import (
+    band_reference_law as band_reference_law,
+)
+from app.research.lab.band_reference import band_reference_sign_score as band_reference_sign_score
 from app.research.lab.candidate_budget import allocate_catalog_candidate_budget
 from app.research.lab.experiment import Experiment, Trial
 from app.research.lab.frontier import sharpe_standard_error
@@ -733,6 +747,7 @@ class PowerCalibration(BaseModel):
     edge: str = "ar1"
     phi: float | None = None
     ar1_reference: AR1Reference | None = None
+    band_reference: BandReference | None = None
     half_life: float | None = None
     deviation_share: float | None = None
     oracle_sharpes: list[_FiniteCalibrationScore]
@@ -782,6 +797,22 @@ class PowerCalibration(BaseModel):
     refine: bool = False
     refine_span: float = 0.25
 
+    @model_validator(mode="before")
+    @classmethod
+    def _original_band_coordinates(cls, value: Any) -> Any:
+        if isinstance(value, Mapping) and value.get("band_reference") is not None:
+            _positive(value.get("half_life"))
+            _share(value.get("deviation_share"))
+            if (
+                value.get("edge") != "band_reversion"
+                or value.get("phi") is not None
+                or value.get("ar1_reference") is not None
+            ):
+                raise ValueError(
+                    "known band reference requires band edge, absent phi and AR reference"
+                )
+        return value
+
     @field_validator("phi", "half_life", "deviation_share", mode="before")
     @classmethod
     def _validate_process_parameter(cls, value: object) -> float | None:
@@ -813,6 +844,10 @@ class PowerCalibration(BaseModel):
     @model_validator(mode="after")
     def _validate_symbol_verdicts(self) -> "PowerCalibration":
         _bind_ar1_reference(self.ar1_reference, self.edge, self.phi)
+        if self.band_reference is not None:
+            band_reference_law(
+                self.band_reference, half_life=self.half_life, deviation_share=self.deviation_share
+            )
         if not (self.n_clear_deflation_bar <= self.n_detected <= self.n_symbols):
             raise ValueError("power survivor/detected/searched counts are inconsistent")
         if self.detection_rate != self.n_detected / self.n_symbols:
@@ -1336,6 +1371,8 @@ def measure_power(
     *,
     phi: float | None = None,
     ar1_reference: AR1Reference | Mapping[str, Any] | None = None,
+    band_reference: BandReference | Mapping[str, Any] | None = None,
+    band_deviations: Mapping[str, pd.Series] | None = None,
     oracle_sharpes: Mapping[str, float] | None = None,
     net_oracle_sharpes: Mapping[str, float] | None = None,
     achievable_oracle_sharpes: Mapping[str, float] | None = None,
@@ -1362,6 +1399,35 @@ def measure_power(
     """
     if not frames:
         raise ValueError("need at least one symbol to measure power")
+    band = BandReference.model_validate(band_reference) if band_reference is not None else None
+    if band is None and band_deviations is not None:
+        raise ValueError("band deviations require an explicit band reference")
+    if band is not None:
+        if (
+            phi is not None
+            or ar1_reference is not None
+            or edge != "band_reversion"
+            or oracle_sharpes is not None
+            or net_oracle_sharpes is not None
+            or achievable_oracle_sharpes is not None
+            or band_deviations is None
+        ):
+            raise ValueError("known band reference requires exclusive source evidence")
+        law = band_reference_law(band, half_life=half_life, deviation_share=deviation_share)
+        half_life, deviation_share = law.half_life, law.deviation_share
+        frames, predictions = band_reference_preflight(frames, band_deviations, band, law)
+        oracle_sharpes = {
+            symbol: oracle_sharpe_of(frames[symbol], values[0])
+            for symbol, values in predictions.items()
+        }
+        net_oracle_sharpes = {
+            symbol: oracle_sharpe_of(frames[symbol], values[0], cost_rate=DEFAULT_COST_RATE)
+            for symbol, values in predictions.items()
+        }
+        achievable_oracle_sharpes = {
+            symbol: oracle_sharpe_of(frames[symbol], values[1], cost_rate=DEFAULT_COST_RATE)
+            for symbol, values in predictions.items()
+        }
     reference = AR1Reference.model_validate(ar1_reference) if ar1_reference is not None else None
     _bind_ar1_reference(reference, edge, phi)
     if reference is not None:
@@ -1481,6 +1547,7 @@ def measure_power(
         edge=edge,
         phi=phi,
         ar1_reference=reference,
+        band_reference=band,
         half_life=half_life,
         deviation_share=deviation_share,
         oracle_sharpes=oracles,
@@ -1738,6 +1805,7 @@ class PowerSweep(BaseModel):
 
     edge: str
     ar1_reference: AR1Reference | None = None
+    band_reference: BandReference | None = None
     gate_config_version: str
     search_config_version: str
     n_bars: int
@@ -1745,11 +1813,19 @@ class PowerSweep(BaseModel):
 
     @model_validator(mode="after")
     def _freeze_cells(self) -> "PowerSweep":
+        if self.band_reference is not None and (
+            self.edge != "band_reversion" or self.ar1_reference is not None
+        ):
+            raise ValueError("band sweep requires band edge and absent AR reference")
         if self.ar1_reference is not None and self.edge != "ar1":
             raise ValueError("AR reference requires edge ar1")
         for cell in self.cells:
             # Reconstruct before reading identity: unchecked model copies are untrusted.
             validated = PowerCalibration.model_validate(cell.model_dump(round_trip=True))
+            if validated.band_reference != self.band_reference:
+                raise ValueError("power cell band reference differs from its sweep reference")
+            if validated.band_reference is not None and validated.edge != self.edge:
+                raise ValueError("power cell band reference edge differs from its sweep")
             if validated.ar1_reference != self.ar1_reference:
                 raise ValueError("power cell AR reference differs from its sweep reference")
             if validated.ar1_reference is not None and validated.edge != self.edge:
@@ -1773,6 +1849,9 @@ def collect_power_sweep(cells: Sequence[PowerCalibration]) -> PowerSweep:
     cells = [PowerCalibration.model_validate(cell.model_dump(round_trip=True)) for cell in cells]
     if not cells:
         raise ValueError("need at least one power cell to collect a sweep")
+    band = cells[0].band_reference
+    if any(cell.band_reference != band for cell in cells):
+        raise ValueError("cannot collect cells with different band reference identities")
     reference = cells[0].ar1_reference
     if any(cell.ar1_reference != reference for cell in cells):
         raise ValueError("cannot collect cells with different AR reference identities")
@@ -1800,6 +1879,7 @@ def collect_power_sweep(cells: Sequence[PowerCalibration]) -> PowerSweep:
     return PowerSweep(
         edge=edges.pop(),
         ar1_reference=reference,
+        band_reference=band,
         gate_config_version=versions.pop(),
         search_config_version=search_versions.pop(),
         n_bars=lengths.pop() if lengths else 0,
@@ -1860,6 +1940,9 @@ def compare_power_sweeps(before: PowerSweep, after: PowerSweep) -> list[PowerSwe
     if before.ar1_reference != after.ar1_reference:
         raise ValueError("cannot compare sweeps with different or known/unknown AR reference")
 
+    if before.band_reference != after.band_reference:
+        raise ValueError("cannot compare sweeps with different or known/unknown band reference")
+
     def _key(cell: PowerCalibration) -> float:
         return cell.phi if cell.phi is not None else (cell.half_life or 0.0)
 
@@ -1883,6 +1966,10 @@ def compare_power_sweeps(before: PowerSweep, after: PowerSweep) -> list[PowerSwe
             raise ValueError("sweep n_bars must be zero when all cell histories are absent")
     before_cells = {_key(c): c for c in before.cells}
     after_cells = {_key(c): c for c in after.cells}
+    if before.band_reference is not None:
+        for key in set(before_cells) & set(after_cells):
+            if before_cells[key].deviation_share != after_cells[key].deviation_share:
+                raise ValueError("cannot compare known band cells with different deviation_share")
     rows: list[PowerSweepComparison] = []
     for key in sorted(set(before_cells) | set(after_cells)):
         old = before_cells.get(key)

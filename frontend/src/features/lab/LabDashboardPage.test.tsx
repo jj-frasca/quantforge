@@ -309,3 +309,28 @@ test('passes authoritative null/power compatibility through the dashboard client
   expect(await screen.findByText(/Different procedure or history/)).toBeInTheDocument()
   expect(await screen.findByText(/Matches current default/)).toBeInTheDocument()
 })
+
+test('retains corrected band law and cell coordinates through the power endpoint', async () => {
+  const band_reference = { method: 'band_conditional_simple_mean_sign_zero_start_v1',
+    drift: -1e-12, total_vol: 0.01, start_price: 100 }
+  server.use(
+    http.get('/api/v1/leaderboard', () => HttpResponse.json([])),
+    http.get('/api/v1/paper-portfolio', () => HttpResponse.json([])),
+    http.get('/api/v1/power-calibration', () => HttpResponse.json([{
+      edge: 'band_reversion', band_reference, gate_config_version: 'v1',
+      search_config_version: 'abcdef0123456789', n_bars: 5400,
+      cells: [{ edge: 'band_reversion', band_reference, half_life: 5, deviation_share: 0.5,
+        n_symbols: 50, n_detected: 32, detection_rate: 0.64, n_clear_deflation_bar: 32,
+        deflation_bar: 2.11, gate_config_version: 'v1', oracle_sharpes: [3.9],
+        net_oracle_sharpes: [2.9], achievable_oracle_sharpes: [0.94], net_capture_ratio: 1.034 }],
+    }]))
+  )
+  renderWithClient(<LabDashboardPage />)
+  expect(await screen.findByLabelText('gate power')).toBeInTheDocument()
+  expect(screen.getByText(/conditional simple-return mean-sign references/)).toHaveTextContent(
+    'drift -1e-12, total_vol 0.01, start_price 100')
+  expect(screen.getAllByText('half-life 5, deviation share 0.5')).toHaveLength(1)
+  expect(screen.getByText('+0.94')).toBeInTheDocument()
+  expect(screen.getByText('103.4%')).toBeInTheDocument()
+  expect(screen.getByText('64%')).toBeInTheDocument()
+})

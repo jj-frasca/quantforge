@@ -26,7 +26,10 @@ from statistics import median
 
 from app.research.backtesting.engine import DEFAULT_COST_RATE
 from app.research.lab.calibration import (
+    BandReference,
     PowerCalibration,
+    band_reference_description,
+    band_reference_law,
     mean_reverting_edge,
     measure_power,
     oracle_sharpe_of,
@@ -44,13 +47,23 @@ def _flag(name: str) -> str | None:
 
 
 def _report(result: PowerCalibration) -> None:
-    print(
-        f"planted process     : {result.edge}\n"
-        "reference convention: historical driver uses log-mean signs scored on simple returns; "
-        "supplied method/source law not recorded\n"
-        "reference limits    : filter startup/posterior not certified; "
-        "no cost-aware optimum, sample maximum or no-edge conclusion (FINDING-159)"
-    )
+    known = result.band_reference is not None
+    print(f"planted process     : {result.edge}")
+    if known:
+        print(f"reference convention: {band_reference_description(result.band_reference)}")
+        print(
+            "reference scores    : latent gross/net and full-price observed NET simple-mean sign references"
+        )
+        print(
+            "reference limits    : declared nominal law; no cost-aware optimum, sample maximum or no-edge conclusion"
+        )
+    else:
+        print(
+            "reference convention: unknown; historical driver uses log-mean signs scored on simple returns; "
+            "supplied method/source law not recorded\n"
+            "reference limits    : filter startup/posterior not certified; "
+            "no cost-aware optimum, sample maximum or no-edge conclusion (FINDING-159)"
+        )
     print(
         f"reversion half-life : {result.half_life} bars (deviation share {result.deviation_share})"
     )
@@ -102,7 +115,11 @@ def _report(result: PowerCalibration) -> None:
         achievable = median(result.achievable_oracle_sharpes)
         print(
             f"filtered reference net: {achievable:+.2f} "
-            "(ADR-061: specified historical filtered log-mean sign rule)"
+            + (
+                "(full-price observed NET simple-mean sign reference)"
+                if known
+                else "(ADR-061: specified historical filtered log-mean sign rule)"
+            )
         )
     achievable_capture = result.achievable_capture_ratio
     if achievable_capture is not None:
@@ -124,7 +141,20 @@ def main() -> None:
     half_life_flag = _flag("--half-life")
     share_flag = _flag("--deviation-share")
     n_bars_flag = _flag("--n-bars")
-    value_options = {"--out", "--half-life", "--deviation-share", "--n-bars"}
+    method_flag = _flag("--band-reference-method")
+    drift_flag = _flag("--drift")
+    vol_flag = _flag("--total-vol")
+    start_flag = _flag("--start-price")
+    value_options = {
+        "--out",
+        "--half-life",
+        "--deviation-share",
+        "--n-bars",
+        "--band-reference-method",
+        "--drift",
+        "--total-vol",
+        "--start-price",
+    }
     consumed_positions = {
         i + 1 for i, arg in enumerate(sys.argv[1:], start=1) if arg in value_options
     }
@@ -140,40 +170,88 @@ def main() -> None:
     share = float(share_flag) if share_flag else 0.409
     n_bars = int(n_bars_flag) if n_bars_flag else CALIBRATION_N_BARS
 
-    planted = {
-        f"BAND{i:04d}": mean_reverting_edge(
-            n_bars, seed=seed + i, half_life=half_life, deviation_share=share
+    method = method_flag if method_flag is not None else "legacy"
+    if method not in {"legacy", "conditional_simple_mean"}:
+        raise ValueError("unknown band reference method")
+    law_flags = (drift_flag, vol_flag, start_flag)
+    reference = None
+    if method == "legacy":
+        if any(value is not None for value in law_flags):
+            raise ValueError("band source law overrides require conditional_simple_mean")
+    else:
+        if any(value is None for value in law_flags):
+            raise ValueError(
+                "conditional_simple_mean requires explicit drift, total-vol and start-price"
+            )
+        assert drift_flag is not None and vol_flag is not None and start_flag is not None
+        reference = BandReference(
+            method="band_conditional_simple_mean_sign_zero_start_v1",
+            drift=float(drift_flag),
+            total_vol=float(vol_flag),
+            start_price=float(start_flag),
         )
-        for i in range(n_symbols)
-    }
+        law = band_reference_law(reference, half_life=half_life, deviation_share=share)
+        half_life, share = law.half_life, law.deviation_share
+
+    if reference is None:
+        planted = {
+            f"BAND{i:04d}": mean_reverting_edge(
+                n_bars, seed=seed + i, half_life=half_life, deviation_share=share
+            )
+            for i in range(n_symbols)
+        }
+    else:
+        planted = {
+            f"BAND{i:04d}": mean_reverting_edge(
+                n_bars,
+                seed=seed + i,
+                half_life=half_life,
+                deviation_share=share,
+                drift=reference.drift,
+                total_vol=reference.total_vol,
+                start_price=reference.start_price,
+            )
+            for i in range(n_symbols)
+        }
     strategies = [entry.name for entry in STRATEGY_CATALOG]
     print(
         f"measuring power against {n_symbols} band-reverting symbols x {n_bars} bars over "
         f"{len(strategies)} strategies (half-life {half_life} bars, deviation share {share}, "
         f"seed {seed})...\n"
     )
-    result = measure_power(
-        {name: p.frame for name, p in planted.items()},
-        strategies,
-        oracle_sharpes={
-            name: oracle_sharpe_of(p.frame, p.conditional_mean) for name, p in planted.items()
-        },
-        net_oracle_sharpes={
-            name: oracle_sharpe_of(p.frame, p.conditional_mean, cost_rate=DEFAULT_COST_RATE)
-            for name, p in planted.items()
-        },
-        # ADR-061: historical price-based filtered log-mean sign reference, net of costs.
-        # This specified rule does not certify a recoverable-edge bound (FINDING-159).
-        achievable_oracle_sharpes={
-            name: oracle_sharpe_of(
-                p.frame, p.achievable_conditional_mean, cost_rate=DEFAULT_COST_RATE
-            )
-            for name, p in planted.items()
-        },
-        edge="band_reversion",
-        half_life=half_life,
-        deviation_share=share,
-    )
+    if reference is not None:
+        result = measure_power(
+            {name: p.frame for name, p in planted.items()},
+            strategies,
+            edge="band_reversion",
+            half_life=half_life,
+            deviation_share=share,
+            band_reference=reference,
+            band_deviations={name: p.deviation for name, p in planted.items()},
+        )
+    else:
+        result = measure_power(
+            {name: p.frame for name, p in planted.items()},
+            strategies,
+            oracle_sharpes={
+                name: oracle_sharpe_of(p.frame, p.conditional_mean) for name, p in planted.items()
+            },
+            net_oracle_sharpes={
+                name: oracle_sharpe_of(p.frame, p.conditional_mean, cost_rate=DEFAULT_COST_RATE)
+                for name, p in planted.items()
+            },
+            # ADR-061: historical price-based filtered log-mean sign reference, net of costs.
+            # This specified rule does not certify a recoverable-edge bound (FINDING-159).
+            achievable_oracle_sharpes={
+                name: oracle_sharpe_of(
+                    p.frame, p.achievable_conditional_mean, cost_rate=DEFAULT_COST_RATE
+                )
+                for name, p in planted.items()
+            },
+            edge="band_reversion",
+            half_life=half_life,
+            deviation_share=share,
+        )
     _report(result)
 
     if out:

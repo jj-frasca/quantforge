@@ -314,10 +314,19 @@ export const ar1ReferenceSchema = z.discriminatedUnion('method', [
   z.object({ method: z.literal('ar1_conditional_mean_sign_v1'), drift: z.number() }).strict(),
 ])
 
+// ADR-313: transport the declared law; the backend owns scientific coherence/ranges.
+export const bandReferenceSchema = z.object({
+  method: z.literal('band_conditional_simple_mean_sign_zero_start_v1'),
+  drift: z.number(),
+  total_vol: z.number(),
+  start_price: z.number(),
+}).strict()
+
 // ADR-041/042/053: one cell of a power sweep — a planted process at one effect size, judged at its
 // own N. `phi` indexes an AR(1) sweep and `half_life` a band-reversion one; exactly one is set.
 export const powerCellSchema = z.object({
   ar1_reference: ar1ReferenceSchema.nullable().optional(),
+  band_reference: bandReferenceSchema.nullable().optional(),
   n_symbols: z.number().int(),
   n_detected: z.number().int(),
   detection_rate: z.number().min(0).max(1),
@@ -326,6 +335,7 @@ export const powerCellSchema = z.object({
   edge: z.string(),
   phi: z.number().nullable().default(null),
   half_life: z.number().nullable().default(null),
+  deviation_share: z.number().nullable().optional(),
   oracle_sharpes: z.array(z.number()).default([]),
   // ADR-055: the same oracle charged the 10bp turnover cost every catalog finalist paid.
   // Empty for a cell measured before the correction — which must read as unmeasured, not as
@@ -355,6 +365,7 @@ export type PowerCell = z.infer<typeof powerCellSchema>
 
 export const powerSweepSchema = z.object({
   ar1_reference: ar1ReferenceSchema.nullable().optional(),
+  band_reference: bandReferenceSchema.nullable().optional(),
   compatibility: calibrationCompatibilitySchema.nullable().optional(),
   edge: z.string(),
   gate_config_version: z.string(),

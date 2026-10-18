@@ -392,3 +392,47 @@ test('keeps multiple and duplicate AR sweeps and cells without duplicate React k
     expect(errors).not.toHaveBeenCalled()
   } finally { errors.mockRestore() }
 })
+
+const correctedBand = (drift = 0): PowerSweep => {
+  const band_reference = { method: 'band_conditional_simple_mean_sign_zero_start_v1' as const,
+    drift, total_vol: 0.01, start_price: 100 }
+  return sweep({ edge: 'band_reversion', band_reference,
+    cells: [cell({ edge: 'band_reversion', phi: null, half_life: 5, deviation_share: 1,
+      band_reference, achievable_oracle_sharpes: [0.94], achievable_capture_ratio: 1.2 })] })
+}
+test.each([0, -0.0004, 1e-12])('attributes corrected band law/sign references with drift %s', (drift) => {
+  render(<GatePowerPanel sweeps={[correctedBand(drift)]} />)
+  const caption = screen.getByText(/conditional simple-return mean-sign references/)
+  expect(caption).toHaveTextContent('band_conditional_simple_mean_sign_zero_start_v1')
+  expect(caption).toHaveTextContent(`drift ${String(drift)}, total_vol 0.01, start_price 100`)
+  expect(caption).toHaveTextContent('known pre-shock start')
+  expect(caption).toHaveTextContent('full-price observed net')
+  expect(caption).toHaveTextContent('sign scores, not expected-return magnitudes')
+  expect(caption).toHaveTextContent('do not certify cost-aware optimality or a realized-sample maximum Sharpe')
+  expect(screen.queryByText(/historical latent and filtered sign references/)).not.toBeInTheDocument()
+  expect(screen.getByText(/Search compatibility MATCHED does not certify reference equivalence/)).toBeInTheDocument()
+  expect(screen.getAllByText('half-life 5, deviation share 1')).toHaveLength(1)
+  for (const value of ['+3.90', '+2.90', '+0.94', '64%', '32 / 50', '76.9%', '103.4%', '120.0%']) {
+    expect(screen.getByText(value)).toBeInTheDocument()
+  }
+})
+test.each([undefined, null])('unknown band metadata does not certify historical provenance: %s', (band_reference) => {
+  render(<GatePowerPanel sweeps={[sweep({ ...bandSweep(), band_reference })]} />)
+  expect(screen.getByText(/Band reference method and source law unknown/)).toHaveTextContent(
+    'Historical driver conventions do not certify arbitrary supplied score-array provenance')
+})
+test('keeps mixed and duplicate band identities/cells and AR captions separate', () => {
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    const known = correctedBand(1e-12)
+    known.cells = [known.cells[0], { ...known.cells[0], deviation_share: 0.5 }]
+    render(<GatePowerPanel sweeps={[known, bandSweep(), sweep(), known]} />)
+    const tables = screen.getAllByRole('table')
+    expect(tables).toHaveLength(4)
+    expect(within(tables[0]).getByText(/conditional simple-return mean-sign references/)).toBeInTheDocument()
+    expect(within(tables[1]).getByText(/Band reference method and source law unknown/)).toBeInTheDocument()
+    expect(within(tables[2]).getByText(/AR\(1\) reference method and drift unknown/)).toBeInTheDocument()
+    expect(screen.getAllByText('32 / 50')).toHaveLength(6)
+    expect(errors).not.toHaveBeenCalled()
+  } finally { errors.mockRestore() }
+})

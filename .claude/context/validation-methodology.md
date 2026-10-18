@@ -1724,3 +1724,41 @@ history and denominator requirements; it cannot be described solely as low signa
 Numeric fields, refusal predicates, display presence policies, calls and artifacts
 remain unchanged. This is reporting, not activation of ADR-310 or a corrected
 method. F159 remains Open; historical tables retain their original bytes.
+
+### Explicit band simple-mean sign reference (ADR-313)
+
+The optional versioned `band_reference` retains explicit drift, total volatility
+and known pre-shock start price at cell and sweep. Known cells bind band edge,
+absent phi, present half-life/share and AR/band exclusivity. Original and
+normalized scalar ranges validate before existing coercion; original share<1
+rounding to1 refuses lost positive level noise. Historical absence stays unknown.
+The conditional mode normalizes one nominal binary64 Gaussian law, preserves the
+historical generator recipe and uses the unchanged ADR-310 full-price posterior.
+Rounded innovation sampling scale and nominal q need not agree bitwise; no
+universal source-law correspondence or conditioning accuracy is certified.
+
+All-symbol source/deviation snapshots and aligned predictions validate before
+any reference scorer/search. Index0 is unavailable; observed prediction index1
+uses posterior index0. Latent variance is q+R; observed variance also includes
+(rho-1)^2 times previous posterior variance, refusing a lost-positive component.
+The fixed finite score 2*m+V supplies only a sign to the existing gross/net scorer.
+Gaussian monotonicity and exact binary64 lattice arithmetic preserve the sign of
+computed finite m,V under gradual underflow; this does not certify earlier
+exact-law arithmetic or an expected-return magnitude. No numerical fallback,
+extra lag, fitting, cost model or detection/search/count change is introduced.
+
+Measurement owns all three arrays in known mode and rejects external arrays or
+contradictory mode evidence before scientific execution. Conditional CLI requires
+explicit law flags and validates before generation; legacy calls remain exact.
+Collection/model reconstruction preserve common identity. Capture comparison
+refuses known/unknown or unequal common identities after existing header guards,
+and mismatched shares at matched known-band half-lives after structural checks
+but before row arithmetic. Unmatched cells retain no-delta rows; unknown/unknown
+retains historical semantics. Detection-only probability inference stays intact.
+API/UI/reports preserve attribution, coordinates, unknown provenance and all served
+values. The reference is neither cost-aware optimal nor a sample maximum, bound
+on every causal strategy, no-edge result or newly measured power curve.
+
+F159's supported explicit production correction gap is resolved by ADR-313.
+Historical scores/unknown metadata and all provenance/optimality qualifications
+remain; this opt-in is not a fresh power measurement or artifact migration.

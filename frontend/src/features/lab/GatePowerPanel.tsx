@@ -17,7 +17,8 @@ const percent = (value: number | null): string =>
   value === null ? '—' : `${(value * 100).toFixed(1)}%`
 
 const label = (cell: PowerCell): string =>
-  cell.phi !== null ? `phi ${cell.phi > 0 ? '+' : ''}${cell.phi}` : `half-life ${cell.half_life}`
+  cell.phi !== null ? `phi ${cell.phi > 0 ? '+' : ''}${cell.phi}` :
+    `half-life ${cell.half_life}${cell.deviation_share == null ? '' : `, deviation share ${String(cell.deviation_share)}`}`
 
 const ar1Caption = (reference: PowerSweep['ar1_reference']): string => {
   if (!reference) {
@@ -27,6 +28,13 @@ const ar1Caption = (reference: PowerSweep['ar1_reference']): string => {
     return 'AR(1) scores use the historical reference sign strategy (ar1_phi_lag_sign_v1; drift null, source drift unspecified), which omits the drift intercept; these are not conditional-mean optimal or realized-sample maximum Sharpes, and do not certify cost-aware optimality.'
   }
   return `AR(1) scores use the conditional-mean sign reference (ar1_conditional_mean_sign_v1), drift ${String(reference.drift)}. These scores do not certify cost-aware optimality or a realized-sample maximum Sharpe.`
+}
+
+const bandCaption = (reference: PowerSweep['band_reference']): string => {
+  if (!reference) {
+    return 'Band reference method and source law unknown. Historical driver conventions do not certify arbitrary supplied score-array provenance: historical latent and filtered sign references use predicted log returns while their scores use simple returns; historical filter startup/posterior is uncertified. These do not certify an optimal strategy before or after costs, or a maximum sample Sharpe.'
+  }
+  return `Band conditional simple-return mean-sign references (${reference.method}), drift ${String(reference.drift)}, total_vol ${String(reference.total_vol)}, start_price ${String(reference.start_price)}. Under the declared zero-start law with known pre-shock start, the latent hidden-state gross/net and full-price observed net references use sign scores, not expected-return magnitudes. These scores do not certify cost-aware optimality or a realized-sample maximum Sharpe, or establish source correspondence. Half-life and deviation share are recorded per cell; absent share is unrecorded.`
 }
 
 const process = (edge: string): string =>
@@ -73,11 +81,11 @@ export function GatePowerPanel({ sweeps }: { sweeps: PowerSweep[] }) {
               </>
             )}
             {sweep.edge === 'band_reversion' && (
-              <p>
-                Band scores use historical latent and filtered sign references. Their positions
-                use predicted log returns while their scores use simple returns; these do not
-                certify an optimal strategy before or after costs, or a maximum sample Sharpe.
-              </p>
+              <>
+                <p>{bandCaption(sweep.band_reference)}</p>
+                <p>Search compatibility MATCHED does not certify reference equivalence.</p>
+                <p>Latent reference Sharpe is gross; latent net and filtered (observed) reference Sharpe include costs. Missing deviation share is unrecorded.</p>
+              </>
             )}
           </caption>
           <thead>

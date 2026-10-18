@@ -313,3 +313,38 @@ test('preserves historical absence without scientific shadow validation', () => 
   expect(powerSweepSchema.parse({ ...manualPower, cells: [{ ...referenceCell, phi: 3,
     ar1_reference: { method: 'ar1_conditional_mean_sign_v1', drift: 0 } }] }).cells[0]).toMatchObject({ phi: 3, ar1_reference: { drift: 0 } })
 })
+
+const bandReference = {
+  method: 'band_conditional_simple_mean_sign_zero_start_v1', drift: 0,
+  total_vol: 0.01, start_price: 100,
+}
+test.each([0, -0.0004, 1e-12])('retains explicit band law and per-cell share with drift %s', (drift) => {
+  const band_reference = { ...bandReference, drift }
+  expect(powerSweepSchema.parse({ ...manualPower, band_reference,
+    cells: [{ ...referenceCell, edge: 'band_reversion', phi: null, half_life: 5,
+      deviation_share: 1, band_reference }] })).toMatchObject({ band_reference,
+    cells: [{ half_life: 5, deviation_share: 1, band_reference }] })
+})
+test.each([
+  {}, { ...bandReference, method: 'future' }, { ...bandReference, extra: true },
+  ...['drift', 'total_vol', 'start_price'].flatMap((field) =>
+    [undefined, null, '0', true, NaN, Infinity, -Infinity].map((value) => ({ ...bandReference, [field]: value }))),
+])('refuses malformed band reference at both boundaries: %j', (band_reference) => {
+  expect(powerSweepSchema.safeParse({ ...manualPower, band_reference }).success).toBe(false)
+  expect(powerSweepSchema.safeParse({ ...manualPower,
+    cells: [{ ...referenceCell, band_reference }] }).success).toBe(false)
+})
+test.each([null, undefined])('preserves historical band reference/share absence or null: %s', (value) => {
+  const historical = value === undefined ? referenceCell : { ...referenceCell, band_reference: null, deviation_share: null }
+  const parsed = powerSweepSchema.parse({ ...manualPower, cells: [historical] })
+  if (value === undefined) {
+    expect(parsed).not.toHaveProperty('band_reference')
+    expect(parsed.cells[0]).not.toHaveProperty('band_reference')
+    expect(parsed.cells[0]).not.toHaveProperty('deviation_share')
+  } else expect(parsed.cells[0]).toMatchObject({ band_reference: null, deviation_share: null })
+})
+test('band transport preserves values without shadow scientific validation', () => {
+  expect(powerSweepSchema.parse({ ...manualPower, band_reference: null,
+    cells: [{ ...referenceCell, band_reference: bandReference, half_life: -1, deviation_share: 2 }] })
+    .cells[0]).toMatchObject({ band_reference: bandReference, half_life: -1, deviation_share: 2 })
+})
