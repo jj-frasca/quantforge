@@ -315,6 +315,15 @@ costs, scoring, thresholds and longitudinal v14 identity remain unchanged.
 This closes malformed negative-window lookahead in forward reconstruction;
 arbitrary custom signal causality and point-in-time fundamentals remain separate.
 
+ADR-315 adds a scored-wealth domain at cross-sectional _score_holdout: after
+selecting the scored return slice, refuse any native return<=-1 before benchmark
+preparation, product or Sharpe. An even number of negative gross factors cannot
+certify positive-wealth performance. Raw portfolio_returns still reports finite
+leveraged losses faithfully, and only unsafe periods inside the scored slice
+trigger this guard. Valid native formulas, warmup, empty slices, thresholds and
+longitudinal v14 remain; no liquidation, full-prefix account guarantee or new
+compounding/projection recovery is introduced (FINDING-266).
+
 **Invariants** (Hypothesis): equity_curve all finite & > 0 for finite inputs; zero signal →
 flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 

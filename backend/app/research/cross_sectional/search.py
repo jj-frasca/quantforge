@@ -288,6 +288,8 @@ def _score_holdout(
     — the cross-sectional analog of 'why not just hold it?'."""
     full_port = _config_returns(strategy, params, quantile, full_prices, cost)
     sliced = full_port.loc[holdout.index]
+    if (sliced <= -1.0).any():
+        raise ValueError("holdout returns must preserve positive wealth")
     equal_weight = asset_returns(full_prices).mean(axis=1).loc[holdout.index]
     total_return = float((1.0 + sliced).prod() - 1.0)
     return HoldoutScore(

@@ -256,6 +256,14 @@ threshold, hash, estimator or v14 identity changes. This prevents malformed scal
 acceptance (FINDING-255), without certifying source provenance or exact-real float
 projection replay (separately governed by ADR-309 / FINDING-256).
 
+**Cross-sectional holdout scoring refuses an insolvent scored period (ADR-315).**
+Native returns at or below -1 refuse before benchmark preparation, products or
+Sharpe; two negative gross factors cannot manufacture a positive terminal claim.
+The raw kernel still reports leveraged losses, and out-of-slice warmup is unchanged.
+Valid scoring arithmetic, thresholds and longitudinal v14 remain; this is no
+liquidation policy or aggregate projection recovery. No affected production result
+or false graduate is established (FINDING-266).
+
 **Holdout predicates must survive their binary64 score projection (ADR-309).**
 The evaluator preserves native comparisons and refuses either-direction
 holdout/active-benchmark projection disagreement before issuing a verdict.
