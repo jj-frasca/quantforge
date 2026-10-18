@@ -151,6 +151,20 @@ attempts until a complete/preferred result appears. Exact8485-bar empirical SPY
 input/all305qualityissues/sources/checkpoints remain preserved. Current bootstrap
 remains unmeasured; F241iid/F243t5 and historical evidence are not pooled.
 
+ADR-316 preregisters one distinct, still unmeasured local heteroskedastic null:
+N200, 7400 bars, initial100 and7399 independent Uniform[-sqrt(3),sqrt(3)]
+innovations scaled by .005/.04 alternating every252returns, starting low.
+Ideal-law conditional simple-return mean is zero; variance is predictable.
+Binary64 is an approximation, not exact numerical-martingale certification.
+Seeds2026101809000+i and canonical causal OHLCV/ns calendars freeze together.
+All200 sources need a hash-bound independent pre-search audit before any search.
+The unchanged full34/defaultGate/refine/nper3/prior0/noStore procedure has one
+7200s soft admission clock; one admitted call may finish later. Never renew,
+retry, redraw, replace or infer rates from a prefix. Rates require200complete/
+zeroerrors and final source/count/model audits; original incomplete AR/bootstrap
+attempts remain frozen. Custom null-mode evidence cannot authorize ADR102 or
+any threshold change. At adoption, no actual cohort draw or search had occurred.
+
 ADR-190 validates positive nonboolean integer trial count and finite positive real dispersion
 at shared expected_max_sharpe entry before N=1. Invalid accounting cannot create an unpenalized
 probability; margin/probability delegate to one guard. Valid formulas, counts and gates remain.
