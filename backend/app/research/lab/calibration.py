@@ -887,12 +887,12 @@ class PowerCalibration(BaseModel):
 
     @property
     def oracle_sharpe_percentiles(self) -> tuple[float, float, float] | None:
-        """(median, p95, max) of the planted effect size actually realized in these frames."""
+        """(median, p95, max) of the stated gross sign-reference strategy Sharpes."""
         return _percentiles(self.oracle_sharpes)
 
     @property
     def net_oracle_sharpe_percentiles(self) -> tuple[float, float, float] | None:
-        """(median, p95, max) of the planted effect size NET of transaction costs (ADR-055)."""
+        """(median, p95, max) of the stated net sign-reference strategy Sharpes (ADR-055)."""
         return _percentiles(self.net_oracle_sharpes)
 
     @computed_field  # type: ignore[prop-decorator]
@@ -935,13 +935,15 @@ class PowerCalibration(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def achievable_capture_ratio(self) -> float | None:
-        """Capture against what a causal filter could recover from prices (ADR-061).
+        """Selected in-sample finalist / specified filtered net reference (ADR-061).
 
         Notes:
-            The honest denominator for a process whose state is LATENT: the latent-state oracle
-            includes edge no strategy could ever see. Same refusal as `net_capture_ratio` — an
-            achievable reference inside Lo (2002)'s Sharpe standard error cannot support a stable
-            capture ratio, as in the half-life-1 case; this refusal alone is not a no-edge proof.
+            Requires complete finalist/reference arrays and recorded history. As with
+            `net_capture_ratio`, a reference not above Lo (2002)'s Sharpe standard error
+            cannot support this ratio. Refusal does not establish absence of tradeable edge.
+            Historical band log-mean signs are scored on simple returns; their filter
+            startup/posterior is not certified (FINDING-159). Neither reference nor this
+            selection-biased ratio establishes cost-aware optimality or a sample maximum.
         """
         if (
             len(self.finalist_observed_sharpes) != self.n_symbols

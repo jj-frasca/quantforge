@@ -4,15 +4,17 @@ Usage: PYTHONPATH=. uv run python scripts/horizon_power_calibration.py [N_SYMBOL
            [--half-life H] [--deviation-share S] [--out PATH]
        (default: 50 symbols, seed 0, half-life 3 bars, share 0.409, print only)
 
-ADR-041 found the catalog detects 54% of planted TRENDING edges and 6% of mean-reverting ones at
-the same effect size, and could not separate two explanations: the mean-reversion family is weak,
-or its planted process reverted at lag 1 while RSI-14/Bollinger-20 act over many bars. This plants
-band reversion at a STATED half-life instead, so the horizon is the swept parameter.
+Historically, ADR-041 reported 54% detection of planted TRENDING controls and 6% of
+mean-reverting controls at the same reported reference score. It could not separate
+weak mean-reversion-family performance from a horizon mismatch: lag-1 reversion
+versus RSI-14/Bollinger-20. This driver plants band reversion at a STATED half-life.
 
-Read the sweep in two tiers (ADR-042). Half-lives 1-5 at a matched effect size (oracle ~2.6) are the
-horizon test. Half-lives 10 and 20 cannot reach that effect size at equity volatility — only
-`(1 - rho) / 2` of the deviation's variance is predictable one bar ahead — so a low detection rate
-there is a fact about the model's ceiling, not evidence about the catalog.
+ADR-042's historical horizon comparison used half-lives 1-5 with a matched reported
+reference score (~2.6). Longer half-lives change the stationary predictable fraction
+of deviation-component log-return variance, `(1 - rho) / 2`. This is not a finite-
+sample simple-return variance or Sharpe bound. Low detection must be interpreted
+under the stated source and reference conventions; it establishes neither a
+strategy ceiling nor a bound on catalog power.
 
 Expensive (one full search per symbol) and NEVER in CI; writes no pooled data — a synthetic symbol
 is not a hypothesis about a real one.
@@ -32,8 +34,8 @@ from app.research.lab.calibration import (
 from app.research.lab.history import CALIBRATION_N_BARS
 from app.research.strategies.catalog import STRATEGY_CATALOG
 
-# ADR-051/063: the length a real hunt actually sees, matching the null and ADR-041 power drivers so
-# the three stay comparable without an adjustment — defined once in app/research/lab/history.py.
+# ADR-051/063: shared synthetic calibration length from app/research/lab/history.py.
+# Actual hunt histories can differ; comparisons require matched recorded history.
 # `--n-bars` overrides it.
 
 
@@ -42,7 +44,13 @@ def _flag(name: str) -> str | None:
 
 
 def _report(result: PowerCalibration) -> None:
-    print(f"planted process     : {result.edge}")
+    print(
+        f"planted process     : {result.edge}\n"
+        "reference convention: historical driver uses log-mean signs scored on simple returns; "
+        "supplied method/source law not recorded\n"
+        "reference limits    : filter startup/posterior not certified; "
+        "no cost-aware optimum, sample maximum or no-edge conclusion (FINDING-159)"
+    )
     print(
         f"reversion half-life : {result.half_life} bars (deviation share {result.deviation_share})"
     )
@@ -51,7 +59,7 @@ def _report(result: PowerCalibration) -> None:
     print(f"adaptive refinement : {result.refine} (span {result.refine_span:.2f})")
     print(f"symbols searched    : {result.n_symbols}")
     if result.n_bars:
-        print(f"bars per symbol     : {median(result.n_bars):.0f} (the hunt's own history length)")
+        print(f"bars per symbol     : {median(result.n_bars):.0f} (supplied synthetic history)")
     print(f"detected            : {result.n_detected}")
     print(f"DETECTION RATE      : {result.detection_rate:.1%}  <- power of the gate as such")
     if result.gate_pass_counts:
@@ -66,46 +74,46 @@ def _report(result: PowerCalibration) -> None:
     pct = result.oracle_sharpe_percentiles
     if pct is not None:
         print(
-            f"oracle Sharpe       : median {pct[0]:+.2f} | p95 {pct[1]:+.2f} | max {pct[2]:+.2f} "
-            "(the effect size actually planted, measured not derived)"
+            f"latent reference gross: median {pct[0]:+.2f} | p95 {pct[1]:+.2f} | max {pct[2]:+.2f} "
+            "(realized gross sign-reference strategy score)"
         )
     net_pct = result.net_oracle_sharpe_percentiles
     if net_pct is not None:
         print(
-            f"oracle NET of costs : median {net_pct[0]:+.2f} | p95 {net_pct[1]:+.2f} | "
+            f"latent reference net: median {net_pct[0]:+.2f} | p95 {net_pct[1]:+.2f} | "
             f"max {net_pct[2]:+.2f} (ADR-055: the same 10bp the catalog pays on turnover)"
         )
     capture = result.capture_ratio
     if capture is not None:
         print(
-            f"CAPTURE UPPER BOUND : {capture:.1%}  <- median finalist in-sample Sharpe / "
-            "median oracle Sharpe (selection-biased)"
+            f"capture vs gross reference: {capture:.1%}  <- median finalist in-sample Sharpe / "
+            "median gross latent reference Sharpe (selection-biased)"
         )
     net_capture = result.net_capture_ratio
     if net_capture is not None:
         print(
-            f"  net of costs      : {net_capture:.1%}  <- the comparable ratio: both sides now "
+            f"  net of costs      : {net_capture:.1%}  <- selected in-sample finalist / "
+            "net latent reference; both sides "
             "pay the same costs (ADR-055)"
         )
-    # ADR-061: the oracle above knows the process's LATENT deviation. This one is what an optimal
-    # causal filter could have formed from prices, which is the only benchmark a strategy could
-    # ever have reached — at a one-bar half-life it is essentially zero.
+    # ADR-061: compare the specified historical price-based filtered log-mean sign rule.
+    # Its net score does not certify the posterior or bound all causal strategies (F159).
     if result.achievable_oracle_sharpes:
         achievable = median(result.achievable_oracle_sharpes)
         print(
-            f"oracle a FILTER could form: {achievable:+.2f} net "
-            "(ADR-061: Kalman with true parameters — the recoverable edge)"
+            f"filtered reference net: {achievable:+.2f} "
+            "(ADR-061: specified historical filtered log-mean sign rule)"
         )
     achievable_capture = result.achievable_capture_ratio
     if achievable_capture is not None:
         print(
-            f"  capture vs achievable: {achievable_capture:.1%}  <- the honest ratio for a "
-            "process whose state is latent"
+            f"  capture vs filtered reference: {achievable_capture:.1%}  <- selected in-sample "
+            "finalist / specified filtered net reference"
         )
     elif result.achievable_oracle_sharpes:
         print(
-            "  capture vs achievable: REFUSED -- the recoverable edge is inside its own Sharpe "
-            "standard error, so there is nothing to express a fraction of"
+            "  capture vs filtered reference: REFUSED under existing evidence/denominator "
+            "requirements; this does not establish absence of tradeable edge"
         )
     if result.errors:
         print(f"unsearchable        : {len(result.errors)} symbol(s)")
@@ -154,8 +162,8 @@ def main() -> None:
             name: oracle_sharpe_of(p.frame, p.conditional_mean, cost_rate=DEFAULT_COST_RATE)
             for name, p in planted.items()
         },
-        # ADR-061: the same oracle a causal Kalman filter could form from PRICES, which is the
-        # honest denominator for a process whose state is latent.
+        # ADR-061: historical price-based filtered log-mean sign reference, net of costs.
+        # This specified rule does not certify a recoverable-edge bound (FINDING-159).
         achievable_oracle_sharpes={
             name: oracle_sharpe_of(
                 p.frame, p.achievable_conditional_mean, cost_rate=DEFAULT_COST_RATE

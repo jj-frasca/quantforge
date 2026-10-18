@@ -1712,3 +1712,15 @@ repeated option value is excluded by position while first-option lookup stays.
 Defaults, source/scorer/measurement calls, seed+i, report/output behavior and
 scientific identity remain. No historical affected cohort is established and
 no source retry or artifact rewrite follows from this parser correction.
+
+### Horizon reference-report qualification (ADR-312 / FINDING-159)
+
+Horizon console gross/net latent and specified filtered net scores are reference
+strategy comparisons, with selected in-sample, selection-biased ratios. Historical
+log-mean signs are scored on simple returns; historical filter startup/posterior
+is uncertified. No upper bound, cost-aware optimum, realized-sample maximum or
+no-edge inference follows. A refused filtered ratio covers existing completeness,
+history and denominator requirements; it cannot be described solely as low signal.
+Numeric fields, refusal predicates, display presence policies, calls and artifacts
+remain unchanged. This is reporting, not activation of ADR-310 or a corrected
+method. F159 remains Open; historical tables retain their original bytes.

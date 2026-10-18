@@ -239,3 +239,50 @@ passed 12,689 backend tests (97.40% coverage) and 401 frontend tests (97.68%
 statements), with lint, formatting and strict types green. All local verification
 is closed; exact master CI is checked after individual publication. F159 remains
 Open for separately attributed simple-return references and production wiring.
+
+## Horizon console qualification (ADR-312)
+
+The horizon driver's console retained unsupported upper-bound/recoverable-edge
+claims after the earlier source/UI qualifications. ADR-312 separately governs
+these printed claims: latent gross/net and specified filtered net strategy scores
+are reference comparisons, and selected in-sample ratios remain selection biased.
+Historical log-mean signs are scored on simple returns; the historical filter's
+startup/posterior is uncertified. The driver identifies its historical convention
+without certifying provenance for arbitrary supplied score arrays. Reported history
+is supplied synthetic history, not a claim of equality to every real hunt.
+
+A refused filtered ratio can mean incomplete finalist/reference evidence or missing
+history as well as a denominator failing the existing noise check. The unchanged
+branch now describes those generic evidence/denominator requirements; refusal does
+not establish absence of tradeable edge. No cost-aware optimum, realized-sample
+maximum or bound on every causal strategy follows from these reference scores.
+The module's variance explanation and three shared PowerCalibration docstrings
+receive the same qualifications. No accepted historical ADR or artifact is rewritten.
+
+Six hand-built report cases failed in test bodies before the print changes
+(`/tmp/qf-w42-s28-report-red.log`, 2.72s). They exercise positive ratios, small/zero
+denominators, missing history, partial finalists and absent optional metrics; no
+source generator, scorer, posterior or search is called. Expected displayed medians,
+percentiles, ratios, counts, versions, history and costs retain their values.
+F159 remains Open for the separately governed production correction; ADR-310's
+posterior is not activated by this reporting change.
+
+Independent final research review approved all six paths and independently passed
+21 report/parser cases. Parent focused verification passed 73 report/parser/capture
+cases. Exact AST comparisons preserve the entire calibration module after excluding
+only the three named docstrings, and the entire horizon module after excluding its
+introductory docstring and report text. Every report interpolation/format specifier,
+branch and scientific call remains exact; all existing tests/frontend/data remain
+unchanged. Receipt: `/tmp/qf-w42-s28-report-source-audit.json`, horizon source SHA256
+`993c0db646cbd16bdda18397ab172599eaac3e078aaa6239ec75c26bbeaec405`.
+
+Session30 resumed the same six owned paths without source edits. Fresh independent
+research review approved them and passed all six reporting cases. A fresh parent
+AST audit confirmed the same scoped exclusions and exact expressions, predicates
+and formats (`/tmp/qf-w42-s30-report-audit.json`); horizon source SHA256 remains
+`993c0db646cbd16bdda18397ab172599eaac3e078aaa6239ec75c26bbeaec405`.
+Fresh full foreground `make check-all PYTEST_WORKERS=4` completed successfully:
+12,710 backend tests (97.40% coverage) and 401 frontend tests (97.68% statements),
+with lint, formatting and strict types green. Receipt:
+`/tmp/qf-w42-s30-check312.log`. All local verification is closed. This reporting
+correction leaves F159 Open and does not activate a conditional reference mode.
