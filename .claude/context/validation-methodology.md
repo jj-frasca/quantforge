@@ -579,6 +579,16 @@ established. Regime partitions remain retrospective diagnostics, not executable
 switching accounts. Calendar/source/alignment validity and arbitrary huge pandas
 horizons remain separate; no threshold, schema, search identity or v14 change.
 
+ADR-319 / FINDING-270 separately checks both whole original regime indexes for
+unique ascending order after window validation and before alignment. Otherwise
+positive positional horizons can use future calendar prices, and duplicate
+alignment can repeat original returns. No sorting/deduplication or UTC/cadence
+policy is added. Ordered generic/naive/aware, partial/disjoint, empty/singleton
+sources retain existing behavior and all numerical statements stay. Normal
+ValidationEngine already has backtest-calendar mitigation; no affected production
+result is established. Source value/provenance and executable-account claims
+remain separate; report schemas, thresholds, search identity and v14 stay.
+
 ---
 
 ## 6. Rank information coefficient (cross-sectional only)

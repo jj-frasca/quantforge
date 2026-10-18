@@ -19,8 +19,9 @@ def analyze_regimes(
     """Break a strategy's performance down by market regime (validation-methodology.md §5).
 
     The horizon is an original nonnegative nonboolean integer, normalized before
-    alignment. Zero retains the degenerate all-bull partition on finite positive
-    prices. Calendar/source validity and executable switching accounts are separate.
+    alignment. Both original source indexes must be unique and ascending. Zero
+    retains the degenerate all-bull partition on finite positive prices. Source
+    provenance, cadence and executable switching accounts remain separate.
 
     Notes:
         Each bar is labelled by the sign of the market's trailing ``window`` return: "bull"
@@ -28,6 +29,9 @@ def analyze_regimes(
         regime is fragile. Regimes partition every bar exactly once.
     """
     window = require_trial_count(window, minimum=0, parameter="window")
+    for source in (strategy_returns, market_prices):
+        if not source.index.is_unique or not source.index.is_monotonic_increasing:
+            raise ValueError("regime source indexes must be unique and ascending")
     strat, market = strategy_returns.align(market_prices, join="inner")
     trailing = market.pct_change(window)
     regime = pd.Series("bull", index=strat.index)
