@@ -541,16 +541,31 @@ For longitudinal searches, both diagnostics are also recorded per `Trial` (`walk
 `scripts/pool_report.py` — which prints them next to `data/null_calibration/` so the
 "passers vs null" comparison is two commands, not a fresh script every session.
 
-The separate cross-sectional search currently generates split geometry only:
-`cross_sectional/search.py::_build_report` records lengths from the splitters,
-without calling either evaluator. Its `walk_forward` / `purged_cv` objects and
-the inherited `CrossSectionalTrial` OOS fields remain null, even with nonzero
-split/fold counts. No selected-test Sharpe or paired benchmark was measured by
-that path. Null remains unmeasured; PBO, DSR, stability and locked holdout still
-run. FINDING-265 records this implementation gap under ADR-038/039's broader
-intent. Evaluator integration requires a separate methodology decision covering
-factor selection, benchmark pairing and embargo geometry; existing longitudinal
-evidence supplies no cross-sectional measurement.
+ADR-321 adds family-local walk-forward evaluation to new cross-sectional backend
+searches. Each complete allocated family matrix uses the unchanged evaluator and
+search-only `asset_returns(in_sample).mean(axis=1)` benchmark on identical test
+windows. Full results remain on ephemeral reports; inherited trial means persist
+with experiment `walk_forward_method`, `walk_forward_hold_sharpe`,
+`walk_forward_n_bars` and `walk_forward_n_splits`. The recognized method requires
+complete finite family means, a common paired benchmark and valid actual geometry.
+Historical method-null/unpaired constructors remain readable without backfill.
+Compact scalars cannot independently reconstruct per-split selection or prove
+source provenance; producer checks establish common geometry and pairing.
+
+Selection within a family is train-only; the overall winning family is still
+selected using the complete search sample. Its family score does not measure
+train-only cross-family selection. Static fundamental maps are conditional supplied
+snapshots, not historical point-in-time information. Scores average continued
+config-window Sharpes with existing internal costs, without account entry/switch
+reconciliation. The equal-weight benchmark includes the existing initial zero
+and no extra turnover-cost model. Measurement errors propagate and can now refuse
+a search; primary gate-bearing results stay exact on measurable controls.
+
+Purged CV remains null with geometry-only counts; its dependency/embargo design is
+separate. FINDING-265 remains open for that evaluation and public publication.
+The reduced cross-sectional API/dashboard is unchanged by the backend slice.
+Historical null stays unmeasured, never zero; longitudinal calibration does not
+certify this panel diagnostic. No selector, threshold or v14 change is made.
 
 **Neither gates anything.** Both are diagnostics with an explicit, measurable trigger for
 revisiting, recorded in their ADRs. Do not add a floor without arguing it from the null

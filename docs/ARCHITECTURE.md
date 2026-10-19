@@ -183,14 +183,20 @@ observed selection is unchanged. Both are recorded per longitudinal `Trial` and 
 because its selection sees the future — read them side by side, never averaged. Details:
 `.claude/context/validation-methodology.md` §3–§5.
 
-**Cross-sectional reports still record split geometry without scoring those splits
-(FINDING-265).** Their separate search assembler records walk-forward split and
-purged-fold counts, but leaves both diagnostic objects and inherited per-trial
-OOS fields null. Those counts establish no evaluated selection, OOS Sharpe or
-matched benchmark. Null means unmeasured, never zero. Cross-sectional PBO, DSR,
-stability and locked-holdout evaluation remain implemented; the UI already labels
-missing diagnostics. Integrating these evaluators needs its own methodology
-decision; longitudinal measurements do not certify the cross-sectional path.
+**Cross-sectional family walk-forward is measured in new backend producers
+(ADR-321 / FINDING-265).** Each allocated family's full return matrix is evaluated
+with train-only config selection and a search-only equal-weight universe benchmark
+on the same forward windows. Compact trial means persist with a common benchmark,
+method and actual search/split geometry; historical absent evidence stays null.
+The winning family is still selected on the whole search sample, so its diagnostic
+does not measure train-only cross-family selection. Static fundamental maps remain
+conditional snapshots, not historical point-in-time evidence. Continuation-window
+means include internal config costs without reconciling account switching trades;
+the benchmark has no extra turnover-cost model. Unmeasurable diagnostics now refuse
+the search, while existing gate-bearing results remain on measurable controls.
+Purged CV still records geometry only and remains unmeasured pending dependency
+and embargo design. The reduced cross-sectional API/dashboard is unchanged in this
+backend slice. Longitudinal null/power evidence supplies no panel calibration.
 
 **Those validation claims are now durable after construction (ADR-159).** The report, split/fold
 records, flags, interpretations, and regime map are defensively copied into immutable JSON-shaped

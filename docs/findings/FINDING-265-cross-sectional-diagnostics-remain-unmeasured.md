@@ -2,11 +2,12 @@
 
 - **Date:** 2026-10-18
 - **Severity:** Medium — documentation overstates evaluation scope
-- **Status:** Open for evaluator integration; documentation scope corrected
+- **Status:** Open in part; ADR-321 adopts backend walk-forward measurement;
+  purged evaluation and public publication remain open
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
-## Evidence
+## Original evidence at 1018ca7c
 
 The cross-sectional report assembler calls walk_forward_splits and
 purged_kfold_splits, stores their lengths and never calls either evaluator.
@@ -29,7 +30,7 @@ Receipts and executable reproduction:
 /tmp/qf-w42-s31-xs-diagnostics-review.json,
 /tmp/qf-w42-s31-xs-diagnostics-parent.json.
 
-## Scope and disposition
+## Original scope and disposition
 
 Architecture and validation cold memory described the longitudinal evaluation
 without distinguishing this cross-sectional path. Those descriptions now state
@@ -49,7 +50,7 @@ factor selection, matched benchmark and embargo semantics, followed by TDD and
 appropriate evidence. This documentation-only correction changes no runtime,
 model, test, selector, threshold, identity, generated record or frozen cohort.
 
-## Verification
+## Original verification (2026-10-18)
 
 Parent and independent direct witnesses and source review passed. Independent
 final review approved all three documentation paths, including the second
@@ -58,3 +59,100 @@ and data remained byte-unchanged. Fresh foreground make check-all passed 12,866
 backend tests (97.39% coverage), 438 frontend tests (97.69% statements), lint,
 formatting and strict types. Log /tmp/qf-w42-s31-check265.log; all local checks
 closed successfully. Exact master CI is verified after individual publication.
+
+## ADR-321 backend walk-forward correction (2026-10-19)
+
+The new producer evaluates each full allocated family matrix with the unchanged
+walk-forward evaluator. Config choice uses each expanding train block; the chosen
+column continues on its next test block. One search-only equal-weight universe
+benchmark is scored on the same test rows for every family. Full results stay in
+ephemeral reports, while trial means persist with a common paired benchmark,
+recognized method and actual search-bar/split counts. Method-null historical and
+unpaired scalar records remain readable; no score or method is backfilled.
+
+The recognized measured branch refuses missing family means, absent/nonfinite
+benchmark, invalid original geometry or an empty trial population. Existing
+store reconstruction protects against unchecked incomplete model copies.
+Producer consistency checks establish common benchmark and geometry; compact
+scalars do not preserve every window's selected config or prove provenance.
+Numerically unmeasurable diagnostic blocks now refuse a search rather than
+fabricating a number. Primary-output preservation is therefore conditional on
+measurable diagnostics, not an unchanged complete success domain.
+
+This closes the backend walk-forward portion only. Purged CV remains unmeasured
+until factor dependency spans and embargo semantics are designed separately.
+The reduced cross-sectional API and dashboard are unchanged by this slice.
+Longitudinal null/power distributions are not panel calibration, and no cohort
+or generated artifact is rerun or relabeled.
+
+Publication review also qualifies the original frontend sentence above: the
+separate validation-report renderer labels absent diagnostics, while the actual
+CrossSectionalPanel has no walk-forward or purged diagnostic column/caption.
+That renderer does not certify public panel measurement or publication.
+
+These family-local scores do not evaluate train-only cross-family selection:
+the eventual family winner still uses the complete search sample. Static
+fundamental maps remain conditional supplied snapshots, not historical
+point-in-time evidence. Existing internal config costs continue through slices;
+entry/switching trades for a common account are not reconciled. The equal-weight
+universe benchmark has no added turnover-cost model. Scores remain equal means
+of window Sharpes, never Sharpe on a stitched trading policy.
+
+Three deterministic prechange primary payloads are frozen at
+`/tmp/qf-w43-s1-xs-wf-baseline.json`, SHA256
+`f54f294ef6976387060dabd2fa39dce2f67f5c65db2313a6060fbeec4d6ad096`.
+They cover two price-only families, a supplied static value family, different
+quantile allocations and carried prior counts. The projection excludes only
+new diagnostic fields and run UUID/time. Source before the correction:
+`8d341417caa4c9e9f33cf6d9e4580877228fb9feaf82cd784a09a12622c8c90a`.
+
+Actual preimplementation RED observed 34 failures in 7.29 seconds with the
+production diff empty (`/tmp/qf-w43-s1-xs-wf-red.log`). All 34 then passed.
+Five supplementary postimplementation controls exercise actual unmeasurable
+training moments and missing/unequal benchmark or actual split geometry; these
+are supplementary GREEN evidence, not preimplementation RED. The final focused
+regression run passed 278 tests in 23.12 seconds, including all 39 new cases;
+Ruff, formatting and strict mypy passed. The verification summary is
+`/tmp/qf-w43-s1-xs-wf-green-receipt.json` (a summary, not captured raw stdout).
+
+Parent audit preserved all three frozen primary payloads exactly, six unchanged
+helper/class ASTs, all four original experiment methods, all original primary
+report statements and the complete search AST after removing only the new
+diagnostic insertions/keywords and its leading docstring. The clarified report
+docstring is also excluded precisely. Ten core modules, including the gate,
+accounting, budget, portfolio kernel, registry, evaluators, PBO, primary metrics
+and holdout, retain their bytes. Bounded controls establish preservation on
+these fixtures, not universal equivalence of every possible native input.
+Audit: `/tmp/qf-w43-s1-xs-wf-parent-audit.py` and
+`/tmp/qf-w43-s1-xs-wf-parent-audit-final.log`.
+
+The first full gate found seven failures in existing original-trial-count
+fixtures (13,047 passed). Their legacy report stub intentionally stops at
+repricing to verify actual Python-int lifetime addition; the new pairing check
+ran before that interception. Only the new consistency block moved downstream
+of unchanged repricing and immediately before holdout. The count tests remain
+unchanged, real evaluator failures still propagate at family assembly, and
+inconsistent evidence still refuses before holdout/publication. The refreshed
+count-plus-new suites pass 175 tests in 4.92 seconds and broader focused suites
+pass 278 in 22.53 seconds; Ruff/format/mypy pass. Raw logs:
+`/tmp/qf-w43-s1-xs-wf-primary-order-green.log` and
+`/tmp/qf-w43-s1-xs-wf-primary-order-focused-green.log`.
+Refreshed primary AST, exact three payloads and all ten core hashes pass.
+
+All 25 current cross-sectional pool rows pass construction and full JSON
+roundtrip; source SHA256 remains
+`4c3a79182a923cbe98c270e693beea2175be3acc0337f8277e7d968b67a10ee1`.
+This is compatibility evidence, not validation of those historical observations.
+Receipt: `/tmp/qf-w43-s1-xs-wf-pool-compatibility.json`.
+Final source SHA256:
+`e8c5e113853b98a178c0b51e8d980efae2619e3a7778d86397c1f50205b7800e`.
+Independent final research review approved all seven paths, reran all 39 new
+cases and checked a separate hand-calculated two-window oracle: selected
+configs [0,1], paired benchmark mean 1.79512050490173 versus whole-history
+benchmark Sharpe 1.2591025250114283. Refreshed review reran all 175 count/new
+tests in 3.58 seconds and reversed only the block relocation in memory to
+recover the previously reviewed source hash exactly. Fresh foreground `make check-all PYTEST_WORKERS=4` completed successfully:
+13,054 backend tests (97.40% coverage), 438 frontend tests (97.69% statements),
+lint, formatting and strict typing green. All checks closed. Full-gate log:
+`/tmp/qf-w43-s1-check321-final.log`. This completes backend walk-forward
+measurement; purged evaluation and API/dashboard publication remain open.

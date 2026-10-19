@@ -43,8 +43,8 @@ class Trial(BaseModel):
     n_evaluated_configs: int = Field(default=1, ge=1)
     # ADR-038: mean out-of-sample Sharpe across the walk-forward windows — a prequential view
     # of the SELECTION procedure, independent of the locked holdout. Nullable + defaulted so the
-    # experiments already in the pool deserialize, and so a producer that computed no
-    # walk-forward (the cross-sectional search) reports "not measured" rather than 0.0.
+    # experiments already in the pool deserialize, and so any producer that computed no
+    # walk-forward reports "not measured" rather than 0.0 (new panel producers: ADR-321).
     walk_forward_oos_sharpe: float | None = Field(default=None, allow_inf_nan=False)
     # ADR-039: mean out-of-sample Sharpe across the PURGED folds. Kept separate from
     # walk_forward_oos_sharpe on purpose — the two answer different questions (causal

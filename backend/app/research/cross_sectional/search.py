@@ -1,5 +1,6 @@
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
+from typing import Literal
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -45,7 +46,7 @@ from app.validation.parameter_stability import parameter_stability
 from app.validation.pbo import probability_of_backtest_overfitting
 from app.validation.purged_cv import purged_kfold_splits
 from app.validation.report import ValidationReport
-from app.validation.walk_forward import walk_forward_splits
+from app.validation.walk_forward import walk_forward_evaluate, walk_forward_splits
 
 _MIN_CONFIGS_FOR_PBO = 2
 _DAYS_PER_YEAR = 365.25
@@ -87,6 +88,18 @@ class CrossSectionalExperiment(BaseModel):
     # ADR-142: exact panel-projected non-price inputs; None retains legacy/unsupplied semantics.
     value_scores: Mapping[str, float] | None = None
     quality_scores: Mapping[str, float] | None = None
+    # ADR-321: compact, paired family-local continuation evidence. Legacy rows are not backfilled.
+    walk_forward_method: Literal["family-walk-forward-equal-weight-continuation-v1"] | None = None
+    walk_forward_hold_sharpe: float | None = Field(default=None, allow_inf_nan=False)
+    walk_forward_n_bars: int | None = None
+    walk_forward_n_splits: int | None = None
+
+    @field_validator("walk_forward_n_bars", "walk_forward_n_splits", mode="before")
+    @classmethod
+    def _validate_walk_forward_count(cls, value: object) -> int | None:
+        if value is None:
+            return None
+        return require_trial_count(value, minimum=1, parameter="walk_forward geometry")
 
     @field_serializer("value_scores", "quality_scores")
     def _serialize_score_snapshot(
@@ -216,6 +229,29 @@ class CrossSectionalExperiment(BaseModel):
             raise ValueError("lifetime_trials must cover the recorded evaluated configurations")
         return self
 
+    @model_validator(mode="after")
+    def _validate_walk_forward_evidence(self) -> "CrossSectionalExperiment":
+        evidence = (
+            self.walk_forward_hold_sharpe,
+            self.walk_forward_n_bars,
+            self.walk_forward_n_splits,
+        )
+        if self.walk_forward_method is None:
+            if any(value is not None for value in evidence):
+                raise ValueError("walk-forward pairing and geometry require a method")
+            return self
+        if not self.trials or any(trial.walk_forward_oos_sharpe is None for trial in self.trials):
+            raise ValueError("measured walk-forward requires every family mean and nonempty trials")
+        if (
+            self.walk_forward_hold_sharpe is None
+            or self.walk_forward_n_bars is None
+            or self.walk_forward_n_splits is None
+        ):
+            raise ValueError("measured walk-forward requires paired benchmark and geometry")
+        if self.walk_forward_n_bars < self.walk_forward_n_splits + 1:
+            raise ValueError("walk-forward bars must be >= splits + 1")
+        return self
+
 
 def _trial_params(params: Params, quantile: float) -> dict[str, float | int]:
     """Record the searched quantile alongside the signal params, so a finalist is fully specified."""
@@ -252,25 +288,38 @@ def _build_report(
     walk_forward_count: int,
     purged_folds: int,
     embargo: int,
+    benchmark: npt.NDArray[np.float64] | None = None,
 ) -> ValidationReport:
     """Assemble a ValidationReport from the (T, N) matrix of a strategy's per-config portfolio
     returns — the same primitives ValidationEngine uses, only the inputs are portfolio series
     instead of one config's series. Regime breakdown is omitted (there is no single market close
-    for a dollar-neutral portfolio); the gate does not use it."""
+    for a dollar-neutral portfolio); the gate does not use it. Walk-forward is family-local
+    fixed-config continuation (ADR-321), with no whole-search winning-family or switching-account
+    claim. Its equal-weight universe benchmark has no additional turnover-cost model."""
     pbo = probability_of_backtest_overfitting(matrix, pbo_splits)
     best = int(np.argmax(sharpes))
     observed = float(sharpes[best])
     sr_std = max(float(np.std(sharpes, ddof=1)), 1e-6)
     deflated = deflated_sharpe(observed, n_trials=matrix.shape[1], sr_std=sr_std)
     stability = parameter_stability(sharpes).stability_score
+    walk_forward = walk_forward_evaluate(
+        matrix, walk_forward_splits(n_obs, walk_forward_count), benchmark=benchmark
+    )
     return ValidationReport(
         strategy_name=name,
         observed_sharpe=observed,
         deflated_sharpe=deflated,
         pbo=pbo,
         parameter_stability_score=stability,
-        n_walk_forward_splits=len(walk_forward_splits(n_obs, walk_forward_count)),
+        n_walk_forward_splits=walk_forward.n_splits,
         n_purged_folds=len(purged_kfold_splits(n_obs, purged_folds, embargo)),
+        walk_forward=walk_forward,
+        flags=[
+            "Family-local walk-forward: whole-search winning-family selection is not walked forward.",
+            "Fixed-config continuation includes internal costs, not account entry/switching trades.",
+            "Static fundamental snapshots are conditional inputs, not point-in-time history.",
+            "Purged CV not measured; fold count describes geometry only.",
+        ],
     )
 
 
@@ -340,6 +389,7 @@ def run_cross_sectional_search(
     )
     names = list(strategy_names) if strategy_names is not None else list(registry)
     in_sample, holdout = split_panel_holdout(prices)
+    walk_forward_benchmark = asset_returns(in_sample).mean(axis=1).to_numpy()
 
     full_families: dict[str, list[_Config]] = {}
     for name in sorted(set(names)):
@@ -374,6 +424,7 @@ def run_cross_sectional_search(
             walk_forward_count=walk_forward_count,
             purged_folds=purged_folds,
             embargo=embargo,
+            benchmark=walk_forward_benchmark,
         )
         best_i = int(np.argmax(sharpes))
         best_params, best_quantile = configs[best_i]
@@ -393,6 +444,9 @@ def run_cross_sectional_search(
                 pbo=report.pbo,
                 parameter_stability_score=report.parameter_stability_score,
                 n_evaluated_configs=len(configs),
+                walk_forward_oos_sharpe=report.walk_forward.mean_oos_sharpe
+                if report.walk_forward is not None
+                else None,
                 ic=summarize_ic(rank_ic(finalist_signal, in_sample)),
             )
         )
@@ -434,6 +488,20 @@ def run_cross_sectional_search(
     )
     strategy, params, quantile = finalists[best_idx]
 
+    paired_walk_forward = reports[0].walk_forward
+    if paired_walk_forward is None or paired_walk_forward.mean_oos_hold_sharpe is None:
+        raise ValueError("walk-forward measurement requires a paired benchmark")
+    for report in reports:
+        measured = report.walk_forward
+        if (
+            measured is None
+            or measured.n_splits != paired_walk_forward.n_splits
+            or [(split.n_train, split.n_test) for split in measured.splits]
+            != [(split.n_train, split.n_test) for split in paired_walk_forward.splits]
+            or measured.mean_oos_hold_sharpe != paired_walk_forward.mean_oos_hold_sharpe
+        ):
+            raise ValueError("walk-forward families must share evaluated geometry and benchmark")
+
     holdout_score = _score_holdout(strategy, params, quantile, prices, holdout, cost_rate)
     gate_result = GraduationGate().evaluate(
         report=best_report,
@@ -465,4 +533,8 @@ def run_cross_sectional_search(
         rationale=rationale,
         value_scores=frozen_value_scores,
         quality_scores=frozen_quality_scores,
+        walk_forward_method="family-walk-forward-equal-weight-continuation-v1",
+        walk_forward_hold_sharpe=paired_walk_forward.mean_oos_hold_sharpe,
+        walk_forward_n_bars=len(in_sample),
+        walk_forward_n_splits=paired_walk_forward.n_splits,
     )
