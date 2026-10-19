@@ -589,6 +589,16 @@ ValidationEngine already has backtest-calendar mitigation; no affected productio
 result is established. Source value/provenance and executable-account claims
 remain separate; report schemas, thresholds, search identity and v14 stay.
 
+ADR-320 / FINDING-271 refuses native matched strategy returns <=-1 immediately
+after alignment and before regime calculations. Two negative gross factors
+could otherwise publish +100%/+300% and survive report-entry validation despite
+intermediate negative wealth. Original window/calendar precedence, unmatched
+unsafe rows, empty/disjoint inputs and every solvent numerical operation stay.
+This is a scored-factor domain, not liquidation or an executable switching
+account; native product/projection, source-value and market-price limits remain
+separate. Normal engine wealth checks mitigate its current route, with no
+affected production result established. No schema/threshold/search/v14 change.
+
 ---
 
 ## 6. Rank information coefficient (cross-sectional only)

@@ -22,6 +22,8 @@ def analyze_regimes(
     alignment. Both original source indexes must be unique and ascending. Zero
     retains the degenerate all-bull partition on finite positive prices. Source
     provenance, cadence and executable switching accounts remain separate.
+    Matched strategy returns at or below -1 refuse before any regime scoring;
+    unmatched rows and native product/projection limitations remain separate.
 
     Notes:
         Each bar is labelled by the sign of the market's trailing ``window`` return: "bull"
@@ -33,6 +35,8 @@ def analyze_regimes(
         if not source.index.is_unique or not source.index.is_monotonic_increasing:
             raise ValueError("regime source indexes must be unique and ascending")
     strat, market = strategy_returns.align(market_prices, join="inner")
+    if (strat <= -1.0).any():
+        raise ValueError("matched regime returns must stay above -1")
     trailing = market.pct_change(window)
     regime = pd.Series("bull", index=strat.index)
     regime[trailing < 0] = "bear"
