@@ -563,6 +563,20 @@ a search; primary gate-bearing results stay exact on measurable controls.
 
 Purged CV remains null with geometry-only counts; its dependency/embargo design is
 separate. FINDING-265 remains open for purged evaluation and its dependency/embargo design.
+
+FINDING-272 qualifies that prospective design: nominal expression windows do not
+certify exact computational source isolation for shipped low-volatility and
+risk-adjusted-momentum factors. A deterministic old-price perturbation changes
+late signals and ranked portfolio turnover despite identical complete nominal
+price windows. This is consistent with rolling numerical state, not a proof of
+compiled internals or arbitrary-length influence. It establishes neither future
+leakage nor an incorrect existing cross-sectional PCV score. Before integration,
+a separate ADR must choose and disclose nominal-support isolation, audited local
+arithmetic, or restricted-family support; none is adopted by this evidence note.
+Hidden defaults and combined windows require operator-chain analysis, and paired
+benchmarks must follow each family's actual kept folds. Static snapshots retain
+their point-in-time limitation. Factor arithmetic and identities stay unchanged.
+
 ADR-322 publishes these exact persisted fields through the read-only API and panel,
 validating complete measured metadata at the wire boundary. Missing scores remain
 not measured; historical method-null scalars display as legacy, unpaired, without
