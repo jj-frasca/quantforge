@@ -348,3 +348,101 @@ test('band transport preserves values without shadow scientific validation', () 
     cells: [{ ...referenceCell, band_reference: bandReference, half_life: -1, deviation_share: 2 }] })
     .cells[0]).toMatchObject({ band_reference: bandReference, half_life: -1, deviation_share: 2 })
 })
+
+
+// ADR-322: attribution and pairing are part of the wire contract, not inferred from scores.
+const measuredCrossSectional = {
+  created_at: '2026-10-19T10:00:00Z',
+  universe_size: 3,
+  graduated: false,
+  trials: [0, -0.37].map((score, index) => ({
+    strategy_name: `family_${index}`,
+    observed_sharpe: 0.5,
+    deflated_sharpe: -0.08,
+    pbo: 0.44,
+    parameter_stability_score: 0.22,
+    walk_forward_oos_sharpe: score,
+  })),
+  walk_forward_method: 'family-walk-forward-equal-weight-continuation-v1',
+  walk_forward_hold_sharpe: -0.12,
+  walk_forward_n_bars: 60,
+  walk_forward_n_splits: 3,
+}
+
+test('cross-sectional attribution preserves paired scores, zero and actual geometry', () => {
+  const parsed = crossSectionalResponseSchema.parse(measuredCrossSectional)
+  expect(parsed).toEqual(measuredCrossSectional)
+})
+
+test.each([undefined, null])('cross-sectional legacy metadata %s preserves an unpaired scalar', (method) => {
+  const legacy = {
+    ...measuredCrossSectional,
+    walk_forward_method: method,
+    walk_forward_hold_sharpe: null,
+    walk_forward_n_bars: null,
+    walk_forward_n_splits: null,
+  }
+  expect(crossSectionalResponseSchema.parse(legacy)).toEqual(legacy)
+})
+
+test.each([
+  { walk_forward_method: 'unknown' },
+  { walk_forward_hold_sharpe: null },
+  { walk_forward_hold_sharpe: undefined },
+  { walk_forward_hold_sharpe: Infinity },
+  { walk_forward_hold_sharpe: NaN },
+  { walk_forward_n_bars: null },
+  { walk_forward_n_bars: undefined },
+  { walk_forward_n_bars: true },
+  { walk_forward_n_bars: 60.5 },
+  { walk_forward_n_bars: Infinity },
+  { walk_forward_n_bars: Number.MAX_SAFE_INTEGER + 1 },
+  { walk_forward_n_bars: 3 },
+  { walk_forward_n_splits: null },
+  { walk_forward_n_splits: undefined },
+  { walk_forward_n_splits: false },
+  { walk_forward_n_splits: 1.5 },
+  { walk_forward_n_splits: 0 },
+  { walk_forward_n_splits: -1 },
+  { walk_forward_n_splits: Number.MAX_SAFE_INTEGER + 1 },
+  { trials: [] },
+])('cross-sectional measured contract refuses malformed metadata %j', (patch) => {
+  expect(crossSectionalResponseSchema.safeParse({ ...measuredCrossSectional, ...patch }).success).toBe(false)
+})
+
+test.each([undefined, null, NaN, Infinity, -Infinity])(
+  'cross-sectional measured contract refuses missing/nonfinite family mean %s',
+  (score) => {
+    const trials = measuredCrossSectional.trials.map((trial, index) =>
+      index === 1 ? { ...trial, walk_forward_oos_sharpe: score } : trial,
+    )
+    expect(crossSectionalResponseSchema.safeParse({ ...measuredCrossSectional, trials }).success).toBe(false)
+  },
+)
+
+test.each(['walk_forward_hold_sharpe', 'walk_forward_n_bars', 'walk_forward_n_splits'] as const)(
+  'cross-sectional legacy contract refuses orphan %s',
+  (field) => {
+    const legacy = {
+      ...measuredCrossSectional,
+      walk_forward_method: null,
+      walk_forward_hold_sharpe: null,
+      walk_forward_n_bars: null,
+      walk_forward_n_splits: null,
+      [field]: measuredCrossSectional[field],
+    }
+    expect(crossSectionalResponseSchema.safeParse(legacy).success).toBe(false)
+  },
+)
+
+test.each([Infinity, -Infinity, NaN])('cross-sectional legacy scalar must also be finite: %s', (score) => {
+  const legacy = {
+    ...measuredCrossSectional,
+    walk_forward_method: null,
+    walk_forward_hold_sharpe: null,
+    walk_forward_n_bars: null,
+    walk_forward_n_splits: null,
+    trials: [{ ...measuredCrossSectional.trials[0], walk_forward_oos_sharpe: score }],
+  }
+  expect(crossSectionalResponseSchema.safeParse(legacy).success).toBe(false)
+})

@@ -477,6 +477,27 @@ parameter today. Reading them together is the fastest way to understand what the
   Null means no finalist in the pool carries a probability yet.
 - `/cross-sectional` returns `None` (JSON `null`) when the pool has no entry yet — an honest
   "nothing searched", distinct from an empty result.
+  ADR-322 adds nullable trial `walk_forward_oos_sharpe` and experiment
+  `walk_forward_method`, `walk_forward_hold_sharpe`, `walk_forward_n_bars` and
+  `walk_forward_n_splits`, projected exactly from the stored ADR-321 evidence.
+  The recognized method is `family-walk-forward-equal-weight-continuation-v1`.
+  It requires nonempty trials, every finite family mean, a finite common benchmark
+  and positive original nonboolean integral geometry with bars >= splits+1.
+  Method-null legacy rows may carry unpaired trial scalars, but no new paired
+  benchmark/geometry; absent method or score is not inferred or backfilled.
+  Source experiments reconstruct before projection, and the public view/client
+  validate structural metadata integrity without recomputing graduation.
+  The panel shows an equal mean of family window Sharpes and the equal mean of
+  the same-window equal-weight universe benchmark Sharpes, plus actual search
+  bars/windows. Null reads "not measured"; method-null nonnull means explicitly
+  read "legacy, unpaired" without a paired caption. Existing metrics/IC and
+  server-issued verdicts remain unchanged. Each family's config selection is
+  train-only; the overall family winner still uses the complete search sample.
+  Continued config scores retain internal costs without reconciling account
+  entry/switching trades, and the benchmark adds no turnover-cost model. Static
+  fundamental inputs remain supplied snapshots, not historical point-in-time
+  evidence. These means are not Sharpe on a stitched policy. Purged CV remains
+  not measured, without invented historical fold counts or panel calibration.
 
 **Frontend contract:** every one of these is parsed through a Zod schema in
 `frontend/src/types/lab.ts` at the boundary. Never re-derive or re-validate a backend-computed

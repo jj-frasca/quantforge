@@ -340,3 +340,24 @@ test.each([
   server.use(http.get(`/api/v1/${endpoint}`, () => HttpResponse.json([{ ...measured, compatibility: { ...metadata, status: 'CURRENT' } }])))
   await expect(request()).rejects.toThrow()
 })
+
+
+test('requestCrossSectional preserves attributed measurement through the real boundary', async () => {
+  const measured = {
+    created_at: '2026-10-19T10:00:00Z', universe_size: 3, graduated: false,
+    trials: [{ strategy_name: 'xs_momentum', observed_sharpe: 0.5, deflated_sharpe: -0.08,
+      pbo: 0.44, parameter_stability_score: 0.22, walk_forward_oos_sharpe: 0 }],
+    walk_forward_method: 'family-walk-forward-equal-weight-continuation-v1',
+    walk_forward_hold_sharpe: -0.12, walk_forward_n_bars: 60, walk_forward_n_splits: 3,
+  }
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json(measured)))
+  await expect(requestCrossSectional()).resolves.toEqual(measured)
+})
+
+test('requestCrossSectional rejects partial attributed metadata rather than dropping it', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({
+    created_at: '2026-10-19T10:00:00Z', universe_size: 3, graduated: false,
+    trials: [], walk_forward_method: 'family-walk-forward-equal-weight-continuation-v1',
+  })))
+  await expect(requestCrossSectional()).rejects.toThrow()
+})

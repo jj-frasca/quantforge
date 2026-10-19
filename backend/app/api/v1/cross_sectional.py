@@ -1,12 +1,13 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.research.cross_sectional.search import CrossSectionalExperiment
 from app.research.cross_sectional.store import JsonFileCrossSectionalStore
+from app.research.trial_counts import require_trial_count
 
 router = APIRouter(tags=["cross-sectional"])
 
@@ -21,7 +22,7 @@ def get_pool_path() -> Path:
 class CrossSectionalTrialView(BaseModel):
     """One strategy's finalist in a cross-sectional hunt — the ranking metrics the dashboard shows."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     strategy_name: str
     observed_sharpe: float
@@ -32,6 +33,7 @@ class CrossSectionalTrialView(BaseModel):
     # carrying the P&L. None for trials recorded before ADR-035: not measured, not zero.
     ic_mean: float | None = None
     ic_t_stat: float | None = None
+    walk_forward_oos_sharpe: float | None = Field(default=None, allow_inf_nan=False)
 
 
 class CrossSectionalView(BaseModel):
@@ -39,7 +41,7 @@ class CrossSectionalView(BaseModel):
     universe size. A per-strategy/universe record, not per-symbol — so it stands apart from the
     single-name leaderboard."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
     created_at: datetime
     universe_size: int
@@ -47,9 +49,45 @@ class CrossSectionalView(BaseModel):
     graduated: bool
     graduate_holdout_sharpe: float | None
     trials: list[CrossSectionalTrialView]
+    # ADR-322: publish compact stored evidence, never infer attribution for legacy scalars.
+    walk_forward_method: Literal["family-walk-forward-equal-weight-continuation-v1"] | None = None
+    walk_forward_hold_sharpe: float | None = Field(default=None, allow_inf_nan=False)
+    walk_forward_n_bars: int | None = None
+    walk_forward_n_splits: int | None = None
+
+    @field_validator("walk_forward_n_bars", "walk_forward_n_splits", mode="before")
+    @classmethod
+    def _validate_walk_forward_count(cls, value: object) -> int | None:
+        if value is None:
+            return None
+        return require_trial_count(value, minimum=1, parameter="walk_forward geometry")
+
+    @model_validator(mode="after")
+    def _validate_walk_forward_evidence(self) -> "CrossSectionalView":
+        evidence = (
+            self.walk_forward_hold_sharpe,
+            self.walk_forward_n_bars,
+            self.walk_forward_n_splits,
+        )
+        if self.walk_forward_method is None:
+            if any(value is not None for value in evidence):
+                raise ValueError("walk-forward pairing and geometry require a method")
+            return self
+        if not self.trials or any(trial.walk_forward_oos_sharpe is None for trial in self.trials):
+            raise ValueError("measured walk-forward requires every family mean and nonempty trials")
+        if (
+            self.walk_forward_hold_sharpe is None
+            or self.walk_forward_n_bars is None
+            or self.walk_forward_n_splits is None
+        ):
+            raise ValueError("measured walk-forward requires paired benchmark and geometry")
+        if self.walk_forward_n_bars < self.walk_forward_n_splits + 1:
+            raise ValueError("walk-forward bars must be >= splits + 1")
+        return self
 
 
 def _view(experiment: CrossSectionalExperiment) -> CrossSectionalView:
+    experiment = CrossSectionalExperiment.model_validate(experiment.model_dump(round_trip=True))
     return CrossSectionalView(
         created_at=experiment.created_at,
         universe_size=len(experiment.universe_symbols),
@@ -58,6 +96,10 @@ def _view(experiment: CrossSectionalExperiment) -> CrossSectionalView:
         graduate_holdout_sharpe=(
             experiment.graduate.holdout_sharpe if experiment.graduate else None
         ),
+        walk_forward_method=experiment.walk_forward_method,
+        walk_forward_hold_sharpe=experiment.walk_forward_hold_sharpe,
+        walk_forward_n_bars=experiment.walk_forward_n_bars,
+        walk_forward_n_splits=experiment.walk_forward_n_splits,
         trials=[
             CrossSectionalTrialView(
                 strategy_name=t.strategy_name,
@@ -67,6 +109,7 @@ def _view(experiment: CrossSectionalExperiment) -> CrossSectionalView:
                 parameter_stability_score=t.parameter_stability_score,
                 ic_mean=t.ic.mean if t.ic else None,
                 ic_t_stat=t.ic.t_stat if t.ic else None,
+                walk_forward_oos_sharpe=t.walk_forward_oos_sharpe,
             )
             for t in experiment.trials
         ],

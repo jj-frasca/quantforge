@@ -1,4 +1,4 @@
-import { screen, waitForElementToBeRemoved } from '@testing-library/react'
+import { screen, waitForElementToBeRemoved, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 
 import { server } from '../../test/server'
@@ -97,4 +97,77 @@ test('shows the rank IC per trial, and "not measured" for a pre-ADR-035 trial', 
   expect(screen.getByRole('cell', { name: '3.4' })).toBeInTheDocument()
   // xs_reversal carries no IC: it must read as absent, never as 0.
   expect(screen.getAllByRole('cell', { name: '—' })).toHaveLength(2)
+})
+
+
+const measuredView = {
+  ...view,
+  walk_forward_method: 'family-walk-forward-equal-weight-continuation-v1',
+  walk_forward_hold_sharpe: -0.12,
+  walk_forward_n_bars: 60,
+  walk_forward_n_splits: 3,
+  trials: view.trials.map((trial, index) => ({
+    ...trial, walk_forward_oos_sharpe: index === 0 ? 0 : -0.37,
+  })),
+}
+
+test('shows attributed family window means with the paired benchmark and actual geometry', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json(measuredView)))
+  renderWithClient(<CrossSectionalPanel />)
+  const momentum = (await screen.findByRole('cell', { name: 'xs_momentum' })).closest('tr')!
+  const reversal = screen.getByRole('cell', { name: 'xs_reversal' }).closest('tr')!
+  expect(screen.getByRole('columnheader', { name: 'Walk-forward mean Sharpe' })).toBeInTheDocument()
+  expect(within(momentum).getByRole('cell', { name: '0.00' })).toBeInTheDocument()
+  expect(within(reversal).getByRole('cell', { name: '-0.37' })).toBeInTheDocument()
+  expect(screen.getByText(/equal mean of same-window equal-weight universe benchmark Sharpes: -0.12/i)).toBeInTheDocument()
+  expect(screen.getByText(/60 search bars · 3 windows/i)).toBeInTheDocument()
+  expect(screen.queryByText(/family-walk-forward-equal-weight-continuation-v1/)).not.toBeInTheDocument()
+})
+
+test('shows missing family scores as not measured without inventing pairing or geometry', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({
+    ...view, trials: view.trials.map((trial, index) => ({
+      ...trial, ...(index === 0 ? { walk_forward_oos_sharpe: null } : {}),
+    })),
+  })))
+  renderWithClient(<CrossSectionalPanel />)
+  await screen.findByRole('cell', { name: 'xs_momentum' })
+  expect(screen.getAllByRole('cell', { name: 'not measured' })).toHaveLength(2)
+  expect(screen.queryByText(/same-window equal-weight universe benchmark Sharpes/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/search bars ·/i)).not.toBeInTheDocument()
+})
+
+test('labels method-null scalar as legacy, unpaired without a paired benchmark caption', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({
+    ...view, walk_forward_method: null,
+    trials: view.trials.map((trial) => ({ ...trial, walk_forward_oos_sharpe: -0.42 })),
+  })))
+  renderWithClient(<CrossSectionalPanel />)
+  await screen.findByRole('cell', { name: 'xs_momentum' })
+  expect(screen.getAllByRole('cell', { name: '-0.42 · legacy, unpaired' })).toHaveLength(2)
+  expect(screen.queryByText(/same-window equal-weight universe benchmark Sharpes/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/search bars ·/i)).not.toBeInTheDocument()
+})
+
+test('keeps family selection, account costs, static snapshots and unmeasured purged CV visible', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json(measuredView)))
+  renderWithClient(<CrossSectionalPanel />)
+  await screen.findByRole('cell', { name: 'xs_momentum' })
+  expect(screen.getByText(/within each family uses earlier training rows/i)).toBeInTheDocument()
+  expect(screen.getByText(/winning family uses the complete search sample/i)).toBeInTheDocument()
+  expect(screen.getByText(/continued configurations include internal costs/i)).toBeInTheDocument()
+  expect(screen.getByText(/account entry and switching trades are not reconciled/i)).toBeInTheDocument()
+  expect(screen.getByText(/benchmark adds no turnover-cost model/i)).toBeInTheDocument()
+  expect(screen.getByText(/static snapshots, not historical point-in-time/i)).toBeInTheDocument()
+  expect(screen.getByText(/equal means of window Sharpes, not Sharpe on stitched policy returns/i)).toBeInTheDocument()
+  expect(screen.getByText(/Purged CV: not measured/i)).toBeInTheDocument()
+})
+
+test('malformed attributed metadata reaches the existing error state', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({
+    ...measuredView, walk_forward_hold_sharpe: null,
+  })))
+  renderWithClient(<CrossSectionalPanel />)
+  expect(await screen.findByRole('alert')).toHaveTextContent(/could not load the cross-sectional hunt/i)
+  expect(screen.queryByRole('cell', { name: 'xs_momentum' })).not.toBeInTheDocument()
 })

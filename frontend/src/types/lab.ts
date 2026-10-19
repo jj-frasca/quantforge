@@ -81,6 +81,7 @@ export const crossSectionalTrialSchema = z.object({
   parameter_stability_score: z.number(),
   ic_mean: z.number().nullable().optional(),
   ic_t_stat: z.number().nullable().optional(),
+  walk_forward_oos_sharpe: z.number().finite().nullable().optional(),
 })
 
 export type CrossSectionalTrial = z.infer<typeof crossSectionalTrialSchema>
@@ -92,6 +93,46 @@ export const crossSectionalViewSchema = z.object({
   graduated: z.boolean(),
   graduate_holdout_sharpe: z.number().nullable().optional(),
   trials: z.array(crossSectionalTrialSchema),
+  walk_forward_method: z
+    .literal('family-walk-forward-equal-weight-continuation-v1')
+    .nullable()
+    .optional(),
+  walk_forward_hold_sharpe: z.number().finite().nullable().optional(),
+  // z.int() also refuses integers outside JavaScript's safe representable range.
+  walk_forward_n_bars: z.int().positive().nullable().optional(),
+  walk_forward_n_splits: z.int().positive().nullable().optional(),
+}).superRefine((view, ctx) => {
+  const pairing = [
+    view.walk_forward_hold_sharpe,
+    view.walk_forward_n_bars,
+    view.walk_forward_n_splits,
+  ]
+  if (view.walk_forward_method == null) {
+    if (pairing.some((value) => value != null)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Legacy walk-forward scores cannot carry pairing metadata',
+      })
+    }
+    return
+  }
+  if (
+    view.trials.length === 0 ||
+    view.trials.some((trial) => trial.walk_forward_oos_sharpe == null) ||
+    pairing.some((value) => value == null)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Attributed walk-forward measurement requires all family means, benchmark and geometry',
+    })
+  }
+  if (
+    view.walk_forward_n_bars != null &&
+    view.walk_forward_n_splits != null &&
+    view.walk_forward_n_bars <= view.walk_forward_n_splits
+  ) {
+    ctx.addIssue({ code: 'custom', message: 'Walk-forward bars must exceed the number of windows' })
+  }
 })
 
 export type CrossSectionalView = z.infer<typeof crossSectionalViewSchema>

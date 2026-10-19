@@ -49,6 +49,13 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
           <> · holdout Sharpe {fmt(view.graduate_holdout_sharpe)}</>
         )}
       </p>
+      {view.walk_forward_method != null && (
+        <p className="section-lede">
+          Family walk-forward: equal mean of same-window equal-weight universe benchmark Sharpes:{' '}
+          {fmt(view.walk_forward_hold_sharpe!)} · {view.walk_forward_n_bars} search bars ·{' '}
+          {view.walk_forward_n_splits} windows. Selection within each family uses earlier training rows.
+        </p>
+      )}
       <div className="table-scroll">
         <table className="lab-table cross-sectional-table">
           <thead>
@@ -58,6 +65,7 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
               <th>Deflated Sharpe</th>
               <th>PBO</th>
               <th>Parameter stability</th>
+              <th>Walk-forward mean Sharpe</th>
               <th>Mean rank IC</th>
               <th>IC t-stat</th>
             </tr>
@@ -73,6 +81,11 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
                 <td>{fmt(trial.deflated_sharpe)}</td>
                 <td>{fmtPct(trial.pbo)}</td>
                 <td>{fmtPct(trial.parameter_stability_score)}</td>
+                <td>
+                  {trial.walk_forward_oos_sharpe == null
+                    ? 'not measured'
+                    : `${fmt(trial.walk_forward_oos_sharpe)}${view.walk_forward_method == null ? ' · legacy, unpaired' : ''}`}
+                </td>
                 <td>{fmtIc(trial.ic_mean, 3)}</td>
                 <td>{fmtIc(trial.ic_t_stat, 1)}</td>
               </tr>
@@ -80,6 +93,14 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
           </tbody>
         </table>
       </div>
+      <p className="section-lede">
+        Attributed walk-forward diagnostics are family-local: the winning family uses the complete
+        search sample. Continued
+        configurations include internal costs; account entry and switching trades are not reconciled.
+        The equal-weight universe benchmark adds no turnover-cost model. Supplied fundamental inputs
+        are static snapshots, not historical point-in-time information. Scores are equal means of
+        window Sharpes, not Sharpe on stitched policy returns. Purged CV: not measured.
+      </p>
     </div>
   )
 }

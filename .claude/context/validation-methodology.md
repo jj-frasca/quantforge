@@ -562,8 +562,12 @@ and no extra turnover-cost model. Measurement errors propagate and can now refus
 a search; primary gate-bearing results stay exact on measurable controls.
 
 Purged CV remains null with geometry-only counts; its dependency/embargo design is
-separate. FINDING-265 remains open for that evaluation and public publication.
-The reduced cross-sectional API/dashboard is unchanged by the backend slice.
+separate. FINDING-265 remains open for purged evaluation and its dependency/embargo design.
+ADR-322 publishes these exact persisted fields through the read-only API and panel,
+validating complete measured metadata at the wire boundary. Missing scores remain
+not measured; historical method-null scalars display as legacy, unpaired, without
+invented benchmark attribution. The panel states the family-selection, snapshot,
+continuation/account-cost and mean-window limitations above.
 Historical null stays unmeasured, never zero; longitudinal calibration does not
 certify this panel diagnostic. No selector, threshold or v14 change is made.
 

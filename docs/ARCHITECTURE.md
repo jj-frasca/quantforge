@@ -195,8 +195,10 @@ means include internal config costs without reconciling account switching trades
 the benchmark has no extra turnover-cost model. Unmeasurable diagnostics now refuse
 the search, while existing gate-bearing results remain on measurable controls.
 Purged CV still records geometry only and remains unmeasured pending dependency
-and embargo design. The reduced cross-sectional API/dashboard is unchanged in this
-backend slice. Longitudinal null/power evidence supplies no panel calibration.
+and embargo design. ADR-322 publishes the exact persisted scores, paired benchmark,
+method and geometry through the read-only API and existing panel. Missing scores
+read as not measured; historical method-null scalars are explicitly unpaired.
+Longitudinal null/power evidence supplies no panel calibration.
 
 **Those validation claims are now durable after construction (ADR-159).** The report, split/fold
 records, flags, interpretations, and regime map are defensively copied into immutable JSON-shaped

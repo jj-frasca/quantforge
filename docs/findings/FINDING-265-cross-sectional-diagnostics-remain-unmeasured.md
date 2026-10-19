@@ -2,8 +2,8 @@
 
 - **Date:** 2026-10-18
 - **Severity:** Medium — documentation overstates evaluation scope
-- **Status:** Open in part; ADR-321 adopts backend walk-forward measurement;
-  purged evaluation and public publication remain open
+- **Status:** Open in part; backend and public walk-forward measurement delivered
+  by ADR-321/322; purged evaluation and dependency/embargo design remain open
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
@@ -156,3 +156,75 @@ recover the previously reviewed source hash exactly. Fresh foreground `make chec
 lint, formatting and strict typing green. All checks closed. Full-gate log:
 `/tmp/qf-w43-s1-check321-final.log`. This completes backend walk-forward
 measurement; purged evaluation and API/dashboard publication remain open.
+
+## ADR-322 attributed public publication (2026-10-19)
+
+The follow-up adds exact stored family means, common paired benchmark, recognized
+method and actual search/split geometry to the latest-experiment read-only API.
+The source experiment reconstructs before projection. Public models and the
+existing client parser enforce coherent finite measured metadata without
+recomputing scores or graduation. Legacy null/omitted fields stay readable,
+and method-null nonnull family scalars remain explicitly legacy and unpaired.
+No method, benchmark, geometry or historical measurement is synthesized.
+
+The panel adds one mean walk-forward Sharpe column and a shared caption for the
+equal mean of same-window equal-weight universe benchmark Sharpes and actual
+search-bar/window counts. Missing means read not measured. Legacy unpaired
+scalars receive no paired caption or inferred excess. Visible qualifications
+retain whole-sample family winner selection, fixed-config continuation/internal
+costs without account entry/switch reconciliation, benchmark without extra
+turnover costs, static supplied fundamental snapshots without historical PIT,
+and equal means of window Sharpes rather than stitched-policy Sharpe. Purged CV
+still reads not measured, with no invented historical fold count.
+
+All 25 current primary API views were frozen before publication changes at
+`/tmp/qf-w43-s1-xs-api-primary-baseline.json`, SHA256
+`af477b989965986022dacde710e863d8ed9282fa2fa806c8a44d85d056fca36e`.
+The projection excludes only new diagnostic fields; twelve research modules,
+including the ADR-321 evaluator producer, are frozen for byte-preservation checks.
+
+Backend actual preimplementation RED observed 25 failures and 2 preserved
+controls in 2.79 seconds, with the production API diff empty. Frontend actual
+preimplementation RED observed 41 failures and 95 preserved controls before
+either runtime client file changed. Logs:
+`/tmp/qf-w43-s1-xs-wf-api-red.log` and
+`/tmp/qf-w43-s1-adr322-frontend-red.log`.
+
+Review found an additional boundary gap in the new, uncommitted public view:
+unchecked copies bypassed finite and original-count field checks when the root
+model trusted instantiated copies. A separate test-first slice observed four
+failures for NaN/infinite benchmark, floating bar count and boolean split count
+before adding only root-view `revalidate_instances="always"`. Nested trial views
+already revalidate. This is an implementation-time correction, with no released
+measurement affected. The supplementary RED log is
+`/tmp/qf-w43-s1-xs-wf-api-revalidate-red.log`.
+
+Final backend focused verification passes 87 tests including all 31 new API
+cases, with Ruff/format/mypy green. All 136 targeted frontend tests, ESLint and
+TypeScript pass. Parent independently reran the 136 frontend tests (2.66 seconds)
+and reviewed their rendered-value/legacy/error-state controls. Independent
+scientific review approved all twelve paths and independently reran the 31 new
+API cases (2.28 seconds). One stale active-document publication-open clause was
+corrected during review. Raw GREEN receipts:
+`/tmp/qf-w43-s1-xs-wf-api-revalidate-green.log`,
+`/tmp/qf-w43-s1-adr322-frontend-green.log` and
+`/tmp/qf-w43-s1-adr322-parent-frontend.log`.
+
+All 25 frozen primary API views remain exact after removing only the new fields;
+all twelve research modules retain their bytes, including the ADR-321 producer.
+Generated source bytes remain unchanged. Audit:
+`/tmp/qf-w43-s1-xs-publication-audit.py` and
+`/tmp/qf-w43-s1-xs-publication-audit-final.log`.
+Final API source SHA256:
+`80c0a9fdf95c46df01b538de7b2624d8d14db8d743623530c0b8eaa135913242`.
+Client schema SHA256:
+`a1cc418ac2ede8e8c7fab199ff1016d55443dab6ff5b2ca032021deb84597bfc`.
+Panel SHA256:
+`94751bdced8308e843fe2af88361f852998632a96aac11bc2c422b95e2febf2b`.
+Fresh foreground `make check-all PYTEST_WORKERS=4` completed successfully:
+13,085 backend tests (97.41% coverage), 479 frontend tests (97.72% statements),
+lint, formatting and strict typing green. All checks closed. Log:
+`/tmp/qf-w43-s1-check322.log`. This completes attributed public walk-forward
+publication; purged evaluation and its dependency/embargo design remain open.
+No evaluator, selector, threshold, accounting-v14, generated file, frozen cohort
+or workflow is changed by this publication slice.
