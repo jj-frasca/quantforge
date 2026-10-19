@@ -20,8 +20,10 @@ def parameter_stability(sharpes: list[float]) -> ParameterStability:
 
     Original observations must be nonboolean real scalars with finite Float64
     inspection, and converted evidence must be one-dimensional. Decimal and
-    coercible non-real objects are unsupported. Native reduction arithmetic
-    and finite projection precision are not certified by these input guards.
+    coercible non-real objects are unsupported. Native mean, sample STD and CV
+    must be finite before a summary is issued. Native warnings/raise exceptions
+    retain their behavior; underflow and finite projection precision remain
+    separate, without arithmetic recovery.
 
     Notes:
         A strategy whose Sharpe swings wildly with small parameter changes is likely overfit.
@@ -48,7 +50,11 @@ def parameter_stability(sharpes: list[float]) -> ParameterStability:
         raise ValueError("Sharpe observations must be one-dimensional")
     mean = float(arr.mean())
     std = float(arr.std(ddof=1))
+    if not math.isfinite(mean) or not math.isfinite(std):
+        raise ValueError("stability reductions must be finite")
     cv = std / (abs(mean) + 1e-9)
+    if not math.isfinite(cv):
+        raise ValueError("stability coefficient must be finite")
     return ParameterStability(
         mean_sharpe=mean,
         std_sharpe=std,

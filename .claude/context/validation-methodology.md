@@ -599,8 +599,22 @@ precedence and all existing numerical operations remain. Decimal and arbitrary
 coercible non-Real objects are intentionally unsupported; signed integers,
 Fraction, NumPy reals and one-dimensional real sequences retain the estimator.
 Native finite-input reduction overflow/underflow and finite projection precision
-remain separate. No production corruption is established; current callers build
-computed Sharpe lists. No threshold, search identity or accounting-v14 change.
+remain separate at that input boundary. No production corruption is established;
+current callers build computed Sharpe lists. No threshold, search identity or
+accounting-v14 change.
+
+ADR-324 / FINDING-274 separately refuses nonfinite native parameter-stability
+mean/sample STD and CV before issuing a summary. Finite observations could yield
+infinite dispersion yet a finite zero accepted by ValidationReport. Every original
+numerical expression, epsilon and clipped reciprocal remains. Under ignore/warn,
+nonfinite reductions now raise ValueError; native warnings still occur, and native
+raise-mode exceptions can preempt the guards unchanged. Caller NumPy state is not
+modified. This narrows the successful arithmetic domain without recovery or
+repricing accepted finite-intermediate estimates. No actual finite-STD/CVInf
+witness was established; the CV guard specifies finite coefficient evidence.
+Native underflow/zero dispersion, finite precision and direct dataclass construction
+remain separate. No production occurrence, false graduate or calibration impact
+is established; thresholds, schemas, search identity and v14 stay unchanged.
 
 ADR-318 / FINDING-269 requires original nonnegative nonboolean Integral regime
 horizons through the unchanged shared count helper, normalizing to Python int
