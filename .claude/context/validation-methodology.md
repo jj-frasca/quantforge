@@ -632,6 +632,21 @@ account; native product/projection, source-value and market-price limits remain
 separate. Normal engine wealth checks mitigate its current route, with no
 affected production result established. No schema/threshold/search/v14 change.
 
+
+ADR-323 / FINDING-273 validates nonempty matched regime market prices after the
+existing window/calendar/strategy-wealth guards and before pct_change. Real
+nonboolean numeric dtype and complete finite positive native values are required;
+object/Decimal/numeric-string containers are unsupported. Missing, zero and
+boolean market sources could otherwise issue finite all-bull evidence accepted
+by ValidationReport. Valid native/nullable numeric and extended-precision prices,
+zero horizons, genuine warmup-bull behavior, empty/disjoint and unmatched invalid
+numeric observations retain their behavior. Object dtype stays unsupported even
+when its matched leaves are numeric. No Float64 narrowing or source repair is
+added. Normal BacktestEngine already refuses the demonstrated malformed prices;
+no affected production report or false graduate is established. Derived trailing
+return arithmetic, provenance and complete-source policy remain separate. No
+schema, formula, threshold, search/accounting-v14 or generated-record change.
+
 ---
 
 ## 6. Rank information coefficient (cross-sectional only)

@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
+from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
 
 from app.research.backtesting.metrics import sharpe_ratio
 from app.research.trial_counts import require_trial_count
@@ -24,6 +26,9 @@ def analyze_regimes(
     provenance, cadence and executable switching accounts remain separate.
     Matched strategy returns at or below -1 refuse before any regime scoring;
     unmatched rows and native product/projection limitations remain separate.
+    Nonempty matched market prices require real nonboolean numeric dtype and
+    complete finite positive native values. Object containers are unsupported;
+    empty intersections and genuine valid-price warmup keep their behavior.
 
     Notes:
         Each bar is labelled by the sign of the market's trailing ``window`` return: "bull"
@@ -37,6 +42,15 @@ def analyze_regimes(
     strat, market = strategy_returns.align(market_prices, join="inner")
     if (strat <= -1.0).any():
         raise ValueError("matched regime returns must stay above -1")
+    if not market.empty:
+        if (
+            not is_numeric_dtype(market.dtype)
+            or is_bool_dtype(market.dtype)
+            or is_complex_dtype(market.dtype)
+        ):
+            raise ValueError("matched regime prices must contain real nonboolean numeric values")
+        if market.isna().any() or not np.isfinite(market).all() or (market <= 0.0).any():
+            raise ValueError("matched regime prices must be positive and finite")
     trailing = market.pct_change(window)
     regime = pd.Series("bull", index=strat.index)
     regime[trailing < 0] = "bear"
