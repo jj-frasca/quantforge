@@ -496,8 +496,23 @@ parameter today. Reading them together is the fastest way to understand what the
   Continued config scores retain internal costs without reconciling account
   entry/switching trades, and the benchmark adds no turnover-cost model. Static
   fundamental inputs remain supplied snapshots, not historical point-in-time
-  evidence. These means are not Sharpe on a stitched policy. Purged CV remains
-  not measured, without invented historical fold counts or panel calibration.
+  evidence. These means are not Sharpe on a stitched policy.
+  ADR-327 adds nullable trial `purged_cv_oos_sharpe` and `purged_diagnostic`,
+  projected exactly from reconstructed ADR-325 source evidence. The nested frozen
+  model publishes recognized method/status, reason, original search bars/requested
+  folds/floor, dependency rule/allocated lag, actual embargo/kept ordinals and
+  paired family means. Measured scalar equals its nested mean; current unsupported
+  and no-usable-fold states require null scores. Absent nested evidence stays
+  historical, permitting finite unpaired scalars without invented attribution.
+  Any current evidence requires complete same-request evidence across trials and
+  search-bar agreement with attributed WF. Family embargoes, kept sets and paired
+  benchmark means can differ. Original integral geometry validates without arrays.
+  Reduced wire views validate structural coherence; full source reconstruction
+  additionally checks finalist parameters and allocated dependency coverage.
+  This read-only API publication leaves the existing panel unchanged: its current
+  client strips these added fields, so PCV is still not published in that panel.
+  Later training is intentional, only the restricted direct-shift recipe is
+  supported, and no panel calibration or executable switching policy is implied.
 
 **Frontend contract:** every one of these is parsed through a Zod schema in
 `frontend/src/types/lab.ts` at the boundary. Never re-derive or re-validate a backend-computed

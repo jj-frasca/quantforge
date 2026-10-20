@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.research.cross_sectional.purged import PurgedDiagnostic
 from app.research.cross_sectional.search import CrossSectionalExperiment
 from app.research.cross_sectional.store import JsonFileCrossSectionalStore
 from app.research.trial_counts import require_trial_count
@@ -34,6 +35,18 @@ class CrossSectionalTrialView(BaseModel):
     ic_mean: float | None = None
     ic_t_stat: float | None = None
     walk_forward_oos_sharpe: float | None = Field(default=None, allow_inf_nan=False)
+    purged_cv_oos_sharpe: float | None = Field(default=None, allow_inf_nan=False)
+    purged_diagnostic: PurgedDiagnostic | None = None
+
+    @model_validator(mode="after")
+    def _validate_purged_evidence(self) -> "CrossSectionalTrialView":
+        evidence = self.purged_diagnostic
+        if evidence is None:
+            return self
+        expected = evidence.mean_oos_sharpe if evidence.status == "measured" else None
+        if self.purged_cv_oos_sharpe != expected:
+            raise ValueError("trial purged scalar must match current evidence status and mean")
+        return self
 
 
 class CrossSectionalView(BaseModel):
@@ -85,6 +98,24 @@ class CrossSectionalView(BaseModel):
             raise ValueError("walk-forward bars must be >= splits + 1")
         return self
 
+    @model_validator(mode="after")
+    def _validate_purged_evidence(self) -> "CrossSectionalView":
+        evidence = [trial.purged_diagnostic for trial in self.trials]
+        if not any(item is not None for item in evidence):
+            return self
+        if any(item is None for item in evidence):
+            raise ValueError("current purged evidence requires every family outcome")
+        first = evidence[0]
+        assert first is not None
+        request = (first.method, first.n_bars, first.requested_folds, first.floor)
+        for item in evidence:
+            assert item is not None
+            if (item.method, item.n_bars, item.requested_folds, item.floor) != request:
+                raise ValueError("purged families must carry the same request geometry")
+            if self.walk_forward_method is not None and item.n_bars != self.walk_forward_n_bars:
+                raise ValueError("purged bars must match attributed walk-forward bars")
+        return self
+
 
 def _view(experiment: CrossSectionalExperiment) -> CrossSectionalView:
     experiment = CrossSectionalExperiment.model_validate(experiment.model_dump(round_trip=True))
@@ -110,6 +141,8 @@ def _view(experiment: CrossSectionalExperiment) -> CrossSectionalView:
                 ic_mean=t.ic.mean if t.ic else None,
                 ic_t_stat=t.ic.t_stat if t.ic else None,
                 walk_forward_oos_sharpe=t.walk_forward_oos_sharpe,
+                purged_cv_oos_sharpe=t.purged_cv_oos_sharpe,
+                purged_diagnostic=t.purged_diagnostic,
             )
             for t in experiment.trials
         ],

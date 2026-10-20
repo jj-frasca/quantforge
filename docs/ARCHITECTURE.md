@@ -213,8 +213,14 @@ no embargo is reduced to fit. This is intentionally noncausal fold reselection,
 with existing internal costs and no account switching reconciliation or independent
 calibration claim. F272's rolling numerical-history limit remains, static maps
 are deferred, and source support does not prove independence or PIT availability.
-Public PCV fields/scores remain unpublished; the panel states that boundary.
-Thresholds, selection, longitudinal v14 and frozen/generated evidence stay.
+ADR-327 publishes the exact stored per-trial PCV scalar and nested status,
+method, geometry and family-specific paired means through the read-only API.
+Public views enforce scalar binding, complete same-request outcomes and attributed
+WF-bar agreement while full source reconstruction retains finalist/domain checks.
+Historical absence stays absent or unpaired. The existing panel does not yet
+consume the added fields and states that publication boundary. Unsupported-family
+measurement and panel publication remain open. Thresholds, selection, longitudinal
+v14 and frozen/generated evidence stay.
 
 **Those validation claims are now durable after construction (ADR-159).** The report, split/fold
 records, flags, interpretations, and regime map are defensively copied into immutable JSON-shaped

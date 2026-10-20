@@ -2,8 +2,9 @@
 
 - **Date:** 2026-10-18
 - **Severity:** Medium — documentation overstates evaluation scope
-- **Status:** Open in part; backend and public walk-forward measurement delivered
-  by ADR-321/322; purged evaluation and dependency/embargo design remain open
+- **Status:** Open in part; backend and public walk-forward delivered by ADR-321/322;
+  restricted purged measurement delivered by ADR-325 and API publication under
+  ADR-327. Unsupported-family measurement and panel publication remain open.
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
@@ -305,3 +306,43 @@ checking only the summed momentum lag admitted unshipped (lookback, skip) pairs
 three regression cases now require individual shipped lookback and skip membership
 as well as allocated-lag coverage. The producer already rejected these parameters.
 This was an uncommitted boundary defect, with no affected published result claimed.
+
+## ADR-327 attributed purged API publication (2026-10-20)
+
+The read-only endpoint now projects the exact stored inherited PCV scalar and
+frozen nested diagnostic per trial. Measured status carries its paired family
+means and actual retained-fold geometry; unsupported and no-usable-fold states
+carry their own explicit outcomes without fabricated scores. Historical absent
+evidence remains absent, permitting finite legacy unpaired scalars without
+invented method or benchmark attribution. Different families retain distinct
+embargoes, kept folds and paired means rather than receiving one common control.
+
+Public views bind the inherited scalar to the nested status/mean, require complete
+same-request evidence across families and agree with attributed WF search bars.
+The unchanged nested model validates original integral geometry without arrays.
+Full source reconstruction before projection retains stronger finalist-parameter
+and dependency-domain checks; the reduced wire schema alone cannot certify those
+omitted parameters or replay allocation. This publishes stored claims, without
+rerunning a search or proving independent scientific provenance.
+
+The existing panel does not consume the added fields and retains its accurate
+unpublished-in-this-panel caption. This closes API publication only; unsupported
+families and panel display remain open. All ADR-325 scientific limitations,
+including noncausal fold reselection, whole-sample family choice, internal costs
+without switching reconciliation, rolling history/PIT limits and absence of panel
+calibration, remain. No core estimator, threshold, v14, cohort or generated record
+changes. Verification receipts follow after the required gates.
+
+ADR-327 observed 32 failing tests and one passing control before runtime edits
+(API source diff empty). Final 129 focused endpoint/model tests passed; independent
+seven-path research/API review approved with 38 independently rerun tests. The 25
+frozen old API payloads remained exact after removing only the two additive trial
+fields. Whole prior API AST matched after removing the new import, fields,
+validators and projection keywords; research core and generated pool bytes stayed
+unchanged. Baseline SHA256:
+e50e52b108ad29c7b84ea7e2249a9796f973c6447a07bc88136e56d62604a383.
+Fresh foreground `make check-all PYTEST_WORKERS=2` passed 13,286 backend tests and 479
+frontend tests with lint, formatting, strict typing and coverage green
+(`/tmp/qf-w43-s6-check327.log`). API source SHA256:
+4b327ac707f319eff70c47d9712090120c95c1e66da76ef4a0375209061dbc29.
+All local verification closed before delivery; no methodology score was recomputed.

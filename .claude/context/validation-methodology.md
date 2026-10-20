@@ -597,11 +597,17 @@ selection is not measured. Source-operand
 separation does not establish independence, PIT universe availability or panel
 calibration. Existing gate-bearing results stay exact on measurable controls.
 
-The reduced API does not yet publish PCV evidence; the existing panel says these
-results are not published there. FINDING-265 remains open for unsupported-family
-measurement and attributed public PCV publication. Legacy geometry-only counts
-retain their historical meaning. No longitudinal v14, threshold, generated file
-or frozen calibration/cohort change.
+ADR-327 publishes the exact inherited PCV scalar and frozen per-trial diagnostic
+through the read-only API. Trial scalar/status binding, complete common request
+geometry and attributed WF-bar agreement also validate at the public view boundary.
+Family-specific embargoes, kept folds and benchmark means stay distinct. Full
+source reconstruction retains the stronger finalist/domain checks; reduced wire
+views establish structural coherence, not source provenance or allocated replay.
+Historical absent evidence remains null or unpaired, without backfill.
+The existing panel still strips the added fields and says results are not
+published there. FINDING-265 remains open for unsupported-family measurement and
+panel publication. Legacy geometry-only counts retain their historical meaning.
+No longitudinal v14, threshold, generated file or frozen calibration/cohort change.
 
 FINDING-272 qualifies that prospective design: nominal expression windows do not
 certify exact computational source isolation for shipped low-volatility and
