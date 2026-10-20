@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.research.backtesting.metrics import TRADING_DAYS
 from app.research.strategies.base import BaseStrategy
+from app.research.trial_counts import require_trial_count
 from app.validation._sharpe import _certified_float64_sharpe
 from app.validation.result_graph import FrozenResultList
 
@@ -24,11 +25,16 @@ def purged_kfold_splits(
         Each contiguous fold is the test set; training indices within ``embargo`` of the test
         block are purged, so no training index lies within embargo of any test index (no
         leakage). Every index is tested exactly once.
+        Original counts must be nonnegative nonboolean integers; normalize integral
+        scalars to Python int before boundary arithmetic to avoid fixed-width wrap.
     """
+    n_splits = require_trial_count(n_splits, minimum=0, parameter="n_splits")
     if n_splits < 2:
         raise ValueError("n_splits must be >= 2")
+    embargo = require_trial_count(embargo, minimum=0, parameter="embargo")
     if embargo < 0:
         raise ValueError("embargo must be >= 0")
+    n_obs = require_trial_count(n_obs, minimum=0, parameter="n_obs")
     if n_obs < n_splits:
         raise ValueError("n_obs must be >= n_splits")
 

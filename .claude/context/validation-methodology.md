@@ -477,6 +477,16 @@ rows: integer/bounded/unique ascending arrays, contiguous kept test blocks, and 
 inside the closed embargo interval. Empty integer folds still drop; before/after training remains
 valid outside that interval. No estimator, lookback sizing, threshold or causal-policy change.
 
+ADR-330 validates the splitter's original n_splits, embargo and n_obs as
+nonnegative nonboolean Integral counts immediately before their existing checks,
+normalizing each to Python int before geometry. Unsigned boundary wrap could
+otherwise retain a fold's own test rows (FINDING-277); ADR-198 already rejects
+those rows at evaluation and ADR-325 normalizes panel requests upstream.
+Existing Python-int geometry, defaults, scoring, thresholds and v14 remain.
+No accepted leaky diagnostic, production occurrence or false graduate is
+established. The lookback proxy and broad engine error attribution remain
+separate; this count guard does not certify feature support or independence.
+
 **ADR-078: it carries a drift control, exactly as walk-forward does.** `purged_cv_evaluate` takes
 an optional `benchmark` of per-bar returns and reports `mean_oos_hold_sharpe` — buy-and-hold scored
 on the same folds, averaged over the folds that were KEPT (a fold purged away entirely is dropped,
