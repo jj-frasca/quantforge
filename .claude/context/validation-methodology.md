@@ -700,6 +700,20 @@ no affected production report or false graduate is established. Derived trailing
 return arithmetic, provenance and complete-source policy remain separate. No
 schema, formula, threshold, search/accounting-v14 or generated-record change.
 
+ADR-326 / FINDING-275 adds a separate derived-sign contract: after the unchanged
+trailing calculation, mature computed trailing<0 must agree with native current
+price below its original lagged price. Positional native slices, without casts,
+Series.shift or label alignment, retain large integer distinctions. Disagreement
+refuses before labels and aggregates rather than silently publishing an all-bull
+partition for descending native prices. Original source/wealth/calendar/count
+checks, native warnings/exceptions, genuine warmup, zero and no-mature-row horizons,
+and all accepted score expressions remain. This certifies only the bear/bull
+partition, not magnitude or positive-versus-zero precision. Upstream PriceBar
+float conversion can already erase distinctions; no recovery or source-provenance
+claim is made. The public backtest engine does not reject the positive integer
+witness, but no production occurrence, leakage or false graduate is established.
+No report, shared metrics/engine, threshold, selector, v14 or generated record change.
+
 ---
 
 ## 6. Rank information coefficient (cross-sectional only)

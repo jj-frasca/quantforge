@@ -29,6 +29,8 @@ def analyze_regimes(
     Nonempty matched market prices require real nonboolean numeric dtype and
     complete finite positive native values. Object containers are unsupported;
     empty intersections and genuine valid-price warmup keep their behavior.
+    Mature trailing signs must agree with native positional price ordering
+    (ADR-326); this certifies the bear/bull partition, not return magnitude.
 
     Notes:
         Each bar is labelled by the sign of the market's trailing ``window`` return: "bull"
@@ -52,6 +54,11 @@ def analyze_regimes(
         if market.isna().any() or not np.isfinite(market).all() or (market <= 0.0).any():
             raise ValueError("matched regime prices must be positive and finite")
     trailing = market.pct_change(window)
+    if 0 < window < len(market):
+        native_bear = market.iloc[window:].to_numpy() < market.iloc[:-window].to_numpy()
+        computed_bear = (trailing.iloc[window:] < 0).to_numpy()
+        if np.any(native_bear != computed_bear):
+            raise ValueError("regime trailing sign must agree with native price order")
     regime = pd.Series("bull", index=strat.index)
     regime[trailing < 0] = "bear"
 
