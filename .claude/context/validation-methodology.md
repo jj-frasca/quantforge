@@ -908,6 +908,14 @@ does not isolate capture from other model/pipeline differences. Shared standard-
 bar, thresholds, reference scoring and v14 accounting are unchanged. At `SR = 0`
 that SE is exactly the `sqrt(1/T)` in `expected_max_sharpe_under_null`.
 
+FINDING-281 qualifies that algebraic null substitution and the bar's source
+docstring: sqrt(2lnN) is a leading-order Gaussian extreme-value scale, not an
+exact finite-N expectation or a cutoff calibrated to a specified alpha. Under
+idealized iid Gaussian draws its single-bar exceedance probability is nonzero;
+this is not measured composite-gate Type-I error or market evidence. Dependence
+alone cannot certify elimination of selection luck. Runtime, thresholds and the
+immutable historical ADR-018 stay unchanged.
+
 - Current design (607 symbols, 4.3-year holdout): a **true annualized Sharpe of 2.13** is needed to
   clear the bar 80% of the time. Printed by `scripts/pool_report.py` and by the dashboard's
   `DeflationHeadline`, computed at report time and never stored.
