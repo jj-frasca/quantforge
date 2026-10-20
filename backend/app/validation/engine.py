@@ -6,7 +6,12 @@ from app.research.strategies.base import BaseStrategy
 from app.validation.deflated_sharpe import deflated_sharpe
 from app.validation.parameter_stability import parameter_stability
 from app.validation.pbo import probability_of_backtest_overfitting
-from app.validation.purged_cv import lookback_embargo, purged_cv_evaluate, purged_kfold_splits
+from app.validation.purged_cv import (
+    NoUsablePurgedFoldsError,
+    lookback_embargo,
+    purged_cv_evaluate,
+    purged_kfold_splits,
+)
 from app.validation.regime_analysis import analyze_regimes
 from app.validation.report import Interpretation, RegimeBreakdownEntry, ValidationReport
 from app.validation.walk_forward import walk_forward_evaluate, walk_forward_splits
@@ -126,8 +131,9 @@ class ValidationEngine:
         Backtests every configuration, builds the (T, N) returns matrix, and reuses it three
         ways: PBO over all combinatorial IS/OOS splits, a multiple-testing haircut on the best
         config's Sharpe, and (ADR-038) a walk-forward evaluation that re-selects on each expanding
-        train block and scores on the block that follows. Purged-CV is still only counted — see
-        ADR-038 §"Purged CV". Produces the ValidationReport — the MVP deliverable. A strategy is
+        train block and scores on the block that follows. Purged CV measures intentionally
+        noncausal fold reselection with its own paired control (ADR-039/078).
+        Produces the ValidationReport — the MVP deliverable. A strategy is
         only "promising" if it survives (low PBO, positive deflated Sharpe).
     """
 
@@ -188,7 +194,7 @@ class ValidationEngine:
             purged_cv = purged_cv_evaluate(
                 performance, cv_splits, embargo=embargo, benchmark=hold_returns
             )
-        except ValueError:
+        except NoUsablePurgedFoldsError:
             # Too few bars to hold a fold AND an honest embargo. Reporting nothing is the correct
             # answer: shrinking the embargo to fit would produce a leaky number labelled "purged".
             purged_cv = None

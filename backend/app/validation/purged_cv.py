@@ -16,6 +16,10 @@ IntArray = npt.NDArray[np.intp]
 FloatArray = npt.NDArray[np.float64]
 
 
+class NoUsablePurgedFoldsError(ValueError):
+    """Validated purged folds leave no train/test block that can be scored."""
+
+
 def purged_kfold_splits(
     n_obs: int, n_splits: int, embargo: int = 0
 ) -> list[tuple[IntArray, IntArray]]:
@@ -263,7 +267,7 @@ def purged_cv_evaluate(
         )
 
     if not folds:
-        raise ValueError("every fold was purged away — no fold could be evaluated")
+        raise NoUsablePurgedFoldsError("every fold was purged away — no fold could be evaluated")
 
     scores = np.array([f.oos_sharpe for f in folds], dtype=np.float64)
     return PurgedCVResult(

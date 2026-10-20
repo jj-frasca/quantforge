@@ -508,6 +508,16 @@ shipped native catalog grids retain their exact values and accounting-v14.
 No production occurrence or false graduate is established; FINDING-272's
 numerical-history and general proxy limitations remain.
 
+ADR-333 distinguishes genuine purged-fold absence with
+NoUsablePurgedFoldsError(ValueError), raised only by the evaluator's existing
+final empty-result check after all evidence/geometry validation. ValidationEngine
+catches only that subtype. Genuine null/count0/geometry flags stay; numerical
+and structural refusals propagate rather than receiving a false insufficient-
+history explanation (FINDING-280). Finite scores, thresholds and v14 estimators
+remain. Affected longitudinal/calibration inputs can now become recorded errors
+and leave completed denominators; unchanged formulas do not certify unchanged
+rates. No calibration, artifact rewrite or frozen-cohort replay is implied.
+
 **ADR-078: it carries a drift control, exactly as walk-forward does.** `purged_cv_evaluate` takes
 an optional `benchmark` of per-bar returns and reports `mean_oos_hold_sharpe` — buy-and-hold scored
 on the same folds, averaged over the folds that were KEPT (a fold purged away entirely is dropped,
