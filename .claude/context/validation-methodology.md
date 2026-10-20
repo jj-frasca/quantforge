@@ -666,6 +666,20 @@ Native underflow/zero dispersion, finite precision and direct dataclass construc
 remain separate. No production occurrence, false graduate or calibration impact
 is established; thresholds, schemas, search identity and v14 stay unchanged.
 
+ADR-329 / FINDING-276 separately refuses zero native sample STD when the already
+converted finite Float64 observations are unequal. The exact-equality check runs
+after existing finite reductions and before unchanged CV. Exact constants and
+signed zeros stay valid; ignore/warn now refuse the contradictory zero summary,
+native underflow warnings remain, and native raise exceptions can preempt the
+guard. No caller policy, numerical expression, epsilon or estimator is replaced.
+Exact Fraction-centered variance confirms representable positive dispersion for
+three tiny-input witnesses; the existing regularizer still rounds their score
+to one, so no gate flip or production impact is established. Refusal is
+conservative for subnormal cases whose exact STD cannot round to a positive
+Float64 value. Positive partial underflow, original projection collapse and
+positive computed dispersion from rounded centering of constants remain separate.
+Report/direct constructors, thresholds, search identity and accounting-v14 stay.
+
 ADR-318 / FINDING-269 requires original nonnegative nonboolean Integral regime
 horizons through the unchanged shared count helper, normalizing to Python int
 before alignment. Negative pct_change periods labeled earlier strategy returns

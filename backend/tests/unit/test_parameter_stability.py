@@ -1,5 +1,8 @@
 """Parameter stability: identical Sharpes are maximally stable, erratic less so, fraction-profitable reflects signs; Hypothesis invariant that scores are bounded in [0,1]."""
 
+from fractions import Fraction
+
+import numpy as np
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
@@ -45,7 +48,18 @@ def test_requires_at_least_two_configs() -> None:
     )
 )
 def test_scores_are_bounded(sharpes: list[float]) -> None:
-    result = parameter_stability(sharpes)
+    try:
+        result = parameter_stability(sharpes)
+    except ValueError as exc:
+        # ADR-329 refuses native zero dispersion contradicted by unequal evidence.
+        assert str(exc) == "zero stability dispersion requires identical converted observations"
+        converted = np.asarray(sharpes, dtype=np.float64)
+        exact = [Fraction.from_float(float(value)) for value in converted]
+        center = sum(exact) / len(exact)
+        variance = sum((value - center) ** 2 for value in exact) / (len(exact) - 1)
+        assert variance > 0
+        assert converted.std(ddof=1) == 0
+        return
     assert 0.0 <= result.stability_score <= 1.0
     assert 0.0 <= result.fraction_profitable <= 1.0
     # mean lies within [min, max] (tiny tolerance for float rounding)

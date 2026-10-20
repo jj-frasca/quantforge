@@ -22,8 +22,9 @@ def parameter_stability(sharpes: list[float]) -> ParameterStability:
     inspection, and converted evidence must be one-dimensional. Decimal and
     coercible non-real objects are unsupported. Native mean, sample STD and CV
     must be finite before a summary is issued. Native warnings/raise exceptions
-    retain their behavior; underflow and finite projection precision remain
-    separate, without arithmetic recovery.
+    retain their behavior. Zero native STD requires identical converted values;
+    positive partial underflow and finite projection precision remain separate,
+    without arithmetic recovery.
 
     Notes:
         A strategy whose Sharpe swings wildly with small parameter changes is likely overfit.
@@ -52,6 +53,8 @@ def parameter_stability(sharpes: list[float]) -> ParameterStability:
     std = float(arr.std(ddof=1))
     if not math.isfinite(mean) or not math.isfinite(std):
         raise ValueError("stability reductions must be finite")
+    if std == 0 and not np.all(arr == arr[0]):
+        raise ValueError("zero stability dispersion requires identical converted observations")
     cv = std / (abs(mean) + 1e-9)
     if not math.isfinite(cv):
         raise ValueError("stability coefficient must be finite")
