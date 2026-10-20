@@ -5,6 +5,7 @@ import numpy.typing as npt
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.research.backtesting.metrics import TRADING_DAYS
+from app.research.trial_counts import require_trial_count
 from app.validation._sharpe import _certified_float64_sharpe
 from app.validation.result_graph import FrozenResultList
 
@@ -21,11 +22,17 @@ def walk_forward_splits(
         Each split trains on [0, k) and tests on the next forward block, so
         max(train) < min(test) always — never uses future data. The final test block absorbs
         any remainder.
+        Counts must be original nonnegative nonboolean integers. Normalize integral
+        scalars before endpoint arithmetic; None keeps the default training length.
     """
+    n_splits = require_trial_count(n_splits, minimum=0, parameter="n_splits")
     if n_splits < 1:
         raise ValueError("n_splits must be >= 1")
+    n_obs = require_trial_count(n_obs, minimum=0, parameter="n_obs")
     if n_obs < n_splits + 1:
         raise ValueError("n_obs must be >= n_splits + 1")
+    if min_train is not None:
+        min_train = require_trial_count(min_train, minimum=0, parameter="min_train")
 
     fold = n_obs // (n_splits + 1)  # >= 1 given the n_obs >= n_splits + 1 guard above
     base = min_train if min_train is not None else fold

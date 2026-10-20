@@ -399,6 +399,16 @@ arrays, nonnegative in-range unique ascending rows, and train entirely before te
 geometry is refused without repair. Generated splits, singleton blocks, causal gaps and earlier
 test blocks entering later expanding train windows retain the same selection/score/benchmark.
 
+ADR-332 validates original nonboolean Integral splitter counts and normalizes
+them before geometry: K before K+1, N before its relationship check, and explicit
+min_train after that check before fold/base arithmetic. None remains the default
+fold size. Fractional bases otherwise generate overlapping rows; bounded unsigned
+counts can wrap into empty/out-of-range folds (FINDING-279). ADR-197 already
+refuses those malformed rows at evaluation; no accepted leaky score or production
+occurrence is established. Existing valid Python geometry, defaults, scoring,
+selection, thresholds and v14 remain unchanged. No new N/K allocation cap or
+strategy/source causality certification follows from this count boundary.
+
 ADR-199 makes both OOS evaluators validate original i/u/f numeric source dtype and complete
 finite float64 matrix/control evidence before selection or singleton/flat/fold-drop shortcuts.
 Explicitly masked missing observations are refused before masks can disappear on materialization.
