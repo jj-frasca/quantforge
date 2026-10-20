@@ -487,6 +487,17 @@ No accepted leaky diagnostic, production occurrence or false graduate is
 established. The lookback proxy and broad engine error attribution remain
 separate; this count guard does not certify feature support or independence.
 
+ADR-331 includes all original nonboolean Integral strategy parameters in the
+existing largest-integer lookback proxy, converting retained values to Python
+int. NumPy int64 windows otherwise vanished into the floor while identical
+native-int signals received their full proxy embargo (FINDING-278). Actual
+ValidationEngine reports reproduced the discrepancy; ADR-198 cannot infer an
+omitted lookback from valid smaller-embargo rows. Floor operands and ignored
+parameter types remain unchanged. Search/calibration reach this helper, but
+shipped native catalog grids retain their exact values and accounting-v14.
+No production occurrence or false graduate is established; FINDING-272's
+numerical-history and general proxy limitations remain.
+
 **ADR-078: it carries a drift control, exactly as walk-forward does.** `purged_cv_evaluate` takes
 an optional `benchmark` of per-bar returns and reports `mean_oos_hold_sharpe` — buy-and-hold scored
 on the same folds, averaged over the folds that were KEPT (a fold purged away entirely is dropped,

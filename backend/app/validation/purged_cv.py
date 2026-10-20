@@ -125,14 +125,16 @@ def lookback_embargo(configs: Sequence[BaseStrategy], floor: int) -> int:
         It is correct for every catalog strategy today (`slow`/`window`/`period`/`lookback` are the
         large integers; thresholds and std multipliers are small floats). A fixed constant is wrong
         for two thirds of the catalog, which is the alternative it replaces.
+        Nonboolean Integral parameter scalars share the same proxy; normalize their
+        values to Python int without changing the original floor operand.
     """
     if floor < 0:
         raise ValueError("floor must be >= 0")
     lookbacks = [
-        value
+        int(value)
         for config in configs
         for value in config.parameters.values()
-        if isinstance(value, int) and not isinstance(value, bool)
+        if not isinstance(value, bool) and isinstance(value, Integral)
     ]
     return max([floor, *lookbacks])
 
