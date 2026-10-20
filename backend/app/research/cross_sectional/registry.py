@@ -36,6 +36,21 @@ class CrossSectionalStrategy:
     param_grid: tuple[Params, ...]
 
 
+def momentum_factory(p: Params) -> SignalFn:
+    """Stable shipped identity; preserve the original factory's parameter coercions."""
+    return lambda prices: momentum_signal(prices, int(p["lookback"]), int(p["skip"]))
+
+
+def reversal_factory(p: Params) -> SignalFn:
+    """Stable short-horizon reversal identity (ADR-325)."""
+    return lambda prices: reversal_signal(prices, int(p["lookback"]))
+
+
+def short_term_reversal_factory(p: Params) -> SignalFn:
+    """Separate stable one-month reversal identity with unchanged signal arithmetic."""
+    return lambda prices: reversal_signal(prices, int(p["lookback"]))
+
+
 def default_strategies(
     value_scores: Mapping[str, float] | None = None,
     quality_scores: Mapping[str, float] | None = None,
@@ -47,16 +62,14 @@ def default_strategies(
     strategies: dict[str, CrossSectionalStrategy] = {
         "xs_momentum": CrossSectionalStrategy(
             name="xs_momentum",
-            build=lambda p: (
-                lambda prices: momentum_signal(prices, int(p["lookback"]), int(p["skip"]))
-            ),
+            build=momentum_factory,
             param_grid=tuple(
                 {"lookback": lb, "skip": sk} for lb in (126, 189, 252) for sk in (0, 21)
             ),
         ),
         "xs_reversal": CrossSectionalStrategy(
             name="xs_reversal",
-            build=lambda p: lambda prices: reversal_signal(prices, int(p["lookback"])),
+            build=reversal_factory,
             param_grid=tuple({"lookback": lb} for lb in (3, 5, 10)),
         ),
         "xs_low_volatility": CrossSectionalStrategy(
@@ -66,7 +79,7 @@ def default_strategies(
         ),
         "xs_short_term_reversal_1m": CrossSectionalStrategy(
             name="xs_short_term_reversal_1m",
-            build=lambda p: lambda prices: reversal_signal(prices, int(p["lookback"])),
+            build=short_term_reversal_factory,
             param_grid=tuple({"lookback": lb} for lb in (21, 42, 63)),
         ),
         "xs_52w_high": CrossSectionalStrategy(

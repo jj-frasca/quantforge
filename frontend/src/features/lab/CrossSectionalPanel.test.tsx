@@ -149,7 +149,7 @@ test('labels method-null scalar as legacy, unpaired without a paired benchmark c
   expect(screen.queryByText(/search bars ·/i)).not.toBeInTheDocument()
 })
 
-test('keeps family selection, account costs, static snapshots and unmeasured purged CV visible', async () => {
+test('keeps family selection, account costs, static snapshots and unpublished purged CV visible', async () => {
   server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json(measuredView)))
   renderWithClient(<CrossSectionalPanel />)
   await screen.findByRole('cell', { name: 'xs_momentum' })
@@ -160,7 +160,9 @@ test('keeps family selection, account costs, static snapshots and unmeasured pur
   expect(screen.getByText(/benchmark adds no turnover-cost model/i)).toBeInTheDocument()
   expect(screen.getByText(/static snapshots, not historical point-in-time/i)).toBeInTheDocument()
   expect(screen.getByText(/equal means of window Sharpes, not Sharpe on stitched policy returns/i)).toBeInTheDocument()
-  expect(screen.getByText(/Purged CV: not measured/i)).toBeInTheDocument()
+  expect(screen.getByText(/Purged CV results are not published in this panel\./i)).toBeInTheDocument()
+  expect(screen.queryByRole('columnheader', { name: /purged CV/i })).not.toBeInTheDocument()
+  expect(screen.getAllByRole('columnheader')).toHaveLength(8)
 })
 
 test('malformed attributed metadata reaches the existing error state', async () => {

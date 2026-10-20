@@ -99,7 +99,7 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
         configurations include internal costs; account entry and switching trades are not reconciled.
         The equal-weight universe benchmark adds no turnover-cost model. Supplied fundamental inputs
         are static snapshots, not historical point-in-time information. Scores are equal means of
-        window Sharpes, not Sharpe on stitched policy returns. Purged CV: not measured.
+        window Sharpes, not Sharpe on stitched policy returns. Purged CV results are not published in this panel.
       </p>
     </div>
   )

@@ -561,8 +561,47 @@ reconciliation. The equal-weight benchmark includes the existing initial zero
 and no extra turnover-cost model. Measurement errors propagate and can now refuse
 a search; primary gate-bearing results stay exact on measurable controls.
 
-Purged CV remains null with geometry-only counts; its dependency/embargo design is
-separate. FINDING-265 remains open for purged evaluation and its dependency/embargo design.
+ADR-325 adds restricted family-local purged evaluation to complete new search
+producers for native Float64 panels and shipped configurations of xs_momentum,
+xs_reversal and xs_short_term_reversal_1m. Stable known-factory identity and
+actual allocated parameters establish the supported direct-shift recipe; matching
+names or grids alone cannot certify custom replacements. All other factories,
+static maps, parameter domains and dtypes retain explicit unsupported evidence
+and remain eligible for unchanged primary search. Historical absent evidence and
+unpaired inherited scalars remain legacy; no score or method is backfilled.
+
+For the supported recipe, the net-return direct-price lag is lookback+skip+1
+(momentum) or lookback+1 (reversals), including previous weights and turnover.
+Use the maximum over actually allocated configs and E=max(original user floor,D).
+Original floor/fold counts are nonboolean Integral evidence. The unchanged
+evaluator scores the existing matrix against the search-only equal-weight
+benchmark on that family's actual kept folds. Family-specific embargoes need
+family-specific controls, never an invented common benchmark. The per-trial
+purged_diagnostic binds recognized method/status, request geometry, support rule,
+allocated lag, embargo, kept ordinals and measured score/control. Its mean must
+match inherited purged_cv_oos_sharpe. Current unsupported/no-usable-fold branches
+carry no scores and ephemeral count0; measured reports carry actual results/counts.
+Unmeasurable evaluator errors propagate; no usable folds is explicit geometry,
+not a generic exception catch or a reason to shrink E.
+
+Original integral metadata and exact kept-set coherence validate without arrays
+using Python-integer prefix/suffix geometry. Models, immutable nested claims and
+store reconstruction enforce the same complete branches, same experiment request
+and attributed WF-bar agreement. Compact evidence does not independently replay
+all allocated configs, selected fold positions or source provenance. Primary/WF
+source checks precede unmeasured classification. Scores are continued-config
+fold means with internal costs, intentionally noncausal later training, no account
+switching reconciliation and no separate graduation threshold. The overall winning
+family is still chosen on the whole search sample; train-only cross-family
+selection is not measured. Source-operand
+separation does not establish independence, PIT universe availability or panel
+calibration. Existing gate-bearing results stay exact on measurable controls.
+
+The reduced API does not yet publish PCV evidence; the existing panel says these
+results are not published there. FINDING-265 remains open for unsupported-family
+measurement and attributed public PCV publication. Legacy geometry-only counts
+retain their historical meaning. No longitudinal v14, threshold, generated file
+or frozen calibration/cohort change.
 
 FINDING-272 qualifies that prospective design: nominal expression windows do not
 certify exact computational source isolation for shipped low-volatility and

@@ -228,3 +228,80 @@ lint, formatting and strict typing green. All checks closed. Log:
 publication; purged evaluation and its dependency/embargo design remain open.
 No evaluator, selector, threshold, accounting-v14, generated file, frozen cohort
 or workflow is changed by this publication slice.
+
+
+## ADR-325 restricted purged backend correction (2026-10-19)
+
+The restricted backend domain is implemented and verified under ADR-325;
+public publication and unsupported-family measurement remain open.
+
+The new complete search producer measures family-local purged diagnostics only
+for three known direct-shift price factories on native Float64 panels with shipped
+parameter domains. Stable factory object identity prevents same-name replacements
+from inheriting support. The net-return price support includes previous weights,
+so D=lookback+skip+1 for momentum and lookback+1 for both reversals. E is the maximum
+of the original user floor and actual allocated maximum D; no unallocated-grid
+proxy or shrinking is used. The unchanged evaluator receives the existing matrix
+and scores its own equal-weight universe benchmark over the same retained folds.
+
+Each trial persists a frozen recognized-method diagnostic with measured,
+unsupported or no-usable-fold status, original request geometry, and supported
+lag/embargo/kept ordinals. Measured means and paired controls are finite, and the
+inherited scalar must agree. Unsupported/no-fold branches carry no scores; legacy
+absent evidence and historical unpaired scalars stay readable without backfill.
+Original integral and exact kept-set validation use allocation-free Python integer
+geometry rather than arange on arbitrary persisted counts. Complete current
+experiment evidence shares one request and agrees with attributed WF bars.
+
+This closes only a restricted backend domain. Other price factories and all static
+maps remain unsupported for PCV; no price embargo certifies PIT map/universe
+availability. FINDING-272's rolling-history witness remains unchanged. Source
+operand separation is not independence or a null calibration. The eventual
+winning family still uses the whole search sample; this is not train-only
+cross-family selection. Later training is intentional, and scores remain
+continued-config fold means with internal costs,
+without account switching/entry reconciliation. Numerical evaluator failures
+propagate; all-fold-empty is preflight geometry, never an arbitrary error label.
+
+The API continues to omit PCV evidence; the existing panel's caption changes to
+not published, avoiding a stale claim that no backend measurement exists. F265
+remains open for unsupported-family measurement and attributed public publication.
+Primary candidates remain eligible when PCV is unsupported. Thresholds, default
+selection, longitudinal v14, generated data and frozen cohorts are unchanged.
+
+Pre-runtime five-case primary payloads, twelve signal and thirty-six portfolio
+wrapper controls, core hashes and calibration fingerprint are frozen at
+/tmp/qf-w43-s3-xs-pcv-baseline.py/json. Baseline JSON SHA256:
+74c013988472241214a139b3c734218ad50b21b3073ceff9d2c5f0ba24faab12.
+These synthetic unit-fixture controls are not a null/power calibration or a
+production impact estimate. The prior three historical control cases and two
+longer/mixed-budget cases preserve WF and all gate-bearing evidence; only new PCV
+fields/inherited scalar and run UUID/time are excluded from the projection.
+
+Caption TDD observed one RED and eleven preserved cases before source edit,
+then all twelve panel tests passed along with targeted ESLint and TypeScript.
+The one-line correction preserves eight existing columns and invents no PCV score.
+Backend TDD observed 45 failures and five preserved controls before source edits.
+An early ordering regression against seven existing count fixtures was corrected
+by placing only the new measurement after existing repricing; original tests stay.
+Final focused regressions passed 232 cases. Exact frozen five primary payloads,
+twelve signals, thirty-six portfolio outputs, unchanged core hashes/fingerprint,
+original search AST except the explicit PCV additions and all twenty-five legacy
+panel-record roundtrips passed. These are bounded controls, not universal numerical
+or production-impact certification.
+
+Independent research review approved the final source, with 14,112 explicit
+geometry cases and a separate train/test selection and same-fold benchmark oracle.
+The latter matched within 1e-12 without calling the splitter or evaluator to
+derive the oracle. Independent frontend review approved all twelve panel cases.
+Fresh foreground `make check-all PYTEST_WORKERS=2` passed: 13,206 backend tests,
+97.36% coverage; 479 frontend tests, 97.72% statement coverage; lint, formatting
+and strict typing green. Log: `/tmp/qf-w43-s5-check325.log`.
+All verification closed before delivery.
+
+Session 5 prepublication review reproduced a gap in the new trial validator:
+checking only the summed momentum lag admitted unshipped (lookback, skip) pairs
+(147,0), (126,84), and (125,22). All three passed before the narrow correction;
+three regression cases now require individual shipped lookback and skip membership
+as well as allocated-lag coverage. The producer already rejected these parameters.
+This was an uncommitted boundary defect, with no affected published result claimed.

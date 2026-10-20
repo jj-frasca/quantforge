@@ -194,11 +194,27 @@ conditional snapshots, not historical point-in-time evidence. Continuation-windo
 means include internal config costs without reconciling account switching trades;
 the benchmark has no extra turnover-cost model. Unmeasurable diagnostics now refuse
 the search, while existing gate-bearing results remain on measurable controls.
-Purged CV still records geometry only and remains unmeasured pending dependency
-and embargo design. ADR-322 publishes the exact persisted scores, paired benchmark,
-method and geometry through the read-only API and existing panel. Missing scores
-read as not measured; historical method-null scalars are explicitly unpaired.
+ADR-322 publishes the exact persisted WF scores, paired benchmark, method and
+geometry through the read-only API and existing panel. Missing scores read as
+not measured; historical method-null scalars are explicitly unpaired.
 Longitudinal null/power evidence supplies no panel calibration.
+
+**Restricted cross-sectional purged evaluation is measured in new backend
+producers (ADR-325 / FINDING-265).** Only the three audited direct-shift price
+families on native Float64 panels and shipped parameter domains are supported.
+Known stable factory identity and the actual allocated maximum net-return price
+lag determine an honest family embargo. The unchanged evaluator uses the existing
+return matrix and a family-specific benchmark on its actual retained test folds.
+Frozen per-trial method/status/geometry and paired means bind the inherited score;
+unsupported/no-fold branches carry no fabricated scores and leave primary candidate
+eligibility unchanged. Original integral metadata and kept ordinals validate
+without allocating arrays from persisted counts. Real measurement failures refuse;
+no embargo is reduced to fit. This is intentionally noncausal fold reselection,
+with existing internal costs and no account switching reconciliation or independent
+calibration claim. F272's rolling numerical-history limit remains, static maps
+are deferred, and source support does not prove independence or PIT availability.
+Public PCV fields/scores remain unpublished; the panel states that boundary.
+Thresholds, selection, longitudinal v14 and frozen/generated evidence stay.
 
 **Those validation claims are now durable after construction (ADR-159).** The report, split/fold
 records, flags, interpretations, and regime map are defensively copied into immutable JSON-shaped

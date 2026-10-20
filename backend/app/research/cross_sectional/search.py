@@ -26,6 +26,11 @@ from app.research.cross_sectional.engine import (
 )
 from app.research.cross_sectional.ic import ICSummary, rank_ic, summarize_ic
 from app.research.cross_sectional.manifest import CrossSectionalManifest
+from app.research.cross_sectional.purged import (
+    PurgedDiagnostic,
+    measure_family_purged,
+    requested_fold_count,
+)
 from app.research.cross_sectional.registry import (
     CrossSectionalStrategy,
     Params,
@@ -61,6 +66,56 @@ class CrossSectionalTrial(Trial):
     honestly "not measured", never backfilled. Nothing gates, selects, or sizes on it."""
 
     ic: ICSummary | None = None
+    purged_diagnostic: PurgedDiagnostic | None = None
+
+    @model_validator(mode="after")
+    def _validate_purged_evidence(self) -> "CrossSectionalTrial":
+        evidence = self.purged_diagnostic
+        if evidence is None:
+            return self
+        evidence = PurgedDiagnostic.model_validate(evidence)
+        object.__setattr__(self, "purged_diagnostic", evidence)
+        expected = evidence.mean_oos_sharpe if evidence.status == "measured" else None
+        if self.purged_cv_oos_sharpe != expected:
+            raise ValueError("trial purged scalar must match current evidence status and mean")
+        if evidence.status != "unsupported":
+            domains = {
+                "xs_momentum": ("shifted-momentum-v1", {127, 148, 190, 211, 253, 274}),
+                "xs_reversal": ("shifted-reversal-v1", {4, 6, 11}),
+                "xs_short_term_reversal_1m": ("shifted-reversal-v1", {22, 43, 64}),
+            }
+            domain = domains.get(self.strategy_name)
+            if (
+                domain is None
+                or evidence.dependency_rule != domain[0]
+                or evidence.max_price_lag not in domain[1]
+            ):
+                raise ValueError("trial purged dependency must identify a supported family domain")
+            keys = (
+                {"lookback", "skip", "quantile"}
+                if self.strategy_name == "xs_momentum"
+                else {"lookback", "quantile"}
+            )
+            if set(self.parameters) != keys:
+                raise ValueError("purged finalist must retain its shipped signal parameters")
+            lookback = require_trial_count(
+                self.parameters["lookback"], minimum=1, parameter="purged finalist lookback"
+            )
+            skip = require_trial_count(
+                self.parameters.get("skip", 0), minimum=0, parameter="purged finalist skip"
+            )
+            if self.strategy_name == "xs_momentum" and (
+                lookback not in (126, 189, 252) or skip not in (0, 21)
+            ):
+                raise ValueError("purged finalist must retain each shipped momentum parameter")
+            finalist_lag = lookback + skip + 1
+            if (
+                finalist_lag not in domain[1]
+                or evidence.max_price_lag is None
+                or evidence.max_price_lag < finalist_lag
+            ):
+                raise ValueError("purged allocated lag must cover its supported finalist")
+        return self
 
 
 class CrossSectionalExperiment(BaseModel):
@@ -252,6 +307,24 @@ class CrossSectionalExperiment(BaseModel):
             raise ValueError("walk-forward bars must be >= splits + 1")
         return self
 
+    @model_validator(mode="after")
+    def _validate_purged_evidence(self) -> "CrossSectionalExperiment":
+        evidence = [trial.purged_diagnostic for trial in self.trials]
+        if not any(item is not None for item in evidence):
+            return self
+        if any(item is None for item in evidence):
+            raise ValueError("current purged evidence requires every family outcome")
+        first = evidence[0]
+        assert first is not None
+        request = (first.method, first.n_bars, first.requested_folds, first.floor)
+        for item in evidence:
+            assert item is not None
+            if (item.method, item.n_bars, item.requested_folds, item.floor) != request:
+                raise ValueError("purged families must carry the same request geometry")
+            if self.walk_forward_method is not None and item.n_bars != self.walk_forward_n_bars:
+                raise ValueError("purged bars must match attributed walk-forward bars")
+        return self
+
 
 def _trial_params(params: Params, quantile: float) -> dict[str, float | int]:
     """Record the searched quantile alongside the signal params, so a finalist is fully specified."""
@@ -381,6 +454,8 @@ def run_cross_sectional_search(
     shared PBO is likewise computed over every current concrete config (ADR-104).
     """
     prior_trials = require_trial_count(prior_trials, minimum=0, parameter="prior_trials")
+    embargo = require_trial_count(embargo, minimum=0, parameter="embargo")
+    purged_folds = requested_fold_count(purged_folds)
     gate_config = config or GateConfig()
     frozen_value_scores = _project_score_snapshot(value_scores, prices.columns)
     frozen_quality_scores = _project_score_snapshot(quality_scores, prices.columns)
@@ -409,6 +484,7 @@ def run_cross_sectional_search(
     candidate_sharpes: list[float] = []
     candidate_returns: list[npt.NDArray[np.float64]] = []
     finalist_moments: list[ReturnMoments | None] = []
+    purged_inputs: list[tuple[CrossSectionalStrategy, list[_Config], npt.NDArray[np.float64]]] = []
     for name, allocated_configs in allocation.families.items():
         strategy = registry[name]
         configs = list(allocated_configs)
@@ -426,6 +502,7 @@ def run_cross_sectional_search(
             embargo=embargo,
             benchmark=walk_forward_benchmark,
         )
+        purged_inputs.append((strategy, configs, matrix))
         best_i = int(np.argmax(sharpes))
         best_params, best_quantile = configs[best_i]
         total_configs += len(configs)
@@ -479,6 +556,45 @@ def run_cross_sectional_search(
         )
         for trial, dsr, psr in zip(trials, repriced, probabilities, strict=True)
     ]
+    for index, (strategy, configs, matrix) in enumerate(purged_inputs):
+        report = reports[index]
+        purged_evidence, purged_result = measure_family_purged(
+            strategy,
+            configs,
+            in_sample,
+            matrix,
+            walk_forward_benchmark,
+            floor=embargo,
+            requested_folds=purged_folds,
+        )
+        purged_flag = (
+            "Family-local purged CV uses later training rows and continued-config internal costs; "
+            "it is not a causal switching-account score."
+            if purged_result is not None
+            else f"Purged CV not measured: {purged_evidence.status}"
+            + (f" ({purged_evidence.reason})." if purged_evidence.reason else ".")
+        )
+        reports[index] = ValidationReport.model_validate(
+            report.model_copy(
+                update={
+                    "purged_cv": purged_result,
+                    "n_purged_folds": purged_result.n_folds if purged_result is not None else 0,
+                    "flags": [
+                        flag
+                        for flag in report.flags
+                        if flag != "Purged CV not measured; fold count describes geometry only."
+                    ]
+                    + [purged_flag],
+                }
+            )
+        )
+        trials[index] = validated_trial_update(
+            trials[index],
+            {
+                "purged_diagnostic": purged_evidence,
+                "purged_cv_oos_sharpe": purged_evidence.mean_oos_sharpe,
+            },
+        )
     best_idx = max(range(len(trials)), key=lambda i: trials[i].observed_sharpe)
     best_report = reports[best_idx].model_copy(
         update={
