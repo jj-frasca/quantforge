@@ -73,6 +73,78 @@ export const graduatesSchema = z.array(graduateRowSchema)
 // `ic_*` (ADR-035) is the per-date rank correlation between the signal and next-period returns —
 // whether the RANKING carried information, which the Sharpe columns cannot distinguish from a
 // couple of names carrying the P&L. Optional: trials recorded before ADR-035 were never measured.
+// ADR-328: the browser accepts parsed safe integer counts, then uses exact BigInt
+// intermediates for compact geometry. Python counts beyond this range fail at the boundary.
+const purgedDiagnosticSchema = z.object({
+  method: z.literal('restricted-shift-family-purged-equal-weight-continuation-v1'),
+  status: z.enum(['measured', 'unsupported', 'no_usable_folds']),
+  n_bars: z.int().positive(),
+  requested_folds: z.int().min(2),
+  floor: z.int().nonnegative(),
+  reason: z.enum(['unsupported_factory', 'unsupported_parameters', 'unsupported_price_dtype']).nullable().optional(),
+  dependency_rule: z.enum(['shifted-momentum-v1', 'shifted-reversal-v1']).nullable().optional(),
+  max_price_lag: z.int().positive().nullable().optional(),
+  embargo: z.int().nonnegative().nullable().optional(),
+  kept_fold_ordinals: z.array(z.int().nonnegative()).nullable().optional(),
+  mean_oos_sharpe: z.number().finite().nullable().optional(),
+  mean_oos_hold_sharpe: z.number().finite().nullable().optional(),
+}).superRefine((evidence, ctx) => {
+  const invalid = (message: string) => ctx.addIssue({ code: 'custom', message })
+  if (evidence.n_bars < evidence.requested_folds) invalid('Purged bars must cover requested folds')
+  const support = [evidence.dependency_rule, evidence.max_price_lag, evidence.embargo, evidence.kept_fold_ordinals]
+  const scores = [evidence.mean_oos_sharpe, evidence.mean_oos_hold_sharpe]
+  if (evidence.status === 'unsupported') {
+    if (evidence.reason == null || [...support, ...scores].some((value) => value != null)) {
+      invalid('Unsupported purged evidence requires only its reason')
+    }
+    return
+  }
+  if (evidence.reason != null || support.some((value) => value == null)) {
+    invalid('Supported purged evidence requires complete dependency geometry')
+    return
+  }
+  const { max_price_lag: lag, embargo, kept_fold_ordinals: kept } = evidence
+  if (lag == null || embargo == null || kept == null) return
+  if (embargo !== Math.max(evidence.floor, lag)) invalid('Purged embargo contradicts floor and allocated lag')
+  if (evidence.n_bars < evidence.requested_folds) return
+  // BigInt avoids unsafe sums/products even when all received counts are safe integers.
+  const bars = BigInt(evidence.n_bars), folds = BigInt(evidence.requested_folds), gap = BigInt(embargo)
+  const q = bars / folds, r = bars % folds
+  const start = (j: bigint) => q * j + (j < r ? j : r)
+  let lo = 0n, hi = folds
+  while (lo < hi) {
+    const j = (lo + hi) / 2n
+    const end = start(j) + q + (j < r ? 1n : 0n)
+    if (end + gap >= bars) hi = j
+    else lo = j + 1n
+  }
+  const prefix = lo
+  lo = 0n
+  hi = folds
+  while (lo < hi) {
+    const j = (lo + hi) / 2n
+    if (start(j) > gap) hi = j
+    else lo = j + 1n
+  }
+  const suffix = lo
+  const count = prefix + folds - (prefix > suffix ? prefix : suffix)
+  let previous = -1
+  if (BigInt(kept.length) !== count) invalid('Kept fold cardinality contradicts geometry')
+  for (const ordinal of kept) {
+    const j = BigInt(ordinal)
+    if (ordinal <= previous || j >= folds || !(j < prefix || j >= suffix)) {
+      invalid('Kept fold identities contradict geometry')
+      break
+    }
+    previous = ordinal
+  }
+  if (evidence.status === 'measured') {
+    if (count === 0n || scores.some((value) => value == null)) invalid('Measured purged evidence requires kept folds and paired means')
+  } else if (count !== 0n || scores.some((value) => value != null)) {
+    invalid('No usable folds requires empty geometry and absent means')
+  }
+})
+
 export const crossSectionalTrialSchema = z.object({
   strategy_name: z.string(),
   observed_sharpe: z.number(),
@@ -82,6 +154,16 @@ export const crossSectionalTrialSchema = z.object({
   ic_mean: z.number().nullable().optional(),
   ic_t_stat: z.number().nullable().optional(),
   walk_forward_oos_sharpe: z.number().finite().nullable().optional(),
+  purged_cv_oos_sharpe: z.number().finite().nullable().optional(),
+  purged_diagnostic: purgedDiagnosticSchema.nullable().optional(),
+}).superRefine((trial, ctx) => {
+  const evidence = trial.purged_diagnostic
+  if (evidence == null) return // Historical scalars remain explicitly unpaired.
+  if (evidence.status === 'measured'
+    ? trial.purged_cv_oos_sharpe == null || trial.purged_cv_oos_sharpe !== evidence.mean_oos_sharpe
+    : trial.purged_cv_oos_sharpe != null) {
+    ctx.addIssue({ code: 'custom', message: 'Purged scalar contradicts diagnostic status or mean' })
+  }
 })
 
 export type CrossSectionalTrial = z.infer<typeof crossSectionalTrialSchema>
@@ -132,6 +214,20 @@ export const crossSectionalViewSchema = z.object({
     view.walk_forward_n_bars <= view.walk_forward_n_splits
   ) {
     ctx.addIssue({ code: 'custom', message: 'Walk-forward bars must exceed the number of windows' })
+  }
+}).superRefine((view, ctx) => {
+  const current = view.trials.find((trial) => trial.purged_diagnostic != null)?.purged_diagnostic
+  if (current == null) return
+  for (const trial of view.trials) {
+    const evidence = trial.purged_diagnostic
+    if (evidence == null || evidence.method !== current.method || evidence.n_bars !== current.n_bars ||
+      evidence.requested_folds !== current.requested_folds || evidence.floor !== current.floor) {
+      ctx.addIssue({ code: 'custom', message: 'Current purged evidence requires a complete common request' })
+      break
+    }
+  }
+  if (view.walk_forward_method != null && view.walk_forward_n_bars !== current.n_bars) {
+    ctx.addIssue({ code: 'custom', message: 'Purged and attributed walk-forward search bars must agree' })
   }
 })
 

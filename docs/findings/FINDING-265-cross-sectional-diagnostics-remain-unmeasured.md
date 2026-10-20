@@ -4,7 +4,7 @@
 - **Severity:** Medium — documentation overstates evaluation scope
 - **Status:** Open in part; backend and public walk-forward delivered by ADR-321/322;
   restricted purged measurement delivered by ADR-325 and API publication under
-  ADR-327. Unsupported-family measurement and panel publication remain open.
+  ADR-327; panel publication under ADR-328. Unsupported-family measurement remains open.
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
@@ -346,3 +346,61 @@ frontend tests with lint, formatting, strict typing and coverage green
 (`/tmp/qf-w43-s6-check327.log`). API source SHA256:
 4b327ac707f319eff70c47d9712090120c95c1e66da76ef4a0375209061dbc29.
 All local verification closed before delivery; no methodology score was recomputed.
+
+## ADR-328 attributed purged panel publication (2026-10-20)
+
+The client now preserves the exact published scalar and nested evidence. Each
+family's new table cell shows its measured mean and same-retained-fold universe
+benchmark, with native Fold evidence disclosure for actual geometry. Unsupported
+recipes/parameters/dtypes and supported no-usable-fold states remain explicitly
+unmeasured; the latter retains its geometry. Historical null/omitted evidence
+stays not measured, while finite legacy scalars are labeled unpaired without
+invented attribution. No shared benchmark is imposed across different kept sets.
+
+Zod validates status/scalar binding, complete same-request family outcomes and
+attributed WF-bar agreement, reusing the published structural contract. Parsed
+counts must be safe JavaScript integers; internal BigInt prefix/suffix arithmetic
+validates exact kept-set cardinality and ordered membership without count-sized
+arrays. Backend-valid Python geometry beyond that safe range refuses through the
+existing load-error state. This promises exactness for published integer geometry,
+not original-token preservation for arbitrary malformed fractional JSON values
+that may round during ordinary JSON parsing.
+
+The panel retains the server's verdict and all scientific limits: intentional
+later training, restricted direct-shift support, whole-sample winning-family
+selection, equal means of fold Sharpes rather than a stitched executable policy,
+internal costs without account switching reconciliation, no extra benchmark
+turnover model, and static/PIT limits. No score, graduation rule, threshold,
+backend producer, accounting-v14, generated record or frozen cohort changes.
+This closes attributed panel publication for the supported recipe only;
+unsupported-family measurement remains open. Verification receipts follow after
+the required tests, reviews, local browser QA and foreground gates.
+
+ADR-328 observed 84 failing assertions with 136 passing controls before either
+runtime source edit; the copy refinement separately observed one failing test
+before changing the price-format wording. Final focused tests passed 223 cases,
+with lint, typecheck and production build green. Independent final review
+approved all ten paths and independently exercised the actual Zod schema against
+11,904 explicit training-row enumeration cases and 42 maximum-safe-integer edge
+oracles. Every tested single-fold add/remove forgery refused. These bounded
+controls supplement the exact geometry derivation without certifying source
+provenance or arbitrary untrusted JSON parsing.
+
+All 25 frozen historical parsed payloads remained exact. Parsing all 25 current
+API payloads preserved the added evidence and every prior field. Unrelated
+schema statements and backend API/research/gate/accounting/generated-pool hashes
+were unchanged. Client baseline SHA256:
+c5b0cdb936b21da319acce80fa07e16f2d815238ad1823d600253a0ae117873d.
+Local standalone-browser QA used synthetic current and legacy payloads through
+the actual component/service/schema. Desktop 1440px and mobile 390px layouts remained
+readable, with mobile overflow confined to the table (document width 390px).
+Enter/Space toggled native disclosures; supported no-fold geometry, measured
+zero/negative pairs, legacy unpaired/null cells and the server verdict were
+faithful. The temporary fixture and server were removed/stopped after QA.
+Receipt: `/tmp/qf-w43-s6-pcv-browser-qa.json`.
+
+Fresh foreground `make check-all PYTEST_WORKERS=2` passed 13,286 backend tests
+and 566 frontend tests (97.83% statements), with lint, formatting and strict types
+green (`/tmp/qf-w43-s6-check328.log`). All local verification closed. Runtime
+schema SHA256: 6e6668e18561449904e3d9c18634a93e18e8e4bf0028e6c99be8c943a8582a31;
+panel SHA256: 4c35490d60f5b9b6c3460c2e1c55cec0c4c9a1339ab34c177cf19e24e850dbc7.

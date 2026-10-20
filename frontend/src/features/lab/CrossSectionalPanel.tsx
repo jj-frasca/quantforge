@@ -1,4 +1,4 @@
-import type { CrossSectionalView } from '../../types/lab'
+import type { CrossSectionalTrial, CrossSectionalView } from '../../types/lab'
 import { useCrossSectional } from './useCrossSectional'
 
 const fmt = (value: number): string => value.toFixed(2)
@@ -66,6 +66,7 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
               <th>PBO</th>
               <th>Parameter stability</th>
               <th>Walk-forward mean Sharpe</th>
+              <th>Purged CV mean Sharpe</th>
               <th>Mean rank IC</th>
               <th>IC t-stat</th>
             </tr>
@@ -86,6 +87,7 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
                     ? 'not measured'
                     : `${fmt(trial.walk_forward_oos_sharpe)}${view.walk_forward_method == null ? ' · legacy, unpaired' : ''}`}
                 </td>
+                <td><PurgedDiagnostic trial={trial} /></td>
                 <td>{fmtIc(trial.ic_mean, 3)}</td>
                 <td>{fmtIc(trial.ic_t_stat, 1)}</td>
               </tr>
@@ -99,8 +101,46 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
         configurations include internal costs; account entry and switching trades are not reconciled.
         The equal-weight universe benchmark adds no turnover-cost model. Supplied fundamental inputs
         are static snapshots, not historical point-in-time information. Scores are equal means of
-        window Sharpes, not Sharpe on stitched policy returns. Purged CV results are not published in this panel.
+        window Sharpes, not Sharpe on stitched policy returns. Purged CV support is restricted to audited direct-shift recipes; later training is intentional.
+        Purged CV scores are equal means of retained-fold Sharpes, paired with each family’s
+        same-kept-fold equal-weight universe benchmark, not Sharpe on stitched policy returns.
       </p>
     </div>
+  )
+}
+
+
+function PurgedDiagnostic({ trial }: { trial: CrossSectionalTrial }) {
+  const evidence = trial.purged_diagnostic
+  if (evidence == null) {
+    return trial.purged_cv_oos_sharpe == null
+      ? <>not measured</>
+      : <>{fmt(trial.purged_cv_oos_sharpe)} · legacy, unpaired</>
+  }
+  if (evidence.status === 'unsupported') {
+    const reasons = {
+      unsupported_factory: 'unsupported or custom recipe',
+      unsupported_parameters: 'unsupported parameters',
+      unsupported_price_dtype: 'unsupported price format',
+    }
+    return <>not measured · {reasons[evidence.reason!]}</>
+  }
+  return (
+    <>
+      {evidence.status === 'measured' ? (
+        <>
+          <span>{fmt(evidence.mean_oos_sharpe!)}</span>
+          <p>Same-kept-fold equal-weight universe benchmark: {fmt(evidence.mean_oos_hold_sharpe!)}</p>
+        </>
+      ) : <span>not measured · no usable folds</span>}
+      <details>
+        <summary>Fold evidence</summary>
+        <p>{evidence.n_bars} search bars · {evidence.kept_fold_ordinals!.length} of {evidence.requested_folds} folds kept</p>
+        <p>Original floor: {evidence.floor} · allocated price lag: {evidence.max_price_lag} · embargo: {evidence.embargo}</p>
+        {evidence.kept_fold_ordinals!.length > 0 && (
+          <p>Kept fold numbers: {evidence.kept_fold_ordinals!.map((j) => j + 1).join(', ')}</p>
+        )}
+      </details>
+    </>
   )
 }

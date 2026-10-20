@@ -132,7 +132,10 @@ test('shows missing family scores as not measured without inventing pairing or g
   })))
   renderWithClient(<CrossSectionalPanel />)
   await screen.findByRole('cell', { name: 'xs_momentum' })
-  expect(screen.getAllByRole('cell', { name: 'not measured' })).toHaveLength(2)
+  // Keep the original WF assertion scoped to its column as PCV adds its own missing cells.
+  for (const row of screen.getAllByRole('row').slice(1)) {
+    expect(within(row).getAllByRole('cell')[5]).toHaveTextContent(/^not measured$/)
+  }
   expect(screen.queryByText(/same-window equal-weight universe benchmark Sharpes/i)).not.toBeInTheDocument()
   expect(screen.queryByText(/search bars ·/i)).not.toBeInTheDocument()
 })
@@ -149,7 +152,7 @@ test('labels method-null scalar as legacy, unpaired without a paired benchmark c
   expect(screen.queryByText(/search bars ·/i)).not.toBeInTheDocument()
 })
 
-test('keeps family selection, account costs, static snapshots and unpublished purged CV visible', async () => {
+test('keeps family selection, account costs, static snapshots and purged CV limits visible', async () => {
   server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json(measuredView)))
   renderWithClient(<CrossSectionalPanel />)
   await screen.findByRole('cell', { name: 'xs_momentum' })
@@ -160,14 +163,104 @@ test('keeps family selection, account costs, static snapshots and unpublished pu
   expect(screen.getByText(/benchmark adds no turnover-cost model/i)).toBeInTheDocument()
   expect(screen.getByText(/static snapshots, not historical point-in-time/i)).toBeInTheDocument()
   expect(screen.getByText(/equal means of window Sharpes, not Sharpe on stitched policy returns/i)).toBeInTheDocument()
-  expect(screen.getByText(/Purged CV results are not published in this panel\./i)).toBeInTheDocument()
-  expect(screen.queryByRole('columnheader', { name: /purged CV/i })).not.toBeInTheDocument()
-  expect(screen.getAllByRole('columnheader')).toHaveLength(8)
+  expect(screen.getByText(/later training is intentional/i)).toBeInTheDocument()
+  expect(screen.getByRole('columnheader', { name: 'Purged CV mean Sharpe' })).toBeInTheDocument()
+  expect(screen.getAllByRole('columnheader')).toHaveLength(9)
 })
 
 test('malformed attributed metadata reaches the existing error state', async () => {
   server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({
     ...measuredView, walk_forward_hold_sharpe: null,
+  })))
+  renderWithClient(<CrossSectionalPanel />)
+  expect(await screen.findByRole('alert')).toHaveTextContent(/could not load the cross-sectional hunt/i)
+  expect(screen.queryByRole('cell', { name: 'xs_momentum' })).not.toBeInTheDocument()
+})
+
+const panelPcvEvidence = {
+  method: 'restricted-shift-family-purged-equal-weight-continuation-v1', status: 'measured',
+  n_bars: 60, requested_folds: 3, floor: 0, reason: null, dependency_rule: 'shifted-reversal-v1',
+  max_price_lag: 4, embargo: 4, kept_fold_ordinals: [0, 1, 2],
+  mean_oos_sharpe: 0, mean_oos_hold_sharpe: -0.12,
+}
+const panelPcvView = { ...view, trials: view.trials.map((trial, index) => ({
+  ...trial, purged_cv_oos_sharpe: index === 0 ? 0 : -0.37,
+  purged_diagnostic: index === 0 ? panelPcvEvidence : { ...panelPcvEvidence,
+    max_price_lag: 30, embargo: 30, kept_fold_ordinals: [0, 2],
+    mean_oos_sharpe: -0.37, mean_oos_hold_sharpe: 0.7 },
+})) }
+
+test('PCV shows family-specific means, paired controls and collapsed fold evidence', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json(panelPcvView)))
+  renderWithClient(<CrossSectionalPanel />)
+  const first = (await screen.findByRole('cell', { name: 'xs_momentum' })).closest('tr')!
+  const second = screen.getByRole('cell', { name: 'xs_reversal' }).closest('tr')!
+  expect(within(first).getByText('0.00')).toBeInTheDocument()
+  expect(within(second).getByText('-0.37')).toBeInTheDocument()
+  expect(within(first).getByText(/same-kept-fold equal-weight universe benchmark: -0.12/i)).toBeInTheDocument()
+  expect(within(second).getByText(/same-kept-fold equal-weight universe benchmark: 0.70/i)).toBeInTheDocument()
+  const disclosures = screen.getAllByText('Fold evidence')
+  expect(disclosures).toHaveLength(2)
+  expect(disclosures[0].closest('details')).not.toHaveAttribute('open')
+  expect(within(second).getByText(/60 search bars/i)).toBeInTheDocument()
+  expect(within(second).getByText(/2 of 3 folds kept/i)).toBeInTheDocument()
+  expect(within(second).getByText(/original floor: 0/i)).toBeInTheDocument()
+  expect(within(second).getByText(/allocated price lag: 30/i)).toBeInTheDocument()
+  expect(within(second).getByText(/embargo: 30/i)).toBeInTheDocument()
+  expect(within(second).getByText(/kept fold numbers: 1, 3/i)).toBeInTheDocument()
+  expect(screen.queryByText(/restricted-shift-family-purged|shifted-reversal-v1/i)).not.toBeInTheDocument()
+  expect(screen.getByText('no graduate')).toBeInTheDocument()
+  expect(screen.getByText(/audited direct-shift recipes/i)).toBeInTheDocument()
+})
+
+test.each([
+  ['unsupported_factory', /unsupported or custom recipe/i],
+  ['unsupported_parameters', /unsupported parameters/i],
+  ['unsupported_price_dtype', /unsupported price format/i],
+] as const)('PCV gives unsupported %s a plain-language explanation', async (reason, label) => {
+  const evidence = { ...panelPcvEvidence, status: 'unsupported', reason,
+    dependency_rule: null, max_price_lag: null, embargo: null, kept_fold_ordinals: null,
+    mean_oos_sharpe: null, mean_oos_hold_sharpe: null }
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({ ...view,
+    trials: view.trials.map((trial) => ({ ...trial, purged_cv_oos_sharpe: null, purged_diagnostic: evidence })),
+  })))
+  renderWithClient(<CrossSectionalPanel />)
+  await screen.findByRole('cell', { name: 'xs_momentum' })
+  expect(screen.getAllByText(label)).toHaveLength(2)
+  expect(screen.queryByText('Fold evidence')).not.toBeInTheDocument()
+})
+
+test('PCV distinguishes supported no-usable-fold geometry from unsupported recipes', async () => {
+  const evidence = { ...panelPcvEvidence, status: 'no_usable_folds', max_price_lag: 60,
+    embargo: 60, kept_fold_ordinals: [], mean_oos_sharpe: null, mean_oos_hold_sharpe: null }
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({ ...view,
+    trials: view.trials.map((trial) => ({ ...trial, purged_cv_oos_sharpe: null, purged_diagnostic: evidence })),
+  })))
+  renderWithClient(<CrossSectionalPanel />)
+  await screen.findByRole('cell', { name: 'xs_momentum' })
+  expect(screen.getAllByText(/not measured · no usable folds/i)).toHaveLength(2)
+  expect(screen.getAllByText(/0 of 3 folds kept/i)).toHaveLength(2)
+  expect(screen.getAllByText('Fold evidence')).toHaveLength(2)
+  expect(screen.queryByText(/same-kept-fold equal-weight universe benchmark:/i)).not.toBeInTheDocument()
+})
+
+test('PCV historical scalar is unpaired while historical null is not measured', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({ ...view,
+    trials: view.trials.map((trial, index) => ({ ...trial,
+      purged_cv_oos_sharpe: index === 0 ? -0.42 : null, purged_diagnostic: null })),
+  })))
+  renderWithClient(<CrossSectionalPanel />)
+  const first = (await screen.findByRole('cell', { name: 'xs_momentum' })).closest('tr')!
+  const second = screen.getByRole('cell', { name: 'xs_reversal' }).closest('tr')!
+  expect(within(first).getByText('-0.42 · legacy, unpaired')).toBeInTheDocument()
+  expect(within(second).getAllByRole('cell', { name: 'not measured' })).toHaveLength(2)
+  expect(screen.queryByText('Fold evidence')).not.toBeInTheDocument()
+  expect(screen.queryByText(/same-kept-fold equal-weight universe benchmark:/i)).not.toBeInTheDocument()
+})
+
+test('PCV malformed evidence reaches the error state without rendering a rounded or invented score', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({ ...panelPcvView,
+    trials: panelPcvView.trials.map((trial) => ({ ...trial, purged_cv_oos_sharpe: 5 })),
   })))
   renderWithClient(<CrossSectionalPanel />)
   expect(await screen.findByRole('alert')).toHaveTextContent(/could not load the cross-sectional hunt/i)

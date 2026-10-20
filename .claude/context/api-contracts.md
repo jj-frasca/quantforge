@@ -509,10 +509,23 @@ parameter today. Reading them together is the fastest way to understand what the
   benchmark means can differ. Original integral geometry validates without arrays.
   Reduced wire views validate structural coherence; full source reconstruction
   additionally checks finalist parameters and allocated dependency coverage.
-  This read-only API publication leaves the existing panel unchanged: its current
-  client strips these added fields, so PCV is still not published in that panel.
-  Later training is intentional, only the restricted direct-shift recipe is
-  supported, and no panel calibration or executable switching policy is implied.
+  ADR-328 preserves these fields through Zod and displays one family-local PCV
+  column: measured mean, same-kept-fold benchmark and native Fold evidence
+  disclosure for actual geometry. Unsupported recipes, parameters or price dtype
+  read not measured with their reason; supported no-fold states show no usable
+  folds and their geometry. Historical finite scalars read legacy, unpaired;
+  absent/null scores read not measured without invented evidence.
+  Client geometry requires safe parsed JavaScript integers and uses BigInt only
+  internally for exact allocation-free prefix/suffix checks. Backend-valid larger
+  integer geometry refuses through the existing load-error state. Zod validates
+  parsed values, without certifying arbitrary raw JSON token integrality.
+  Trial scalar/status, complete common requests and attributed WF bars bind at
+  the client boundary, without recalculating scientific scores or graduation.
+  Family-specific controls and kept sets remain distinct. Later training is
+  intentional, only the restricted direct-shift recipe is supported, and no panel
+  calibration or executable switching policy is implied. Visible qualifications
+  retain whole-sample family selection, static/PIT limits and internal costs
+  without account-switching or extra benchmark-turnover reconciliation.
 
 **Frontend contract:** every one of these is parsed through a Zod schema in
 `frontend/src/types/lab.ts` at the boundary. Never re-derive or re-validate a backend-computed

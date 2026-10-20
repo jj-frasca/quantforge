@@ -604,9 +604,14 @@ Family-specific embargoes, kept folds and benchmark means stay distinct. Full
 source reconstruction retains the stronger finalist/domain checks; reduced wire
 views establish structural coherence, not source provenance or allocated replay.
 Historical absent evidence remains null or unpaired, without backfill.
-The existing panel still strips the added fields and says results are not
-published there. FINDING-265 remains open for unsupported-family measurement and
-panel publication. Legacy geometry-only counts retain their historical meaning.
+ADR-328 also preserves this evidence at the client boundary and displays each
+family's mean, paired control, explicit unmeasured state and collapsible actual
+fold geometry. Safe parsed JavaScript counts use exact internal BigInt geometry
+without count-sized arrays; larger Python integers refuse rather than appearing
+as rounded geometry. This concerns the published integer contract, not arbitrary
+raw JSON token preservation. The UI keeps server verdicts and scientific caveats.
+FINDING-265 remains open for unsupported-family measurement. Legacy geometry-only
+counts retain their historical meaning.
 No longitudinal v14, threshold, generated file or frozen calibration/cohort change.
 
 FINDING-272 qualifies that prospective design: nominal expression windows do not

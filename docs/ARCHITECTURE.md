@@ -217,10 +217,13 @@ ADR-327 publishes the exact stored per-trial PCV scalar and nested status,
 method, geometry and family-specific paired means through the read-only API.
 Public views enforce scalar binding, complete same-request outcomes and attributed
 WF-bar agreement while full source reconstruction retains finalist/domain checks.
-Historical absence stays absent or unpaired. The existing panel does not yet
-consume the added fields and states that publication boundary. Unsupported-family
-measurement and panel publication remain open. Thresholds, selection, longitudinal
-v14 and frozen/generated evidence stay.
+Historical absence stays absent or unpaired. ADR-328 preserves the evidence in
+Zod and displays family-specific means/controls with native Fold evidence
+disclosures and distinct unsupported/no-fold/historical states. Safe parsed
+JavaScript integer counts use exact internal BigInt geometry; unsupported larger
+integer geometry refuses without count-sized allocations. Client checks do not
+recompute scientific scores or graduation. Unsupported-family measurement remains
+open. Thresholds, selection, longitudinal v14 and frozen/generated evidence stay.
 
 **Those validation claims are now durable after construction (ADR-159).** The report, split/fold
 records, flags, interpretations, and regime map are defensively copied into immutable JSON-shaped

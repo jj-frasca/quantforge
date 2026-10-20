@@ -361,3 +361,34 @@ test('requestCrossSectional rejects partial attributed metadata rather than drop
   })))
   await expect(requestCrossSectional()).rejects.toThrow()
 })
+
+const wirePcvView = {
+  created_at: '2026-10-20T10:00:00Z', universe_size: 3, graduated: false,
+  trials: [{ strategy_name: 'xs_reversal', observed_sharpe: 1, deflated_sharpe: 1,
+    pbo: 0, parameter_stability_score: 1, purged_cv_oos_sharpe: 0,
+    purged_diagnostic: {
+      method: 'restricted-shift-family-purged-equal-weight-continuation-v1', status: 'measured',
+      n_bars: 60, requested_folds: 3, floor: 0, reason: null,
+      dependency_rule: 'shifted-reversal-v1', max_price_lag: 4, embargo: 4,
+      kept_fold_ordinals: [0, 1, 2], mean_oos_sharpe: 0, mean_oos_hold_sharpe: -0.12,
+    } }],
+}
+
+test('requestCrossSectional preserves published PCV evidence through the real boundary', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json(wirePcvView)))
+  await expect(requestCrossSectional()).resolves.toEqual(wirePcvView)
+})
+
+test('requestCrossSectional rejects current PCV contradictions without WF attribution', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({ ...wirePcvView,
+    trials: [{ ...wirePcvView.trials[0], purged_cv_oos_sharpe: 1 }] })))
+  await expect(requestCrossSectional()).rejects.toThrow()
+})
+
+test('requestCrossSectional rejects oversized Python count JSON tokens rather than displaying rounded counts', async () => {
+  const body = JSON.stringify(wirePcvView).replace('"n_bars":60', '"n_bars":9007199254740993')
+  server.use(http.get('/api/v1/cross-sectional', () => new HttpResponse(body, {
+    headers: { 'Content-Type': 'application/json' },
+  })))
+  await expect(requestCrossSectional()).rejects.toThrow()
+})
