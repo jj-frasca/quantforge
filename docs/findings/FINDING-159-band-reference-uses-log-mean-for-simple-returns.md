@@ -367,3 +367,47 @@ calls. All prior frontend test bytes remain; new cases are appended. Receipts:
 threshold, accounting-v14 or search/gate identity was authored or changed.
 This resolves the supported explicit production correction gap; historical
 qualifications and arbitrary provenance/optimality limitations remain.
+
+## Residual README publication gap — 2026-10-21
+
+At `46f7baf6`, README still describes the historical filtered reference as an
+upper bound on every causal price strategy, treats low reference scores as
+absence of recoverable edge and says any graduate in those cells would be wrong.
+Its recognition-versus-expression assertion also says no reverting strategy wins
+despite the same paragraph's recorded 18% reverting finalists. These are residual
+public claims already ruled out by this finding and ADR-239/312; they are not new
+measurements or a reopening of the supported ADR-313 opt-in correction.
+
+The same public section calls low historical AR net reference scores proof of
+no tradeable edge (FINDING-155), presents old measurements as current production
+evidence (ADR-294), and treats an individual-score Lo standard error as an
+uncertainty test for a selected dependent category difference. That descriptive
+comparison cannot prove insufficient information or explain a graduation count.
+The frontier likewise describes a conditional single-bar iid-normal asymptotic
+model, not composite pipeline power or a universal minimum edge (ADR-292).
+
+The documentation-only correction applies the existing F155/F159/F164 and
+ADR-239/292/294/312 boundaries to README. Historical numbers and cohort identities
+remain intact. Recorded snapshots are explicit; references and selected in-sample
+ratios carry no optimality, market-power or absence-of-edge guarantee. Build/test
+counts remain historical snapshots rather than fabricated current measurements.
+No accepted historical ADR, artifact, scorer, posterior, search, threshold or
+frozen cohort is changed. This records follow-through in the existing finding
+under ADR-239 rather than creating a duplicate mathematical finding.
+
+Verification: independent final three-path review approved the wording. Parent
+audit preserves all 331 prior numeric-token occurrences; an independent tokenizer
+preserves all 318 of its prior occurrences, each of the 13 table rows' numeric
+multisets and 14 explicit cohort contexts. These lexical checks supplement the
+contextual review; they are not a recomputation of historical results. All 1,293
+tracked backend/frontend/data files remain byte-identical to `46f7baf6`.
+Receipts: `/tmp/qf-w43-s13-readme-review.md`, `-review.json` and
+`-numeric-audit.json`. Final README SHA256:
+`b4b2c816a3006ac56f3271dbcfcdcb5b54e48d74357361af58746f5fce613a73`.
+
+Fresh foreground `make check-all PYTEST_WORKERS=2` passed 13,811 backend tests
+(97.38% coverage), 566 frontend tests (97.83% statements), lint, formatting and
+strict types (`/tmp/qf-w43-s13-check-readme.log`). All local verification closed
+before individual publication; exact master CI is checked after pushing. No
+wording-mirroring tests, source draws, searches, provider/broker calls, threshold
+changes, historical ADR edits or generated-data writes were needed.

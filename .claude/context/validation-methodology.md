@@ -837,6 +837,15 @@ The three sections above describe statistics. This one describes what has been m
 after any `GateConfig` change; each is token-free cloud compute.
 
 ### 7.1 Type-I error (ADR-036/037) — `app/research/lab/calibration.py`
+
+README measurement summaries retain historical cohorts and numeric figures,
+with explicit recorded-procedure/snapshot attribution (ADR-294). They do not
+certify the current default. Reference scores are stated strategies, selected
+in-sample ratios are not optimal-edge fractions, and the frontier is a conditional
+single-bar normal-model approximation. Near-zero references and category-gap/SE
+comparisons do not prove absence of edge or rule out another selection method.
+See FINDING-155/159/164 and F159's README follow-through for the public wording.
+
 `calibrate_gate` runs the UNMODIFIED search + gate over symbols with no edge by construction:
 `iid_normal_null` (textbook) and `bootstrap_null` (resamples a real symbol's bars, preserving fat
 tails and vol, destroying serial structure). `null-calibration.yml` shards it and commits
