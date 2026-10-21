@@ -807,6 +807,21 @@ ordered panel manifest binding those report identities to the selected search an
 
 ---
 
+ADR-338 preregisters one distinct absorbing integer-price martingale null:
+N200/7400bars, P0=128, symmetric integer ±1 until absorption at1, fixed
+PCG64 seeds2026102107000+i and all7399 innovations drawn even after absorption.
+Ideal next simple returns have conditional mean0 and state-dependent variance;
+native price-ratio rounding is disclosed rather than certified as exactly zero.
+Full34/defaultGate/budget200/refine/nper3/prior0/noStore search remains unchanged.
+Exact protocol CI must precede source draw, all200 independently audited sources
+must precede search, and a single7200s soft admission clock cannot renew.
+Incomplete/error/interrupted cohorts are permanently no retry/resume/redraw/
+rebudget/replacement; complete200/zeroerrors and independent final audits alone
+permit separate graduation and combined-N200 strict ADR018 rates. At publication
+no actual cohort source or search exists. This is neither a replacement for frozen
+cohorts nor ADR102 probability-gate/market-safety evidence. See ADR338 for exact
+law, checkpoint identity, inference limits and pre-draw controlled-test evidence.
+
 ## 7. Gate calibration — Type-I error, power, and the detectable-edge frontier
 
 The three sections above describe statistics. This one describes what has been measured about the
