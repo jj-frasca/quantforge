@@ -2,8 +2,10 @@
 
 Resolve each OPEN ``PaperPosition`` to its latest signal (the frozen strategy's position weight on
 the most recent bar, in [-1, 1]), then equal-weight the book into signed whole-share targets. The
-signal path runs the engine over an injected frame, so it is deterministic and network-free.
+signal path runs the strategy over an injected frame, so it is deterministic and network-free.
 """
+
+import math
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
@@ -32,10 +34,13 @@ class TargetPosition(BaseModel):
 
 
 def latest_signal(position: PaperPosition, frame: pd.DataFrame) -> float:
-    """The frozen strategy's position weight on the last bar of ``frame`` (clipped to [-1, 1])."""
+    """Clip the frozen strategy's finite latest weight to [-1, 1]; refuse nonfinite output."""
     strategy = build_strategy_from_dict(position.strategy_name, position.parameters)
     signals = strategy.generate_signals(frame)
-    return float(min(1.0, max(-1.0, float(signals.iloc[-1]))))
+    signal = float(signals.iloc[-1])
+    if not math.isfinite(signal):
+        raise ValueError("latest strategy signal must be finite")
+    return float(min(1.0, max(-1.0, signal)))
 
 
 def quote_position(position: PaperPosition, frame: pd.DataFrame) -> PositionQuote:

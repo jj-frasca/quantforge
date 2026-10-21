@@ -783,6 +783,16 @@ request range, and executed revision), and its report symbol must match the froz
 Provider/quality failures leave the prior managed score unchanged and yield no broker target;
 legacy scores without evidence remain valid.
 
+ADR-339 separately requires the converted latest strategy weight to be finite
+before its existing [-1,1] clamp. Python min/max could turn NaN into a full short;
+nonfinite output now raises before quote/target completion. The existing broker
+orchestration propagates that refusal, aborting the whole target calculation
+before reconciliation rather than skipping the name or inventing a zero target.
+Finite conversions/clipping, earlier warmup history, ADR-120's NaN-price-to-flat
+policy and sizing arithmetic remain. Source quality alone does not certify
+computed weights. No affected actual catalog output or paper order is established
+(FINDING-287); no threshold, search identity or accounting-v14 change.
+
 ADR-164 makes `ResearchDatasetEvidence` revalidate instantiated inputs, including unchecked copies,
 before direct validation or attachment to either forward-score model. Acquisition bounds must be
 timezone-aware and normalize to UTC. `ResearchDataset` shares this identity boundary and retains
