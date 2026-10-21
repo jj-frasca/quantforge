@@ -937,6 +937,18 @@ integrity remain separate open work. Twelve previously wrapped scalar controls
 intentionally become refusals; unaffected scalar/frontier evidence remains.
 No threshold, score cap, model, fingerprint, v14 or historical-data change.
 
+ADR-336 separately refuses nonfinite or nonpositive returned SE (FINDING-284).
+Finite native inputs can overflow the square or history division and return
+infinity despite a representable exact-model answer. In particular zero Sharpe
+with Python history 2**-1074 has exact SE 2**537. The unchanged native formula
+now binds and checks its final result; warnings and exceptions still propagate
+without catches, normalization or intermediate representation restrictions.
+Tiny square underflow remains valid when the final uncertainty is measurable.
+Positive uncertainty is a preventive model contract, not an observed ordinary
+native zero-SE finding. This refuses unsupported results without recovering them
+or certifying finite precision, arbitrary custom operators or every intermediate.
+Ordinary producers mitigate exposure; no affected production rate is established.
+
 - Current design (607 symbols, 4.3-year holdout): a **true annualized Sharpe of 2.13** is needed to
   clear the bar 80% of the time. Printed by `scripts/pool_report.py` and by the dashboard's
   `DeflationHeadline`, computed at report time and never stored.

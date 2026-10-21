@@ -59,7 +59,8 @@ def sharpe_standard_error(sharpe: float, holdout_years: float) -> float:
         to estimate, which matters precisely at the only effect sizes this pipeline can see.
         Original finite nonboolean Real evidence is inspected without normalizing operands
         (ADR-334). Integral native squares must retain their exact integer value (ADR-335);
-        floating derived arithmetic integrity remains a separate contract.
+        the final result must remain finite and positive (ADR-336). Finite precision and
+        general intermediate integrity remain separate contracts.
     """
     _require_finite_real(holdout_years, "holdout_years")
     if holdout_years <= 0:
@@ -73,7 +74,10 @@ def sharpe_standard_error(sharpe: float, holdout_years: float) -> float:
         or int(square_evidence) != int(score_evidence) ** 2
     ):
         raise ValueError("integral Sharpe square must retain its exact integer value")
-    return math.sqrt((1.0 + square / _ANNUALIZED_SR_SQUARED) / holdout_years)
+    result = math.sqrt((1.0 + square / _ANNUALIZED_SR_SQUARED) / holdout_years)
+    if not math.isfinite(result) or result <= 0:
+        raise ValueError("Sharpe standard error must be finite and positive")
+    return result
 
 
 def detectable_sharpe(n_symbols: int, holdout_years: float, *, power: float = 0.8) -> float:

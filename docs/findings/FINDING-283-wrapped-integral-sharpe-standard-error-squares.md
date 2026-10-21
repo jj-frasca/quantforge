@@ -36,7 +36,9 @@ production occurrence, affected graduate, changed historical rate or calibration
 is established. The model formula and every financial threshold remain.
 
 Floating intermediate overflow, precision and final nonfinite/zero results are
-separate open issues. Some tiny floating square underflow remains legitimate
+separate issues at the ADR-335 boundary. ADR-336 / FINDING-284 subsequently
+refuses nonfinite/nonpositive final SE without certifying intermediates or
+finite precision. Some tiny floating square underflow remains legitimate
 because the SE model adds one. This finding does not justify MinBTL's separate
 strict-positive-square policy here, nor certify arbitrary custom Real operators.
 
@@ -45,13 +47,13 @@ strict-positive-square policy here, nor certify arbitrary custom Real operators.
 ADR-335 requires an original Integral score's native square to be Integral and
 equal to the independent Python-int square, then uses the unchanged native
 square in the formula. It introduces no replacement calculation or native
-warning/exception policy. Actual preimplementation TDD recorded50 failures and
-19 controls. Final191 focused tests pass; independent research review confirms
-all finding table values,48 unaffected scalar outcomes,12 intended named
-refusals,24 exact frontier reports and the prior runtime AST. Independent27
-floating-policy comparisons and parent36 policy comparisons preserve native
+warning/exception policy. Actual preimplementation TDD recorded 50 failures and
+19 controls. Final 191 focused tests pass; independent research review confirms
+all finding table values, 48 unaffected scalar outcomes, 12 intended named
+refusals, 24 exact frontier reports and the prior runtime AST. Independent 27
+floating-policy comparisons and parent 36 policy comparisons preserve native
 values, errors and warnings, including still-open floating overflow outcomes.
-Fresh foreground make check-all passed13,582 backend and566 frontend tests,
+Fresh foreground make check-all passed 13,582 backend and 566 frontend tests,
 lint, formatting, typing and both coverage gates.
 The prior60-scalar baseline includes12 wrapped rows that must intentionally
 change to refusals; the other48 scalars and24 frontier reports must remain exact.
