@@ -817,10 +817,18 @@ Exact protocol CI must precede source draw, all200 independently audited sources
 must precede search, and a single7200s soft admission clock cannot renew.
 Incomplete/error/interrupted cohorts are permanently no retry/resume/redraw/
 rebudget/replacement; complete200/zeroerrors and independent final audits alone
-permit separate graduation and combined-N200 strict ADR018 rates. At publication
-no actual cohort source or search exists. This is neither a replacement for frozen
+permit separate graduation and combined-N200 strict ADR018 rates. At protocol publication
+no actual cohort source or search existed. This is neither a replacement for frozen
 cohorts nor ADR102 probability-gate/market-safety evidence. See ADR338 for exact
 law, checkpoint identity, inference limits and pre-draw controlled-test evidence.
+FINDING-286 records the subsequent complete execution at75bddc05: all200 original
+sources/searches, zeroerrors/zero graduates/zero strictADR018 survivors; combined
+N200 bar1.3432393159670402 and one-sided95% zero-event upper1.4867% per endpoint.
+Independent final source/model/config-count/selection/fixed-holdout/joint-gate/
+merge/count audits PASS; five diagnostic fields each200/200 measured. Twenty-seven
+paths absorbed by the final bar. This law-only result is not a zero population-rate
+guarantee, general-null/market/power/bootstrap certification, a pooled denominator
+or threshold permission. No frozen cohort was rerun, repaired or replaced.
 
 ## 7. Gate calibration — Type-I error, power, and the detectable-edge frontier
 
