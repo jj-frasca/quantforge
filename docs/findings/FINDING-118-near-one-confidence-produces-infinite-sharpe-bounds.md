@@ -18,4 +18,6 @@ representable tail. Boundary and Hypothesis tests verify finite bounds and the f
 with relative tolerance. Confidence bounds and the iid-normal standard-error formula are unchanged;
 no confidence cap is added. ADR-183's missing-count correction was a separate input defect.
 Very small confidence or endpoint widths below float resolution remain numerical limitations.
+ADR-337 / FINDING-285 subsequently repairs representable central-quantile cancellation with
+an inverse-erf branch; subnormal quantization and endpoint-resolution limits remain explicit.
 No generated data or thresholds changed.

@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from pandas.api.types import is_bool_dtype, is_complex_dtype, is_numeric_dtype
+from scipy.special import erfinv
 from scipy.stats import norm
 
 TRADING_DAYS = 252
@@ -160,6 +161,9 @@ def sharpe_confidence_interval(
         year of data, below which the asymptotic normal approximation is unreliable.
         ADR-183 requires complete finite real numeric observations before those shortcuts;
         missing rows cannot add history or narrow the interval.
+        ADR-337 uses central inverse-erf evaluation through confidence 0.5, preserving the
+        existing inverse-survival high tail. Subnormal and endpoint rounding still limit
+        representable precision; the quantile repair does not establish empirical coverage.
     """
     if not np.isfinite(confidence) or not 0.0 < confidence < 1.0:
         raise ValueError("confidence must be finite and between 0 and 1")
@@ -171,8 +175,12 @@ def sharpe_confidence_interval(
         return None
     sharpe = sharpe_ratio(returns)
     standard_error = float(np.sqrt((1.0 + sharpe**2 / (2.0 * TRADING_DAYS)) / years))
-    # The equivalent upper tail stays representable when the CDF argument rounds to one.
-    z = float(norm.isf((1.0 - confidence) / 2.0))
+    # Central inversion avoids cancellation; inverse survival protects the high tail.
+    z = (
+        float(np.sqrt(2.0)) * float(erfinv(confidence))
+        if confidence <= 0.5
+        else float(norm.isf((1.0 - confidence) / 2.0))
+    )
     return SharpeConfidenceInterval(
         assumption="iid_normal",
         confidence=confidence,

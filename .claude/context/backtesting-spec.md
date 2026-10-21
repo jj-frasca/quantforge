@@ -345,6 +345,17 @@ unchanged. ADR-185 resolves FINDING-117 by applying the same source validation t
 Sharpe before its shortcuts, preserving valid signed/nullable and numeric degenerate conventions.
 ADR-184 resolves FINDING-118 by evaluating the equivalent Gaussian quantile with
 norm.isf((1-confidence)/2), preserving a representable near-one tail and finite interval bounds.
+ADR-337 / FINDING-285 addresses the separately deferred central-quantile cancellation:
+confidence<=0.5 uses sqrt(2)*erfinv(confidence), while the exact existing inverse-survival
+expression remains above 0.5, preserving default 95% and high-tail arithmetic. The branch chooses
+a numerical representation of the same Gaussian quantile, not a statistical threshold.
+The central product uses Python floats, avoiding new NumPy scalar-multiply underflow
+warnings/strict-policy failures without changing its binary64 quantile or error-state policy.
+Complete zero-centered 252-row returns at confidence 1e-20 now retain representable nonzero
+bounds. Forward Gaussian mass is a numerical quantile oracle, not empirical interval coverage.
+Subnormal probability quantization and nonzero-center endpoint widths below float spacing remain
+limitations; no uniform relative accuracy, correct rounding or dependence-robust coverage follows.
+Source validation, history minimum, Sharpe/Lo-SE formulas, iid_normal metadata and API/UI shape stay.
 
 ADR-203 gives exact constant Sharpe samples zero and exact constant higher moments None
 before native arithmetic. Nonconstant native Sharpe must have finite mean/positive dispersion
