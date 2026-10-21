@@ -1,6 +1,7 @@
 import math
 from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
 from fractions import Fraction
+from numbers import Real
 from statistics import NormalDist
 
 from pydantic import BaseModel, ConfigDict
@@ -35,6 +36,19 @@ class DetectionFrontier(BaseModel):
     standard_error: float
 
 
+def _require_finite_real(value: object, parameter: str) -> None:
+    """Inspect original scalar evidence without replacing its native operand."""
+    error = f"{parameter} must be a finite real nonboolean scalar"
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(error)
+    try:
+        finite = math.isfinite(float(value))
+    except (OverflowError, ValueError) as exc:
+        raise ValueError(error) from exc
+    if not finite:
+        raise ValueError(error)
+
+
 def sharpe_standard_error(sharpe: float, holdout_years: float) -> float:
     """Standard error of an annualized Sharpe estimated over `holdout_years` of daily data.
 
@@ -43,9 +57,13 @@ def sharpe_standard_error(sharpe: float, holdout_years: float) -> float:
         the sqrt(1/T) that `expected_max_sharpe_under_null` uses — the same formula evaluated at the
         null rather than at the alternative. The SR^2 term is what makes a LARGE true Sharpe noisier
         to estimate, which matters precisely at the only effect sizes this pipeline can see.
+        Original finite nonboolean Real evidence is inspected without normalizing operands
+        (ADR-334). Derived native arithmetic integrity remains a separate contract.
     """
+    _require_finite_real(holdout_years, "holdout_years")
     if holdout_years <= 0:
         raise ValueError("holdout_years must be > 0")
+    _require_finite_real(sharpe, "sharpe")
     return math.sqrt((1.0 + sharpe**2 / _ANNUALIZED_SR_SQUARED) / holdout_years)
 
 

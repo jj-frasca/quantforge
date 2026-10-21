@@ -916,6 +916,16 @@ this is not measured composite-gate Type-I error or market evidence. Dependence
 alone cannot certify elimination of selection luck. Runtime, thresholds and the
 immutable historical ADR-018 stay unchanged.
 
+ADR-334 extends ADR-292's previously deferred shared-SE original-scalar boundary.
+sharpe_standard_error requires finite binary64-inspectable nonboolean Real
+history, then its original positive-history check, then finite signed Real
+Sharpe. Inspection never replaces operands; the exact native expression stays.
+FINDING-282 records bool/nonfinite evidence acceptance; ordinary producer inputs
+are mitigated by native/validated callers, with no production or rate claim.
+Native square wrapping and derived arithmetic remain separate and unresolved by
+this slice. Zero squares and some tiny floating underflow are legitimate with
+the additive-one model. Thresholds, v14 estimators and frozen records remain.
+
 - Current design (607 symbols, 4.3-year holdout): a **true annualized Sharpe of 2.13** is needed to
   clear the bar 80% of the time. Printed by `scripts/pool_report.py` and by the dashboard's
   `DeflationHeadline`, computed at report time and never stored.
