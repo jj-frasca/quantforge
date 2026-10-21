@@ -793,6 +793,17 @@ policy and sizing arithmetic remain. Source quality alone does not certify
 computed weights. No affected actual catalog output or paper order is established
 (FINDING-287); no threshold, search identity or accounting-v14 change.
 
+ADR-340 / FINDING-288 requires finite inspection and a nonnegative original
+equity operand at `equal_weight_targets`, before active counting or shortcuts.
+Negative capital could reverse a frozen signal's direction; invalid capital now
+raises even for empty/flat/invalid-price books. Zero/signed zero, original native
+allocation arithmetic and ADR-120 price behavior remain. Native inspection errors
+propagate; no arbitrary-precision recovery or new scalar-type contract is added.
+The refusal propagates before reconciliation and the later equity-snapshot append,
+so it also defers potential flattening and does not guarantee insolvency recording.
+ADR-169 account/ledger models still admit negative observations. No actual negative
+account, affected target/order, threshold, search identity or v14 change is established.
+
 ADR-164 makes `ResearchDatasetEvidence` revalidate instantiated inputs, including unchecked copies,
 before direct validation or attachment to either forward-score model. Acquisition bounds must be
 timezone-aware and normalize to UTC. `ResearchDataset` shares this identity boundary and retains

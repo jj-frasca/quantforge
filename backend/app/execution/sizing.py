@@ -57,10 +57,14 @@ def equal_weight_targets(quotes: list[PositionQuote], equity: float) -> list[Tar
     its slice scaled by its signal (signed), truncated to whole shares toward zero.
 
     Notes:
+        Equity must have finite inspection and be nonnegative before any allocation or empty-book
+        shortcut. Zero is valid; retain the original operand for native sizing arithmetic (ADR-340).
         A flat name (signal 0) or a price that is not strictly positive (non-positive, or NaN —
         ADR-120/FINDING-048) yields a 0 target and frees its slice for the active names. Whole-share
         sizing keeps the reconcile diff a clean integer (idempotent).
     """
+    if not math.isfinite(equity) or equity < 0.0:
+        raise ValueError("equity must be finite and nonnegative")
     active = sum(1 for q in quotes if q.signal != 0.0 and q.price > 0.0)
     targets: list[TargetPosition] = []
     for q in quotes:
