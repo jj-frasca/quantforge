@@ -783,6 +783,15 @@ request range, and executed revision), and its report symbol must match the froz
 Provider/quality failures leave the prior managed score unchanged and yield no broker target;
 legacy scores without evidence remain valid.
 
+ADR-341 / FINDING-289 requires the complete canonical HTTPS paper-broker origin
+after trailing-slash trimming. Substring matching allowed a paper hostname in
+an unrelated URL component to bypass the initial destination guard. Canonical
+and trailing-slash forms remain; HTTP, explicit ports, userinfo, paths, queries,
+fragments and alternate authorities refuse. Existing urllib redirect policy is
+unchanged: this validates the initial URL, not redirect destinations. Inert
+Request construction establishes the bypass, not an actual configuration,
+credential exposure, external request or order. Request/reconcile math stays.
+
 ADR-339 separately requires the converted latest strategy weight to be finite
 before its existing [-1,1] clamp. Python min/max could turn NaN into a full short;
 nonfinite output now raises before quote/target completion. The existing broker

@@ -6,8 +6,8 @@ single injectable ``_fetch`` (``# pragma: no cover``) — the same pattern as
 ``app/data/sources/alpaca.py`` — so mapping + reconcile are unit-tested at 100% with a fake fetcher;
 the real round-trip is a ``@pytest.mark.live`` smoke.
 
-Paper only (CLAUDE.md rule 7): the constructor refuses any non-paper base URL, so a real-money
-endpoint is structurally unreachable from this code path.
+Paper only (CLAUDE.md rule 7): the constructor accepts only the canonical HTTPS paper origin
+(ADR-341). This checks the initial URL; standard-library redirect handling remains unchanged.
 """
 
 from collections.abc import Callable
@@ -57,9 +57,9 @@ class AlpacaBroker:
     def __init__(
         self, base_url: str, api_key: str, secret_key: str, *, fetcher: Fetcher | None = None
     ) -> None:
-        if _PAPER_HOST not in base_url:
+        if base_url.rstrip("/") != f"https://{_PAPER_HOST}":
             raise ValueError(
-                f"AlpacaBroker is paper-only (rule 7): base_url must be the {_PAPER_HOST} host, "
+                f"AlpacaBroker is paper-only (rule 7): base_url must be https://{_PAPER_HOST}, "
                 f"got {base_url!r}"
             )
         self._base_url = base_url.rstrip("/")
