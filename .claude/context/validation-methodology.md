@@ -926,6 +926,17 @@ Native square wrapping and derived arithmetic remain separate and unresolved by
 this slice. Zero squares and some tiny floating underflow are legitimate with
 the additive-one model. Thresholds, v14 estimators and frozen records remain.
 
+ADR-335 separately resolves the integral-square defect (FINDING-283). After
+original validation, the native square of an Integral score must itself be
+Integral and equal the exact Python-int square; mismatches refuse before
+division/sqrt. Python integers serve only as an inspection oracle, preserving
+native calculation operands, warnings and exceptions. Safe squares and integer
+zero remain valid; custom nonintegral square results conservatively refuse even
+when exactly valued. Floating overflow, precision and final nonfinite/zero
+integrity remain separate open work. Twelve previously wrapped scalar controls
+intentionally become refusals; unaffected scalar/frontier evidence remains.
+No threshold, score cap, model, fingerprint, v14 or historical-data change.
+
 - Current design (607 symbols, 4.3-year holdout): a **true annualized Sharpe of 2.13** is needed to
   clear the bar 80% of the time. Printed by `scripts/pool_report.py` and by the dashboard's
   `DeflationHeadline`, computed at report time and never stored.

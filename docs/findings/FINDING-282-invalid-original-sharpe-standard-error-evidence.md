@@ -27,7 +27,8 @@ standalone primitive's original-evidence boundary. No actual production
 occurrence, affected graduate, changed capture/frontier result or rate is
 established. General inverse-frontier scalar/count hardening is outside scope.
 
-Native integer-square wrap remains a distinct unresolved arithmetic defect:
+Native integer-square wrap was a distinct unresolved arithmetic defect at this boundary
+(subsequently repaired separately by ADR-335 / FINDING-283):
 int8(100) gives SE1.015749 versus Python100 giving4.565224; int8(12) can give SE
 below the null SE. Original finite Real validation alone does not repair it.
 This unit must not claim otherwise. Native zero squares are legitimate at
