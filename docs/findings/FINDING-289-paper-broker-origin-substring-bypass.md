@@ -29,11 +29,15 @@ stored URL, injected transport, request construction and reconcile logic intact.
 Canonical URLs and trailing slashes remain valid; alternate components/spellings
 including explicit port 443 deliberately refuse. This adds no URL normalization.
 
-The guard covers the initial base URL. Existing urllib redirect handling is a
-separate limitation, so the module must not claim transport-wide impossibility
+The guard covers the initial base URL. At ADR-341 adoption, urllib redirect handling
+remained a separate limitation, so the module must not claim transport-wide impossibility
 of reaching another endpoint. DNS/proxy behavior and credential validity are
 also outside this evidence. All tests use inert strings, synthetic credential
 literals and fake/intercepted transports, never external services or real keys.
+
+ADR-342 / FINDING-290 later addresses the separate default redirect policy with
+native HTTPError refusal before a follow-up request. The evidence and initial-URL
+correction above retain their original scope.
 
 ## Verification
 

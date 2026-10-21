@@ -787,10 +787,20 @@ ADR-341 / FINDING-289 requires the complete canonical HTTPS paper-broker origin
 after trailing-slash trimming. Substring matching allowed a paper hostname in
 an unrelated URL component to bypass the initial destination guard. Canonical
 and trailing-slash forms remain; HTTP, explicit ports, userinfo, paths, queries,
-fragments and alternate authorities refuse. Existing urllib redirect policy is
-unchanged: this validates the initial URL, not redirect destinations. Inert
+fragments and alternate authorities refuse. This validates the initial URL;
+ADR-342 separately controls redirects. Inert
 Request construction establishes the bypass, not an actual configuration,
 credential exposure, external request or order. Request/reconcile math stays.
+
+ADR-342 / FINDING-290 separately refuses automatic broker redirects through a
+private HTTPRedirectHandler in a local default opener. Returning None preserves
+native HTTPError/status/response body while preventing a follow-up request,
+including same-origin redirects. Initial URL, method, payload, headers, timeout
+and JSON decoding remain; default proxy/TLS/error handlers stay. Global urllib
+opener customization is intentionally bypassed; explicit fetcher injection is
+unchanged. Refusal may defer later orders/snapshot and cannot undo prior requests
+or determine whether a server processed an order. Synthetic pipelines establish
+the behavior, not an actual redirect/credential leak. No research identity changes.
 
 ADR-339 separately requires the converted latest strategy weight to be finite
 before its existing [-1,1] clamp. Python min/max could turn NaN into a full short;

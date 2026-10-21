@@ -7,12 +7,14 @@ single injectable ``_fetch`` (``# pragma: no cover``) — the same pattern as
 the real round-trip is a ``@pytest.mark.live`` smoke.
 
 Paper only (CLAUDE.md rule 7): the constructor accepts only the canonical HTTPS paper origin
-(ADR-341). This checks the initial URL; standard-library redirect handling remains unchanged.
+(ADR-341), and the default transport refuses automatic HTTP redirects (ADR-342).
 """
 
+import urllib.request
 from collections.abc import Callable
 from decimal import Decimal
-from typing import Any, Literal
+from http.client import HTTPMessage
+from typing import IO, Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -22,6 +24,21 @@ Side = Literal["buy", "sell"]
 Fetcher = Callable[[str, str, dict[str, Any] | None], Any]
 
 _PAPER_HOST = "paper-api.alpaca.markets"
+
+
+class _RefusePaperRedirects(urllib.request.HTTPRedirectHandler):
+    """Leave redirects to urllib's native HTTPError chain without a follow-up request."""
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: IO[bytes],
+        code: int,
+        msg: str,
+        headers: HTTPMessage,
+        newurl: str,
+    ) -> None:
+        return None
 
 
 class AlpacaAccount(BaseModel):
@@ -112,7 +129,6 @@ class AlpacaBroker:
         self, method: str, path: str, body: dict[str, Any] | None
     ) -> Any:
         import json
-        import urllib.request
 
         headers = {
             "APCA-API-KEY-ID": self._api_key,
@@ -123,7 +139,9 @@ class AlpacaBroker:
         request = urllib.request.Request(
             self._base_url + path, data=payload, headers=headers, method=method
         )
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.build_opener(_RefusePaperRedirects()).open(
+            request, timeout=30
+        ) as response:
             return json.load(response)
 
 

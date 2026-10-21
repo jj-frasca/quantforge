@@ -69,14 +69,20 @@ def test_alpaca_broker_canonical_initial_request_has_paper_authority(
 ) -> None:
     captured: list[tuple[str, str, str]] = []
 
-    def intercepted(request: urllib.request.Request, *, timeout: int) -> io.BytesIO:
+    def intercepted(
+        opener: urllib.request.OpenerDirector,
+        request: urllib.request.Request,
+        data: bytes | None = None,
+        timeout: int = 30,
+    ) -> io.BytesIO:
         captured.append((request.host, request.selector, request.get_method()))
+        assert data is None
         assert timeout == 30
         return io.BytesIO(
             b'{"id":"synthetic","symbol":"SYNTH","qty":"1","side":"buy","status":"new"}'
         )
 
-    monkeypatch.setattr(urllib.request, "urlopen", intercepted)
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", intercepted)
     broker = AlpacaBroker(PAPER + suffix, "synthetic-key", "synthetic-secret")
     assert broker.submit_order("SYNTH", 1, "buy").id == "synthetic"
     assert captured == [("paper-api.alpaca.markets", "/v2/orders", "POST")]
