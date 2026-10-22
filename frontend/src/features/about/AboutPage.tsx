@@ -8,7 +8,7 @@ const adr = (n: string, label: string) => ({
 })
 
 const ADR_LINKS = [
-  adr('001-monorepo-and-scope', 'ADR-001 — Monorepo + scope (no live execution)'),
+  adr('001-monorepo-and-scope', 'ADR-001 — Monorepo + scope'),
   adr('007-vectorized-backtesting', 'ADR-007 — Vectorized pandas/numpy backtester (not vectorbt)'),
   adr('008-validation-first', 'ADR-008 — Validation-first methodology'),
   adr('009-storage-access-pattern', 'ADR-009 — Sync stack on psycopg3'),
@@ -37,7 +37,7 @@ export function AboutPage() {
           <div>
             <dt>Data Explorer</dt>
             <dd>
-              Fetch price bars for a symbol + range via yfinance, run the 6-check data
+              Fetch price bars for a symbol + range via yfinance, run the data
               quality engine, and inspect the cached series on a price chart. Bars are
               stored in TimescaleDB and served from there on subsequent runs (cache-aside).
             </dd>
@@ -114,10 +114,11 @@ export function AboutPage() {
             <dt>PBO (Probability of Backtest Overfitting)</dt>
             <dd>
               Via Combinatorially-Symmetric Cross-Validation (Bailey, Borwein, López de
-              Prado, Zhu 2015). For each split of the configuration grid, check whether
-              the in-sample best underperforms the out-of-sample median; PBO is the
-              fraction of splits where that happens. A random strategy yields ≈ 0.5;
-              we flag ≥ 0.5 as "high overfitting risk".
+              Prado, Zhu 2015). Balanced splits of time observations rank configurations
+              in sample and out of sample. PBO measures how often the in-sample winners
+              rank at or below the out-of-sample median; tied in-sample winners contribute
+              equally. We flag ≥ 0.5 as "high overfitting risk". There is no universal
+              null PBO value: candidate dependence and ties affect the result.
             </dd>
           </div>
           <div>
@@ -137,10 +138,14 @@ export function AboutPage() {
           <div>
             <dt>Walk-forward + Purged K-Fold CV</dt>
             <dd>
-              López de Prado (2018), <em>Advances in Financial Machine Learning</em>. Purged
-              CV removes training samples whose labels overlap the test set and applies
-              an embargo after each test fold to prevent look-ahead leakage. Walk-forward
-              expands the training window through time and never uses future data.
+              López de Prado (2018), <em>Advances in Financial Machine Learning</em>.
+              Walk-forward selects using earlier training rows and scores continued
+              fixed-config paths on the following window. Its headline is the equal mean
+              of window Sharpes; it does not reconcile entry or switching trades for one
+              account. Purged CV excludes training rows within a lookback-based proxy gap
+              on both sides of each test block. Training can include observations after
+              the test block, so this is a resampling diagnostic, not a live-simulation
+              estimate. The proxy gap does not guarantee independence.
             </dd>
           </div>
           <div>
@@ -199,8 +204,9 @@ export function AboutPage() {
           <li>
             <strong>Not an alpha generator.</strong> Strategies in the catalog are
             textbook implementations of well-cited methods, included to demonstrate that
-            the rigor (PBO, DSR, purged CV) is calibrated honestly — a random walk gives
-            PBO ≈ 0.5 and the engine reports it as such.
+            the rigor (PBO, DSR, purged CV) can be evaluated honestly. Null calibration
+            depends on the search, candidate dependence and ties; a random walk does not
+            guarantee any single PBO value.
           </li>
           <li>
             <strong>Not pairs trading.</strong> The single-symbol backtest/validation

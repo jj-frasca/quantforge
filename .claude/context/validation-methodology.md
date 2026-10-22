@@ -469,14 +469,21 @@ documented proxy for the longest window) rather than a constant — the old fixe
 ~1% of the contaminated region for a 200-bar strategy.
 
 **Read it NEXT TO walk-forward, never instead of it.** A fold's training rows include data from
-*after* its test block, so purged CV is not causal: it measures how stable an edge is across
-regimes with boundary leakage removed, not what the procedure would have earned. Measured under
+*after* its test block, so purged CV is not causal. It reports fold scores under the declared
+lookback-proxy gap and retained training regimes; this geometry alone does not certify source
+independence or historical point-in-time availability. Measured under
 the null it scores systematically ABOVE walk-forward (median +0.26 / +0.39; p95 +0.88 / +1.06) —
 that gap IS the optimistic bias, and it is why the two are never averaged.
 
-- **Invariant**: no training index lies within `embargo` of any test index (no leakage).
+- **Invariant**: no training index lies within `embargo` of any test index (declared row-gap geometry).
 - A sample too short to hold the folds plus an honest embargo reports `purged_cv=None` plus a
   flag. Shrinking the embargo to fit would emit a leaky number labelled "purged".
+
+FINDING-291 aligns the public About explanation with these contracts: CSCV splits
+time observations and ranks configurations, null PBO depends on the supplied
+candidate set, purged training may include later rows, and walk-forward reports
+continued fixed-config windows without reconciling account entry/switching trades.
+The reporting correction changes no diagnostic arithmetic, thresholds or API fields.
 
 ADR-291 applies the same certified OOS scalar correction described in §3 to
 purged train/selected-test scores and its independently sourced benchmark on kept
