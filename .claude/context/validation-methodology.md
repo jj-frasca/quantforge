@@ -458,9 +458,9 @@ or relabeling. Primary ADR-290 and PBO ADR-289 contracts remain independent.
 
 ## 4. Purged K-Fold CV (ADR-039)
 
-`app/validation/purged_cv.py`. López de Prado (2018) ch. 7. K folds; for each test fold, **purge**
-training indices within `embargo` of the test fold (overlapping labels leak), and apply the
-embargo after the test block. `purged_cv_evaluate` then selects on the purged train rows and
+`app/validation/purged_cv.py`. López de Prado (2018) ch. 7. K folds; for each test fold, exclude
+training indices within the declared `embargo` on both sides of the test block. This is row-gap
+geometry, not a label-interval overlap analyzer. `purged_cv_evaluate` selects on the retained train rows and
 scores that choice on the fold, reporting the mean, the **dispersion across folds**, consistency
 and the embargo used.
 
@@ -484,6 +484,19 @@ time observations and ranks configurations, null PBO depends on the supplied
 candidate set, purged training may include later rows, and walk-forward reports
 continued fixed-config windows without reconciling account entry/switching trades.
 The reporting correction changes no diagnostic arithmetic, thresholds or API fields.
+
+FINDING-292 independently establishes a longitudinal proxy limit with an accepted
+VolTargetedSMA class configuration (fast=2, slow=3, vol_window=21, target_vol=0.01),
+not a claimed production-grid occurrence. On 300 deterministic prices, changing
+only test price 99 changes retained train return 121 under proxy embargo 21:
+the held signal's 21 log returns reach price 99. Embargo 22 excludes that direct
+boundary dependency but leaves small bitwise differences through row 299,
+consistent with rolling numerical history. It is not an isolation fix. Bounded
+prefix controls agree exactly; no future-information use, selection bias,
+graduate or calibration rate is established. Three active purged docstrings now
+state geometry/proxy limits. The generated PurgedCVResult schema description
+prose changes; fields, constraints and serialized-result shape remain unchanged.
+No estimator, embargo rule, threshold or accounting identity changes.
 
 ADR-291 applies the same certified OOS scalar correction described in §3 to
 purged train/selected-test scores and its independently sourced benchmark on kept

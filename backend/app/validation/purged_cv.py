@@ -26,9 +26,11 @@ def purged_kfold_splits(
     """Purged K-Fold CV splits with an embargo (López de Prado 2018, ch. 7).
 
     Notes:
-        Each contiguous fold is the test set; training indices within ``embargo`` of the test
-        block are purged, so no training index lies within embargo of any test index (no
-        leakage). Every index is tested exactly once.
+        Each contiguous fold is the test set. Training indices within ``embargo``
+        of either side of the test block are excluded. This establishes declared
+        row-gap geometry, not source independence or historical information
+        availability. Retained training rows may occur after the test block.
+        Every index is tested exactly once.
         Original counts must be nonnegative nonboolean integers; normalize integral
         scalars to Python int before boundary arithmetic to avoid fixed-width wrap.
     """
@@ -72,14 +74,16 @@ class PurgedCVFoldResult(BaseModel):
 
 
 class PurgedCVResult(BaseModel):
-    """Leakage-controlled out-of-sample dispersion of an edge across folds (ADR-039).
+    """Configuration-reselection scores and dispersion across purged folds (ADR-039).
 
     Notes:
-        NOT a live-simulation estimate: a fold's training rows include indices AFTER its test
-        block, so selection sees the future. That is what the technique buys — many resampled
-        paths with boundary leakage purged. ADR-038's walk-forward is the causal counterpart;
-        a large gap between the two is itself diagnostic. Sharpes are annualized, matching
-        metrics.sharpe_ratio. Diagnostic only — nothing gates on it.
+        Not a live-simulation estimate: a fold's training rows may include indices
+        after its test block. Selection uses the retained training rows and scores
+        the chosen configuration on the test block. The declared gap does not
+        guarantee source independence. Read beside ADR-038's forward-window
+        diagnostic; a difference between the two is itself diagnostic.
+        Sharpes are annualized, matching metrics.sharpe_ratio.
+        Diagnostic only — nothing gates on it.
     """
 
     model_config = ConfigDict(frozen=True, revalidate_instances="always")
@@ -122,13 +126,15 @@ class PurgedCVResult(BaseModel):
 
 
 def lookback_embargo(configs: Sequence[BaseStrategy], floor: int) -> int:
-    """Embargo sized from the longest lookback in the config grid, floored at `floor` (ADR-039).
+    """Embargo from the grid's largest integer parameter, floored at `floor` (ADR-039).
 
     Notes:
-        The largest integer parameter is a PROXY for the longest window, not a guarantee of one.
-        It is correct for every catalog strategy today (`slow`/`window`/`period`/`lookback` are the
-        large integers; thresholds and std multipliers are small floats). A fixed constant is wrong
-        for two thirds of the catalog, which is the alternative it replaces.
+        The largest integer parameter is a proxy for the longest window, not a
+        guarantee of complete computational source support or independence.
+        Parameters such as `slow`, `window`, `period` and `lookback` motivate this
+        rule; operator composition and numerical history can require separate
+        support analysis. This helper inspects parameter values, not source
+        dependencies (FINDING-292).
         Nonboolean Integral parameter scalars share the same proxy; normalize their
         values to Python int without changing the original floor operand.
     """
