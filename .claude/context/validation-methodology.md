@@ -289,11 +289,17 @@ Input: a performance matrix `R` of shape (T observations, N configurations). Pro
 2. For each of the C(S, S/2) ways to pick S/2 groups as **in-sample (IS)** (rest = OOS):
    - rank configs by IS Sharpe; pick the IS-best `n*`.
    - compute the OOS rank of `n*` as `w = rank / (N + 1)` ∈ (0, 1).
-   - `logit = ln(w / (1 - w))`; the split is "overfit" if `logit ≤ 0` (IS-best below OOS median).
-3. **PBO = fraction of splits that are overfit.**
+   - `logit = ln(w / (1 - w))`; a winner counts as "overfit" if `logit ≤ 0`
+     (at or below the OOS rank midpoint, including equality).
+3. **PBO = mean across splits of the equally weighted tied IS winners' overfit indicators.**
 
-- **Invariant**: PBO ∈ [0, 1]. A matrix of pure-noise configs ⇒ PBO ≈ 0.5; a single
-  dominant config ⇒ PBO ≈ 0.
+- **Bound invariant**: PBO ∈ [0, 1]. There is no universal noise or dominance guarantee;
+  results depend on the supplied candidate set and ties (FINDING-291).
+  If OOS ranks are tie-free and exchangeable, with IS selection independent of OOS
+  ordering, the selected rank is uniform. The implemented inclusive predicate then has
+  expected PBO `floor((N + 1) / 2) / N`: 0.5 for even N and `0.5 + 1/(2N)` for odd N.
+  This is an idealized expectation, not a guarantee for one matrix or a random walk.
+  Identical supplied candidate columns give PBO 1 under ADR-105's tie rule.
 
 **Search-level scope (ADR-104).** Production selects within parameter grids and then across strategy
 families; longitudinal refinement can add another adaptively chosen grid. The gate therefore uses

@@ -1,6 +1,6 @@
 # FINDING-291: About page overstates validation scope and null PBO behavior
 
-- **Status:** Resolved — About reporting correction; source-docstring follow-through remains separately scoped
+- **Status:** Resolved — About and active PBO reporting corrections
 - **Date:** 2026-10-21
 - **Severity:** Medium — public interpretation differs from the implemented diagnostic
 - **Reviewed revision:** `e1cc3086`
@@ -78,6 +78,27 @@ Fresh foreground `make check-all PYTEST_WORKERS=2` completed successfully:
 frontend statement coverage; lint, format and strict type checks passed.
 Receipt: `/tmp/qf-w43-s15-check291.log`.
 
-This resolves the About publication gap. Remaining active primitive docstrings
-and the cold-memory PBO noise gloss require a separately verified follow-through;
-this correction does not claim exhaustive cleanup of every source description.
+This resolves the About publication gap. Session17's follow-through also corrects
+the active PBO function docstring, validation cold memory, paper summary and
+research-agent invariant. They now state the inclusive OOS rank-midpoint rule
+and tied-IS-winner averaging, retaining PBO in [0, 1] while removing universal
+noise and dominance guarantees. Under tie-free exchangeable OOS ranks and IS
+selection independent of OOS ordering, the selected rank is uniform; the
+implemented predicate's expectation is `floor((N + 1) / 2) / N`, not exactly
+0.5 for odd N. Identical supplied candidates give PBO 1 under ADR-105.
+These deterministic rank facts are not a random-walk simulation, empirical
+null calibration, new estimator or threshold decision. Historical architecture
+drafts, all existing tests and generated evidence remain intact. This correction
+does not claim exhaustive cleanup of every historical source description.
+
+Session17 verification: independent prospective rank enumeration for N2..256
+and five identical-column CSCV matrices passed without RNG or search calls.
+Final independent five-path research review approved the correction and reran
+138 existing PBO tests successfully; the parent run also passed all 138.
+The complete prior module AST is unchanged except the exact leading public
+function docstring; all original tests, frontend and data remain byte-identical.
+Receipt: `/tmp/qf-w43-s17-pbo-doc-preservation.json`.
+Fresh foreground `make check-all PYTEST_WORKERS=2` passed 13,975 backend and
+570 frontend tests, with 97.38% backend and 97.83% frontend statement coverage;
+lint, formatting and strict type checks passed. Receipt:
+`/tmp/qf-w43-s17-check291-pbo.log`. Exact master CI is verified after publication.

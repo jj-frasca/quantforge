@@ -67,7 +67,8 @@ DSR: Bailey & López de Prado (2014) SSRN 2460551. Summaries in .claude/context/
 
 ## Validation invariants (Hypothesis property tests — all required)
 PBO ∈ [0,1] | DSR ≤ observed Sharpe | walk-forward never uses future data | purged CV embargo
-removes overlapping samples | random strategy PBO ≈ 0.5.
+removes overlapping samples. PBO has no universal noise value: candidate dependence and ties
+matter; use the conditional uniform-rank expectation in validation-methodology.md §2.
 
 ## Financial math rules
 Sharpe: sqrt(252) annualization for daily, always. Max drawdown ∈ [-1.0, 0.0]; positive = bug.

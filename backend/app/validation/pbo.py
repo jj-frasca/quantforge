@@ -71,8 +71,12 @@ def probability_of_backtest_overfitting(
         n_splits: even number of row groups; uses all C(n_splits, n_splits/2) IS/OOS splits.
 
     Returns:
-        Fraction of splits where the in-sample-best config lands below the OOS median — the
-        probability of backtest overfitting, in [0, 1]. Pure noise -> ~0.5.
+        Mean across splits of the equally weighted tied IS winners' indicators that their
+        average one-based OOS rank divided by (N + 1) is <= 0.5 (ADR-105), in [0, 1].
+        There is no universal noise value: supplied candidate dependence and ties matter.
+        With tie-free exchangeable OOS ranks and IS selection independent of OOS ordering,
+        the selected rank is uniform and expected PBO is floor((N + 1) / 2) / N.
+        This is an expectation, not a guarantee for one matrix; identical candidates give 1.
     """
     performance_source = performance
     source = np.asarray(performance)

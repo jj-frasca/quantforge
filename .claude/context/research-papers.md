@@ -395,9 +395,11 @@ pp. 36–52. DOI: 10.2469/faj.v58.n4.2453
 **Bailey, Borwein, López de Prado & Zhu (2015)** — "The Probability of Backtest Overfitting".
 SSRN: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2326253
 - PBO via Combinatorially-Symmetric Cross-Validation (CSCV): partition the returns matrix into
-  S submatrices, evaluate in-sample vs out-of-sample rank of the selected configuration; PBO is
-  the fraction of splits where the IS-best underperforms OOS-median. PBO ∈ [0, 1]; a random
-  strategy gives ≈ 0.5.
+  S observation groups and evaluate the IS-selected configuration's OOS rank. QuantForge
+  averages tied IS winners' indicators that average one-based OOS rank / (N + 1) ≤ 0.5,
+  including equality (ADR-105). PBO ∈ [0, 1]; candidate dependence and ties preclude a
+  universal random-strategy value. The idealized uniform-rank expectation and its assumptions
+  are in validation-methodology.md §2.
 
 **López de Prado (2018)** — *Advances in Financial Machine Learning*. Wiley. Ch. 7, 12.
 - Purged K-Fold CV: when features/labels overlap in time, **purge** training samples whose
