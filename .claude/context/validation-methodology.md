@@ -975,6 +975,17 @@ inputs can now fail before a formerly bypassing N<2 branch. Finite-derived
 overflow/underflow remains separate; no rate, precision or production-incident
 claim follows from this original-history refusal. Thresholds and v14 stay.
 
+ADR-345 separately refuses nonfinite or nonpositive final active bar results
+(FINDING-295), retaining the exact native product after ADR-344's guard and the
+legacy shortcut zeros. Finite longdouble history1e400 loses a representable bar
+to zero; Python history2**-1074 overflows despite a representable model answer.
+This is a result refusal, without recovery, coercion, intermediate inspection,
+warning filters or NumPy-policy changes. Native errors/warnings still precede
+the check. Active NaN/infinite N results also refuse, without a new original-count
+contract. Positive finite results do not certify arbitrary rounding accuracy,
+model validity or source provenance. No production incidence, rate, threshold,
+fingerprint, accounting-v14 or frozen/generated evidence change is established.
+
 FINDING-281 qualifies that algebraic null substitution and the bar's source
 docstring: sqrt(2lnN) is a leading-order Gaussian extreme-value scale, not an
 exact finite-N expectation or a cutoff calibrated to a specified alpha. Under

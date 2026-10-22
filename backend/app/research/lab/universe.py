@@ -68,13 +68,18 @@ def expected_max_sharpe_under_null(n_symbols: int, holdout_years: float) -> floa
     composite graduation gate's Type-I error. See FINDING-281.
 
     Reject native NaN/signed-infinite history before shortcuts without float conversion.
-    Finite nonpositive history and N<2 retain their zero-bar convention (ADR-344)."""
+    Finite nonpositive history and N<2 retain their zero-bar convention (ADR-344).
+    Active results must be finite and positive; native warnings/errors propagate
+    without numerical recovery or a finite-result accuracy guarantee (ADR-345)."""
     if holdout_years != holdout_years or holdout_years in (math.inf, -math.inf):
         raise ValueError("holdout_years must be finite")
     if n_symbols < 2 or holdout_years <= 0:
         return 0.0
     se = math.sqrt(1.0 / holdout_years)
-    return se * math.sqrt(2.0 * math.log(n_symbols))
+    bar = se * math.sqrt(2.0 * math.log(n_symbols))
+    if not math.isfinite(bar) or bar <= 0:
+        raise ValueError("universe bar must be finite and positive (deflation_bar)")
+    return bar
 
 
 def run_universe_hunt(
