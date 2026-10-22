@@ -33,6 +33,7 @@ class BacktestEngine:
     Notes:
         No look-ahead: yesterday's position earns today's return (``position.shift(1)``).
         Transaction costs are charged on turnover (|Δposition|). Long/short are symmetric.
+        Aligned infinite signals refuse before clipping; missing warmup weights remain flat.
     """
 
     def __init__(
@@ -58,7 +59,10 @@ class BacktestEngine:
         if not np.isfinite(values).all() or (values <= 0).any():
             raise ValueError("prices must be positive and finite")
         returns = prices.pct_change().fillna(0.0)
-        position = signals.reindex(prices.index).clip(-1.0, 1.0).fillna(0.0)
+        aligned_signals = signals.reindex(prices.index)
+        if aligned_signals.isin([np.inf, -np.inf]).any():
+            raise ValueError("aligned signals must not contain infinity")
+        position = aligned_signals.clip(-1.0, 1.0).fillna(0.0)
 
         gross = position.shift(1).fillna(0.0) * returns
         turnover = position.diff().abs().fillna(position.abs())

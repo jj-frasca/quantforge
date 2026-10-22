@@ -208,6 +208,20 @@ before pct_change. Missing first/interior/last observations and invalid singleto
 even for zero exposure, rather than becoming zero returns. Object/string/complex payloads are not
 coerced; complete nullable numeric and empty numeric Series retain their existing semantics.
 No observation is filled, dropped or repaired, and lag/cost/metric calculations are unchanged.
+
+ADR-343 refuses exact signed infinity in the already reindexed signal Series
+before the existing clip/fill path. Infinity cannot become full directional
+exposure and finite reported performance (FINDING-293). NaN/pd.NA warmup, sparse
+alignment, finite saturation and native finite wider values retain their native
+arithmetic. Unmatched infinity remains discarded, including for empty prices;
+aligned final/singleton infinity refuses even with zero cost. Existing price
+error precedence stays. This is not full original-signal validation or causality
+certification. Flagged unsupported Decimal/complex infinities already failed but
+now refuse earlier; no universal exception/warning equivalence is claimed.
+If encountered by search/calibration, the narrower completion domain can change
+errors or denominators; no unchanged-rate claim follows. Finite estimators,
+thresholds and accounting v14 remain; edited source provenance changes.
+
 ADR-254 applies the same original-price dtype/domain boundary to populated
 cross-sectional panels at asset_returns before pct_change. Native per-column
 checks preserve nullable and wider numeric precision without float64 conversion.
