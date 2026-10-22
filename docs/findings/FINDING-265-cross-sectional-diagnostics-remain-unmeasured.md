@@ -8,6 +8,30 @@
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
+## ADR-346 preparatory stable factory identity (2026-10-22)
+
+The shipped xs_52w_high outer factory now has stable module-owned identity,
+preserving its exact returned signal expression, lazy lookup/int coercion,
+mapping capture and grid. This makes later exact-factory recognition possible
+without trusting a family name or comparing newly constructed lambdas.
+The family remains explicitly unsupported for purged measurement. No new score,
+method/schema/engine support, threshold or accounting identity is adopted, and
+the unsupported-family portion of this finding remains Open. Any rolling-max
+support requires its own engine/version/domain evidence and decision; F272's
+sum/variance numerical-history limitation is not resolved by this prerequisite.
+
+Verification: actual preimplementation identity RED1 with21 passing behavioral
+controls. Focused verification passed123 tests; independent research review
+approved all five paths with79 independently rerun tests, native coercion/error
+timing, custom lazy int-call counts and mutable/deleted mapping controls. The
+complete prior registry AST matches except the declared helper and outer-factory
+replacement; the helper's returned lambda matches the original inner expression
+exactly. All1295 other tracked backend/frontend/data paths retain their bytes,
+and default search/gate/accounting-v14 fingerprints remain unchanged. Fresh full
+foreground make check-all passed14034 backend and570 frontend tests, with
+97.38%/97.83% coverage and lint/format/type gates green. Exact published master
+CI follows individual delivery. This prerequisite leaves the finding Open in part.
+
 ## Original evidence at 1018ca7c
 
 The cross-sectional report assembler calls walk_forward_splits and

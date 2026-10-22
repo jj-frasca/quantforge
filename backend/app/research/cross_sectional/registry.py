@@ -51,6 +51,11 @@ def short_term_reversal_factory(p: Params) -> SignalFn:
     return lambda prices: reversal_signal(prices, int(p["lookback"]))
 
 
+def high_proximity_factory(p: Params) -> SignalFn:
+    """Stable shipped identity with the original lazy lookup/coercion (ADR-346)."""
+    return lambda prices: high_proximity_signal(prices, int(p["window"]))
+
+
 def default_strategies(
     value_scores: Mapping[str, float] | None = None,
     quality_scores: Mapping[str, float] | None = None,
@@ -84,7 +89,7 @@ def default_strategies(
         ),
         "xs_52w_high": CrossSectionalStrategy(
             name="xs_52w_high",
-            build=lambda p: lambda prices: high_proximity_signal(prices, int(p["window"])),
+            build=high_proximity_factory,
             param_grid=tuple({"window": w} for w in (126, 189, 252)),
         ),
         "xs_residual_momentum": CrossSectionalStrategy(

@@ -131,6 +131,14 @@ or partially overwrite cached evidence; frame construction and adjustment semant
 
 ## 2. BaseStrategy contract
 
+ADR-346 gives the shipped cross-sectional xs_52w_high factory a stable
+module-owned high_proximity_factory identity, preserving the original returned
+callable's lazy parameter lookup/int coercion and captured mapping. Signal
+arithmetic, grid and outputs stay unchanged. This is a prerequisite only:
+the family remains unsupported for ADR-325 purged measurement. Rolling-max
+engine/version/dependency support and method attribution require a separate ADR;
+no new score, source-isolation guarantee or historical evidence is introduced.
+
 `app/research/strategies/base.py`. ABC:
 
 - `generate_signals(data: pd.DataFrame) -> pd.Series`
