@@ -65,7 +65,12 @@ def expected_max_sharpe_under_null(n_symbols: int, holdout_years: float) -> floa
     guarantees for real equities. Even under idealized iid standard normals, the
     chance that their maximum exceeds √(2·ln N) is positive. Clearing this annotation
     does not prove skill or eliminate selection luck, and it does not certify the
-    composite graduation gate's Type-I error. See FINDING-281."""
+    composite graduation gate's Type-I error. See FINDING-281.
+
+    Reject native NaN/signed-infinite history before shortcuts without float conversion.
+    Finite nonpositive history and N<2 retain their zero-bar convention (ADR-344)."""
+    if holdout_years != holdout_years or holdout_years in (math.inf, -math.inf):
+        raise ValueError("holdout_years must be finite")
     if n_symbols < 2 or holdout_years <= 0:
         return 0.0
     se = math.sqrt(1.0 / holdout_years)

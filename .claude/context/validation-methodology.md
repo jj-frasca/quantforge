@@ -960,6 +960,15 @@ does not isolate capture from other model/pipeline differences. Shared standard-
 bar, thresholds, reference scoring and v14 accounting are unchanged. At `SR = 0`
 that SE is exactly the `sqrt(1/T)` in `expected_max_sharpe_under_null`.
 
+ADR-344 refuses native NaN and exact signed-infinite history before the shared
+universe bar's existing shortcuts (FINDING-294). Native comparisons preserve
+finite wider durations, huge negative integers and the legacy `(51, 0) -> 0`
+convention without float conversion. This adds no positive-history, boolean,
+scalar-type or selection-count policy. Malformed missing/nonscalar/signaling
+inputs can now fail before a formerly bypassing N<2 branch. Finite-derived
+overflow/underflow remains separate; no rate, precision or production-incident
+claim follows from this original-history refusal. Thresholds and v14 stay.
+
 FINDING-281 qualifies that algebraic null substitution and the bar's source
 docstring: sqrt(2lnN) is a leading-order Gaussian extreme-value scale, not an
 exact finite-N expectation or a cutoff calibrated to a specified alpha. Under
