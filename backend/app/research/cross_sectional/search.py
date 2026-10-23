@@ -28,7 +28,9 @@ from app.research.cross_sectional.ic import ICSummary, rank_ic, summarize_ic
 from app.research.cross_sectional.manifest import CrossSectionalManifest
 from app.research.cross_sectional.purged import (
     HIGH_PURGED_METHOD,
+    HighRuntime,
     PurgedDiagnostic,
+    capture_high_runtime,
     measure_family_purged,
     requested_fold_count,
 )
@@ -36,6 +38,7 @@ from app.research.cross_sectional.registry import (
     CrossSectionalStrategy,
     Params,
     default_strategies,
+    high_proximity_factory,
 )
 from app.research.cross_sectional.snapshots import freeze_score_snapshot
 from app.research.lab.candidate_budget import allocate_candidate_budget
@@ -500,11 +503,27 @@ def run_cross_sectional_search(
     candidate_sharpes: list[float] = []
     candidate_returns: list[npt.NDArray[np.float64]] = []
     finalist_moments: list[ReturnMoments | None] = []
-    purged_inputs: list[tuple[CrossSectionalStrategy, list[_Config], npt.NDArray[np.float64]]] = []
+    purged_inputs: list[
+        tuple[CrossSectionalStrategy, list[_Config], npt.NDArray[np.float64], HighRuntime | None]
+    ] = []
     for name, allocated_configs in allocation.families.items():
         strategy = registry[name]
         configs = list(allocated_configs)
-        series = [_config_returns(strategy, p, q, in_sample, cost_rate) for p, q in configs]
+        high_runtime: HighRuntime | None = None
+        series = []
+        is_high = (
+            name == "xs_52w_high"
+            and strategy.name == name
+            and strategy.build is high_proximity_factory
+        )
+        for p, q in configs:
+            before = capture_high_runtime() if is_high else None
+            series.append(_config_returns(strategy, p, q, in_sample, cost_rate))
+            if is_high:
+                after = capture_high_runtime()
+                if before != after or (high_runtime is not None and before != high_runtime):
+                    raise ValueError("high matrix runtime changed during allocated execution")
+                high_runtime = after
         matrix = np.column_stack([s.to_numpy() for s in series])
         sharpes = [sharpe_ratio(s) for s in series]
         report = _build_report(
@@ -518,7 +537,7 @@ def run_cross_sectional_search(
             embargo=embargo,
             benchmark=walk_forward_benchmark,
         )
-        purged_inputs.append((strategy, configs, matrix))
+        purged_inputs.append((strategy, configs, matrix, high_runtime))
         best_i = int(np.argmax(sharpes))
         best_params, best_quantile = configs[best_i]
         total_configs += len(configs)
@@ -572,7 +591,7 @@ def run_cross_sectional_search(
         )
         for trial, dsr, psr in zip(trials, repriced, probabilities, strict=True)
     ]
-    for index, (strategy, configs, matrix) in enumerate(purged_inputs):
+    for index, (strategy, configs, matrix, high_runtime) in enumerate(purged_inputs):
         report = reports[index]
         purged_evidence, purged_result = measure_family_purged(
             strategy,
@@ -582,6 +601,7 @@ def run_cross_sectional_search(
             walk_forward_benchmark,
             floor=embargo,
             requested_folds=purged_folds,
+            high_runtime=high_runtime,
         )
         purged_flag = (
             "Family-local purged CV uses later training rows and continued-config internal costs; "

@@ -58,10 +58,14 @@ def test_high_proximity_factory_preserves_lazy_lookup_and_mutable_mapping_captur
     pd.testing.assert_frame_equal(signal(panel()), high_proximity_signal(panel(), 189))
 
 
-def test_high_proximity_factory_does_not_enable_unaudited_purged_support() -> None:
+def test_high_proximity_factory_does_not_enable_unaudited_purged_support(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     strategy = registry.default_strategies()["xs_52w_high"]
     configs = [(params, 0.2) for params in strategy.param_grid]
-    assert support_lag(strategy, configs, panel()) == (None, "unsupported_factory")
+    # ADR-348 supersedes blanket deferral only for the separately audited domain.
+    monkeypatch.setattr(pd, "__version__", "unaudited")
+    assert support_lag(strategy, configs, panel()) == (None, "unsupported_pandas_version")
 
 
 @given(window=st.integers(2, 30), scale=st.floats(0.1, 100.0))

@@ -67,3 +67,23 @@ test('high measured negative mean remains a measured score with its paired contr
   expect(within(row).getByText(/same-kept-fold equal-weight universe benchmark: -0.20/i)).toBeInTheDocument()
   expect(within(row).queryByText(/no usable folds/i)).not.toBeInTheDocument()
 })
+
+test.each([
+  ['unsupported_pandas_version', 'unsupported pandas version'],
+  ['unsupported_rolling_engine', 'unsupported rolling engine'],
+] as const)('renders %s as a plain-language unmeasured outcome', async (reason, label) => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json({ ...view,
+    trials: [{ ...trial, purged_cv_oos_sharpe: null, purged_diagnostic: { ...high,
+      method: 'restricted-shift-family-purged-equal-weight-continuation-v1',
+      status: 'unsupported', reason, dependency_rule: null, max_price_lag: null,
+      embargo: null, kept_fold_ordinals: null, mean_oos_sharpe: null, mean_oos_hold_sharpe: null,
+    } }, view.trials[1]],
+  })))
+  renderWithClient(<CrossSectionalPanel />)
+  const row = (await screen.findByRole('cell', { name: 'xs_52w_high' })).closest('tr')!
+  expect(within(row).getByText(`not measured · ${label}`)).toBeInTheDocument()
+  expect(within(row).queryByText(/same-kept-fold equal-weight universe benchmark:/i)).not.toBeInTheDocument()
+  expect(within(row).queryByText('Fold evidence')).not.toBeInTheDocument()
+  expect(within(row).queryByText('0.00')).not.toBeInTheDocument()
+  expect(screen.queryByText(/unsupported_pandas_version|unsupported_rolling_engine/)).not.toBeInTheDocument()
+})

@@ -2,9 +2,21 @@
 
 - **Date:** 2026-10-19
 - **Severity:** Medium — prospective dependency/embargo proof limitation
-- **Status:** Confirmed; documented limitation, cross-sectional PCV still unmeasured
+- **Status:** Confirmed; reviewed rolling-reducer limitation remains. Other restricted
+  families are measured under ADR-325/348.
 - **Reviewed revision:** 1773a717
 - **Related:** FINDING-265; ADR-024/039/104/198/291/293/321/322
+
+## Current disposition (2026-10-22)
+
+The evidence below is the original reviewed1773a717 snapshot. ADR-325 later
+measured three restricted direct-shift families. ADR-348 separately supports
+trailing-high only under its audited pandas3.0.6/Cython/native Float64/shipped
+window domain with generation-time runtime receipts. Its maximum selects a local
+window operand; that source argument does not apply to the sum/variance reducers
+in this finding. The original two numerical-history witnesses and their limits
+remain unchanged. Neither later decision establishes a wrong existing PCV score,
+future leakage, calibration impact or a fix for these unsupported reducers.
 
 ## Evidence
 
@@ -117,7 +129,7 @@ later outputs. Bounded full-prefix controls agree exactly, distinguishing
 causality from finite-window isolation without proving universal causality.
 No arbitrary exact-rank contract is inferred from floating arithmetic.
 
-Current cross-sectional search imports only purged_kfold_splits, records
+At reviewed1773a717, cross-sectional search imports only purged_kfold_splits, records
 geometry counts and leaves purged_cv null. No existing cross-sectional PCV
 score is shown wrong. No production occurrence, false graduate, longitudinal
 PCV/EMA impact, calibration bias or statistical significance is established.

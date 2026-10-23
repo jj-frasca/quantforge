@@ -123,6 +123,8 @@ function PurgedDiagnostic({ trial }: { trial: CrossSectionalTrial }) {
       unsupported_factory: 'unsupported or custom recipe',
       unsupported_parameters: 'unsupported parameters',
       unsupported_price_dtype: 'unsupported price format',
+      unsupported_pandas_version: 'unsupported pandas version',
+      unsupported_rolling_engine: 'unsupported rolling engine',
     }
     return <>not measured · {reasons[evidence.reason!]}</>
   }

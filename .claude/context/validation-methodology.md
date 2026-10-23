@@ -674,6 +674,19 @@ scalar/geometry/benchmark binding and historical absence stay. This reader-first
 contract does not certify engine execution or adopt rolling measurement; a
 separate producer ADR and source/runtime audit remain required (F265 Open in part).
 
+ADR-348 subsequently enables only the audited trailing-high recipe on exact
+pandas3.0.6/Cython, native Float64 and shipped windows126/189/252. Frozen matching
+before/after per-config runtime receipts travel with the allocated matrix;
+measurement classifies that saved domain, not later globals. Unknown versions
+and engines remain explicitly unsupported; missing/inconsistent high receipts
+raise. D=max(actual allocated W), E=max(original floor,D); unchanged evaluator
+and actual kept-fold benchmark produce v2/rolling-high-v1 measured/no-fold
+outcomes. Existing three shifted-family evidence stays v1. No engine/options,
+signal/portfolio formula, selector, threshold, v14 or frozen record changes.
+Kernel operand proof and both-boundary controls do not certify independence,
+PIT, Numba/future builds, other rolling reducers or an executable switching policy.
+F265 stays Open for the remaining unsupported families; F272 remains valid.
+
 ADR-327 publishes the exact inherited PCV scalar and frozen per-trial diagnostic
 through the read-only API. Trial scalar/status binding, complete common request
 geometry and attributed WF-bar agreement also validate at the public view boundary.

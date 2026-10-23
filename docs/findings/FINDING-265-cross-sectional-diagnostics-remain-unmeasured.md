@@ -4,9 +4,70 @@
 - **Severity:** Medium — documentation overstates evaluation scope
 - **Status:** Open in part; backend and public walk-forward delivered by ADR-321/322;
   restricted purged measurement delivered by ADR-325 and API publication under
-  ADR-327; panel publication under ADR-328. Unsupported-family measurement remains open.
+  ADR-327; panel publication under ADR-328; runtime-attributed trailing-high
+  support under ADR-348. Remaining unsupported-family measurement stays open.
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
+
+## ADR-348 runtime-attributed trailing-high measurement (2026-10-22)
+
+The known shipped xs_52w_high producer now measures restricted PCV on complete
+native Float64 panels with allocated windows126/189/252, exactly pandas3.0.6
+and standard Cython dispatch. Stable factory/domain recognition and matching
+before/after runtime receipts for every allocated configuration bind the matrix
+at generation time, before other families or later PCV measurement can change
+the observed global option. Receipts are frozen ephemeral metadata, not a
+hostile-code provenance proof. Inconsistent or missing known-high receipts raise;
+other versions/engines record explicit unmeasured reasons without changing primary
+eligibility. Measurement classifies the saved receipt, not current global state.
+No engine is forced, and no global option is changed.
+
+The reviewed exact-tag Cython maximum selects a current window operand without
+floating sum/variance history. Signal [t-W+1,t], previous ranked weights and
+current turnover give net-return hull [t-W,t], D=W. Independent deterministic
+endpoint probes at W126/189/252 change both gross and turnover at the oldest
+endpoint, leave all operands at t exact when changing only t-W-1, and preserve
+earlier outputs when changing t. E=W separates both inclusive hull boundaries;
+E=W-1 can share their endpoint prices. This does not generalize to F272's other
+reducers, Numba runtime, future builds/versions or arbitrary patched internals.
+
+Use the maximum W over actual allocation and max(original floor,D), without
+shrinking. The unchanged evaluator scores the existing matrix and its own actual
+retained-fold equal-weight benchmark. Successful/no-fold high outcomes use the
+separate ADR347 v2 method/rule; existing three shift families retain v1 exactly.
+No-fold remains absent scores with supported geometry. Other numerical errors
+propagate. API/client retain both new unsupported-domain reasons with readable
+labels, without inventing means. Existing reader graph/geometry checks remain.
+
+Only this audited family/domain gap closes. Unsupported families remain Open;
+no panel calibration, independence, PIT guarantee, causal training, train-only
+cross-family choice or executable switching-account claim follows. Gate-bearing
+payloads and WF remain exact on frozen synthetic controls; measurement refusals
+can narrow the completed-search domain, without an unchanged-rate guarantee.
+No threshold, longitudinal v14, generated file or frozen cohort changes.
+
+Verification: actual preimplementation backendRED25/1 passing
+locality control, frontendRED4/25 controls; initial26 backendGREEN, then150
+focused with supplementary operand/extreme/geometry/allocated-max controls.
+Three preimplementation primary payloads retain exact SHA256
+45eca76cefdd7e150fe0f31ece967f9789875d9eee7118717f725d29f3ea51e4.
+Independent research/frontend final reviews approve. The first full gate found
+seven existing original-count fixture failures (14098 passed): the new capture
+guard read a high-specific attribute on a minimal unrelated strategy stub before
+its existing repricing interception. No old count test changed; the guard now
+checks the registry family name first and retains exact genuine high name/factory
+checks. Refreshed286 focused tests and an independent172 count/producer cases
+pass. Initial failed gate remains recorded. Fresh full foreground make check-all
+passed14105 backend and599 frontend tests at97.39%/97.84% coverage, with lint,
+formatting and strict types green (/tmp/qf-w43-s20-check348-final.log).
+Independent final research review approved150 tests,45 original shifted-support
+comparisons, the three exact primary payloads and distinct-family actual kept-fold
+benchmark controls; its guard refresh independently passed172 tests. Independent
+frontend review approved224 tests/lint/types. Parent1293 other tracked blobs,
+all26 panel-record roundtrips, unchanged search/gate/v14 fingerprints and primary
+AST except declared capture plumbing pass. Signal, portfolio/ranker, registry,
+evaluators and old count tests retain their bytes. All local verification closed
+before delivery; exact master CI follows individual publication.
 
 ## ADR-347 preparatory versioned readers (2026-10-22)
 

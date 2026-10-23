@@ -1,12 +1,14 @@
 """Restricted direct-price-operand purged diagnostics (ADR-325; López de Prado 2018 ch7).
 
-Source separation is not independence or causal selection. Rolling reducers and
-static snapshots have no supported isolation contract here (FINDING-272).
+Source separation is not independence or causal selection. ADR-348 adds only
+runtime-attributed Cython high support; other rolling/static recipes retain
+FINDING-272 limitations.
 """
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from numbers import Integral
-from typing import Literal
+from typing import Final, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -16,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.research.cross_sectional.registry import (
     CrossSectionalStrategy,
     Params,
+    high_proximity_factory,
     momentum_factory,
     reversal_factory,
     short_term_reversal_factory,
@@ -23,9 +26,31 @@ from app.research.cross_sectional.registry import (
 from app.research.trial_counts import require_trial_count
 from app.validation.purged_cv import PurgedCVResult, purged_cv_evaluate, purged_kfold_splits
 
-Reason = Literal["unsupported_factory", "unsupported_parameters", "unsupported_price_dtype"]
+Reason = Literal[
+    "unsupported_factory",
+    "unsupported_parameters",
+    "unsupported_price_dtype",
+    "unsupported_pandas_version",
+    "unsupported_rolling_engine",
+]
 Rule = Literal["shifted-momentum-v1", "shifted-reversal-v1", "rolling-high-v1"]
-HIGH_PURGED_METHOD = "restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2"
+HIGH_PURGED_METHOD: Final = (
+    "restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2"
+)
+
+
+@dataclass(frozen=True)
+class HighRuntime:
+    """Ephemeral observed matrix domain, not proof against forged caller metadata."""
+
+    version: str
+    use_numba: bool | None
+
+
+def capture_high_runtime() -> HighRuntime:
+    """Observe standard dispatch; unknown versions make no engine-option claim."""
+    version = pd.__version__
+    return HighRuntime(version, pd.get_option("compute.use_numba") if version == "3.0.6" else None)
 
 
 def requested_fold_count(value: object) -> int:
@@ -166,9 +191,12 @@ def support_lag(
     strategy: CrossSectionalStrategy,
     configs: Sequence[tuple[Params, float]],
     prices: pd.DataFrame,
+    *,
+    runtime: HighRuntime | None = None,
 ) -> tuple[int | None, Reason | None]:
     """Audit exact factory/domain identity before direct operand bounds (ADR-325)."""
     known = {
+        "xs_52w_high": (high_proximity_factory, (126, 189, 252)),
         "xs_momentum": (momentum_factory, (126, 189, 252)),
         "xs_reversal": (reversal_factory, (3, 5, 10)),
         "xs_short_term_reversal_1m": (short_term_reversal_factory, (21, 42, 63)),
@@ -182,16 +210,33 @@ def support_lag(
         return None, "unsupported_price_dtype"
     lags = []
     for params, _ in configs:
-        keys = {"lookback", "skip"} if strategy.name == "xs_momentum" else {"lookback"}
+        keys = (
+            {"window"}
+            if strategy.name == "xs_52w_high"
+            else {"lookback", "skip"}
+            if strategy.name == "xs_momentum"
+            else {"lookback"}
+        )
         if set(params) != keys or any(
             isinstance(v, (bool, np.bool_)) or not isinstance(v, Integral) for v in params.values()
         ):
             return None, "unsupported_parameters"
-        if params["lookback"] not in entry[1] or (
+        window_key = "window" if strategy.name == "xs_52w_high" else "lookback"
+        if params[window_key] not in entry[1] or (
             strategy.name == "xs_momentum" and params["skip"] not in (0, 21)
         ):
             return None, "unsupported_parameters"
-        lags.append(int(params["lookback"]) + int(params.get("skip", 0)) + 1)
+        lags.append(
+            int(params["window"])
+            if strategy.name == "xs_52w_high"
+            else int(params["lookback"]) + int(params.get("skip", 0)) + 1
+        )
+    if lags and strategy.name == "xs_52w_high":
+        observed = capture_high_runtime() if runtime is None else runtime
+        if observed.version != "3.0.6":
+            return None, "unsupported_pandas_version"
+        if observed.use_numba is not False:
+            return None, "unsupported_rolling_engine"
     return (max(lags), None) if lags else (None, "unsupported_parameters")
 
 
@@ -218,6 +263,7 @@ def measure_family_purged(
     *,
     floor: int,
     requested_folds: int,
+    high_runtime: HighRuntime | None = None,
 ) -> tuple[PurgedDiagnostic, PurgedCVResult | None]:
     """Use existing rows/evaluator; geometry insufficiency alone is an unmeasured outcome."""
     floor = require_trial_count(floor, minimum=0, parameter="embargo")
@@ -225,7 +271,10 @@ def measure_family_purged(
     _validate_sources(matrix, benchmark, len(prices))
     if matrix.shape[1] != len(configs):
         raise ValueError("purged matrix must retain every allocated config in order")
-    lag, reason = support_lag(strategy, configs, prices)
+    is_high = strategy.name == "xs_52w_high" and strategy.build is high_proximity_factory
+    if is_high and high_runtime is None:
+        raise ValueError("high purged measurement requires its matrix runtime receipt")
+    lag, reason = support_lag(strategy, configs, prices, runtime=high_runtime)
     if lag is None:
         return PurgedDiagnostic(
             status="unsupported",
@@ -247,10 +296,25 @@ def measure_family_purged(
     ):
         raise ValueError("purged prices must be complete finite positive observations")
     embargo = max(floor, lag)
-    rule: Rule = "shifted-momentum-v1" if strategy.name == "xs_momentum" else "shifted-reversal-v1"
+    rule: Rule = (
+        "rolling-high-v1"
+        if is_high
+        else "shifted-momentum-v1"
+        if strategy.name == "xs_momentum"
+        else "shifted-reversal-v1"
+    )
+    method: Literal[
+        "restricted-shift-family-purged-equal-weight-continuation-v1",
+        "restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2",
+    ] = (
+        HIGH_PURGED_METHOD
+        if is_high
+        else "restricted-shift-family-purged-equal-weight-continuation-v1"
+    )
     _, _, count = kept_geometry(len(prices), requested_folds, embargo)
     if not count:
         return PurgedDiagnostic(
+            method=method,
             status="no_usable_folds",
             n_bars=len(prices),
             requested_folds=requested_folds,
@@ -266,6 +330,7 @@ def measure_family_purged(
     if result.n_folds != count or result.mean_oos_hold_sharpe is None:
         raise ValueError("purged measurement requires actual kept geometry and paired benchmark")
     return PurgedDiagnostic(
+        method=method,
         status="measured",
         n_bars=len(prices),
         requested_folds=requested_folds,

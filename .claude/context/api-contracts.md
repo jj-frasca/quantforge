@@ -519,6 +519,12 @@ parameter today. Reading them together is the fastest way to understand what the
   provenance. Producers remain unchanged/high unsupported; these readers prepare
   compatibility before a separate scientific adoption. Client fold details show
   the attributed pandas3.0.6/Cython trailing-high qualification without raw IDs.
+  ADR-348 now produces attributed high-v2 evidence only on its captured reviewed
+  runtime/domain. Unsupported_pandas_version and unsupported_rolling_engine are
+  additional v1 unmeasured reasons, rendered as unsupported pandas version and
+  unsupported rolling engine. Unknown identities still refuse; no score is
+  fabricated for unsupported domains. Saved generation-time metadata establishes
+  bounded attribution, not independent runtime/source-provenance replay.
   ADR-328 preserves these fields through Zod and displays one family-local PCV
   column: measured mean, same-kept-fold benchmark and native Fold evidence
   disclosure for actual geometry. Unsupported recipes, parameters or price dtype
@@ -532,7 +538,8 @@ parameter today. Reading them together is the fastest way to understand what the
   Trial scalar/status, complete common requests and attributed WF bars bind at
   the client boundary, without recalculating scientific scores or graduation.
   Family-specific controls and kept sets remain distinct. Later training is
-  intentional, only the restricted direct-shift recipe is supported, and no panel
+  intentional, only audited direct-shift and runtime-attributed high recipes are
+  supported, and no panel
   calibration or executable switching policy is implied. Visible qualifications
   retain whole-sample family selection, static/PIT limits and internal costs
   without account-switching or extra benchmark-turnover reconciliation.

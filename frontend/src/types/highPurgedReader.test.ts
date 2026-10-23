@@ -97,3 +97,17 @@ test('mixed methods retain scalar binding and attributed WF-bar agreement', () =
   raw.walk_forward_n_bars += 1
   expect(crossSectionalResponseSchema.safeParse(raw).success).toBe(false)
 })
+
+test.each(['unsupported_pandas_version', 'unsupported_rolling_engine'] as const)(
+  'preserves v1 %s refusal in a mixed-method request and rejects v2 refusal', (reason) => {
+    const raw = view()
+    raw.trials[2].purged_diagnostic.reason = reason
+    const parsed = crossSectionalResponseSchema.parse(raw)!
+    expect(parsed.trials[2].purged_diagnostic?.reason).toBe(reason)
+    expect(parsed.trials[2].purged_diagnostic?.method).toBe(shiftMethod)
+    expect(parsed.trials[2].purged_cv_oos_sharpe).toBeNull()
+    expect(parsed.trials[0].purged_diagnostic?.method).toBe(highMethod)
+    raw.trials[2].purged_diagnostic.method = highMethod
+    expect(crossSectionalResponseSchema.safeParse(raw).success).toBe(false)
+  },
+)

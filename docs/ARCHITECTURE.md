@@ -225,6 +225,19 @@ integer geometry refuses without count-sized allocations. Client checks do not
 recompute scientific scores or graduation. Unsupported-family measurement remains
 open. Thresholds, selection, longitudinal v14 and frozen/generated evidence stay.
 
+**Trailing-high panel PCV has a separately attributed runtime domain (ADR-348).**
+ADR-347 installed versioned mixed-family readers first. New high-proximity
+measurement now requires its stable factory, native Float64 panel, shipped
+windows and matching per-config generation-time pandas3.0.6/Cython receipts.
+Saved runtime metadata travels with the matrix; later globals cannot silently
+relabel its engine. Other versions/engines remain explicitly unsupported, and
+inconsistent/missing receipts raise. The reviewed rolling maximum selects local
+operands; previous weights/current turnover give D=max(actual allocated W),
+with no embargo shrinking. Its v2 evidence pairs actual retained folds; the three
+shift families keep v1. No primary formula, engine option, threshold, v14,
+generated file or frozen cohort changes. This does not certify other reducers,
+Numba/future builds, independence, PIT or an executable switching policy.
+
 **Those validation claims are now durable after construction (ADR-159).** The report, split/fold
 records, flags, interpretations, and regime map are defensively copied into immutable JSON-shaped
 containers. Every scalar is finite, split/fold summaries are bound to their nested evidence, and

@@ -84,7 +84,10 @@ const purgedDiagnosticSchema = z.object({
   n_bars: z.int().positive(),
   requested_folds: z.int().min(2),
   floor: z.int().nonnegative(),
-  reason: z.enum(['unsupported_factory', 'unsupported_parameters', 'unsupported_price_dtype']).nullable().optional(),
+  reason: z.enum([
+    'unsupported_factory', 'unsupported_parameters', 'unsupported_price_dtype',
+    'unsupported_pandas_version', 'unsupported_rolling_engine',
+  ]).nullable().optional(),
   dependency_rule: z.enum(['shifted-momentum-v1', 'shifted-reversal-v1', 'rolling-high-v1']).nullable().optional(),
   max_price_lag: z.int().positive().nullable().optional(),
   embargo: z.int().nonnegative().nullable().optional(),
