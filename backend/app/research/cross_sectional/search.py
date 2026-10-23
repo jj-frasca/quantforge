@@ -29,6 +29,7 @@ from app.research.cross_sectional.manifest import CrossSectionalManifest
 from app.research.cross_sectional.purged import (
     ALPHA4_PURGED_METHOD,
     ALPHA9_PURGED_METHOD,
+    DECAY_PURGED_METHOD,
     HIGH_PURGED_METHOD,
     Alpha4Runtime,
     HighRuntime,
@@ -133,6 +134,21 @@ class CrossSectionalTrial(Trial):
                 or evidence.max_price_lag < window
             ):
                 raise ValueError("Alpha4 purged allocated lag must cover its supported finalist")
+        elif evidence.method == DECAY_PURGED_METHOD:
+            if self.strategy_name != "xs_decay_reversal" or set(self.parameters) != {
+                "window",
+                "quantile",
+            }:
+                raise ValueError("decay purged evidence requires its shipped family and parameters")
+            window = require_trial_count(
+                self.parameters["window"], minimum=1, parameter="purged finalist window"
+            )
+            if (
+                window not in (3, 5, 10)
+                or evidence.max_price_lag is None
+                or evidence.max_price_lag < window + 1
+            ):
+                raise ValueError("decay purged allocated lag must cover returns and prior weight")
         elif evidence.status != "unsupported":
             domains = {
                 "xs_momentum": ("shifted-momentum-v1", {127, 148, 190, 211, 253, 274}),

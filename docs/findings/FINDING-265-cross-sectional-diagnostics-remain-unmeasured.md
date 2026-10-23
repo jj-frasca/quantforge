@@ -9,6 +9,66 @@
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
+## ADR-355 decay-reversal attributed-reader prerequisite (2026-10-23)
+
+Distinct decay-v5 readers retain the pandas3.0.6/Cython/NumPy2.5.4 identity
+and rolling-decay-reversal-v1 through source claims, stores, API and client.
+Supported/no-fold metadata binds shipped lags4/6/11. Full trials require
+xs_decay_reversal/window3/5/10 and maxlag>=window+1. Alpha9 shares those lags
+but retains a separate method/rule: its difference/extrema and early trading
+are not this pct_change/weighted-return callback with first W NaN rows.
+Existing v1-v4 claims may coexist with complete common requests, scalar,
+geometry and attributed WF-bar binding unchanged. Fold disclosures qualify
+stored decay evidence; the actual support caption remains unchanged.
+
+Actual decay production remains unsupported_factory. No execution capture,
+callback, support resolver, measurement or evaluator changes are adopted.
+Prospective source review now follows the tagged NumPy vector adapter into
+bounded current operands, actual strides and fresh scalar output, then fresh
+DOUBLE_dot/conforming DDOT accumulation. Different BLAS rounding alone does not
+imply expired-window state; this does not attest arbitrary binaries or vendor
+reproducibility. Deterministic operative endpoints and window/prefix oracles
+support nominal D=W+1 for windows3/5/10; E=W can share both boundary prices
+while E=W+1 separates their inclusive hulls. Finite derived-return admission
+remains necessary. These controls are not execution provenance, source
+independence, PIT or panel calibration, and do not adopt a runtime producer.
+
+Further independent review narrows the dot conclusion: tagged NumPy and reference
+DDOT establish bounded mathematical inputs and fresh visible accumulation, but
+DDOT conformance alone does not establish bit-level independence from prior
+calls in the actual opaque Accelerate dependency. A legal adaptive reduction
+order could change rounding with hidden state. No such Accelerate behavior or
+false score has been observed; this is an unclosed proof obligation, distinct
+from FINDING-272's demonstrated expired-price accumulator. The earlier
+prospective suggestion that no linked-domain restriction was needed is
+superseded. Producer support stays deferred until the actual short-vector
+reducer's invocation purity is reviewed and its linked domain can be identified
+at generation. This is not a demand for universal cross-build equality or
+binary attestation. Saved pandas/NumPy/engine metadata alone is insufficient
+for that unresolved claim. Any later scientific ADR/TDD must govern the reviewed
+linked reducer domain, per-config receipts/consistency, actual maximum and
+kept-fold pairing; the reader-only contract certifies none of these.
+
+FINDING-265 remains Open in part and FINDING-272 remains valid. All existing
+noncausal selection, continued-cost/switching-account and historical absence
+limitations stay, as do thresholds, fingerprints, v14 and generated/frozen files.
+Three complete synthetic primary/WF/gate/accounting/PCV payloads excluding
+only UUID/time were frozen before code at SHA256
+d79cc331da61ec8148118a5d57ba90917fbb73e11cf20f68eaa7d581091c31e1.
+Actual pre-source backend RED13/37 refusal controls and frontend RED9/33
+controls precede their edits. Backend50 new/322 focused tests pass, with
+Ruff/format/source mypy. Frontend347 focused tests/lint/types pass; independent
+frontend review verifies339 tests and byte-exact reconstruction after removing
+only declared v5 additions, including unchanged support caption and old tests.
+Independent research172 tests plus30 extra symmetric method/rule/lag controls
+approve. All24 producer/unrelated functions,1,311 other tracked blobs and the
+three complete frozen payloads remain exact. Existing tests are unchanged.
+Fresh foreground `make check-all PYTEST_WORKERS=2` exits0:14,419 backend and731
+frontend tests pass, with97.41% backend/97.88% frontend statement coverage and
+lint/format/types gates. Default fingerprints and26 actual panel/API roundtrips
+remain unchanged. Independent follow-up review approves the written linked-
+reducer proof limitation and continued producer deferral.
+
 ## ADR-354 decay-reversal identity prerequisite (2026-10-23)
 
 The shipped decay-reversal factory receives a stable module-owned identity,

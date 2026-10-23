@@ -565,6 +565,19 @@ parameter today. Reading them together is the fastest way to understand what the
   Other unsupported recipes and FINDING-272 remain; v14/generated/frozen evidence
   and all noncausal selection/switching-account limitations stay unchanged.
 
+  ADR-355 prepares separate decay-reversal v5 readers identifying pandas3.0.6
+  Cython/NumPy2.5.4 decay-weighted returns with rolling-decay-reversal-v1 and
+  supported/no-fold lags4/6/11. Full trials bind window3/5/10 and covering
+  maxlag>=window+1; compact views retain structural checks without finalist or
+  execution replay. Mixed v1-v5 preserve complete common requests, scalar/geometry
+  and attributed WF-bar agreement. Fold details qualify the stored recipe, while
+  the actual support caption stays unchanged. Actual decay remains unsupported;
+  no callback, capture, support resolver, measurement or evaluator changes.
+  Prospective source/endpoint evidence does not adopt saved runtime policy or
+  certify build/provenance, independence, PIT, switching-account performance or
+  panel calibration. A separate producer ADR/TDD remains necessary. Existing
+  F265/F272 limits, thresholds, fingerprints, v14 and generated/frozen records stay.
+
   ADR-328 preserves these fields through Zod and displays one family-local PCV
   column: measured mean, same-kept-fold benchmark and native Fold evidence
   disclosure for actual geometry. Unsupported recipes, parameters or price dtype
