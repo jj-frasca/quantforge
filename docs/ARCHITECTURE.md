@@ -238,6 +238,20 @@ shift families keep v1. No primary formula, engine option, threshold, v14,
 generated file or frozen cohort changes. This does not certify other reducers,
 Numba/future builds, independence, PIT or an executable switching policy.
 
+**Alpha9 panel PCV has a separate captured-runtime recipe (ADR-349/350).**
+Stable factory identity and v3 readers preceded restricted producer adoption.
+Only native Float64 complete positive panels, shipped windows3/5/10 and matching
+per-config generation-time pandas3.0.6/Cython receipts support measurement.
+Runtime observations are consistent within each family; different matrices can
+have different saved domains. Missing/inconsistent receipts raise, unaudited
+domains remain unsupported, and later globals cannot relabel execution. The
+difference/extrema chain plus previous weights gives D=max(actual W+1), unlike
+high's W. Early -d trading, primary formulas and existing high/shift evidence stay.
+Distinct v3/rule attribution and actual kept-fold benchmark pairing do not certify
+independence, PIT, arbitrary builds, executable switching or panel calibration.
+Other unsupported families and FINDING-272's rolling-sum/variance limits remain.
+No thresholds, longitudinal-v14, generated files or frozen cohorts change.
+
 **Those validation claims are now durable after construction (ADR-159).** The report, split/fold
 records, flags, interpretations, and regime map are defensively copied into immutable JSON-shaped
 containers. Every scalar is finite, split/fold summaries are bound to their nested evidence, and

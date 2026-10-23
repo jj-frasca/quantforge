@@ -696,6 +696,18 @@ capture changes are included: actual Alpha9 remains unsupported_factory until
 a separately reviewed scientific decision. No historical scores or provenance
 are invented; current v1/v2 evidence and all F265/F272 limitations remain.
 
+ADR-350 subsequently enables the audited Alpha9 producer only on native Float64
+complete positive panels, shipped windows3/5/10 and saved generation-time
+pandas3.0.6/Cython receipts. Historical HighRuntime names now serve both known
+families; receipt consistency is per family, not across different matrices.
+Missing/inconsistent receipts raise and later globals never relabel execution.
+Unaudited/custom domains remain explicitly unsupported. Difference plus prior
+weights requires D=max(actual W+1), not high's W; E never shrinks. Unchanged
+evaluator/actual kept-fold pairing produces v3/rolling-alpha9-v1; high-v2 and
+shift-v1 remain. Early -d behavior and primary formulas stay. No provenance,
+independence, PIT, switching-policy or calibration certification is added;
+thresholds/v14/generated/frozen evidence stay. Remaining F265/F272 limits stand.
+
 ADR-327 publishes the exact inherited PCV scalar and frozen per-trial diagnostic
 through the read-only API. Trial scalar/status binding, complete common request
 geometry and attributed WF-bar agreement also validate at the public view boundary.

@@ -1,4 +1,4 @@
-"""ADR-349 compatibility preparation; actual Alpha9 remains unmeasured."""
+"""ADR-349 reader compatibility; ADR-350 retains unaudited-runtime refusal."""
 
 from pathlib import Path
 from typing import Any
@@ -95,11 +95,14 @@ def test_alpha9_factory_retains_lazy_lookup_and_mapping_capture() -> None:
         signal(panel())
 
 
-def test_alpha9_producer_is_still_unsupported_after_preparation() -> None:
+def test_alpha9_producer_refuses_unaudited_runtime_after_adoption() -> None:
+    # ADR-350 supersedes blanket refusal with audited support; unsafe metadata
+    # still refuses without executing the unaudited engine.
     strategy = registry.default_strategies()["xs_alpha9"]
-    assert purged.support_lag(strategy, [({"window": 5}, 0.2)], panel()) == (
+    unsafe = purged.HighRuntime("3.0.6", True)
+    assert purged.support_lag(strategy, [({"window": 5}, 0.2)], panel(), runtime=unsafe) == (
         None,
-        "unsupported_factory",
+        "unsupported_rolling_engine",
     )
     d, result = purged.measure_family_purged(
         strategy,
@@ -109,8 +112,9 @@ def test_alpha9_producer_is_still_unsupported_after_preparation() -> None:
         np.zeros(80),
         floor=0,
         requested_folds=3,
+        high_runtime=unsafe,
     )
-    assert d.reason == "unsupported_factory" and result is None
+    assert d.reason == "unsupported_rolling_engine" and result is None
 
 
 @pytest.mark.parametrize("window", [3, 5, 10])

@@ -38,6 +38,7 @@ from app.research.cross_sectional.purged import (
 from app.research.cross_sectional.registry import (
     CrossSectionalStrategy,
     Params,
+    alpha9_factory,
     default_strategies,
     high_proximity_factory,
 )
@@ -533,13 +534,17 @@ def run_cross_sectional_search(
             and strategy.name == name
             and strategy.build is high_proximity_factory
         )
+        is_alpha9 = (
+            name == "xs_alpha9" and strategy.name == name and strategy.build is alpha9_factory
+        )
         for p, q in configs:
-            before = capture_high_runtime() if is_high else None
+            before = capture_high_runtime() if is_high or is_alpha9 else None
             series.append(_config_returns(strategy, p, q, in_sample, cost_rate))
-            if is_high:
+            if is_high or is_alpha9:
                 after = capture_high_runtime()
                 if before != after or (high_runtime is not None and before != high_runtime):
-                    raise ValueError("high matrix runtime changed during allocated execution")
+                    family = "high" if is_high else "Alpha9"
+                    raise ValueError(f"{family} matrix runtime changed during allocated execution")
                 high_runtime = after
         matrix = np.column_stack([s.to_numpy() for s in series])
         sharpes = [sharpe_ratio(s) for s in series]

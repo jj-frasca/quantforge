@@ -533,6 +533,14 @@ parameter today. Reading them together is the fastest way to understand what the
   Client fold details qualify the price-change-extrema recipe in plain language.
   Actual Alpha9 production stays unsupported; no runtime execution or measurement
   is certified by these preparatory readers.
+  ADR-350 subsequently produces Alpha9-v3 only within its reviewed native
+  Float64/shipped-window/pandas3.0.6-Cython saved runtime domain. Per-family
+  generation-time receipt agreement binds classification; later globals cannot
+  relabel matrices and missing/inconsistent receipts raise. Existing unsupported
+  engine/version reasons remain. D=max(actual W+1) and same-kept-fold pairing
+  distinguish it from high-v2. Client support caption now names both restricted
+  rolling recipes. No wire fields, parser, score formula or verdict changes;
+  runtime metadata does not independently attest provenance, PIT or calibration.
   ADR-328 preserves these fields through Zod and displays one family-local PCV
   column: measured mean, same-kept-fold benchmark and native Fold evidence
   disclosure for actual geometry. Unsupported recipes, parameters or price dtype
@@ -546,7 +554,7 @@ parameter today. Reading them together is the fastest way to understand what the
   Trial scalar/status, complete common requests and attributed WF bars bind at
   the client boundary, without recalculating scientific scores or graduation.
   Family-specific controls and kept sets remain distinct. Later training is
-  intentional, only audited direct-shift and runtime-attributed high recipes are
+  intentional, only audited direct-shift and runtime-attributed high/Alpha9 recipes are
   supported, and no panel
   calibration or executable switching policy is implied. Visible qualifications
   retain whole-sample family selection, static/PIT limits and internal costs

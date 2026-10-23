@@ -9,6 +9,53 @@
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
+## ADR-350 runtime-attributed Alpha9 measurement (2026-10-23)
+
+After ADR-349's individually published readers and exact CI, the known Alpha9
+producer now supports only native Float64 complete positive panels, shipped
+windows3/5/10 and saved generation-time pandas3.0.6/Cython receipts. Reused
+HighRuntime names are historical; each family carries its own matching
+before/after and cross-config receipt. Separate families may have different
+observed domains. Later globals cannot relabel a matrix. Missing known-factory
+receipts and inconsistent observations raise; custom identities and unaudited
+versions/engines retain explicit unsupported outcomes. No engine is forced.
+
+Its difference/extrema chain and prior weights give D=max(actual allocated W+1),
+lags4/6/11. E=max(original floor,D) never shrinks. Independent source/operator
+review and deterministic oldest/current/expired-prefix, early-trade, oracle and
+both-boundary controls establish this restricted hull. The unchanged evaluator
+pairs its actual kept folds with their own equal-weight benchmark; v3/rule
+identity remains distinct from high-v2/D=W and shifted-v1. No-fold outcomes
+retain geometry without scores; numerical measurement refusals propagate.
+
+This closes only Alpha9's unsupported-family gap. FINDING-265 remains Open in
+part for other recipes; FINDING-272's sum/variance limitation stands. Later
+training, whole-sample family selection, non-PIT snapshots, mean-of-Sharpes,
+internal costs without account-switching reconciliation, no extra benchmark
+turnover costs and absent panel-null calibration remain. Bounded runtime
+metadata is not independent provenance or arbitrary-build attestation. No
+threshold, primary formula, selector, longitudinal-v14 or frozen/generated
+record changes; changed completion domains do not certify unchanged rates.
+
+Preimplementation RED26 included2 too-short capture fixtures; corrected capture
+fixtures independently fail against original HEAD source in memory (RED2,
+missing refusal). Other24 failures exercise absent support/classification and
+measurement. Final202 focused backend tests and281 frontend cases pass; rendered
+caption RED preceded its source edit. Prior349 blanket-refusal test is explicitly
+superseded with unaudited-engine refusal, retaining other identity/reader tests.
+Primary/WF/gate/accounting baseline excludes only intentional per-trial PCV
+evidence and UUID/time; frozen SHA256
+cd974256c6b3f4c321024113f9d4a2d5152cf6f3e27ee1e6b72a6904703b85fa.
+Final independent research review approves350 tests, all3 primary baselines,
+exact existing high/shift results and differing family-kept benchmark means;
+frontend281 cases/lint/types and documentation review approve. Parent checks
+preserve1,300 other tracked blobs, undeclared functions/classes, old349 tests
+except explicit refusal supersession,26 panel/API roundtrips and fingerprints.
+Fresh foreground `make check-all PYTEST_WORKERS=2` exits0 with14,179 backend
+and628 frontend tests passing, plus lint/format/types and coverage gates. A final
+stale test-module description was corrected without changing assertions;
+targeted Ruff/format pass. No calibration/cohort/provider measurement occurred.
+
 ## ADR-349 Alpha9 compatibility prerequisite (2026-10-22)
 
 The shipped Alpha9 factory now has stable module-owned identity, retaining the
@@ -38,7 +85,7 @@ Session22 independently refreshed research review (250 focused cases plus
 native-error/lazy-coercion and producer-AST checks) and frontend review (280
 cases, lint and typing) approve this prerequisite. The fresh foreground
 `make check-all PYTEST_WORKERS=2` exits0: 14,148 backend and627 frontend tests
-pass, with backend97.39% and frontend97.86% statement coverage. Preservation
+pass, with backend97.40% and frontend97.86% statement coverage. Preservation
 checks retain1,296 other tracked backend/frontend/data blobs, every producer
 function, the original inner lambda,26 panel roundtrips and search/gate hashes.
 No score, threshold, accounting-v14, generated or frozen record changes.

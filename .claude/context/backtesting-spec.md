@@ -149,6 +149,15 @@ lags4/6/11 for prospective W+1 source support, preserving row1 early -d trading.
 Actual Alpha9 remains unsupported; signal, portfolio and producer ASTs stay.
 Reader metadata is not proof that a named runtime executed.
 
+ADR-350 subsequently adopts restricted Alpha9 producer support with exact
+pandas3.0.6/Cython and matching per-config generation-time receipts. Historical
+HighRuntime names carry each family's independent version/engine observations;
+classification never uses later globals. Native Float64/shipped-window support
+uses max(actual W+1), v3 and actual kept-fold pairing; high stays W/v2. Missing
+receipts raise; unaudited/custom domains stay unsupported. No engine, early -d,
+signal/portfolio formula, primary selector, threshold or v14 changes. See ADR350
+and validation-methodology.md for numerical-history/PIT/calibration limits.
+
 `app/research/strategies/base.py`. ABC:
 
 - `generate_signals(data: pd.DataFrame) -> pd.Series`

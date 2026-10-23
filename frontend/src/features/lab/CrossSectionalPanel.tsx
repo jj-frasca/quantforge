@@ -102,7 +102,8 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
         The equal-weight universe benchmark adds no turnover-cost model. Supplied fundamental inputs
         are static snapshots, not historical point-in-time information. Scores are equal means of
         window Sharpes, not Sharpe on stitched policy returns. Purged CV support is restricted to audited family recipes
-        (including audited direct-shift recipes); later training is intentional.
+        (including audited direct-shift recipes, and trailing-high and Alpha9 price-change-extrema
+        recipes restricted to pandas 3.0.6 Cython on complete native Float64 panels); later training is intentional.
         Purged CV scores are equal means of retained-fold Sharpes, paired with each family’s
         same-kept-fold equal-weight universe benchmark, not Sharpe on stitched policy returns.
       </p>
