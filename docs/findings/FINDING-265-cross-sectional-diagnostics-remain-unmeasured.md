@@ -9,6 +9,40 @@
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
+## ADR-349 Alpha9 compatibility prerequisite (2026-10-22)
+
+The shipped Alpha9 factory now has stable module-owned identity, retaining the
+exact lazy int/window expression, captured mapping, errors, grid, signals,
+portfolio returns and early -d behavior. Only row0 is flat for the shipped
+windows; no warmup is changed. A distinct pandas3.0.6/Cython Alpha9-v3 method
+and rolling-alpha9-v1 rule are readable through full claims, stores, API and
+client, alongside unchanged v1/v2. Supported/no-fold v3 metadata requires lags
+4/6/11; full trials bind window3/5/10 and covering lag >=window+1. All common
+request, scalar, branch, geometry and WF checks remain.
+
+The difference operator extends the prospective source hull to [t-W-1,t],
+D=W+1. Independent endpoint controls establish that copying high's W would miss
+an operative oldest price affecting both gross and turnover. This preparation
+does not adopt an execution domain, capture policy or measurement: support_lag,
+measure_family_purged and search/capture functions remain unchanged, and Alpha9
+still reports unsupported_factory. Stable identity and reader metadata cannot
+certify actual kernel execution or source provenance. A separate scientific ADR
+must govern producer/runtime integration and actual kept-fold pairing. Existing
+rolling-reducer/PIT/noncausal/account-switching and calibration limits remain.
+
+Actual preimplementation backendRED7/36 controls and frontendRED9/19 controls
+preceded source edits. Final parent171 focused and frontend252 cases pass.
+Three FULL synthetic payloads, excluding only run UUID/time, retain frozen SHA256
+f89cecb111c9dd9a3039fb93b64b69a1816fa690da8fdc6cdb838926df85856e.
+Session22 independently refreshed research review (250 focused cases plus
+native-error/lazy-coercion and producer-AST checks) and frontend review (280
+cases, lint and typing) approve this prerequisite. The fresh foreground
+`make check-all PYTEST_WORKERS=2` exits0: 14,148 backend and627 frontend tests
+pass, with backend97.39% and frontend97.86% statement coverage. Preservation
+checks retain1,296 other tracked backend/frontend/data blobs, every producer
+function, the original inner lambda,26 panel roundtrips and search/gate hashes.
+No score, threshold, accounting-v14, generated or frozen record changes.
+
 ## ADR-348 runtime-attributed trailing-high measurement (2026-10-22)
 
 The known shipped xs_52w_high producer now measures restricted PCV on complete

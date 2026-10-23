@@ -56,6 +56,11 @@ def high_proximity_factory(p: Params) -> SignalFn:
     return lambda prices: high_proximity_signal(prices, int(p["window"]))
 
 
+def alpha9_factory(p: Params) -> SignalFn:
+    """Stable shipped Alpha9 identity with unchanged lazy coercion (ADR-349)."""
+    return lambda prices: alpha9_signal(prices, int(p["window"]))
+
+
 def default_strategies(
     value_scores: Mapping[str, float] | None = None,
     quality_scores: Mapping[str, float] | None = None,
@@ -141,7 +146,7 @@ def default_strategies(
         ),
         "xs_alpha9": CrossSectionalStrategy(
             name="xs_alpha9",
-            build=lambda p: lambda prices: alpha9_signal(prices, int(p["window"])),
+            build=alpha9_factory,
             param_grid=tuple({"window": w} for w in (3, 5, 10)),
         ),
     }

@@ -687,6 +687,15 @@ Kernel operand proof and both-boundary controls do not certify independence,
 PIT, Numba/future builds, other rolling reducers or an executable switching policy.
 F265 stays Open for the remaining unsupported families; F272 remains valid.
 
+ADR-349 prepares stable Alpha9 identity and a distinct v3/rolling-alpha9-v1
+reader contract only. Supported/no-fold metadata uses lags4/6/11; full trials
+bind shipped windows3/5/10 and maxlag>=window+1. Existing mixed-method request,
+scalar/geometry/WF checks remain. Its prospective difference/extrema chain has
+D=W+1 and early -d signals from row1, unlike trailing-high. No producer/runtime
+capture changes are included: actual Alpha9 remains unsupported_factory until
+a separately reviewed scientific decision. No historical scores or provenance
+are invented; current v1/v2 evidence and all F265/F272 limitations remain.
+
 ADR-327 publishes the exact inherited PCV scalar and frozen per-trial diagnostic
 through the read-only API. Trial scalar/status binding, complete common request
 geometry and attributed WF-bar agreement also validate at the public view boundary.

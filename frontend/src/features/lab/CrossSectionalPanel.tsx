@@ -141,6 +141,9 @@ function PurgedDiagnostic({ trial }: { trial: CrossSectionalTrial }) {
         {evidence.method === 'restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2' && (
           <p>Recipe qualification: pandas 3.0.6 Cython trailing-high on complete native Float64 panels.</p>
         )}
+        {evidence.method === 'restricted-pandas-3.0.6-cython-alpha9-purged-equal-weight-continuation-v3' && (
+          <p>Recipe qualification: pandas 3.0.6 Cython price-change-extrema on complete native Float64 panels.</p>
+        )}
         <p>{evidence.n_bars} search bars · {evidence.kept_fold_ordinals!.length} of {evidence.requested_folds} folds kept</p>
         <p>Original floor: {evidence.floor} · allocated price lag: {evidence.max_price_lag} · embargo: {evidence.embargo}</p>
         {evidence.kept_fold_ordinals!.length > 0 && (

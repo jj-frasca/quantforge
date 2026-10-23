@@ -525,6 +525,14 @@ parameter today. Reading them together is the fastest way to understand what the
   unsupported rolling engine. Unknown identities still refuse; no score is
   fabricated for unsupported domains. Saved generation-time metadata establishes
   bounded attribution, not independent runtime/source-provenance replay.
+  ADR-349 also prepares the exact
+  restricted-pandas-3.0.6-cython-alpha9-purged-equal-weight-continuation-v3 method
+  with rolling-alpha9-v1 and supported/no-fold lags4/6/11. Existing v1/v2/v3 claims
+  may mix with unchanged complete common requests, scalar/geometry and WF binding.
+  Full source trials additionally bind window3/5/10 and covering maxlag>=window+1.
+  Client fold details qualify the price-change-extrema recipe in plain language.
+  Actual Alpha9 production stays unsupported; no runtime execution or measurement
+  is certified by these preparatory readers.
   ADR-328 preserves these fields through Zod and displays one family-local PCV
   column: measured mean, same-kept-fold benchmark and native Fold evidence
   disclosure for actual geometry. Unsupported recipes, parameters or price dtype

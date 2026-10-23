@@ -143,6 +143,12 @@ selects in-window operands; previous weights/current turnover give D=W. Existing
 primary math, three shifted-family evidence and all scientific caveats remain.
 See validation-methodology.md and ADR348 for exact domain, geometry and limits.
 
+ADR-349 adds stable alpha9_factory identity with the exact prior lazy window
+lookup/int coercion and mapping capture. Its distinct v3 reader contract prepares
+lags4/6/11 for prospective W+1 source support, preserving row1 early -d trading.
+Actual Alpha9 remains unsupported; signal, portfolio and producer ASTs stay.
+Reader metadata is not proof that a named runtime executed.
+
 `app/research/strategies/base.py`. ABC:
 
 - `generate_signals(data: pd.DataFrame) -> pd.Series`
