@@ -9,6 +9,39 @@
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
+## ADR-354 decay-reversal identity prerequisite (2026-10-23)
+
+The shipped decay-reversal factory receives a stable module-owned identity,
+preserving the exact old lazy returned expression, reference-captured mapping,
+int conversion, native errors, call-time module-global lookup and windows3/5/10.
+Signals, weighted callback, ranking, portfolio, first W NaN warmup and all other
+registry entries stay unchanged. This representation prerequisite adopts no
+new source-support recipe, runtime capture, reader or measurement. Actual decay
+PCV remains unsupported_factory.
+
+Read-only triage distinguishes this pct_change/rolling.apply/np.dot path from
+Alpha4's boolean percentile. Nominal W+1 support still needs operative endpoint
+proof; installed float-vector dot may dispatch through CBLAS/Accelerate, so
+pandas/NumPy versions alone do not settle its reviewed runtime/build domain.
+Finite prices alone also do not guarantee finite derived returns. These are
+prerequisites for a separate scientific decision, not certification or a newly
+observed false score. FINDING-265 remains Open in part, FINDING-272 remains valid,
+and no threshold, v14, generated record or frozen cohort changes.
+
+Before implementation,3 complete deterministic synthetic primary/WF/gate/
+accounting/PCV payloads excluding only UUID/time were frozen at SHA256
+d79cc331da61ec8148118a5d57ba90917fbb73e11cf20f68eaa7d581091c31e1.
+Actual pre-edit RED1 identity/62 compatibility controls precedes the helper.
+Final63 new and170 focused tests pass with Ruff/format and source mypy.
+Independent review approves63 tests plus36 exact signals/108 exact portfolios
+against compiled prior source. The whole prior registry AST matches after
+undoing only the declared helper/reference; the returned inner lambda is exact.
+All1,313 other tracked backend/frontend/data blobs and3FULL payloads remain
+exact. No prior tests change. Fresh foreground `make check-all PYTEST_WORKERS=2`
+exits0:14,369 backend and683 frontend tests pass, with97.41% backend/97.87%
+frontend statement coverage and lint/format/types gates. Default search/gate
+fingerprints stay unchanged. No scientific support is adopted.
+
 ## ADR-353 runtime-attributed Alpha4 measurement (2026-10-23)
 
 The previously accepted producer decision is resumed in session24. Support is

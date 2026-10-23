@@ -66,6 +66,11 @@ def alpha4_factory(p: Params) -> SignalFn:
     return lambda prices: alpha4_signal(prices, int(p["window"]))
 
 
+def decay_reversal_factory(p: Params) -> SignalFn:
+    """Stable shipped decay identity with unchanged lazy coercion (ADR-354)."""
+    return lambda prices: decay_reversal_signal(prices, int(p["window"]))
+
+
 def default_strategies(
     value_scores: Mapping[str, float] | None = None,
     quality_scores: Mapping[str, float] | None = None,
@@ -146,7 +151,7 @@ def default_strategies(
         ),
         "xs_decay_reversal": CrossSectionalStrategy(
             name="xs_decay_reversal",
-            build=lambda p: lambda prices: decay_reversal_signal(prices, int(p["window"])),
+            build=decay_reversal_factory,
             param_grid=tuple({"window": w} for w in (3, 5, 10)),
         ),
         "xs_alpha9": CrossSectionalStrategy(

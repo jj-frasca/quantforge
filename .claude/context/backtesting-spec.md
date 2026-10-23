@@ -188,6 +188,14 @@ attribution, not build/provenance/PIT/independence or calibration attestation.
 Other unsupported recipes and FINDING-272 remain; v14/generated/frozen evidence
 and all noncausal selection/switching-account limitations stay unchanged.
 
+ADR-354 gives xs_decay_reversal a stable module-owned factory while preserving
+its exact lazy inner lambda, mapping reference, int coercion/errors, call-time
+signal lookup and3/5/10 grid. Signals and first W NaN warmup stay unchanged.
+Actual decay PCV remains unsupported; no capture/reader/source support is adopted.
+Future scientific review must follow pct_change/rolling.apply/np.dot, finite
+return admission, BLAS dispatch/build domain and operative W+1 endpoints rather
+than borrowing Alpha4's percentile proof. Existing F265/F272 limitations remain.
+
 `app/research/strategies/base.py`. ABC:
 
 - `generate_signals(data: pd.DataFrame) -> pd.Series`
