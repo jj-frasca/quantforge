@@ -9,6 +9,29 @@
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
+## ADR-351 Alpha4 identity prerequisite (2026-10-23)
+
+The shipped Alpha4 factory gains stable module-owned identity while retaining
+the exact lazy inner alpha4_signal/window/int expression, mapping capture,
+native errors,5/9/21 grid, tie convention and W-1 missing warmup. The actual
+signal uses a rolling.apply less-than-or-equal percentile callback, not pandas
+Rolling.rank. No callback, signal, runtime capture, reader, source-support rule
+or measurement changes; Alpha4 still reports unsupported_factory.
+
+This is a representation-only prerequisite. Prospective source triage is not
+operative-endpoint/runtime evidence or scientific adoption. Any later support
+requires distinct attributed readers and a separately reviewed scientific ADR
+covering the actual callback, NumPy reduction and rolling admission/dispatch
+dependencies. Existing F265/F272 limits, thresholds, v14 and historical evidence
+remain. Actual pre-edit identity RED1/40 compatibility controls precedes the
+narrow edit;208 focused tests, Ruff and mypy pass. Independent review approves
+41 tests plus8 exact signal/24 exact portfolio comparisons with compiled HEAD.
+Whole registry AST is exact after undoing only the helper/outer replacement,
+including the original returned lambda;1,305 other tracked runtime/test/data
+blobs and search/gate fingerprints remain exact. Fresh foreground
+`make check-all PYTEST_WORKERS=2` exits0:14,220 backend and628 frontend tests
+pass with lint/format/types and coverage gates. No scientific support is adopted.
+
 ## ADR-350 runtime-attributed Alpha9 measurement (2026-10-23)
 
 After ADR-349's individually published readers and exact CI, the known Alpha9

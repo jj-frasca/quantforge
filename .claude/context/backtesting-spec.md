@@ -158,6 +158,14 @@ receipts raise; unaudited/custom domains stay unsupported. No engine, early -d,
 signal/portfolio formula, primary selector, threshold or v14 changes. See ADR350
 and validation-methodology.md for numerical-history/PIT/calibration limits.
 
+ADR-351 gives Alpha4 a stable module-owned factory with the exact prior lazy
+window lookup/int expression, mapping capture, errors and5/9/21 grid. Its
+rolling.apply percentile callback counts <= ties fully and keeps W-1 NaN warmup;
+neither that callback nor execution arithmetic changes. Alpha4 PCV remains
+unsupported. This identity prerequisite adopts no runtime/source support or
+new readers; a future scientific decision must audit actual callback/NumPy/
+rolling-admission dependencies rather than pandas Rolling.rank.
+
 `app/research/strategies/base.py`. ABC:
 
 - `generate_signals(data: pd.DataFrame) -> pd.Series`

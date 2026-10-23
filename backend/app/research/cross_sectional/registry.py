@@ -61,6 +61,11 @@ def alpha9_factory(p: Params) -> SignalFn:
     return lambda prices: alpha9_signal(prices, int(p["window"]))
 
 
+def alpha4_factory(p: Params) -> SignalFn:
+    """Stable shipped Alpha4 identity with unchanged lazy coercion (ADR-351)."""
+    return lambda prices: alpha4_signal(prices, int(p["window"]))
+
+
 def default_strategies(
     value_scores: Mapping[str, float] | None = None,
     quality_scores: Mapping[str, float] | None = None,
@@ -136,7 +141,7 @@ def default_strategies(
         ),
         "xs_alpha4": CrossSectionalStrategy(
             name="xs_alpha4",
-            build=lambda p: lambda prices: alpha4_signal(prices, int(p["window"])),
+            build=alpha4_factory,
             param_grid=tuple({"window": w} for w in (5, 9, 21)),
         ),
         "xs_decay_reversal": CrossSectionalStrategy(
