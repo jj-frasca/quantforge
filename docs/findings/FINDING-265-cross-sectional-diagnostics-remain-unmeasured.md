@@ -8,6 +8,41 @@
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
+## ADR-347 preparatory versioned readers (2026-10-22)
+
+Reader compatibility now recognizes a separately attributed pandas3.0.6/Cython
+trailing-high method and rolling-high dependency rule, with supported/no-fold
+geometry and shipped allocated lags126/189/252. Full trial reconstruction binds
+that method to xs_52w_high, its shipped finalist window and covering allocated
+lag. Inherited parameter normalization remains; this is not a new original-type
+provenance guarantee. Old shifted methods/defaults remain readable exactly.
+
+Recognized family methods may differ within one full experiment and public view;
+all families still supply current outcomes with common bars/folds/floor and
+attributed WF-bar agreement. Per-family scalar, branch, exact kept-set and
+benchmark binding remain. API/client preserve method identity without recomputing
+scores or proving that a claimed engine ran. The panel discloses the trailing-high
+kernel qualification when reading such evidence. Mixed-method fixtures are
+synthetic claims, not executed scientific measurements.
+
+No producer emits the new method: support_lag and measure_family_purged remain
+unchanged, and high-proximity still returns unsupported_factory. A separate
+scientific ADR, engine/version/domain refusal policy and independent source/runtime
+endpoint audit are required before producer adoption. F272 is not resolved; no
+score, threshold, accounting-v14, generated or frozen record changes. This
+compatibility prerequisite leaves the unsupported-family finding Open in part.
+
+Verification: actual backend RED14/21 controls and frontend RED7/16 controls
+preceded source edits. Final parent backend focused119 and frontend220 cases
+pass; independent research review approved114 independently rerun tests and
+frontend review approved220 plus lint/types. Exact producer ASTs and1292 other
+tracked backend/frontend/data blobs, all old tests, default search/gate/v14
+fingerprints and26 current panel-record roundtrips remain unchanged. Fresh full
+foreground make check-all passed14069 backend and595 frontend tests, with
+97.38%/97.84% coverage, lint, formatting and types green. Log:
+/tmp/qf-w43-s20-check347.log. All local verification closed before delivery;
+exact published master CI follows individual publication.
+
 ## ADR-346 preparatory stable factory identity (2026-10-22)
 
 The shipped xs_52w_high outer factory now has stable module-owned identity,

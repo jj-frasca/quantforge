@@ -27,6 +27,7 @@ from app.research.cross_sectional.engine import (
 from app.research.cross_sectional.ic import ICSummary, rank_ic, summarize_ic
 from app.research.cross_sectional.manifest import CrossSectionalManifest
 from app.research.cross_sectional.purged import (
+    HIGH_PURGED_METHOD,
     PurgedDiagnostic,
     measure_family_purged,
     requested_fold_count,
@@ -78,7 +79,22 @@ class CrossSectionalTrial(Trial):
         expected = evidence.mean_oos_sharpe if evidence.status == "measured" else None
         if self.purged_cv_oos_sharpe != expected:
             raise ValueError("trial purged scalar must match current evidence status and mean")
-        if evidence.status != "unsupported":
+        if evidence.method == HIGH_PURGED_METHOD:
+            if self.strategy_name != "xs_52w_high" or set(self.parameters) != {
+                "window",
+                "quantile",
+            }:
+                raise ValueError("high purged evidence requires its shipped family and parameters")
+            window = require_trial_count(
+                self.parameters["window"], minimum=1, parameter="purged finalist window"
+            )
+            if (
+                window not in (126, 189, 252)
+                or evidence.max_price_lag is None
+                or evidence.max_price_lag < window
+            ):
+                raise ValueError("high purged allocated lag must cover its supported finalist")
+        elif evidence.status != "unsupported":
             domains = {
                 "xs_momentum": ("shifted-momentum-v1", {127, 148, 190, 211, 253, 274}),
                 "xs_reversal": ("shifted-reversal-v1", {4, 6, 11}),
@@ -316,10 +332,10 @@ class CrossSectionalExperiment(BaseModel):
             raise ValueError("current purged evidence requires every family outcome")
         first = evidence[0]
         assert first is not None
-        request = (first.method, first.n_bars, first.requested_folds, first.floor)
+        request = (first.n_bars, first.requested_folds, first.floor)
         for item in evidence:
             assert item is not None
-            if (item.method, item.n_bars, item.requested_folds, item.floor) != request:
+            if (item.n_bars, item.requested_folds, item.floor) != request:
                 raise ValueError("purged families must carry the same request geometry")
             if self.walk_forward_method is not None and item.n_bars != self.walk_forward_n_bars:
                 raise ValueError("purged bars must match attributed walk-forward bars")

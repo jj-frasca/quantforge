@@ -76,13 +76,16 @@ export const graduatesSchema = z.array(graduateRowSchema)
 // ADR-328: the browser accepts parsed safe integer counts, then uses exact BigInt
 // intermediates for compact geometry. Python counts beyond this range fail at the boundary.
 const purgedDiagnosticSchema = z.object({
-  method: z.literal('restricted-shift-family-purged-equal-weight-continuation-v1'),
+  method: z.enum([
+    'restricted-shift-family-purged-equal-weight-continuation-v1',
+    'restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2',
+  ]),
   status: z.enum(['measured', 'unsupported', 'no_usable_folds']),
   n_bars: z.int().positive(),
   requested_folds: z.int().min(2),
   floor: z.int().nonnegative(),
   reason: z.enum(['unsupported_factory', 'unsupported_parameters', 'unsupported_price_dtype']).nullable().optional(),
-  dependency_rule: z.enum(['shifted-momentum-v1', 'shifted-reversal-v1']).nullable().optional(),
+  dependency_rule: z.enum(['shifted-momentum-v1', 'shifted-reversal-v1', 'rolling-high-v1']).nullable().optional(),
   max_price_lag: z.int().positive().nullable().optional(),
   embargo: z.int().nonnegative().nullable().optional(),
   kept_fold_ordinals: z.array(z.int().nonnegative()).nullable().optional(),
@@ -93,6 +96,14 @@ const purgedDiagnosticSchema = z.object({
   if (evidence.n_bars < evidence.requested_folds) invalid('Purged bars must cover requested folds')
   const support = [evidence.dependency_rule, evidence.max_price_lag, evidence.embargo, evidence.kept_fold_ordinals]
   const scores = [evidence.mean_oos_sharpe, evidence.mean_oos_hold_sharpe]
+  if (evidence.method === 'restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2') {
+    if (evidence.status === 'unsupported' || evidence.dependency_rule !== 'rolling-high-v1' ||
+      ![126, 189, 252].includes(evidence.max_price_lag ?? 0)) {
+      invalid('Versioned high evidence requires its supported audited dependency recipe')
+    }
+  } else if (evidence.dependency_rule === 'rolling-high-v1') {
+    invalid('High dependency recipe requires its versioned method')
+  }
   if (evidence.status === 'unsupported') {
     if (evidence.reason == null || [...support, ...scores].some((value) => value != null)) {
       invalid('Unsupported purged evidence requires only its reason')
@@ -220,7 +231,7 @@ export const crossSectionalViewSchema = z.object({
   if (current == null) return
   for (const trial of view.trials) {
     const evidence = trial.purged_diagnostic
-    if (evidence == null || evidence.method !== current.method || evidence.n_bars !== current.n_bars ||
+    if (evidence == null || evidence.n_bars !== current.n_bars ||
       evidence.requested_folds !== current.requested_folds || evidence.floor !== current.floor) {
       ctx.addIssue({ code: 'custom', message: 'Current purged evidence requires a complete common request' })
       break

@@ -664,6 +664,16 @@ selection is not measured. Source-operand
 separation does not establish independence, PIT universe availability or panel
 calibration. Existing gate-bearing results stay exact on measurable controls.
 
+ADR-347 installs readers for a separate pandas3.0.6/Cython high-proximity
+method with rolling-high-v1 and shipped allocated lags126/189/252. Only measured
+or no-fold evidence can use it; full trials bind xs_52w_high/window/covering lag.
+Current producers remain unchanged and high remains unsupported. Recognized
+family methods may differ, while all current outcomes must retain common
+bars/folds/floor and attributed WF-bar agreement. Existing shift identities,
+scalar/geometry/benchmark binding and historical absence stay. This reader-first
+contract does not certify engine execution or adopt rolling measurement; a
+separate producer ADR and source/runtime audit remain required (F265 Open in part).
+
 ADR-327 publishes the exact inherited PCV scalar and frozen per-trial diagnostic
 through the read-only API. Trial scalar/status binding, complete common request
 geometry and attributed WF-bar agreement also validate at the public view boundary.

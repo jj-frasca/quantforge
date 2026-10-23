@@ -101,7 +101,8 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
         configurations include internal costs; account entry and switching trades are not reconciled.
         The equal-weight universe benchmark adds no turnover-cost model. Supplied fundamental inputs
         are static snapshots, not historical point-in-time information. Scores are equal means of
-        window Sharpes, not Sharpe on stitched policy returns. Purged CV support is restricted to audited direct-shift recipes; later training is intentional.
+        window Sharpes, not Sharpe on stitched policy returns. Purged CV support is restricted to audited family recipes
+        (including audited direct-shift recipes); later training is intentional.
         Purged CV scores are equal means of retained-fold Sharpes, paired with each family’s
         same-kept-fold equal-weight universe benchmark, not Sharpe on stitched policy returns.
       </p>
@@ -135,6 +136,9 @@ function PurgedDiagnostic({ trial }: { trial: CrossSectionalTrial }) {
       ) : <span>not measured · no usable folds</span>}
       <details>
         <summary>Fold evidence</summary>
+        {evidence.method === 'restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2' && (
+          <p>Recipe qualification: pandas 3.0.6 Cython trailing-high on complete native Float64 panels.</p>
+        )}
         <p>{evidence.n_bars} search bars · {evidence.kept_fold_ordinals!.length} of {evidence.requested_folds} folds kept</p>
         <p>Original floor: {evidence.floor} · allocated price lag: {evidence.max_price_lag} · embargo: {evidence.embargo}</p>
         {evidence.kept_fold_ordinals!.length > 0 && (

@@ -24,7 +24,8 @@ from app.research.trial_counts import require_trial_count
 from app.validation.purged_cv import PurgedCVResult, purged_cv_evaluate, purged_kfold_splits
 
 Reason = Literal["unsupported_factory", "unsupported_parameters", "unsupported_price_dtype"]
-Rule = Literal["shifted-momentum-v1", "shifted-reversal-v1"]
+Rule = Literal["shifted-momentum-v1", "shifted-reversal-v1", "rolling-high-v1"]
+HIGH_PURGED_METHOD = "restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2"
 
 
 def requested_fold_count(value: object) -> int:
@@ -68,9 +69,10 @@ class PurgedDiagnostic(BaseModel):
 
     model_config = ConfigDict(frozen=True, revalidate_instances="always")
 
-    method: Literal["restricted-shift-family-purged-equal-weight-continuation-v1"] = (
-        "restricted-shift-family-purged-equal-weight-continuation-v1"
-    )
+    method: Literal[
+        "restricted-shift-family-purged-equal-weight-continuation-v1",
+        "restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2",
+    ] = "restricted-shift-family-purged-equal-weight-continuation-v1"
     status: Literal["measured", "unsupported", "no_usable_folds"]
     n_bars: int
     requested_folds: int
@@ -121,6 +123,17 @@ class PurgedDiagnostic(BaseModel):
     def _coherent(self) -> "PurgedDiagnostic":
         if self.n_bars < self.requested_folds:
             raise ValueError("purged bars must cover requested folds")
+        # ADR-347 readers precede producer adoption; existing defaults stay shifted-only.
+        is_high = self.method == HIGH_PURGED_METHOD
+        if is_high:
+            if (
+                self.status == "unsupported"
+                or self.dependency_rule != "rolling-high-v1"
+                or self.max_price_lag not in (126, 189, 252)
+            ):
+                raise ValueError("high purged method requires its supported rule and shipped lag")
+        elif self.dependency_rule == "rolling-high-v1":
+            raise ValueError("rolling high dependency requires its attributed method")
         support = (self.dependency_rule, self.max_price_lag, self.embargo, self.kept_fold_ordinals)
         scores = (self.mean_oos_sharpe, self.mean_oos_hold_sharpe)
         if self.status == "unsupported":

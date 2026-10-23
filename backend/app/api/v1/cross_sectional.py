@@ -107,10 +107,10 @@ class CrossSectionalView(BaseModel):
             raise ValueError("current purged evidence requires every family outcome")
         first = evidence[0]
         assert first is not None
-        request = (first.method, first.n_bars, first.requested_folds, first.floor)
+        request = (first.n_bars, first.requested_folds, first.floor)
         for item in evidence:
             assert item is not None
-            if (item.method, item.n_bars, item.requested_folds, item.floor) != request:
+            if (item.n_bars, item.requested_folds, item.floor) != request:
                 raise ValueError("purged families must carry the same request geometry")
             if self.walk_forward_method is not None and item.n_bars != self.walk_forward_n_bars:
                 raise ValueError("purged bars must match attributed walk-forward bars")

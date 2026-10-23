@@ -136,8 +136,11 @@ module-owned high_proximity_factory identity, preserving the original returned
 callable's lazy parameter lookup/int coercion and captured mapping. Signal
 arithmetic, grid and outputs stay unchanged. This is a prerequisite only:
 the family remains unsupported for ADR-325 purged measurement. Rolling-max
-engine/version/dependency support and method attribution require a separate ADR;
-no new score, source-isolation guarantee or historical evidence is introduced.
+engine/version/dependency execution support requires a separate ADR. ADR-347
+installs the separately attributed high-method readers only, including mixed
+recognized family methods with unchanged common request geometry. No producer
+emits high-method evidence, and no new score, source-isolation guarantee or
+historical evidence is introduced.
 
 `app/research/strategies/base.py`. ABC:
 

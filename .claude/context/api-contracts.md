@@ -509,6 +509,16 @@ parameter today. Reading them together is the fastest way to understand what the
   benchmark means can differ. Original integral geometry validates without arrays.
   Reduced wire views validate structural coherence; full source reconstruction
   additionally checks finalist parameters and allocated dependency coverage.
+  ADR-347 additionally recognizes the exact
+  restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2 method
+  with rolling-high-v1, supported measured/no-fold branches and lags126/189/252.
+  Shift-v1 and high-v2 may coexist with identical bars/folds/floor, complete current
+  outcomes and WF-bar agreement; method identity is family-local. Nested branch,
+  scalar and kept-geometry checks remain. Full source trials additionally bind
+  the high family/window/allocated coverage; reduced views do not replay source
+  provenance. Producers remain unchanged/high unsupported; these readers prepare
+  compatibility before a separate scientific adoption. Client fold details show
+  the attributed pandas3.0.6/Cython trailing-high qualification without raw IDs.
   ADR-328 preserves these fields through Zod and displays one family-local PCV
   column: measured mean, same-kept-fold benchmark and native Fold evidence
   disclosure for actual geometry. Unsupported recipes, parameters or price dtype
