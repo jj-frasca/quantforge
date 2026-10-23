@@ -9,6 +9,58 @@
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
+## ADR-353 runtime-attributed Alpha4 measurement (2026-10-23)
+
+The previously accepted producer decision is resumed in session24. Support is
+restricted to the exact stable Alpha4 factory, complete positive native Float64
+panels, shipped windows5/9/21 and saved generation-time pandas3.0.6,
+NumPy2.5.4/Cython receipts. A dedicated frozen Alpha4Runtime keeps NumPy
+attribution separate from the unchanged HighRuntime used by high/Alpha9.
+Before/after and across-config observations must agree within each family;
+later globals cannot relabel an already generated matrix. Missing/wrong receipts
+raise. Unknown pandas, NumPy and engine domains classify in that order, retain
+primary eligibility and carry unmeasured v1 reasons, including the new
+unsupported_numpy_version. No option is forced or mutated.
+
+The actual rolling.apply callback counts a fresh <= boolean vector, whose
+small integer sum is exact; its price-independent complete-input admission
+counts cannot carry expired-price arithmetic. It is not Rolling.rank. Signal
+support [t-W+1,t], previous weights and current turnover imply net hull [t-W,t].
+D=max(actual allocated W), E=max(original floor,D) never shrinks. The unchanged
+evaluator and actual family-kept-fold benchmark produce distinct v4 evidence;
+no-fold outcomes retain geometry without scores, and numerical errors propagate.
+Independent deterministic endpoint/oracle controls support oldest/current-price
+operativity, expired-prefix isolation, full ties, W-1 warmup and both embargo
+boundaries for this reviewed recipe. They do not certify arbitrary callbacks,
+builds, other versions/engines, source independence, PIT or panel calibration.
+
+This addresses only Alpha4's unsupported-family gap. FINDING-265 stays Open in
+part and FINDING-272's rolling-sum/variance limitation remains. Later training,
+whole-sample family choice, mean-of-Sharpes, internal costs without account
+switching reconciliation and no added benchmark turnover costs stay explicit.
+No primary formula, selector, threshold, fingerprint, longitudinal-v14,
+generated record or frozen cohort changes; refusal can change completion domains.
+The support caption and NumPy reason readers change without inventing historical
+runtime or fold qualifications. Prior351/352 blanket producer refusals are
+explicitly superseded by unaudited-NumPy refusals; all other assertions remain.
+
+Preimplementation fresh backend RED29/1 control and original-HEAD frontend
+RED3/13 controls are recorded. Three complete primary/WF/gate/accounting payloads,
+excluding only intentional trial-PCV and run UUID/time, were frozen before code:
+SHA256 c177313907a837aeec3c191a531899be4f0c7afad1a83df90992dbdbff4dac35.
+Final328 focused backend tests pass; supplemental12 pass (8 observed RED before
+implementation and4 postimplementation compatibility controls). Frontend299
+focused tests, lint and types pass. Independent research/frontend/documentation
+reviews approve. The3FULL payload hash stays exact; a separate five-family full
+payload comparison preserves high/Alpha9/shift PCV evidence exactly at SHA256
+83c7676d1583572776773b3c2d5ac9f56e09484ebc9e350acaa9ad6fea8785bc.
+Other1,303 tracked backend/frontend/data blobs and unrelated function/class ASTs
+are unchanged, as are both default search/gate fingerprints. All old test bodies
+except the two explicitly superseded assertions remain exact. Source-only mypy,
+Ruff and formatting pass. Fresh foreground `make check-all PYTEST_WORKERS=2` exits0 with14,306 backend
+and683 frontend tests passing,97.41% backend/97.87% frontend statement coverage,
+and lint/format/types gates. No calibration/cohort/provider measurement occurred.
+
 ## ADR-352 Alpha4 attributed-reader prerequisite (2026-10-23)
 
 Distinct Alpha4-v4 readers retain the pandas3.0.6/Cython/NumPy2.5.4 identity

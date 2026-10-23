@@ -1,7 +1,7 @@
 """Restricted direct-price-operand purged diagnostics (ADR-325; López de Prado 2018 ch7).
 
-Source separation is not independence or causal selection. ADR-348/350 add only
-runtime-attributed Cython high/Alpha9 support; other rolling/static recipes
+Source separation is not independence or causal selection. ADR-348/350/353 add only
+runtime-attributed Cython high/Alpha9/Alpha4 support; other rolling/static recipes
 retain FINDING-272 limitations.
 """
 
@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.research.cross_sectional.registry import (
     CrossSectionalStrategy,
     Params,
+    alpha4_factory,
     alpha9_factory,
     high_proximity_factory,
     momentum_factory,
@@ -32,6 +33,7 @@ Reason = Literal[
     "unsupported_parameters",
     "unsupported_price_dtype",
     "unsupported_pandas_version",
+    "unsupported_numpy_version",
     "unsupported_rolling_engine",
 ]
 Rule = Literal[
@@ -64,6 +66,23 @@ def capture_high_runtime() -> HighRuntime:
     """Observe standard dispatch; unknown versions make no engine-option claim."""
     version = pd.__version__
     return HighRuntime(version, pd.get_option("compute.use_numba") if version == "3.0.6" else None)
+
+
+@dataclass(frozen=True)
+class Alpha4Runtime:
+    """Observed callback domain, including NumPy; bounded attribution only (ADR-353)."""
+
+    pandas_version: str
+    numpy_version: str
+    use_numba: bool | None
+
+
+def capture_alpha4_runtime() -> Alpha4Runtime:
+    """Observe callback dependencies without forcing an engine or interpreting unknown pandas."""
+    version = pd.__version__
+    return Alpha4Runtime(
+        version, np.__version__, pd.get_option("compute.use_numba") if version == "3.0.6" else None
+    )
 
 
 def requested_fold_count(value: object) -> int:
@@ -226,11 +245,13 @@ def support_lag(
     prices: pd.DataFrame,
     *,
     runtime: HighRuntime | None = None,
+    alpha4_runtime: Alpha4Runtime | None = None,
 ) -> tuple[int | None, Reason | None]:
     """Audit exact factory/domain identity before direct operand bounds (ADR-325)."""
     known = {
         "xs_52w_high": (high_proximity_factory, (126, 189, 252)),
         "xs_alpha9": (alpha9_factory, (3, 5, 10)),
+        "xs_alpha4": (alpha4_factory, (5, 9, 21)),
         "xs_momentum": (momentum_factory, (126, 189, 252)),
         "xs_reversal": (reversal_factory, (3, 5, 10)),
         "xs_short_term_reversal_1m": (short_term_reversal_factory, (21, 42, 63)),
@@ -246,7 +267,7 @@ def support_lag(
     for params, _ in configs:
         keys = (
             {"window"}
-            if strategy.name in ("xs_52w_high", "xs_alpha9")
+            if strategy.name in ("xs_52w_high", "xs_alpha9", "xs_alpha4")
             else {"lookback", "skip"}
             if strategy.name == "xs_momentum"
             else {"lookback"}
@@ -255,18 +276,30 @@ def support_lag(
             isinstance(v, (bool, np.bool_)) or not isinstance(v, Integral) for v in params.values()
         ):
             return None, "unsupported_parameters"
-        window_key = "window" if strategy.name in ("xs_52w_high", "xs_alpha9") else "lookback"
+        window_key = (
+            "window" if strategy.name in ("xs_52w_high", "xs_alpha9", "xs_alpha4") else "lookback"
+        )
         if params[window_key] not in entry[1] or (
             strategy.name == "xs_momentum" and params["skip"] not in (0, 21)
         ):
             return None, "unsupported_parameters"
         lags.append(
             int(params["window"])
-            if strategy.name == "xs_52w_high"
+            if strategy.name in ("xs_52w_high", "xs_alpha4")
             else int(params["window"]) + 1
             if strategy.name == "xs_alpha9"
             else int(params["lookback"]) + int(params.get("skip", 0)) + 1
         )
+    if lags and strategy.name == "xs_alpha4":
+        observed_alpha4 = capture_alpha4_runtime() if alpha4_runtime is None else alpha4_runtime
+        if not isinstance(observed_alpha4, Alpha4Runtime):
+            raise ValueError("Alpha4 purged support requires a dedicated runtime receipt")
+        if observed_alpha4.pandas_version != "3.0.6":
+            return None, "unsupported_pandas_version"
+        if observed_alpha4.numpy_version != "2.5.4":
+            return None, "unsupported_numpy_version"
+        if observed_alpha4.use_numba is not False:
+            return None, "unsupported_rolling_engine"
     if lags and strategy.name in ("xs_52w_high", "xs_alpha9"):
         observed = capture_high_runtime() if runtime is None else runtime
         if observed.version != "3.0.6":
@@ -300,6 +333,7 @@ def measure_family_purged(
     floor: int,
     requested_folds: int,
     high_runtime: HighRuntime | None = None,
+    alpha4_runtime: Alpha4Runtime | None = None,
 ) -> tuple[PurgedDiagnostic, PurgedCVResult | None]:
     """Use existing rows/evaluator; geometry insufficiency alone is an unmeasured outcome."""
     floor = require_trial_count(floor, minimum=0, parameter="embargo")
@@ -313,7 +347,12 @@ def measure_family_purged(
         raise ValueError("high purged measurement requires its matrix runtime receipt")
     if is_alpha9 and high_runtime is None:
         raise ValueError("Alpha9 purged measurement requires its matrix runtime receipt")
-    lag, reason = support_lag(strategy, configs, prices, runtime=high_runtime)
+    is_alpha4 = strategy.name == "xs_alpha4" and strategy.build is alpha4_factory
+    if is_alpha4 and not isinstance(alpha4_runtime, Alpha4Runtime):
+        raise ValueError("Alpha4 purged measurement requires its dedicated matrix runtime receipt")
+    lag, reason = support_lag(
+        strategy, configs, prices, runtime=high_runtime, alpha4_runtime=alpha4_runtime
+    )
     if lag is None:
         return PurgedDiagnostic(
             status="unsupported",
@@ -340,6 +379,8 @@ def measure_family_purged(
         if is_high
         else "rolling-alpha9-v1"
         if is_alpha9
+        else "rolling-alpha4-percentile-v1"
+        if is_alpha4
         else "shifted-momentum-v1"
         if strategy.name == "xs_momentum"
         else "shifted-reversal-v1"
@@ -348,11 +389,14 @@ def measure_family_purged(
         "restricted-shift-family-purged-equal-weight-continuation-v1",
         "restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2",
         "restricted-pandas-3.0.6-cython-alpha9-purged-equal-weight-continuation-v3",
+        "restricted-pandas-3.0.6-numpy-2.5.4-cython-alpha4-purged-equal-weight-continuation-v4",
     ] = (
         HIGH_PURGED_METHOD
         if is_high
         else ALPHA9_PURGED_METHOD
         if is_alpha9
+        else ALPHA4_PURGED_METHOD
+        if is_alpha4
         else "restricted-shift-family-purged-equal-weight-continuation-v1"
     )
     _, _, count = kept_geometry(len(prices), requested_folds, embargo)

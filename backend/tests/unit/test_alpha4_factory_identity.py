@@ -1,4 +1,4 @@
-"""ADR-351 identity-only compatibility; Alpha4 remains unsupported for PCV."""
+"""ADR-351 identity-only compatibility; producer domain is governed by ADR-353."""
 
 from decimal import Decimal
 from typing import Any
@@ -109,14 +109,19 @@ def test_alpha4_ties_and_warmup(window: int) -> None:
     np.testing.assert_array_equal(actual.iloc[window - 1 :].to_numpy(), -1.0)
 
 
-def test_alpha4_actual_purged_producer_stays_unsupported() -> None:
+def test_alpha4_actual_purged_producer_refuses_unaudited_numpy() -> None:
+    # ADR-353 supersedes the blanket refusal with a dedicated unaudited-domain check.
+    receipt = purged.Alpha4Runtime("3.0.6", "unaudited", False)
     strategy = registry.default_strategies()["xs_alpha4"]
     prices = panel()
     configs: list[tuple[registry.Params, float]] = [
         ({"window": 5}, 0.1),
         ({"window": 21}, 0.3),
     ]
-    assert purged.support_lag(strategy, configs, prices) == (None, "unsupported_factory")
+    assert purged.support_lag(strategy, configs, prices, alpha4_runtime=receipt) == (
+        None,
+        "unsupported_numpy_version",
+    )
     evidence, result = purged.measure_family_purged(
         strategy,
         configs,
@@ -125,8 +130,9 @@ def test_alpha4_actual_purged_producer_stays_unsupported() -> None:
         np.zeros(len(prices)),
         floor=0,
         requested_folds=3,
+        alpha4_runtime=receipt,
     )
-    assert evidence.status == "unsupported" and evidence.reason == "unsupported_factory"
+    assert evidence.status == "unsupported" and evidence.reason == "unsupported_numpy_version"
     assert evidence.max_price_lag is None and evidence.mean_oos_sharpe is None and result is None
 
 

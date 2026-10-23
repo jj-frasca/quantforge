@@ -550,6 +550,21 @@ parameter today. Reading them together is the fastest way to understand what the
   percentile in plain language. Actual Alpha4 production stays unsupported;
   readers do not certify runtime execution or authorize measurement. A separate
   scientific decision must govern saved NumPy/pandas/engine attribution.
+  ADR-353 subsequently enables restricted Alpha4 measurement using a dedicated
+  frozen Alpha4Runtime with saved generation-time pandas3.0.6/NumPy2.5.4/Cython
+  identity. Exact known factories require matching before/after and cross-config
+  receipts; HighRuntime/high/Alpha9 stay unchanged and later globals cannot relabel
+  matrices. Missing/wrong receipts raise; unknown pandas, NumPy and engine domains
+  remain unsupported v1 in that order, with unsupported_numpy_version added to
+  backend/API/client reason readers and display. Native Float64/shipped windows
+  use D=max(actual W), E=max(floor,D), distinct v4 and actual kept-fold pairing.
+  The <= percentile callback, ties, W-1 warmup, primary arithmetic and thresholds
+  remain exact; no engine option is forced. The support caption includes Alpha4
+  without inventing historical fold attribution. Runtime metadata is bounded
+  attribution, not build/provenance/PIT/independence or calibration attestation.
+  Other unsupported recipes and FINDING-272 remain; v14/generated/frozen evidence
+  and all noncausal selection/switching-account limitations stay unchanged.
+
   ADR-328 preserves these fields through Zod and displays one family-local PCV
   column: measured mean, same-kept-fold benchmark and native Fold evidence
   disclosure for actual geometry. Unsupported recipes, parameters or price dtype
@@ -563,7 +578,7 @@ parameter today. Reading them together is the fastest way to understand what the
   Trial scalar/status, complete common requests and attributed WF bars bind at
   the client boundary, without recalculating scientific scores or graduation.
   Family-specific controls and kept sets remain distinct. Later training is
-  intentional, only audited direct-shift and runtime-attributed high/Alpha9 recipes are
+  intentional, only audited direct-shift and runtime-attributed high/Alpha9/Alpha4 recipes are
   supported, and no panel
   calibration or executable switching policy is implied. Visible qualifications
   retain whole-sample family selection, static/PIT limits and internal costs

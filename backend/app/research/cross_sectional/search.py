@@ -30,8 +30,10 @@ from app.research.cross_sectional.purged import (
     ALPHA4_PURGED_METHOD,
     ALPHA9_PURGED_METHOD,
     HIGH_PURGED_METHOD,
+    Alpha4Runtime,
     HighRuntime,
     PurgedDiagnostic,
+    capture_alpha4_runtime,
     capture_high_runtime,
     measure_family_purged,
     requested_fold_count,
@@ -39,6 +41,7 @@ from app.research.cross_sectional.purged import (
 from app.research.cross_sectional.registry import (
     CrossSectionalStrategy,
     Params,
+    alpha4_factory,
     alpha9_factory,
     default_strategies,
     high_proximity_factory,
@@ -537,12 +540,19 @@ def run_cross_sectional_search(
     candidate_returns: list[npt.NDArray[np.float64]] = []
     finalist_moments: list[ReturnMoments | None] = []
     purged_inputs: list[
-        tuple[CrossSectionalStrategy, list[_Config], npt.NDArray[np.float64], HighRuntime | None]
+        tuple[
+            CrossSectionalStrategy,
+            list[_Config],
+            npt.NDArray[np.float64],
+            HighRuntime | None,
+            Alpha4Runtime | None,
+        ]
     ] = []
     for name, allocated_configs in allocation.families.items():
         strategy = registry[name]
         configs = list(allocated_configs)
         high_runtime: HighRuntime | None = None
+        alpha4_runtime: Alpha4Runtime | None = None
         series = []
         is_high = (
             name == "xs_52w_high"
@@ -552,9 +562,20 @@ def run_cross_sectional_search(
         is_alpha9 = (
             name == "xs_alpha9" and strategy.name == name and strategy.build is alpha9_factory
         )
+        is_alpha4 = (
+            name == "xs_alpha4" and strategy.name == name and strategy.build is alpha4_factory
+        )
         for p, q in configs:
+            before_alpha4 = capture_alpha4_runtime() if is_alpha4 else None
             before = capture_high_runtime() if is_high or is_alpha9 else None
             series.append(_config_returns(strategy, p, q, in_sample, cost_rate))
+            if is_alpha4:
+                after_alpha4 = capture_alpha4_runtime()
+                if before_alpha4 != after_alpha4 or (
+                    alpha4_runtime is not None and before_alpha4 != alpha4_runtime
+                ):
+                    raise ValueError("Alpha4 matrix runtime changed during allocated execution")
+                alpha4_runtime = after_alpha4
             if is_high or is_alpha9:
                 after = capture_high_runtime()
                 if before != after or (high_runtime is not None and before != high_runtime):
@@ -574,7 +595,7 @@ def run_cross_sectional_search(
             embargo=embargo,
             benchmark=walk_forward_benchmark,
         )
-        purged_inputs.append((strategy, configs, matrix, high_runtime))
+        purged_inputs.append((strategy, configs, matrix, high_runtime, alpha4_runtime))
         best_i = int(np.argmax(sharpes))
         best_params, best_quantile = configs[best_i]
         total_configs += len(configs)
@@ -628,7 +649,9 @@ def run_cross_sectional_search(
         )
         for trial, dsr, psr in zip(trials, repriced, probabilities, strict=True)
     ]
-    for index, (strategy, configs, matrix, high_runtime) in enumerate(purged_inputs):
+    for index, (strategy, configs, matrix, high_runtime, alpha4_runtime) in enumerate(
+        purged_inputs
+    ):
         report = reports[index]
         purged_evidence, purged_result = measure_family_purged(
             strategy,
@@ -639,6 +662,7 @@ def run_cross_sectional_search(
             floor=embargo,
             requested_folds=purged_folds,
             high_runtime=high_runtime,
+            alpha4_runtime=alpha4_runtime,
         )
         purged_flag = (
             "Family-local purged CV uses later training rows and continued-config internal costs; "

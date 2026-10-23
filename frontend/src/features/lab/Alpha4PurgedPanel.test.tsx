@@ -42,7 +42,8 @@ test.each([0, -0.7])('renders mixed Alpha4 measured %s with qualified fold evide
   expect(screen.getByText(/pandas 3\.0\.6.*Cython.*trailing-high/i)).toBeInTheDocument()
   expect(screen.getByText(/pandas 3\.0\.6.*Cython.*price-change-extrema/i)).toBeInTheDocument()
   const caption = screen.getByText(/Purged CV support is restricted/i)
-  expect(caption).not.toHaveTextContent(/Alpha4|window-percentile/i)
+  // ADR-353 adopts the producer; support copy now names its reviewed runtime.
+  expect(caption).toHaveTextContent(/Alpha4 window-percentile recipes restricted to pandas 3\.0\.6 Cython and NumPy 2\.5\.4/i)
   expect(screen.getByText('no graduate')).toBeInTheDocument()
   expect(screen.queryByText(/restricted-pandas|rolling-alpha4-percentile-v1|rolling-high-v1|shifted-reversal-v1/i)).not.toBeInTheDocument()
   for (const caveat of [/later training is intentional/i, /winning family uses the complete search sample/i,
@@ -56,7 +57,9 @@ test.each([null, undefined])('historical Alpha4 remains unpaired without recipe 
   })))
   renderWithClient(<CrossSectionalPanel />)
   expect(await screen.findByText('-0.70 · legacy, unpaired')).toBeInTheDocument()
-  expect(screen.queryByText(/window-percentile/i)).not.toBeInTheDocument()
+  // Historical rows still receive no invented runtime or fold qualification.
+  const row = screen.getByRole('cell', { name: 'xs_alpha4' }).closest('tr')!
+  expect(within(row).queryByText(/window-percentile|pandas|NumPy/i)).not.toBeInTheDocument()
   expect(screen.queryByText('Fold evidence')).not.toBeInTheDocument()
   expect(screen.queryByText(/same-kept-fold equal-weight universe benchmark:/i)).not.toBeInTheDocument()
 })

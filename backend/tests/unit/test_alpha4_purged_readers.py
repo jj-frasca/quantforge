@@ -1,4 +1,4 @@
-"""ADR-352 attributed Alpha4 readers; actual producers remain unchanged."""
+"""ADR-352 attributed Alpha4 readers; producer domains are governed by ADR-353."""
 
 from pathlib import Path
 from typing import Any
@@ -201,10 +201,15 @@ def test_alpha4_mixed_claims_preserve_common_request_wf_and_scalar_binding(targe
         CrossSectionalExperiment.model_validate(data)
 
 
-def test_alpha4_actual_producer_stays_unsupported() -> None:
+def test_alpha4_actual_producer_refuses_unaudited_numpy() -> None:
+    # ADR-353 supersedes the blanket refusal with a dedicated unaudited-domain check.
+    receipt = purged.Alpha4Runtime("3.0.6", "unaudited", False)
     strategy = registry.default_strategies()["xs_alpha4"]
     configs: list[tuple[registry.Params, float]] = [({"window": 5}, 0.1), ({"window": 21}, 0.3)]
-    assert purged.support_lag(strategy, configs, panel()) == (None, "unsupported_factory")
+    assert purged.support_lag(strategy, configs, panel(), alpha4_runtime=receipt) == (
+        None,
+        "unsupported_numpy_version",
+    )
     diag, result = purged.measure_family_purged(
         strategy,
         configs,
@@ -213,8 +218,9 @@ def test_alpha4_actual_producer_stays_unsupported() -> None:
         np.zeros(80),
         floor=0,
         requested_folds=3,
+        alpha4_runtime=receipt,
     )
-    assert diag.reason == "unsupported_factory" and result is None
+    assert diag.reason == "unsupported_numpy_version" and result is None
     assert diag.method.endswith("continuation-v1")
 
 

@@ -717,6 +717,21 @@ callback/source support or runtime capture. Prospective D=W endpoints/<=tie/
 warmup controls do not replace a separate scientific NumPy/pandas/engine receipt
 decision. Provenance/PIT/calibration/F265/F272 limits, thresholds and v14 remain.
 
+ADR-353 subsequently enables restricted Alpha4 measurement using a dedicated
+frozen Alpha4Runtime with saved generation-time pandas3.0.6/NumPy2.5.4/Cython
+identity. Exact known factories require matching before/after and cross-config
+receipts; HighRuntime/high/Alpha9 stay unchanged and later globals cannot relabel
+matrices. Missing/wrong receipts raise; unknown pandas, NumPy and engine domains
+remain unsupported v1 in that order, with unsupported_numpy_version added to
+backend/API/client reason readers and display. Native Float64/shipped windows
+use D=max(actual W), E=max(floor,D), distinct v4 and actual kept-fold pairing.
+The <= percentile callback, ties, W-1 warmup, primary arithmetic and thresholds
+remain exact; no engine option is forced. The support caption includes Alpha4
+without inventing historical fold attribution. Runtime metadata is bounded
+attribution, not build/provenance/PIT/independence or calibration attestation.
+Other unsupported recipes and FINDING-272 remain; v14/generated/frozen evidence
+and all noncausal selection/switching-account limitations stay unchanged.
+
 ADR-327 publishes the exact inherited PCV scalar and frozen per-trial diagnostic
 through the read-only API. Trial scalar/status binding, complete common request
 geometry and attributed WF-bar agreement also validate at the public view boundary.
