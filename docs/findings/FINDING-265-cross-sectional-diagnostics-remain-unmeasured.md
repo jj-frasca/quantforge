@@ -9,6 +9,38 @@
 - **Reviewed source:** 1018ca7c, cross_sectional/search.py::_build_report
 - **Related decisions:** ADR-024/035/038/039
 
+## ADR-352 Alpha4 attributed-reader prerequisite (2026-10-23)
+
+Distinct Alpha4-v4 readers retain the pandas3.0.6/Cython/NumPy2.5.4 identity
+and rolling-alpha4-percentile-v1 rule through source claims, stores, API and
+client. Supported/no-fold metadata binds shipped lags5/9/21; full trials bind
+xs_alpha4/window5/9/21 and maxlag>=window. Existing v1-v3 claims may coexist
+with complete common requests, scalar/geometry and WF binding unchanged.
+Fold disclosures qualify the actual window-percentile recipe in plain language.
+
+Actual Alpha4 remains unsupported_factory. No execution-domain capture or
+producer/evaluator/callback changes are adopted. Prospective endpoint/oracle
+controls support D=W, including operative oldest/current prices, expired prefix,
+full <= ties, W-1 warmup and both embargo boundaries. Future strict adoption
+must explicitly govern saved NumPy2.5.4 attribution as well as pandas/Cython;
+current HighRuntime alone cannot certify that dependency. Reader structure is
+not runtime/source provenance, independence, PIT or panel calibration evidence.
+All F265/F272 limitations and thresholds/v14/frozen/generated evidence remain.
+
+Before new readers,3 FULL deterministic synthetic payloads excluding only run
+UUID/time are frozen at SHA256
+340bf07cbc5e35a9b73e1da85556a73194971c3a0f814f67ad1b3c869d5cbfbd.
+Actual pre-edit backend RED12/32 refusal controls and frontend RED6 acceptance/
+3 rendered cases precede their source changes. A second rendered RED3 isolates
+missing qualification after schema acceptance. Backend366 focused and frontend320
+cases/lint/types pass. Independent research163 cases,3FULLexactpayloads and
+producer/unrelated-class ASTs approve;1,303 other tracked blobs,26 panel/API
+roundtrips and search/gate fingerprints remain exact. Normal source-only mypy
+passes; final44 new cases pass after type-only test annotations. Fresh foreground
+`make check-all PYTEST_WORKERS=2` exits0 with14,264 backend and667 frontend
+tests passing, plus lint/format/types and coverage gates. No calibration/cohort/
+provider measurement is authorized.
+
 ## ADR-351 Alpha4 identity prerequisite (2026-10-23)
 
 The shipped Alpha4 factory gains stable module-owned identity while retaining

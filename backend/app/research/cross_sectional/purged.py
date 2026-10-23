@@ -34,12 +34,21 @@ Reason = Literal[
     "unsupported_pandas_version",
     "unsupported_rolling_engine",
 ]
-Rule = Literal["shifted-momentum-v1", "shifted-reversal-v1", "rolling-high-v1", "rolling-alpha9-v1"]
+Rule = Literal[
+    "shifted-momentum-v1",
+    "shifted-reversal-v1",
+    "rolling-high-v1",
+    "rolling-alpha9-v1",
+    "rolling-alpha4-percentile-v1",
+]
 HIGH_PURGED_METHOD: Final = (
     "restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2"
 )
 ALPHA9_PURGED_METHOD: Final = (
     "restricted-pandas-3.0.6-cython-alpha9-purged-equal-weight-continuation-v3"
+)
+ALPHA4_PURGED_METHOD: Final = (
+    "restricted-pandas-3.0.6-numpy-2.5.4-cython-alpha4-purged-equal-weight-continuation-v4"
 )
 
 
@@ -102,6 +111,7 @@ class PurgedDiagnostic(BaseModel):
         "restricted-shift-family-purged-equal-weight-continuation-v1",
         "restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2",
         "restricted-pandas-3.0.6-cython-alpha9-purged-equal-weight-continuation-v3",
+        "restricted-pandas-3.0.6-numpy-2.5.4-cython-alpha4-purged-equal-weight-continuation-v4",
     ] = "restricted-shift-family-purged-equal-weight-continuation-v1"
     status: Literal["measured", "unsupported", "no_usable_folds"]
     n_bars: int
@@ -169,7 +179,18 @@ class PurgedDiagnostic(BaseModel):
                 or self.max_price_lag not in (4, 6, 11)
             ):
                 raise ValueError("Alpha9 purged method requires its supported rule and shipped lag")
-        elif self.dependency_rule in ("rolling-high-v1", "rolling-alpha9-v1"):
+        elif self.method == ALPHA4_PURGED_METHOD:
+            if (
+                self.status == "unsupported"
+                or self.dependency_rule != "rolling-alpha4-percentile-v1"
+                or self.max_price_lag not in (5, 9, 21)
+            ):
+                raise ValueError("Alpha4 purged method requires its supported rule and shipped lag")
+        elif self.dependency_rule in (
+            "rolling-high-v1",
+            "rolling-alpha9-v1",
+            "rolling-alpha4-percentile-v1",
+        ):
             raise ValueError("rolling dependency requires its attributed method")
         support = (self.dependency_rule, self.max_price_lag, self.embargo, self.kept_fold_ordinals)
         scores = (self.mean_oos_sharpe, self.mean_oos_hold_sharpe)

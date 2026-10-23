@@ -166,6 +166,13 @@ unsupported. This identity prerequisite adopts no runtime/source support or
 new readers; a future scientific decision must audit actual callback/NumPy/
 rolling-admission dependencies rather than pandas Rolling.rank.
 
+ADR-352 subsequently prepares distinct pandas3.0.6/Cython/NumPy2.5.4 Alpha4-v4
+readers and rolling-alpha4-percentile-v1. Supported/no-fold lags5/9/21 and full
+window/allocated-coverage binding preserve mixed existing methods and structural
+checks. Actual Alpha4 stays unsupported; no callback, producer or runtime-capture
+change. Future strict measurement needs a separate NumPy/pandas/engine saved-domain
+decision. Reader attribution cannot certify actual execution or source provenance.
+
 `app/research/strategies/base.py`. ABC:
 
 - `generate_signals(data: pd.DataFrame) -> pd.Series`

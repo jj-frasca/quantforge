@@ -708,6 +708,15 @@ shift-v1 remain. Early -d behavior and primary formulas stay. No provenance,
 independence, PIT, switching-policy or calibration certification is added;
 thresholds/v14/generated/frozen evidence stay. Remaining F265/F272 limits stand.
 
+ADR-352 prepares separate Alpha4-v4 readers identifying pandas3.0.6/Cython and
+NumPy2.5.4 window-percentile execution, with rolling-alpha4-percentile-v1 and
+supported/no-fold lags5/9/21. Full claims bind shipped windows and covering lag;
+v1-v4 preserve complete common requests, scalar/geometry/WF and historical checks.
+Actual Alpha4 remains unsupported; stable identity and reader metadata adopt no
+callback/source support or runtime capture. Prospective D=W endpoints/<=tie/
+warmup controls do not replace a separate scientific NumPy/pandas/engine receipt
+decision. Provenance/PIT/calibration/F265/F272 limits, thresholds and v14 remain.
+
 ADR-327 publishes the exact inherited PCV scalar and frozen per-trial diagnostic
 through the read-only API. Trial scalar/status binding, complete common request
 geometry and attributed WF-bar agreement also validate at the public view boundary.

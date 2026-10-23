@@ -541,6 +541,15 @@ parameter today. Reading them together is the fastest way to understand what the
   distinguish it from high-v2. Client support caption now names both restricted
   rolling recipes. No wire fields, parser, score formula or verdict changes;
   runtime metadata does not independently attest provenance, PIT or calibration.
+  ADR-352 additionally recognizes exact method
+  restricted-pandas-3.0.6-numpy-2.5.4-cython-alpha4-purged-equal-weight-continuation-v4
+  and rolling-alpha4-percentile-v1 with supported/no-fold lags5/9/21. Full source
+  trials bind Alpha4 window/allocated coverage; compact views retain structural
+  branch/scalar/geometry/request/WF checks without source replay. Mixed v1-v4
+  claims remain valid. Fold details qualify pandas3.0.6 Cython/NumPy2.5.4 window
+  percentile in plain language. Actual Alpha4 production stays unsupported;
+  readers do not certify runtime execution or authorize measurement. A separate
+  scientific decision must govern saved NumPy/pandas/engine attribution.
   ADR-328 preserves these fields through Zod and displays one family-local PCV
   column: measured mean, same-kept-fold benchmark and native Fold evidence
   disclosure for actual geometry. Unsupported recipes, parameters or price dtype

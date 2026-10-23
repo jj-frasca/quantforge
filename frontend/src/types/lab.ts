@@ -80,6 +80,7 @@ const purgedDiagnosticSchema = z.object({
     'restricted-shift-family-purged-equal-weight-continuation-v1',
     'restricted-pandas-3.0.6-cython-high-purged-equal-weight-continuation-v2',
     'restricted-pandas-3.0.6-cython-alpha9-purged-equal-weight-continuation-v3',
+    'restricted-pandas-3.0.6-numpy-2.5.4-cython-alpha4-purged-equal-weight-continuation-v4',
   ]),
   status: z.enum(['measured', 'unsupported', 'no_usable_folds']),
   n_bars: z.int().positive(),
@@ -89,7 +90,7 @@ const purgedDiagnosticSchema = z.object({
     'unsupported_factory', 'unsupported_parameters', 'unsupported_price_dtype',
     'unsupported_pandas_version', 'unsupported_rolling_engine',
   ]).nullable().optional(),
-  dependency_rule: z.enum(['shifted-momentum-v1', 'shifted-reversal-v1', 'rolling-high-v1', 'rolling-alpha9-v1']).nullable().optional(),
+  dependency_rule: z.enum(['shifted-momentum-v1', 'shifted-reversal-v1', 'rolling-high-v1', 'rolling-alpha9-v1', 'rolling-alpha4-percentile-v1']).nullable().optional(),
   max_price_lag: z.int().positive().nullable().optional(),
   embargo: z.int().nonnegative().nullable().optional(),
   kept_fold_ordinals: z.array(z.int().nonnegative()).nullable().optional(),
@@ -115,6 +116,14 @@ const purgedDiagnosticSchema = z.object({
     }
   } else if (evidence.dependency_rule === 'rolling-alpha9-v1') {
     invalid('Alpha9 dependency recipe requires its versioned method')
+  }
+  if (evidence.method === 'restricted-pandas-3.0.6-numpy-2.5.4-cython-alpha4-purged-equal-weight-continuation-v4') {
+    if (evidence.status === 'unsupported' || evidence.dependency_rule !== 'rolling-alpha4-percentile-v1' ||
+      ![5, 9, 21].includes(evidence.max_price_lag ?? 0)) {
+      invalid('Versioned Alpha4 evidence requires its supported audited dependency recipe')
+    }
+  } else if (evidence.dependency_rule === 'rolling-alpha4-percentile-v1') {
+    invalid('Alpha4 dependency recipe requires its versioned method')
   }
   if (evidence.status === 'unsupported') {
     if (evidence.reason == null || [...support, ...scores].some((value) => value != null)) {

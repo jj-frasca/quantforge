@@ -27,6 +27,7 @@ from app.research.cross_sectional.engine import (
 from app.research.cross_sectional.ic import ICSummary, rank_ic, summarize_ic
 from app.research.cross_sectional.manifest import CrossSectionalManifest
 from app.research.cross_sectional.purged import (
+    ALPHA4_PURGED_METHOD,
     ALPHA9_PURGED_METHOD,
     HIGH_PURGED_METHOD,
     HighRuntime,
@@ -115,6 +116,20 @@ class CrossSectionalTrial(Trial):
                 raise ValueError(
                     "Alpha9 purged allocated lag must cover difference and prior weight"
                 )
+        elif evidence.method == ALPHA4_PURGED_METHOD:
+            if self.strategy_name != "xs_alpha4" or set(self.parameters) != {"window", "quantile"}:
+                raise ValueError(
+                    "Alpha4 purged evidence requires its shipped family and parameters"
+                )
+            window = require_trial_count(
+                self.parameters["window"], minimum=1, parameter="purged finalist window"
+            )
+            if (
+                window not in (5, 9, 21)
+                or evidence.max_price_lag is None
+                or evidence.max_price_lag < window
+            ):
+                raise ValueError("Alpha4 purged allocated lag must cover its supported finalist")
         elif evidence.status != "unsupported":
             domains = {
                 "xs_momentum": ("shifted-momentum-v1", {127, 148, 190, 211, 253, 274}),
