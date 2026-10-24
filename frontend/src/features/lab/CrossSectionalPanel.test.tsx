@@ -99,6 +99,32 @@ test('shows the rank IC per trial, and "not measured" for a pre-ADR-035 trial', 
   expect(screen.getAllByRole('cell', { name: '—' })).toHaveLength(2)
 })
 
+test.each([
+  /signal\/next-return rank association/i,
+  /current searches compute it on the search sample for the family finalist selected by in-sample Sharpe/i,
+  /IC t-stat assumes independent periods, with no serial-dependence or search-selection adjustment/i,
+  /screening diagnostic, not independent validation or a graduation gate/i,
+])('keeps the IC interpretation qualification visible: %s', async (qualification) => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json(view)))
+  renderWithClient(<CrossSectionalPanel />)
+  await screen.findByRole('cell', { name: 'xs_momentum' })
+
+  expect(screen.getByText(qualification)).toBeInTheDocument()
+})
+
+test('labels the IC t-stat independent-period assumption beside unchanged evidence', async () => {
+  server.use(http.get('/api/v1/cross-sectional', () => HttpResponse.json(view)))
+  renderWithClient(<CrossSectionalPanel />)
+  await screen.findByRole('cell', { name: 'xs_momentum' })
+
+  expect(screen.getByRole('columnheader', { name: 'IC t-stat (independent periods)' })).toBeInTheDocument()
+  expect(screen.getAllByRole('columnheader')).toHaveLength(9)
+  expect(screen.getByRole('cell', { name: '0.021' })).toBeInTheDocument()
+  expect(screen.getByRole('cell', { name: '3.4' })).toBeInTheDocument()
+  expect(screen.getAllByRole('cell', { name: '—' })).toHaveLength(2)
+  expect(screen.getByText('no graduate')).toBeInTheDocument()
+})
+
 
 const measuredView = {
   ...view,

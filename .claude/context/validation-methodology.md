@@ -896,16 +896,25 @@ cross-section at *t* and each asset's return from *t* to *t+1* — the same caus
 `portfolio_returns` uses (rank on t, realize t+1). `summarize_ic` returns mean, std, IR (mean/std),
 t-stat (IR·√periods), hit rate and period count.
 
-- Answers the one question a dollar-neutral Sharpe cannot: **did the ranking carry information, or
-  did two names carry the P&L?** At a 0.2 quantile over ~50 names each leg is ~10 positions.
+- Describes signal/next-return rank association, complementing portfolio Sharpe.
+  Current searches compute it on the search sample for the family finalist selected
+  by in-sample portfolio Sharpe. This is selected-sample screening evidence, not
+  independent validation; arbitrary historical scalar records do not prove this provenance.
 - Dates with <2 ranked names, or zero dispersion on either side, are **dropped, not scored 0** —
   "not measurable" is a different observation from "no information", and zeroing biases the mean
   toward the null.
 - **Diagnostic, not a gate.** An IC floor would change what graduates; per the charter that needs
-  argued methodology with evidence, and no IC distribution exists yet. Trigger to revisit: ≥50
-  cross-sectional trials with an IC, then compare gate-passing vs gate-failing distributions.
-- The t-stat assumes independent periods, so it is **optimistic** for a slow signal whose IC series
-  is autocorrelated. Newey-West adjustment is a noted, unbuilt follow-up.
+  argued methodology with evidence. ADR-035's original revisit trigger was ≥50
+  cross-sectional trials with an IC, then comparison of gate-passing vs gate-failing
+  distributions. The historical absence of summaries is no longer current
+  (ADR-267 audited 242); their existence alone does not adopt an IC floor.
+- The t-stat assumes independent periods, with no serial-dependence or
+  search-selection adjustment. It is not an inferential claim. ADR-360/F300
+  supersede ADR-035's inference that not selecting directly on IC removes selection
+  concerns. Permuted IC observations can retain exactly the same summary/t-stat
+  while having different lag-1 correlation; this establishes chronology blindness,
+  not actual market bias magnitude/direction. Dependence-aware or independent IC
+  measurement requires its own estimator/sample policy and evidence.
 
 Production panel acquisition is lineage-bearing as of ADR-138. Each requested vendor series must
 cross the ADR-006 `ResearchDataset` boundary before it can enter the hunt. The persisted experiment

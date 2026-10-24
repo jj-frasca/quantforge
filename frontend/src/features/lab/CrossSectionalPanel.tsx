@@ -15,9 +15,11 @@ export function CrossSectionalPanel() {
       <h3>Cross-sectional hunt</h3>
       <p className="section-lede">
         A dollar-neutral long/short rank across the whole universe (ADR-024) — a per-strategy edge,
-        not a single-name bet. The latest hunt and its graduation verdict. Rank IC (ADR-035) is a
-        diagnostic, not a gate: it says whether the ranking itself carried information, which a
-        portfolio Sharpe cannot distinguish from two lucky names.
+        not a single-name bet. The latest hunt and its graduation verdict. Rank IC (ADR-035)
+        summarizes signal/next-return rank association. Current searches compute it on the search
+        sample for the family finalist selected by in-sample Sharpe. The IC t-stat assumes independent
+        periods, with no serial-dependence or search-selection adjustment. It is a screening
+        diagnostic, not independent validation or a graduation gate.
       </p>
       {crossSectional.isPending && <p role="status">Loading cross-sectional hunt…</p>}
       {crossSectional.isError && (
@@ -68,7 +70,7 @@ function CrossSectionalView({ view }: { view: CrossSectionalView }) {
               <th>Walk-forward mean Sharpe</th>
               <th>Purged CV mean Sharpe</th>
               <th>Mean rank IC</th>
-              <th>IC t-stat</th>
+              <th>IC t-stat (independent periods)</th>
             </tr>
           </thead>
           <tbody>

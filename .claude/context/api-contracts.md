@@ -477,6 +477,13 @@ parameter today. Reading them together is the fastest way to understand what the
   Null means no finalist in the pool carries a probability yet.
 - `/cross-sectional` returns `None` (JSON `null`) when the pool has no entry yet — an honest
   "nothing searched", distinct from an empty result.
+  ADR-360 qualifies displayed rank IC as signal/next-return rank association.
+  Current producers summarize the family finalist selected by in-sample Sharpe
+  on the search sample; this is not inferred for arbitrary historical scalar rows.
+  The t-stat assumes independent periods, with no serial-dependence or
+  search-selection adjustment: screening evidence, not independent validation or
+  a graduation gate. The qualified heading and copy change no wire fields,
+  numeric/missing-value displays or server-issued verdicts.
   ADR-322 adds nullable trial `walk_forward_oos_sharpe` and experiment
   `walk_forward_method`, `walk_forward_hold_sharpe`, `walk_forward_n_bars` and
   `walk_forward_n_splits`, projected exactly from the stored ADR-321 evidence.
