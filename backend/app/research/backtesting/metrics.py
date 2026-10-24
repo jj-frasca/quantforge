@@ -397,7 +397,15 @@ def return_moments(returns: pd.Series) -> ReturnMoments | None:
 
 
 def max_drawdown(equity: pd.Series) -> float:
-    """Largest peak-to-trough drop, clamped to [-1.0, 0.0] (no leverage modelled)."""
+    """Peak-to-trough drop of complete real equity; native arithmetic is retained (ADR-357)."""
+    if (
+        not is_numeric_dtype(equity.dtype)
+        or is_bool_dtype(equity.dtype)
+        or is_complex_dtype(equity.dtype)
+    ):
+        raise ValueError("equity must be real nonboolean numeric observations")
+    if equity.isna().any() or not np.isfinite(equity).all():
+        raise ValueError("equity must be finite and complete")
     if len(equity) == 0:
         return 0.0
     drawdown = equity / equity.cummax() - 1.0

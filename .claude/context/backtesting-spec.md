@@ -425,6 +425,17 @@ flat equity, zero trades; higher cost_rate → total return monotonically ≤.
 
 `app/research/backtesting/metrics.py` — `BacktestMetrics` (frozen):
 
+ADR-357 validates raw max_drawdown equity before its empty shortcut: original
+real numeric nonboolean/noncomplex dtype and complete native finite observations.
+Missing rows cannot disappear through pandas reduction; complex wealth cannot
+lose its imaginary part at float conversion (FINDING-297). Native inspection
+preserves finite wider inputs; no float64 source conversion or data repair is
+introduced. Numeric empty zero, original operands, cummax/division/reduction and
+clamp stay. This is source validity only: finite zero/negative equity and native
+derived NaN, warnings or exceptions remain separate, including unsupported sparse
+cummax. No universal finite-output claim, positivity floor, estimator, threshold,
+policy hash, v14 identity or generated/frozen evidence change follows.
+
 The standalone `return_moments` helper validates complete finite real nonboolean numeric input
 before degenerate shortcuts (ADR-182). Missing rows cannot inflate PSR counts while pandas skips
 them for skew/kurtosis. Finite short/constant or undefined higher-moment arithmetic remains None;
