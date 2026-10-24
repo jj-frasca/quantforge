@@ -974,6 +974,15 @@ remain unresolved without retry/replacement. No actual fixture/search exists at
 adoption. Later null laws/cohorts/auditors need separate prospective authority;
 F298 and all frozen no-retry restrictions remain intact.
 
+FINDING-299 records that sole ADR359 engineering fixture as complete with the
+predeclared planning screen NOT MET:20.118507740087807s search gives factor2*N200
+extrapolation8047.403096035123s>7200s. RSS164728832bytes and storage291539000bytes
+meet their2GiB screens. Independent source/identity/sealedmodel-metadata/callcount/
+screen/preservation audit passes; no scientific outcome is reported or used for planning.
+Direct-panel null feasibility remains unresolved, not impossible or measured under
+a null. Never repeat/repair/altergeometry/N/multiplier/ceiling/replace to obtain a
+pass. No null cohort is authorized or drawn; originalfixture/results stay sealed.
+
 ## 7. Gate calibration — Type-I error, power, and the detectable-edge frontier
 
 The three sections above describe statistics. This one describes what has been measured about the
