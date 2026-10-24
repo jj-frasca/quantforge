@@ -964,6 +964,16 @@ reported. Preserve all original bytes; never retry/resume/redraw/repair/remove
 markers/renew budget/replace this cohort. Persistent-variance calibration remains
 unmeasured, separate from all historical laws and frozen attempts.
 
+ADR-359 preregisters ONE predictable deterministic51x3472 direct-XS timing fixture,
+not a null pilot. Exact protocol CI precedes its generation/search; fake controls
+precede publication. Default13price-only families126configs/prior0 produce127
+return calls including warmed holdout and13IC calls. Sealed outcome evidence is
+not a calibration denominator or a basis for selecting parameters. Fixed factor2/
+200panel/7200s and2GiB engineering screens supply planning evidence only; failures
+remain unresolved without retry/replacement. No actual fixture/search exists at
+adoption. Later null laws/cohorts/auditors need separate prospective authority;
+F298 and all frozen no-retry restrictions remain intact.
+
 ## 7. Gate calibration — Type-I error, power, and the detectable-edge frontier
 
 The three sections above describe statistics. This one describes what has been measured about the
