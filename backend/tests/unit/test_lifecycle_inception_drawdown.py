@@ -94,11 +94,11 @@ def test_lifecycle_initial_loss_does_not_bypass_grace(family: Family) -> None:
 
 
 @pytest.mark.parametrize("bars", [21, 126])
-def test_single_initial_loss_does_not_override_no_trade_branch(bars: int) -> None:
+def test_single_initial_loss_is_measured_despite_zero_forward_turnover(bars: int) -> None:
     result = _decision("single", pd.Series([-0.5] + [0.01] * (bars - 1)), trades=0)
-    assert result.forward_drawdown == 0.0
-    assert result.action == ("hold" if bars < 126 else "exit")
-    assert not any("drawdown" in reason for reason in result.reasons)
+    assert result.forward_drawdown == 0.5
+    assert result.action == "exit"
+    assert any("drawdown" in reason for reason in result.reasons)
 
 
 @pytest.mark.parametrize("family", ["single", "panel"])

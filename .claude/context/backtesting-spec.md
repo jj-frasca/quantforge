@@ -1070,6 +1070,19 @@ rolling statistics, reason text, score/curve schemas and generated records stay;
 the internal baseline adds no persisted bar or timestamp. Historical decisions
 are not restated, and extreme native compounding remains a separate limitation.
 
+ADR-361 distinguishes absence of turnover from absence of forward return evidence.
+The single-name no-evidence branch now requires both zero forward trades and every
+validated original forward return exactly zero. A warmed config may remain long
+or short after freeze with no position changes while earning nonzero returns;
+those paths face the unchanged risk/performance rules after grace. The forward
+score permits its unchanged strict Sharpe benchmark comparison when there is
+turnover or any nonzero forward return, retaining the actual zero trade count.
+No epsilon, sum/product shortcut or invented entry trade is used. Genuine
+all-zero/no-trade holds/timeouts, defaults, policy hashes, arithmetic, reasons
+and schemas remain. All-zero returns cannot prove flat exposure; observed returns
+do not attest account entry or reconcile execution/switching costs. Historical
+data/decisions stay intact. See FINDING-301 and its public default-Momentum witness.
+
 ADR-169 gives the separate broker account ledger (`execution/equity_curve.py`) an intrinsic point
 and chronological-batch boundary. Points require aware UTC times, finite scalars, strict
 nonnegative integer counts, and jointly measured/absent benchmark-alpha fields. Load/save/append

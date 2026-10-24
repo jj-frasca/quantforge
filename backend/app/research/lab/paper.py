@@ -256,11 +256,10 @@ def lifecycle_from_returns(
     """Decide hold/exit from a position's FORWARD returns (ADR-020). Uses a rolling trailing window
     so recent decay isn't masked by early gains. Pure — no engine/network, fully controllable.
 
-    `n_forward_trades` is required, not inferred (ADR-073): the Sharpe rules below are verdicts on
-    a strategy's TRADING, and on zero trades the return series is all zeros, whose Sharpe
-    `sharpe_ratio` manufactures as 0.0 for a degenerate series. Applying the rules to that constant
-    reads "no evidence" as "failing grade" and cut 18 of the book's 27 closed positions before they
-    ever took a position.
+    `n_forward_trades` is required, not inferred (ADR-073). Zero turnover with all-zero returns
+    remains unmeasured: applying Sharpe rules to that degenerate path reads "no evidence" as a
+    failing grade. Inherited exposure can earn nonzero returns without forward turnover; those
+    observed paths face the existing performance/risk rules (ADR-361).
     """
     policy = ExitPolicy.model_validate(policy)
     validate_lifecycle_returns(forward_returns, buy_and_hold_returns)
@@ -274,7 +273,7 @@ def lifecycle_from_returns(
             rolling_buy_and_hold_sharpe=0.0,
             reasons=["grace period (insufficient forward data)"],
         )
-    if n_forward_trades == 0:
+    if n_forward_trades == 0 and not forward_returns.ne(0).any():
         # ADR-073: unmeasured, not failed. Retired only for being unevaluable, in wording that
         # cannot be read back as a performance verdict.
         if n >= policy.max_bars_without_trade:
@@ -440,9 +439,8 @@ def evaluate_forward(position: PaperPosition, dataset: ResearchDataset) -> Forwa
         forward_sharpe=fwd_sharpe,
         buy_and_hold_return=float((1.0 + bh).prod() - 1.0),
         buy_and_hold_sharpe=bh_sharpe,
-        # ADR-073: on zero trades `fwd_sharpe` is 0.0 by the degenerate-series guard, and
-        # `0.0 > bh_sharpe` scored not-participating-in-a-decline as a win. Never traded, never beat.
-        beats_buy_and_hold=bool(n_trades > 0 and fwd_sharpe > bh_sharpe),
+        # Keep inactive paths unmeasured, but retain inherited-exposure evidence (ADR-361).
+        beats_buy_and_hold=bool((n_trades > 0 or fwd.ne(0).any()) and fwd_sharpe > bh_sharpe),
         as_of=as_of,
         forward_equity=forward_equity,
         forward_trades=n_trades,
