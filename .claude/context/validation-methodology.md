@@ -937,6 +937,22 @@ paths absorbed by the final bar. This law-only result is not a zero population-r
 guarantee, general-null/market/power/bootstrap certification, a pooled denominator
 or threshold permission. No frozen cohort was rerun, repaired or replaced.
 
+ADR-358 separately preregisters a persistent stochastic-amplitude integer
+martingale, N200/7400bars, P0=384/floor128, states1/4 with independent1/50
+post-step flips and full symmetric sign/flip arrays. Its ideal conditional simple
+return mean is0; the native ratio-operation rounding bound is2^-54. Fixed seeds
+2026102407000+i and V14PVAR26 symbols identify a distinct question, never a
+replacement/continuation of ADR316 or any other frozen cohort. Helper/checkpoint
+machinery is retained, while independent state-parity replay validates all200
+exact sources before one7200s soft-admission search invocation. Protocol exact CI
+precedes every draw; controlled fake-RNG/search tests precede publication. Only
+complete200/zeroerrors with independent final source/model/selection/holdout/
+joint/count audits permit separate graduation and combined-N200 survival rates.
+At preregistration no cohort sources or searches exist. Law-only bounds do not
+certify market safety, arbitrary variance processes, bootstrap/power, mathematical
+PRNG stream independence or ADR102 probability-gate eligibility. No production
+math, threshold, v14 identity or generated/frozen evidence changes.
+
 ## 7. Gate calibration — Type-I error, power, and the detectable-edge frontier
 
 The three sections above describe statistics. This one describes what has been measured about the
