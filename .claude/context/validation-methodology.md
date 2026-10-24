@@ -953,6 +953,17 @@ certify market safety, arbitrary variance processes, bootstrap/power, mathematic
 PRNG stream independence or ADR102 probability-gate eligibility. No production
 math, threshold, v14 identity or generated/frozen evidence changes.
 
+FINDING-298 records ADR-358's subsequent single-use execution as incomplete:
+all200 original sources froze and passed pre-search audit;96 durable Experiment/
+shard pairs and97 START markers remain,0096 unresolved and103 never started.
+No combined result, summary, error or invalidation is recorded; these absences
+establish no activity state or cause. Independent all200 exact-source and96
+checkpoint-preservation audits pass, without a raw-candidate rescan or full-result
+certification. No partial endpoints, rates, intervals or full-N inference are
+reported. Preserve all original bytes; never retry/resume/redraw/repair/remove
+markers/renew budget/replace this cohort. Persistent-variance calibration remains
+unmeasured, separate from all historical laws and frozen attempts.
+
 ## 7. Gate calibration — Type-I error, power, and the detectable-edge frontier
 
 The three sections above describe statistics. This one describes what has been measured about the
