@@ -419,6 +419,8 @@ def lifecycle_from_forward_returns(
             reasons=["grace period (insufficient forward data)"],
         )
     equity = (1.0 + forward_returns).cumprod()
+    # Include losses from forward inception, before the first return (ADR-356).
+    equity = pd.concat([pd.Series([1.0], dtype=equity.dtype), equity], ignore_index=True)
     forward_drawdown = abs(max_drawdown(equity))
     roll = forward_returns.iloc[-policy.rolling_window_bars :]
     roll_bench = benchmark_returns.iloc[-policy.rolling_window_bars :]

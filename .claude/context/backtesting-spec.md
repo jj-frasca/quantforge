@@ -1050,6 +1050,15 @@ numeric returns, finite and greater than -1, plus a valid single-name trade coun
 history and naive/generic indexes remain valid. Input validation does not certify arbitrary extreme
 floating-point compounding/variance arithmetic.
 
+ADR-356 includes pre-return unit wealth in both lifecycle drawdown histories,
+after grace and single-name no-trade branches. The baseline has the existing
+compounded equity's dtype; original cumprod and peak-to-trough arithmetic remain.
+An initial forward loss can now trigger the unchanged strict risk limit even if
+later recovery makes rolling Sharpe healthy (FINDING-296). Policy defaults/hashes,
+rolling statistics, reason text, score/curve schemas and generated records stay;
+the internal baseline adds no persisted bar or timestamp. Historical decisions
+are not restated, and extreme native compounding remains a separate limitation.
+
 ADR-169 gives the separate broker account ledger (`execution/equity_curve.py`) an intrinsic point
 and chronological-batch boundary. Points require aware UTC times, finite scalars, strict
 nonnegative integer counts, and jointly measured/absent benchmark-alpha fields. Load/save/append

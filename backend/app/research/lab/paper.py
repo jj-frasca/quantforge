@@ -296,6 +296,8 @@ def lifecycle_from_returns(
             reasons=[f"not yet measurable (0 trades in {n} forward bars)"],
         )
     equity = (1.0 + forward_returns).cumprod()
+    # Include losses from forward inception, before the first return (ADR-356).
+    equity = pd.concat([pd.Series([1.0], dtype=equity.dtype), equity], ignore_index=True)
     forward_drawdown = abs(max_drawdown(equity))
     roll = forward_returns.iloc[-policy.rolling_window_bars :]
     roll_bh = buy_and_hold_returns.iloc[-policy.rolling_window_bars :]
