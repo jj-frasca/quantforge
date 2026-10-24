@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 
 import type { PaperPosition } from '../../types/lab'
 import { PaperPortfolioTable } from './PaperPortfolioTable'
@@ -58,7 +58,7 @@ test('renders a position that has never traded as unmeasured, not as a score of 
     },
   }
   render(<PaperPortfolioTable positions={[untraded]} />)
-  expect(screen.getByText(/not yet measurable — 0 trades in 21 forward bars/i)).toBeInTheDocument()
+  expect(screen.getByText(/no nonzero forward evidence recorded — 0 forward turnover events in 21 forward bars/i)).toBeInTheDocument()
   expect(screen.queryByRole('cell', { name: '0.00' })).not.toBeInTheDocument()
 })
 
@@ -116,11 +116,64 @@ test('uses singular "bar" for a one-bar-old scored position, traded and untraded
         {
           ...open,
           symbol: 'UNTRADED1',
-          score: { ...open.score!, forward_bars: 1, forward_trades: 0 },
+          score: { ...open.score!, forward_bars: 1, forward_trades: 0, forward_return: 0, forward_sharpe: 0 },
         },
       ]}
     />,
   )
   expect(screen.getByText(/^1 forward bar$/i)).toBeInTheDocument()
-  expect(screen.getByText(/not yet measurable — 0 trades in 1 forward bar$/i)).toBeInTheDocument()
+  expect(screen.getByText(/no nonzero forward evidence recorded — 0 forward turnover events in 1 forward bar$/i)).toBeInTheDocument()
+})
+
+test.each([
+  { label: 'legacy nonzero scores', sharpe: 0.9, returns: 0.08, curve: [] },
+  { label: 'return only', sharpe: 0, returns: -0.2, curve: [] },
+  { label: 'Sharpe only', sharpe: 0.9, returns: 0, curve: [] },
+  { label: 'round-trip curve', sharpe: 0, returns: 0, curve: [1, 1.2, 1] },
+  { label: 'first-period movement', sharpe: 0, returns: 0, curve: [1.2, 1, 1] },
+  { label: 'tiny nonzero scalar', sharpe: 0, returns: Number.MIN_VALUE, curve: [] },
+])('preserves served zero-turnover evidence: $label', ({ sharpe, returns, curve }) => {
+  const scored: PaperPosition = { ...open, score: {
+    ...open.score!, forward_bars: 3, forward_trades: 0,
+    forward_sharpe: sharpe, forward_return: returns,
+    forward_equity: curve.map((value, index) => ({
+      timestamp: `2026-07-0${index + 7}T00:00:00Z`, strategy_equity: value, buy_and_hold_equity: 1,
+    })),
+  } }
+  render(<PaperPortfolioTable positions={[scored]} />)
+  const cells = within(screen.getByRole('cell', { name: 'CRM' }).closest('tr')!).getAllByRole('cell')
+  expect(cells[3]).toHaveTextContent(new RegExp(`^${sharpe.toFixed(2).replace('.', '\\.')}$`))
+  expect(cells[3]).toHaveClass('beats')
+  expect(cells[5]).toHaveTextContent(`${(returns * 100).toFixed(1)}%`)
+  expect(cells[6]).toHaveTextContent('0 forward turnover events in 3 forward bars')
+  expect(screen.queryByText(/no nonzero forward evidence recorded/i)).not.toBeInTheDocument()
+})
+
+test('retains the server comparison flag for zero-turnover evidence', () => {
+  render(<PaperPortfolioTable positions={[{ ...open, score: {
+    ...open.score!, forward_trades: 0, beats_buy_and_hold: false,
+  } }]} />)
+  const cell = screen.getByRole('cell', { name: '0.90' })
+  expect(cell).toHaveClass('lags')
+  expect(cell).not.toHaveClass('beats')
+})
+
+test.each([{ curve: [] }, { curve: [1, 1, 1] }])('benchmark movement alone does not supply strategy evidence: %j', ({ curve }) => {
+  render(<PaperPortfolioTable positions={[{ ...open, score: {
+    ...open.score!, forward_bars: 3, forward_trades: 0, forward_return: -0, forward_sharpe: 0,
+    forward_equity: curve.map((value, index) => ({
+      timestamp: `2026-07-0${index + 7}T00:00:00Z`, strategy_equity: value, buy_and_hold_equity: 1.2,
+    })),
+  } }]} />)
+  const cells = within(screen.getByRole('cell', { name: 'CRM' }).closest('tr')!).getAllByRole('cell')
+  expect(cells[3]).toHaveTextContent('—')
+  expect(cells[3]).not.toHaveClass('beats')
+  expect(cells[3]).not.toHaveClass('lags')
+  expect(cells[5]).toHaveTextContent('—')
+  expect(screen.getByText(/no nonzero forward evidence recorded/i)).toBeInTheDocument()
+})
+
+test('qualifies legacy default counts without inferring historical execution', () => {
+  render(<PaperPortfolioTable positions={[open]} />)
+  expect(screen.getByText(/legacy default-zero counts do not attest historical execution/i)).toBeInTheDocument()
 })

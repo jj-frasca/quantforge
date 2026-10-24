@@ -367,6 +367,15 @@ parameter today. Reading them together is the fastest way to understand what the
 
 **The honesty contract these encode, which is the reason they exist at all:**
 
+- `/paper-portfolio` retains served forward scores and comparison flags. Under
+  ADR-361, zero forward turnover can coexist with measured inherited-exposure
+  returns. ADR-362 preserves numeric cells and the server comparison style if
+  either strategy scalar is nonzero or any strategy-equity point differs from
+  unit wealth, including round trips. Benchmark-only movement is not strategy
+  evidence. Positive-bar, zero-count rows with zero scalars and unit/empty curves
+  display no nonzero forward evidence recorded; absent/rounded evidence does not
+  certify inactivity. Default-zero legacy counts do not attest execution.
+  No original return reconstruction, score/verdict recomputation or schema change.
 - `/pool-report` leads with `n_surviving_deflation` — how many graduates are distinguishable from
   best-of-N selection luck (ADR-018/033) — *not* the graduate count, which overstates the funnel.
   It also carries `walk_forward_graduates` / `purged_cv_graduates` (ADR-038/039) and their

@@ -26,6 +26,9 @@ export function PaperPortfolioTable({ positions }: Props) {
       <p className="summary">
         {positions.length} position{positions.length === 1 ? '' : 's'} · {nOpen} open
       </p>
+      <p className="section-lede">
+        Forward trade counts record turnover events. Legacy default-zero counts do not attest historical execution.
+      </p>
       <div className="table-scroll">
         <table className="lab-table paper-portfolio-table">
           <thead>
@@ -43,9 +46,13 @@ export function PaperPortfolioTable({ positions }: Props) {
             {positions.map((position) => {
               const score = position.score ?? undefined
               const beats = score?.beats_buy_and_hold ?? false
-              // ADR-073: with no forward trades every Sharpe on this row is the degenerate-series
-              // 0.0, not a measurement. Render it as unmeasured rather than as a score of zero.
-              const untraded = score !== undefined && score.forward_bars > 0 && score.forward_trades === 0
+              // ADR-362: preserve affirmative served evidence without inferring original returns.
+              const hasReturnEvidence = score !== undefined && (
+                score.forward_sharpe !== 0 || score.forward_return !== 0 ||
+                score.forward_equity.some((point) => point.strategy_equity !== 1)
+              )
+              const unmeasured = score !== undefined && score.forward_bars > 0 &&
+                score.forward_trades === 0 && !hasReturnEvidence
               return (
                 <tr
                   key={`${position.symbol}-${position.strategy_name}`}
@@ -58,11 +65,11 @@ export function PaperPortfolioTable({ positions }: Props) {
                       {position.status}
                     </span>
                   </td>
-                  <td className={score && !untraded ? (beats ? 'beats' : 'lags') : undefined}>
-                    {untraded ? '—' : fmtSharpe(score?.forward_sharpe)}
+                  <td className={score && !unmeasured ? (beats ? 'beats' : 'lags') : undefined}>
+                    {unmeasured ? '—' : fmtSharpe(score?.forward_sharpe)}
                   </td>
                   <td>{fmtSharpe(score?.buy_and_hold_sharpe)}</td>
-                  <td>{untraded ? '—' : fmtPct(score?.forward_return)}</td>
+                  <td>{unmeasured ? '—' : fmtPct(score?.forward_return)}</td>
                   <td>
                     {position.status === 'closed' && position.exit_reasons.length > 0 ? (
                       <ul className="exit-reasons">
@@ -70,10 +77,10 @@ export function PaperPortfolioTable({ positions }: Props) {
                           <li key={reason}>{reason}</li>
                         ))}
                       </ul>
-                    ) : untraded ? (
-                      `not yet measurable — 0 trades in ${score.forward_bars} forward bar${score.forward_bars === 1 ? '' : 's'}`
+                    ) : unmeasured ? (
+                      `no nonzero forward evidence recorded — 0 forward turnover events in ${score.forward_bars} forward bar${score.forward_bars === 1 ? '' : 's'}`
                     ) : score ? (
-                      `${score.forward_bars} forward bar${score.forward_bars === 1 ? '' : 's'}`
+                      `${score.forward_trades === 0 ? '0 forward turnover events in ' : ''}${score.forward_bars} forward bar${score.forward_bars === 1 ? '' : 's'}`
                     ) : (
                       'no forward data yet'
                     )}

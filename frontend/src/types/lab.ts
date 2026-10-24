@@ -42,9 +42,8 @@ export const forwardScoreSchema = z.object({
   beats_buy_and_hold: z.boolean(),
   as_of: z.string(),
   forward_equity: z.array(forwardEquityPointSchema).default([]),
-  // ADR-073. Zero means the strategy never took a position in the forward window, so every
-  // Sharpe on this row is the degenerate-series 0.0 rather than a measurement. Defaulted for
-  // scores persisted before ADR-073.
+  // ADR-361/362: counts forward turnover, not exposure. Zero can coexist with measured returns.
+  // Defaulted for pre-ADR-073 scores; a default zero does not attest historical execution.
   forward_trades: z.number().int().nonnegative().default(0),
 })
 
