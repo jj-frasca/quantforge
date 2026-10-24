@@ -68,8 +68,9 @@ class ForwardScore(BaseModel):
     beats_buy_and_hold: bool
     as_of: datetime
     forward_equity: list[ForwardEquityPoint] = []
-    # ADR-073. Defaulted so scores persisted before it still validate; a stored 0 on an old score
-    # is indistinguishable from "never traded", which is the honest reading of a zero-return series.
+    # ADR-073: defaulted for legacy scores. Counts forward turnover events; zero can coexist with
+    # nonzero forward returns from inherited exposure (ADR-361). A default zero does not attest
+    # historical execution.
     forward_trades: int = 0
     # ADR-139: absent only on legacy persisted scores. New production scores retain the exact
     # checked vendor evidence that supported their lifecycle decision.

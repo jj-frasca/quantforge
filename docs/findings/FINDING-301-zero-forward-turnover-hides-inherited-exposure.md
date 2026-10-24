@@ -79,3 +79,15 @@ type checks. Receipts: `/tmp/qf-w43-s29-check361.log`,
 `/tmp/qf-w43-s29-turnover-preservation.json` and
 `/tmp/qf-w43-s29-adr361-independent-review.json`. No production occurrence or
 account-execution claim follows, and no generated/frozen evidence was modified.
+
+The subsequent consumer sweep found one residual ForwardScore field comment
+equating a legacy zero count with never having traded. Under the same ADR-361,
+the comment now describes forward turnover and the absence of historical
+execution attestation. Independent research review approved this documentation
+scope. The entire paper module AST, including every docstring, and its source
+outside that exact comment replacement independently remained identical; no new
+runtime test or estimator was needed. Fresh foreground `make check-all
+PYTEST_WORKERS=2` passed all 14,575 backend and 746 frontend tests at 97.41% and
+97.88% coverage, with lint/format/types green. Receipts:
+`/tmp/qf-w43-s29-turnover-comment-preservation.json` and
+`/tmp/qf-w43-s29-check-comment.log`. This follow-up changes no runtime behavior.
