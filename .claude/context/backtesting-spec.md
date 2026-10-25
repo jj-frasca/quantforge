@@ -131,6 +131,15 @@ or partially overwrite cached evidence; frame construction and adjustment semant
 
 ## 2. BaseStrategy contract
 
+ADR-371 rejects cross-CIK ambiguity when projecting fundamental records to
+symbol inputs. The cross-sectional driver checks its resolved requested universe
+before frame acquisition/search, excluding unrelated off-panel records from the
+projection. Preserve global leg presence: supplied-but-uncovered legs pass empty
+maps, globally absent legs pass None, so family eligibility and missing snapshot
+semantics stay. Raw map key spelling, same-CIK behavior, formulas, thresholds,
+v14 and CIK-keyed generated history remain. Historical frozen maps lack owner
+metadata and are not retroactively certified (F312).
+
 ADR-370 validates original longitudinal MomentumStrategy lookback/skip counts
 as nonboolean Integral scalars, with lookback>=1 and skip>=0, normalizing both
 to Python int before storage and summed shift arithmetic. Native signed wrap

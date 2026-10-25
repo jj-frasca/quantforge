@@ -24,7 +24,7 @@ from collections.abc import Callable, Sequence
 from pydantic import BaseModel, ConfigDict
 
 from app.research.backtesting.manifest import compute_parameter_hash
-from app.research.fundamentals.record import FundamentalRecord
+from app.research.fundamentals.record import FundamentalRecord, ambiguous_fundamental_symbols
 
 QualityProvider = Callable[[str], FundamentalRecord | None]
 
@@ -84,9 +84,12 @@ def screen_quality(record: FundamentalRecord | None, config: QualityGateConfig) 
 
 
 def make_quality_provider(records: list[FundamentalRecord]) -> QualityProvider:
-    """Index the ADR-029 fundamentals pool by symbol. A symbol filed under several fiscal years
-    keeps the NEWEST — the same newest-wins rule `merge_fundamental_records` applies by CIK, so the
-    screen judges a name on its latest filing rather than whichever row happened to come last."""
+    """Index the ADR-029 pool, keeping the newest same-company filing for each symbol.
+
+    A requested symbol shared by distinct CIKs raises instead of becoming an
+    unscored name. Refusal is lazy so unrelated lookups and screen-OFF callers
+    remain available (ADR-371)."""
+    ambiguous = ambiguous_fundamental_symbols(records)
     by_symbol: dict[str, FundamentalRecord] = {}
     for record in records:
         key = record.symbol.upper()
@@ -95,7 +98,10 @@ def make_quality_provider(records: list[FundamentalRecord]) -> QualityProvider:
             by_symbol[key] = record
 
     def provide(symbol: str) -> FundamentalRecord | None:
-        return by_symbol.get(symbol.upper())
+        key = symbol.upper()
+        if key in ambiguous:
+            raise ValueError(f"ambiguous fundamental symbol ownership: {key}")
+        return by_symbol.get(key)
 
     return provide
 

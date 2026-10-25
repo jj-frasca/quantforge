@@ -60,21 +60,27 @@ def main() -> None:
             git_commit_hash=git_revision,
         )
 
-    # ADR-029 4b: the weekly EDGAR sweep's pool supplies the fundamental legs. A symbol missing
-    # from a map is simply excluded from that factor's ranking, so an unswept universe degrades to
-    # the price-only factors instead of ranking on zeros.
-    quality_scores, value_scores = score_maps(load_fundamentals_pool(FUNDAMENTALS_POOL))
+    # The weekly pool supplies the legs. Missing symbols stay outside factor ranks.
+    # Preserve globally supplied legs even with zero requested coverage, while
+    # checking ownership only in the resolved requested universe (ADR-371).
+    records = load_fundamentals_pool(FUNDAMENTALS_POOL)
+    quality_supplied = any(record.quality_score is not None for record in records)
+    value_supplied = any(record.value_score is not None for record in records)
+    requested = set(symbols)
+    quality_scores, value_scores = score_maps(
+        [record for record in records if record.symbol.upper() in requested]
+    )
     print(
         f"Cross-sectional hunt over {len(symbols)} symbols (yfinance max history); "
-        f"fundamentals pool: {len(quality_scores)} quality / {len(value_scores)} value scores\n"
+        f"requested fundamentals: {len(quality_scores)} quality / {len(value_scores)} value scores\n"
     )
     try:
         result = run_cross_sectional_hunt(
             symbols,
             dataset_provider,
             store=store,
-            quality_scores=quality_scores or None,
-            value_scores=value_scores or None,
+            quality_scores=quality_scores if quality_supplied else None,
+            value_scores=value_scores if value_supplied else None,
             rationale="scheduled cross-sectional hunt",
         )
     except ValueError as exc:

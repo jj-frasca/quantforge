@@ -158,12 +158,25 @@ def load_fundamentals_shard(path: Path) -> list[FundamentalRecord] | None:
         return None
 
 
+def ambiguous_fundamental_symbols(records: list[FundamentalRecord]) -> set[str]:
+    """Find case-insensitive symbol labels shared by distinct company identities."""
+    owners: dict[str, set[int]] = {}
+    for record in records:
+        owners.setdefault(record.symbol.upper(), set()).add(record.cik)
+    return {symbol for symbol, ciks in owners.items() if len(ciks) > 1}
+
+
 def score_maps(
     records: list[FundamentalRecord],
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Project the fundamentals pool into (quality_scores, value_scores) symbol->score maps for the
     cross-sectional hunt (ADR-029 4a). A symbol appears in a map only when that leg is not None, so
-    an unscored name is simply absent — the ranker excludes it that day."""
+    an unscored name is simply absent — the ranker excludes it that day.
+    Cross-company symbol ambiguity refuses before leg filtering (ADR-371);
+    neither input order nor missingness can resolve current symbol ownership."""
+    ambiguous = ambiguous_fundamental_symbols(records)
+    if ambiguous:
+        raise ValueError(f"ambiguous fundamental symbol ownership: {', '.join(sorted(ambiguous))}")
     quality = {r.symbol: r.quality_score for r in records if r.quality_score is not None}
     value = {r.symbol: r.value_score for r in records if r.value_score is not None}
     return quality, value

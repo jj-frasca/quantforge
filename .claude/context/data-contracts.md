@@ -202,6 +202,13 @@ cross-sectional factors. Each `FundamentalRecord` defensively freezes its flags,
 or out-of-range scores, constrains F-score to `[0, 9]`, and requires the combined score to equal the
 quality/value product exactly when both legs exist. Merge revalidates existing and incoming rows
 before deduplication; the durable JSON keeps flags as arrays and all prior field shapes unchanged.
+ADR-371 separately guards symbol projection: canonical CIK-keyed rows can share
+a case-insensitive symbol label across companies. score_maps refuses multiple
+distinct owners before missing-leg filtering; output keys keep original spelling.
+The quality provider refuses only a requested ambiguous symbol, before frame
+acquisition/search and without converting it to ordinary missingness. Existing
+earlier value-provider ordering and same-CIK newest/tie behavior remain.
+No source owner is inferred, pool row repaired or historical snapshot rewritten.
 
 ADR-156 independently hardens the quality reports embedded by those research and forward claims.
 Their issue/context graphs cannot drift under a stable report UUID, unsupported Python or non-finite
