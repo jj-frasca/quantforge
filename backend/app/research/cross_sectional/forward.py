@@ -458,6 +458,8 @@ def evaluate_cross_sectional_lifecycle(
     `panel` and decide hold/retire (ADR-025). Holds during the grace period / before any forward
     data has accrued."""
     policy = CrossSectionalExitPolicy.model_validate(policy)
+    if list(panel.columns) != list(position.universe_symbols):
+        raise ValueError("forward panel columns must match the exact frozen universe order")
     forward_mask = panel.index > pd.Timestamp(position.frozen_at)
     if not bool(forward_mask.any()):
         return CrossSectionalLifecycleDecision(

@@ -940,6 +940,14 @@ computed. Any failure defers the entire position update instead of scoring a dif
 New `CrossSectionalForwardScore` rows carry the ordered complete component evidence; legacy and
 direct synthetic scores may retain `None`.
 
+ADR-363 extends ADR-252's direct scoring column contract to direct cross-sectional
+lifecycle evaluation: after policy revalidation and before calendar access or
+no-forward holds, require the exact frozen ordered columns. Subsets, substituted,
+extra or reordered labels refuse without normalizing or repairing the panel.
+The managed book already enforces this identity. Matching-panel arithmetic,
+grace, reasons, defaults and thresholds remain; no broader calendar/price or
+position-reconstruction rule is introduced (FINDING-303).
+
 ADR-142 freezes the panel-projected value and quality score mappings on every new cross-sectional
 experiment because those static fundamental inputs define the `xs_value`, `xs_quality`, and
 `xs_quality_value` trials just as prices do. Promotion copies only those historical snapshots into
