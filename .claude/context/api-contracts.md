@@ -390,6 +390,10 @@ parameter today. Reading them together is the fastest way to understand what the
   zero Sharpes and zero-trade positive-bar scores remain included, with supported
   legacy empty curves/absent evidence. These unweighted per-position means are
   neither portfolio Sharpe nor proof of ADR-033's separate126-bar research trigger.
+  ADR-367 retains finite native mean arithmetic and recovers nonfinite intermediate
+  sums from validated finite floats using an exact represented rational mean before
+  one final float conversion. Numerical overflow is not reported as absent evidence;
+  empty observed samples still yield null. This changes no field or input schema.
 - `/null-calibration` returns the gate's measured Type-I error on symbols with no edge by
   construction (ADR-036/037). **A missing data directory returns `[]` with a 200**, deliberately:
   a 500 here would take the whole dashboard down for the sake of a summary panel. The same

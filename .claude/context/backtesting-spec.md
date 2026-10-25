@@ -974,6 +974,15 @@ curves/absent evidence remain included. The unweighted native mean and unknown
 handling stay; this is not portfolio Sharpe or ADR-033's separate126-bar research
 trigger. No field, threshold, stored score or generated record changes (F306).
 
+ADR-367 preserves that selected sample and every finite native sum/divide result.
+Only a nonfinite native total invokes exact Fraction addition of represented
+finite builtin floats, exact division by count, then one final float conversion.
+The mean lies inside its finite source range; severe cancellation can retain a
+representable subnormal rather than lose it through normalization. Final rounding
+may still yield zero, and finite native inaccuracies stay. This is local producer
+arithmetic, not full unchecked-copy validation or source Sharpe certification.
+None, membership, schemas, thresholds, v14 and generated/frozen records stay (F307).
+
 ADR-142 freezes the panel-projected value and quality score mappings on every new cross-sectional
 experiment because those static fundamental inputs define the `xs_value`, `xs_quality`, and
 `xs_quality_value` trials just as prices do. Promotion copies only those historical snapshots into

@@ -1,5 +1,7 @@
 from collections.abc import Callable
 from datetime import datetime
+from fractions import Fraction
+from math import isfinite
 
 from pydantic import BaseModel, ConfigDict
 
@@ -54,7 +56,13 @@ def _mean_forward_sharpe(positions: list[PaperPosition]) -> float | None:
         for p in positions
         if p.score is not None and p.score.forward_bars > 0
     ]
-    return sum(scored) / len(scored) if scored else None
+    if not scored:
+        return None
+    total = sum(scored)
+    if isfinite(total):
+        return total / len(scored)
+    exact_total = sum((Fraction.from_float(value) for value in scored), Fraction())
+    return float(exact_total / len(scored))
 
 
 def deflation_cohorts(positions: list[PaperPosition]) -> DeflationCohorts:
