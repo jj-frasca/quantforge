@@ -49,7 +49,11 @@ class DeflationCohorts(BaseModel):
 
 
 def _mean_forward_sharpe(positions: list[PaperPosition]) -> float | None:
-    scored = [p.score.forward_sharpe for p in positions if p.score is not None]
+    scored = [
+        p.score.forward_sharpe
+        for p in positions
+        if p.score is not None and p.score.forward_bars > 0
+    ]
     return sum(scored) / len(scored) if scored else None
 
 

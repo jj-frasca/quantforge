@@ -384,6 +384,12 @@ parameter today. Reading them together is the fastest way to understand what the
   artifacts, which record a finalist per searched symbol rather than per graduate; `pool-report`
   also carries `search_config_versions` and `median_n_bars` (ADR-052), the two facts a reader needs
   before quoting any real-versus-null difference.
+  Its paper-book cohort means use only present scores with positive forward bars
+  (ADR-366); absent and zero-bar placeholders leave the mean unmeasured when no
+  observed-bar scores remain. Cohort counts still describe membership. Measured
+  zero Sharpes and zero-trade positive-bar scores remain included, with supported
+  legacy empty curves/absent evidence. These unweighted per-position means are
+  neither portfolio Sharpe nor proof of ADR-033's separate126-bar research trigger.
 - `/null-calibration` returns the gate's measured Type-I error on symbols with no edge by
   construction (ADR-036/037). **A missing data directory returns `[]` with a 200**, deliberately:
   a 500 here would take the whole dashboard down for the sake of a summary panel. The same
