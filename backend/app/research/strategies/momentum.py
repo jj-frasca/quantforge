@@ -3,6 +3,7 @@ from typing import ClassVar
 import pandas as pd
 
 from app.research.strategies.base import BaseStrategy
+from app.research.trial_counts import require_trial_count
 
 
 class MomentumStrategy(BaseStrategy):
@@ -20,10 +21,8 @@ class MomentumStrategy(BaseStrategy):
     ]
 
     def __init__(self, lookback: int = 60, skip: int = 5) -> None:
-        if lookback < 1:
-            raise ValueError("lookback must be >= 1")
-        if skip < 0:
-            raise ValueError("skip must be >= 0")
+        lookback = require_trial_count(lookback, minimum=1, parameter="lookback")
+        skip = require_trial_count(skip, minimum=0, parameter="skip")
         self.lookback = lookback
         self.skip = skip
 

@@ -131,6 +131,16 @@ or partially overwrite cached evidence; frame construction and adjustment semant
 
 ## 2. BaseStrategy contract
 
+ADR-370 validates original longitudinal MomentumStrategy lookback/skip counts
+as nonboolean Integral scalars, with lookback>=1 and skip>=0, normalizing both
+to Python int before storage and summed shift arithmetic. Native signed wrap
+could otherwise read future prices; unsigned wrap could change the trailing
+window. Safe numerical parameter values, formulas, lag and costs remain; stored
+NumPy scalar types intentionally normalize. The existing helper's ValueError
+wording names the parameter. API/grid policies and other strategies stay;
+post-construction mutation and arbitrary-sized pandas indexers are not covered.
+No current default/API/catalog occurrence, threshold or v14 change (F311).
+
 ADR-346 gives the shipped cross-sectional xs_52w_high factory a stable
 module-owned identity with unchanged lazy coercion/mapping capture/signals.
 ADR-347 installed attributed high-method readers before ADR-348's restricted
