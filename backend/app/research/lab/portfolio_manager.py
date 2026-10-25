@@ -117,6 +117,9 @@ def manage_portfolio(
             updated.append(position)
             continue
         score = evaluate_forward(position, dataset)
+        if position.score is not None and score.as_of < position.score.as_of:
+            updated.append(position)
+            continue
         decision = evaluate_lifecycle(position, dataset.frame, policy)
         if decision.action == "exit":
             updated.append(

@@ -958,6 +958,15 @@ predicate. Empty/naive lifecycle holds and existing empty/naive score refusals
 remain; generic timestamp-object/offset calendars retain their prior behavior.
 No measured noncausal return or affected actual book is established (FINDING-304).
 
+ADR-365 preserves the entire managed position when a computed candidate score has
+an earlier `as_of` than its retained score, before either manager evaluates
+lifecycle. Quality-passing truncated responses can otherwise erase known later
+forward observations (FINDING-305). Same-cutoff corrections, first/newer scores
+and terminal positions retain their existing paths. No curve merging, monotonic
+bar-count rule or freshness comparison against `now` is introduced. Monitoring
+defers on stale cutoffs; this does not validate old observations or reconcile
+broker execution. Pure historical scoring and all thresholds/schemas stay.
+
 ADR-142 freezes the panel-projected value and quality score mappings on every new cross-sectional
 experiment because those static fundamental inputs define the `xs_value`, `xs_quality`, and
 `xs_quality_value` trials just as prices do. Promotion copies only those historical snapshots into

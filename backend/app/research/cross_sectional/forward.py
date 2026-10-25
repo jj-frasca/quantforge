@@ -554,6 +554,9 @@ def manage_cross_sectional_book(
                 raise TypeError("cross-sectional forward provider must return a dataset mapping")
             panel, evidence = _frozen_panel(position, datasets)
             score = score_forward(position, panel, evidence=evidence)
+            if position.score is not None and score.as_of < position.score.as_of:
+                updated.append(position)
+                continue
             decision = evaluate_cross_sectional_lifecycle(position, panel, policy)
         except (ValueError, KeyError, OSError, ArithmeticError, TypeError):
             updated.append(position)
