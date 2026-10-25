@@ -1,4 +1,4 @@
-"""Regression floors for packages named by FINDING-086's Dependabot alerts."""
+"""Regression floors for packages named by FINDING-086/313 Dependabot alerts."""
 
 import tomllib
 from pathlib import Path
@@ -10,7 +10,7 @@ PATCHED_MINIMUMS = {
     "anyio": Version("4.14.2"),
     "pydantic-settings": Version("2.14.2"),
     "soupsieve": Version("2.9.0"),
-    "virtualenv": Version("21.7.13"),
+    "virtualenv": Version("21.14.13"),
 }
 
 
