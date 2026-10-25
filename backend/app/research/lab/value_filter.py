@@ -29,7 +29,7 @@ class ValueGateConfig(BaseModel):
     with every run so a filtered universe is reproducible against the exact rubric that judged it.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     # Cheapness score is 0-1 (higher = cheaper vs own P/E+P/S history + DCF margin of safety), so a
     # name passes when its score >= min_score. 0.5 is the neutral midpoint — a permissive starting

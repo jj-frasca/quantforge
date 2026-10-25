@@ -131,6 +131,14 @@ or partially overwrite cached evidence; frame construction and adjustment semant
 
 ## 2. BaseStrategy contract
 
+ADR-372 requires finite optional quality/value pre-screen minima at validated
+config construction, JSON loading and CLI numeric overrides. NaN could otherwise
+admit a weak score through an enabled screen. All finite thresholds, including
+out-of-range values, coercions, flags, defaults and hashes retain their meaning;
+screen arithmetic and graduation thresholds stay unchanged. Both screens remain
+off by default. Unchecked config copies and separate score-model validity remain
+outside this constructor correction; no actual affected hunt is established (F315).
+
 ADR-371 rejects cross-CIK ambiguity when projecting fundamental records to
 symbol inputs. The cross-sectional driver checks its resolved requested universe
 before frame acquisition/search, excluding unrelated off-panel records from the

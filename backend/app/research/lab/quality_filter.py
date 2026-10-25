@@ -32,7 +32,7 @@ QualityProvider = Callable[[str], FundamentalRecord | None]
 class QualityGateConfig(BaseModel):
     """Versioned, tunable quality pre-screen thresholds (ADR-029 4b), mirroring `ValueGateConfig`."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     # Composite quality is 0-1 (F-score + gross profitability + financial safety). 0.5 is the
     # neutral midpoint — a permissive starting point and a calibration knob, not a proven constant.
