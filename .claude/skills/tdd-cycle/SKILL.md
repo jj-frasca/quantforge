@@ -16,10 +16,11 @@ each gate, rather than leaving it to memory.
    - Name it `test_<unit>_<scenario>_<expected_outcome>` (see `.claude/rules/test-files.md`).
    - Cover the happy path to start. Put it in `backend/tests/unit/` (or `integration/`).
 2. **Confirm it fails for the right reason.**
-   - `cd backend && uv run pytest tests/path::test_name -x`
+   - `cd backend && uv run pytest -m "not live and not integration" tests/path::test_name -x`
    - It must FAIL (missing impl / wrong result) — not error on a typo or bad import.
+   - Confirm the test was collected; a deselected test is not RED.
 3. **GREEN — implement the minimum** to pass. No speculative extras (CLAUDE.md scope rules).
-4. **Confirm it passes.** Re-run the same test.
+4. **Confirm it passes.** Re-run the same command, retaining the synthetic marker filter.
 5. **Expand coverage** — add edge cases and error paths as separate tests:
    - boundary values, empty/degenerate inputs, the documented `raises` paths.
 6. **Property test for financial math.** If the unit computes a financial quantity, add a
@@ -33,4 +34,7 @@ each gate, rather than leaving it to memory.
 - A test that passes before the implementation exists is not a TDD test — make it fail first.
 - Tests must be deterministic: no live network (mark `@pytest.mark.live` if unavoidable),
   seed RNGs, use the synthetic fixtures.
+- Keep `-m "not live and not integration"` on focused runs too: marking a test live does not
+  exclude it automatically when selecting a file or test name. Run live/DB checks separately
+  with their dedicated make targets when that verification is in scope.
 - Don't lower the coverage gate to make a commit pass — add the missing test.

@@ -26,8 +26,9 @@ template is automation: read the diff and *write* the body, don't ask the user t
    - `TESTS`: list each new/changed test and what it validates
    - `EDGE CASES`: the explicit edge/error paths covered
    - `ADR:` line ONLY if this commit enacts an architecture decision
-4. **Gate** — confirm `make check` passed (lint + tests + coverage). If it didn't, stop;
-   do not commit a red tree.
+4. **Gate** — confirm foreground `make check-all` finished and passed (backend and frontend
+   lint, types, tests and coverage). If it didn't, stop; do not commit a red tree or leave
+   verification running while committing.
 5. **Commit** via HEREDOC so formatting is preserved:
    ```
    git commit -m "$(cat <<'EOF'
