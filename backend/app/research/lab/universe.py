@@ -202,8 +202,9 @@ def run_universe_hunt(
 
 
 def rank_experiments(experiments: list[Experiment]) -> list[LeaderboardRow]:
-    """Cross-symbol leaderboard: ONE row per symbol (its best experiment), graduates first then by
-    deflated Sharpe. A symbol hunted more than once collapses to its best result — so the row is
+    """Cross-symbol leaderboard: ONE row per symbol, representing its experiment's selected finalist.
+    Graduates rank first, then by that finalist's deflated Sharpe. Repeated symbols collapse to
+    their best experiment under that ordering — so the row is
     unique per symbol (no duplicate keys) and the board isn't padded with repeat experiments. Each
     graduate is annotated with whether it survives universe-level deflation (ADR-018), using the
     count of UNIQUE symbols searched as the selection breadth."""
@@ -212,7 +213,7 @@ def rank_experiments(experiments: list[Experiment]) -> list[LeaderboardRow]:
     for exp in experiments:
         if not exp.trials:
             continue
-        best = max(exp.trials, key=lambda t: t.deflated_sharpe)
+        best = selected_trial(exp)
         survives: bool | None = None
         if exp.graduate is not None:
             holdout_years = exp.graduate.holdout_n_bars / _TRADING_DAYS

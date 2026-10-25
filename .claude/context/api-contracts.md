@@ -367,6 +367,14 @@ parameter today. Reading them together is the fastest way to understand what the
 
 **The honesty contract these encode, which is the reason they exist at all:**
 
+- `/leaderboard` and `/graduates` project each experiment's persisted selected
+  trial strategy and margin through ADR-079's resolver (ADR-369), including
+  same-family refinement. Legacy missing indexes retain max-margin fallback.
+  Repeated symbols still collapse graduates first, then by the represented
+  finalist's margin; correcting that operand may select a different experiment
+  and its existing holdout/universe annotation. Universe-symbol count, bars,
+  fields and verdict calculations remain unchanged. Pool summary ranking uses
+  the same projection; its represented survivor count can consequently change.
 - `/paper-portfolio` retains served forward scores and comparison flags. Under
   ADR-361, zero forward turnover can coexist with measured inherited-exposure
   returns. ADR-362 preserves numeric cells and the server comparison style if
