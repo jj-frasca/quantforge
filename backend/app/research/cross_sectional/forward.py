@@ -305,6 +305,8 @@ def score_forward(
         symbols = [item.quality_report.symbol.strip().upper() for item in evidence]
         if symbols != [symbol.strip().upper() for symbol in position.universe_symbols]:
             raise ValueError("forward score evidence must match the frozen universe order")
+    if not panel.index.is_unique or not panel.index.is_monotonic_increasing:
+        raise ValueError("cross-sectional price index must be unique and ascending")
     as_of = pd.Timestamp(panel.index.max())
     forward_mask = panel.index > pd.Timestamp(position.frozen_at)
     if not bool(forward_mask.any()):
@@ -460,6 +462,8 @@ def evaluate_cross_sectional_lifecycle(
     policy = CrossSectionalExitPolicy.model_validate(policy)
     if list(panel.columns) != list(position.universe_symbols):
         raise ValueError("forward panel columns must match the exact frozen universe order")
+    if not panel.index.is_unique or not panel.index.is_monotonic_increasing:
+        raise ValueError("cross-sectional price index must be unique and ascending")
     forward_mask = panel.index > pd.Timestamp(position.frozen_at)
     if not bool(forward_mask.any()):
         return CrossSectionalLifecycleDecision(

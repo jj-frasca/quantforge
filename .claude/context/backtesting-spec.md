@@ -948,6 +948,16 @@ The managed book already enforces this identity. Matching-panel arithmetic,
 grace, reasons, defaults and thresholds remain; no broader calendar/price or
 position-reconstruction rule is introduced (FINDING-303).
 
+ADR-364 requires original source indexes to be unique and ascending at the raw
+panel score and both raw lifecycle wrappers before calendar access/no-forward
+shortcuts. Policy/column and early evidence reconstruction/frozen-symbol checks
+retain precedence; score-root common-revision validation remains later.
+This mirrors engine calendar identity without invoking extra price/strategy work,
+sorting, deduplication or UTC/cadence coercion. NaT fails the native ordering
+predicate. Empty/naive lifecycle holds and existing empty/naive score refusals
+remain; generic timestamp-object/offset calendars retain their prior behavior.
+No measured noncausal return or affected actual book is established (FINDING-304).
+
 ADR-142 freezes the panel-projected value and quality score mappings on every new cross-sectional
 experiment because those static fundamental inputs define the `xs_value`, `xs_quality`, and
 `xs_quality_value` trials just as prices do. Promotion copies only those historical snapshots into

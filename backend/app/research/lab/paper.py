@@ -332,6 +332,8 @@ def evaluate_lifecycle(
 ) -> LifecycleDecision:
     """Run the strategy over `frame` and decide hold/exit on its post-freeze forward slice."""
     policy = ExitPolicy.model_validate(policy)
+    if not frame.index.is_unique or not frame.index.is_monotonic_increasing:
+        raise ValueError("price calendar must be unique and ascending")
     forward_mask = frame.index > pd.Timestamp(position.frozen_at)
     if not bool(forward_mask.any()):
         return LifecycleDecision(
