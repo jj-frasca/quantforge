@@ -1774,6 +1774,15 @@ sources raise without filtering. This is summary arithmetic, not a power-array
 construction contract or universal finite-native precision guarantee. Search,
 gate, reference strategies, thresholds and fingerprints remain unchanged (F166).
 
+ADR-368 applies that same helper to `pool_report._summarize` for walk-forward
+and purged-CV Trial diagnostics. Nullable filtering, selected populations,
+empty None, counts, maximum and finite native summaries remain unchanged.
+Nonfinite endpoint arithmetic recovers at the existing binary linear indexes;
+the helper's finite-source guard and local NumPy error handling are inherited.
+This does not validate whole unchecked Trial graphs, certify finite-native
+precision or repair other report reducers. No threshold, schema, accounting-v14,
+generated record or frozen cohort changes (F308).
+
 ## Power root evidence validity (ADR-218)
 
 PowerCalibration requires original positive integral searched counts, nonnegative

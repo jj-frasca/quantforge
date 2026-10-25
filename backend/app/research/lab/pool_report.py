@@ -16,7 +16,7 @@ import numpy as np
 import numpy.typing as npt
 from pydantic import BaseModel, ConfigDict
 
-from app.research.lab.calibration import NullCalibration
+from app.research.lab.calibration import NullCalibration, _percentiles
 from app.research.lab.experiment import Experiment, Trial, selected_trial
 from app.research.lab.frontier import (
     DetectionFrontier,
@@ -563,14 +563,15 @@ def _excess_rows(
 def _summarize(trials: list[Trial], field: str) -> DiagnosticSummary | None:
     """Distribution of one nullable Trial diagnostic, or None when none of them carry it."""
     values = [v for t in trials if (v := getattr(t, field)) is not None]
-    if not values:
+    percentiles = _percentiles(values)
+    if percentiles is None:
         return None
-    array = np.asarray(values, dtype=float)
+    median, p95, maximum = percentiles
     return DiagnosticSummary(
         n=len(values),
-        median=float(np.median(array)),
-        p95=float(np.percentile(array, 95)),
-        maximum=float(array.max()),
+        median=median,
+        p95=p95,
+        maximum=maximum,
     )
 
 

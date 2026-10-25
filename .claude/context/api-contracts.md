@@ -384,6 +384,12 @@ parameter today. Reading them together is the fastest way to understand what the
   artifacts, which record a finalist per searched symbol rather than per graduate; `pool-report`
   also carries `search_config_versions` and `median_n_bars` (ADR-052), the two facts a reader needs
   before quoting any real-versus-null difference.
+  ADR-368 gives the four Trial-diagnostic summaries the existing ADR-217 finite
+  percentile recipe: finite native median/p95 results stay exact; nonfinite
+  intermediate arithmetic recovers through rational endpoint interpolation at
+  the same binary linear index. Counts, maximum, selected populations and missing
+  evidence semantics stay; no field or schema changes. Other reducers and manual
+  model construction remain outside this producer correction.
   Its paper-book cohort means use only present scores with positive forward bars
   (ADR-366); absent and zero-bar placeholders leave the mean unmeasured when no
   observed-bar scores remain. Cohort counts still describe membership. Measured
