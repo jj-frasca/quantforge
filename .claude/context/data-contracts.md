@@ -202,6 +202,13 @@ cross-sectional factors. Each `FundamentalRecord` defensively freezes its flags,
 or out-of-range scores, constrains F-score to `[0, 9]`, and requires the combined score to equal the
 quality/value product exactly when both legs exist. Merge revalidates existing and incoming rows
 before deduplication; the durable JSON keeps flags as arrays and all prior field shapes unchanged.
+ADR-373 separately requires finite numeric UndervaluationScore evidence at
+validated construction/JSON and final producer return, preserving nullable
+absence, finite values/coercions and existing flags/JSON shape. Nonfinite output
+refuses rather than becoming unscored permission. Record-first hunt admission can
+skip a symbol even with screening off, and a sweep shard may fail; prior provider
+price acquisition can already occur. Unchecked copies, deep flag freezing,
+score bounds and historical null recovery remain outside this correction (F316).
 ADR-371 separately guards symbol projection: canonical CIK-keyed rows can share
 a case-insensitive symbol label across companies. score_maps refuses multiple
 distinct owners before missing-leg filtering; output keys keep original spelling.

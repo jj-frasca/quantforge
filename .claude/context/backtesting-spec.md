@@ -131,6 +131,15 @@ or partially overwrite cached evidence; frame construction and adjustment semant
 
 ## 2. BaseStrategy contract
 
+ADR-373 requires finite numeric UndervaluationScore fields at validated
+construction/JSON and the unchanged scorer's final return. Nullable absence,
+all finite values/coercions, flag-list behavior and valuation arithmetic stay.
+Record-first provider refusal becomes a per-symbol hunt error even with screening
+off; earlier provider price acquisition can occur, and the fundamental sweep can
+fail its shard. No missingness fallback, numerical recovery or unchecked-copy
+consumer protection is adopted. Extreme synthetic overflow is confirmed; an
+actual production occurrence is not established (F316).
+
 ADR-372 requires finite optional quality/value pre-screen minima at validated
 config construction, JSON loading and CLI numeric overrides. NaN could otherwise
 admit a weak score through an enabled screen. All finite thresholds, including

@@ -17,7 +17,7 @@ from app.research.valuation.multiples import compute_multiples
 class UndervaluationScore(BaseModel):
     """How undervalued a company looks versus its own history + intrinsic value, cited (rule 6)."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     symbol: str
     cik: int
