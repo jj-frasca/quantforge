@@ -574,6 +574,13 @@ raw distribution or gate; it prevents complementary missingness from becoming cr
 
 ## 5. ValidationReport
 
+F310 limits all three PBO interpretations to the frequency of in-sample winners
+ranking at or below the out-of-sample midpoint among tested configurations.
+Every tier states that the diagnostic does not establish a profitable edge or
+future performance. Stable ranking can occur among entirely losing candidates.
+This changes explanatory strings only: display cutoffs/verdicts, tied-winner
+averaging, scores, flags, report pass policy and accounting-v14 remain unchanged.
+
 ADR-159 makes the report a durable claim rather than a shallowly frozen object. All headline and
 nested diagnostic scalars must be finite; split/fold counts and derived summaries must agree with
 their records; present diagnostic counts must agree with the top-level counts; and list/map fields

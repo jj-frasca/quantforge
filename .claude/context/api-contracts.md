@@ -320,7 +320,7 @@ cache access (ADR-133).
     "n_purged_folds": 5,
     "flags": [],
     "interpretations": [
-      { "metric": "pbo", "message": "PBO 18% — overfitting risk is low.", "verdict": "good" },
+      { "metric": "pbo", "message": "PBO 18% — low frequency of in-sample winners ranking at or below the out-of-sample midpoint among tested configurations. This diagnostic does not establish a profitable edge or future performance.", "verdict": "good" },
       { "metric": "deflated_sharpe", "message": "...", "verdict": "good" },
       { "metric": "parameter_stability_score", "message": "...", "verdict": "good" }
     ],
@@ -331,6 +331,11 @@ cache access (ADR-133).
   - `interpretations` are backend-authored plain-English readings per metric, with a
     `verdict` of `good` / `warning` / `bad`. Thresholds: PBO ≥ 0.5 bad / 0.3–0.5 warning /
     < 0.3 good; DSR ≤ 0 bad / > 0 good; stability ≤ 0.4 bad / 0.4–0.7 warning / > 0.7 good.
+    F310 bounds every PBO message to relative-rank inversion among tested
+    configurations, explicitly without a profitable-edge or future-performance
+    inference. Low/moderate/high display bands and verdicts stay unchanged;
+    the client renders the server message. Other metric text, flags, numerical
+    fields, pass calculations and schema remain unchanged.
   - The example omits three response fields that exist but are diagnostic-only (nothing
     gates on them): nullable `walk_forward` (ADR-038) and `purged_cv` (ADR-039) objects, and
     `regime_breakdown` (ADR-012, keyed by regime name, missing key means zero bars in that

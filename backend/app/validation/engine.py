@@ -36,8 +36,9 @@ def _interpret(pbo: float, dsr: float, stability: float) -> list[Interpretation]
             Interpretation(
                 metric="pbo",
                 message=(
-                    f"PBO {pbo:.0%} — overfitting risk is low; the strategy's edge is "
-                    "unlikely to be a backtest artifact."
+                    f"PBO {pbo:.0%} — low frequency of in-sample winners ranking at or below "
+                    "the out-of-sample midpoint among tested configurations. This diagnostic "
+                    "does not establish a profitable edge or future performance."
                 ),
                 verdict="good",
             )
@@ -47,7 +48,9 @@ def _interpret(pbo: float, dsr: float, stability: float) -> list[Interpretation]
             Interpretation(
                 metric="pbo",
                 message=(
-                    f"PBO {pbo:.0%} — moderate overfitting risk; treat the result with caution."
+                    f"PBO {pbo:.0%} — moderate frequency of in-sample winners ranking at or below "
+                    "the out-of-sample midpoint among tested configurations. This diagnostic "
+                    "does not establish a profitable edge or future performance."
                 ),
                 verdict="warning",
             )
@@ -57,8 +60,9 @@ def _interpret(pbo: float, dsr: float, stability: float) -> list[Interpretation]
             Interpretation(
                 metric="pbo",
                 message=(
-                    f"PBO {pbo:.0%} — high probability the strategy is overfit to the "
-                    "parameter grid; do not trust this result."
+                    f"PBO {pbo:.0%} — high frequency of in-sample winners ranking at or below "
+                    "the out-of-sample midpoint among tested configurations. This diagnostic "
+                    "does not establish a profitable edge or future performance."
                 ),
                 verdict="bad",
             )
