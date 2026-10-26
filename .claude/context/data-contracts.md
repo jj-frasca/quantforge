@@ -358,3 +358,14 @@ comparisons/reasons remain. This constructor contract does not revalidate
 unchecked copies or certify FundamentalSnapshot numeric evidence/provenance.
 No parser, provider fallback, search, graduation threshold, v14 or generated
 record changes; no actual affected hunt or false graduate is established.
+
+## Enabled fundamental metric validity (ADR-378 / FINDING-320)
+
+An enabled screen_fundamentals check returns an explicit failure for NaN or
+infinite metric evidence after its existing None branch. Finite comparisons and
+missing-value reasons stay; disabled checks still ignore their metrics. No new
+exception can become provider-fallback absence, and negative infinity stays vetoed.
+Snapshot construction/parser/JSON remain unchanged; nonfinite numeric evidence
+can still serialize as null. That durable loss and invalid-versus-unavailable
+provider policy remain open under F320. No source-truth/PIT, historical effect,
+threshold, search, v14 or generated-record change is claimed.

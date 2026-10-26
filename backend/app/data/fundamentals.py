@@ -1,3 +1,4 @@
+import math
 from datetime import date
 from typing import Any
 
@@ -121,19 +122,25 @@ class FundamentalScreen(BaseModel):
 def screen_fundamentals(
     snapshot: FundamentalSnapshot, criteria: FundamentalCriteria
 ) -> FundamentalScreen:
-    """Conservative screen: a metric we cannot verify (None) FAILS its check — we don't trade a
-    company whose fundamentals we can't confirm."""
+    """Enabled checks fail missing or nonfinite metrics; disabled checks ignore their metrics.
+
+    Snapshot numeric persistence and provider missingness remain separate (FINDING-320).
+    """
     reasons: list[str] = []
     if criteria.min_revenue_growth_yoy is not None:
         g = snapshot.revenue_growth_yoy
         if g is None:
             reasons.append("revenue growth unavailable (cannot verify)")
+        elif not math.isfinite(g):
+            reasons.append("revenue growth is not finite (cannot verify)")
         elif g < criteria.min_revenue_growth_yoy:
             reasons.append(f"revenue growth {g:.1%} < {criteria.min_revenue_growth_yoy:.1%}")
     if criteria.min_net_margin is not None:
         m = snapshot.net_margin
         if m is None:
             reasons.append("net margin unavailable (cannot verify)")
+        elif not math.isfinite(m):
+            reasons.append("net margin is not finite (cannot verify)")
         elif m < criteria.min_net_margin:
             reasons.append(f"net margin {m:.1%} < {criteria.min_net_margin:.1%}")
     return FundamentalScreen(passed=not reasons, reasons=reasons)
