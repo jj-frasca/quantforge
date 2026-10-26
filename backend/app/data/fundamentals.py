@@ -236,6 +236,7 @@ def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> F
 
     Revenue anchors the set of fiscal years; other line items are joined per year where present.
     Raises ValueError if no annual revenue facts exist.
+    Raises OverflowError if the revenue-minus-COGS fallback is nonfinite (ADR-380).
     """
     cik = int(company_facts.get("cik", 0))
     entity_name = str(company_facts.get("entityName", symbol))
@@ -275,6 +276,8 @@ def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> F
         gp = gross_profit.get(fy)
         if gp is None and cogs.get(fy) is not None:
             gp = revenue_by_year[fy] - cogs[fy]
+            if not math.isfinite(gp):
+                raise OverflowError("derived gross profit is not finite")
         years.append(
             AnnualFundamentals(
                 fiscal_year=fy,

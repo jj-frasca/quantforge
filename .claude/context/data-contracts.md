@@ -383,3 +383,15 @@ OSError, history/Annual models and custom-provider fallbacks retain old semantic
 ADR-378's enabled consumer guards remain as defense for unchecked numeric copies.
 Historical values lost to null are unrecoverable; no source-truth, PIT, universal
 invalid/unavailable distinction, threshold or v14 change is claimed.
+
+## Derived gross-profit measurability (ADR-380 / FINDING-321)
+
+Only the history parser's revenue-minus-COGS fallback requires a finite result,
+otherwise raising OverflowError before AnnualFundamentals/scoring. Native finite
+subtraction and direct GrossProfit precedence stay. History providers propagate
+this arithmetic error; the universe handles it per symbol before search. The
+fundamental sweep counts/skips acquisition-time OverflowError and continues, also
+covering existing huge-integer conversion overflow; other arithmetic exceptions
+retain their old behavior. Earlier pool rows may remain under existing retention.
+No recovery, None/zero fallback, broad Annual/history/scorer policy, FCF change,
+threshold, v14, generated-record or general financial-score correctness claim.

@@ -98,7 +98,7 @@ def main() -> None:
     for symbol in symbols:
         try:
             history = edgar.fetch_history(symbol)
-        except (ValueError, OSError, KeyError):
+        except (ValueError, OSError, KeyError, OverflowError):
             errors += 1
             continue
         finally:
