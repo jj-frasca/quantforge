@@ -103,7 +103,7 @@ class FundamentalsHistory(BaseModel):
 class FundamentalCriteria(BaseModel):
     """Tunable 'sane fundamentals' thresholds (ADR-017). A None threshold skips that check."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     min_revenue_growth_yoy: float | None = 0.0
     min_net_margin: float | None = 0.0

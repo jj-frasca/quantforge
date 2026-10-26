@@ -347,3 +347,14 @@ ORDER BY timestamp_utc;                     -- ASC for backtests
   (ADR-119); repository filtering is not a substitute for adapter provenance validation.
 - Bind parameters always (no string interpolation — injection + plan-cache).
 - For "latest bar", still bound the range (e.g. last 7 days) then `ORDER BY ... DESC LIMIT 1`.
+
+## Finite fundamental-screen minima (ADR-377 / FINDING-319)
+
+FundamentalCriteria requires finite non-null min_revenue_growth_yoy and
+min_net_margin at ordinary validated construction and JSON loading. NaN could
+otherwise admit finite negative evidence through an enabled check. None still
+disables that check; default zero, all finite values/coercions and screen
+comparisons/reasons remain. This constructor contract does not revalidate
+unchecked copies or certify FundamentalSnapshot numeric evidence/provenance.
+No parser, provider fallback, search, graduation threshold, v14 or generated
+record changes; no actual affected hunt or false graduate is established.

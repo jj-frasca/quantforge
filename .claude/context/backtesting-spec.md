@@ -1238,3 +1238,14 @@ arrays stay unknown. Odd legacy custom-edge phi remains unknown. Reject explicit
 contradictions before scoring/search. Collector and capture comparisons cannot
 mix denominators; detection-only joint-count semantics remain unchanged.
 No search/gate threshold, fingerprint/accounting-v14, source or artifact rewrite.
+
+## Finite fundamental-screen minima (ADR-377 / FINDING-319)
+
+FundamentalCriteria requires finite non-null min_revenue_growth_yoy and
+min_net_margin at ordinary validated construction and JSON loading. NaN could
+otherwise admit finite negative evidence through an enabled check. None still
+disables that check; default zero, all finite values/coercions and screen
+comparisons/reasons remain. This constructor contract does not revalidate
+unchecked copies or certify FundamentalSnapshot numeric evidence/provenance.
+No parser, provider fallback, search, graduation threshold, v14 or generated
+record changes; no actual affected hunt or false graduate is established.
