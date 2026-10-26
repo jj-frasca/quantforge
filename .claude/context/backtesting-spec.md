@@ -131,6 +131,15 @@ or partially overwrite cached evidence; frame construction and adjustment semant
 
 ## 2. BaseStrategy contract
 
+ADR-374 keeps optional valuation attachment/revalidation inside the universe
+hunt's existing per-symbol exception handler, after manifest enrichment. Wrong-
+symbol valuation still refuses, becomes a symbol error and permits later names
+to run; it is never None fallback, filtered admission or an invalid stored row.
+Search for that symbol has already occurred and no missing trial history is
+reconstructed. Store failures remain outside the catch and propagate; prior valid
+rows may remain. All validation, ordering, thresholds, schemas and v14 stay.
+No affected actual production cohort is established (F318); F317 remains open.
+
 ADR-373 requires finite numeric UndervaluationScore fields at validated
 construction/JSON and the unchanged scorer's final return. Nullable absence,
 all finite values/coercions, flag-list behavior and valuation arithmetic stay.
