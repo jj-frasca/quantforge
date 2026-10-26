@@ -369,3 +369,17 @@ Snapshot construction/parser/JSON remain unchanged; nonfinite numeric evidence
 can still serialize as null. That durable loss and invalid-versus-unavailable
 provider policy remain open under F320. No source-truth/PIT, historical effect,
 threshold, search, v14 or generated-record change is claimed.
+
+## Canonical fundamental snapshot validity (ADR-379 / FINDING-320)
+
+FundamentalSnapshot requires finite values in all six numeric fields at validated
+construction/JSON and parser return. Nullable fields, defaults, finite coercions
+and JSON shape stay. Existing Experiment/store reconstruction refuses invalid
+nested copies; invalid persisted numeric snapshots refuse on load. Three hunt
+wrappers rethrow ValidationError before their existing ValueError/OSError-to-None
+fallback, including already-rejected malformed nonnumeric fields. The universe
+records per-symbol errors before search. Plain parser/availability ValueErrors,
+OSError, history/Annual models and custom-provider fallbacks retain old semantics.
+ADR-378's enabled consumer guards remain as defense for unchecked numeric copies.
+Historical values lost to null are unrecoverable; no source-truth, PIT, universal
+invalid/unavailable distinction, threshold or v14 change is claimed.

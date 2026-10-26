@@ -22,6 +22,8 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.data.sources.edgar import SecEdgarFundamentalsSource
 from app.data.sources.retry import CLOUD
@@ -76,6 +78,8 @@ def main() -> None:
     def fundamentals_provider(symbol: str) -> FundamentalSnapshot | None:
         try:
             return edgar.fetch(symbol)
+        except ValidationError:
+            raise
         except (ValueError, OSError):
             return None  # ETFs/indices have no 10-K revenue
 

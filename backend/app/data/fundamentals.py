@@ -39,7 +39,7 @@ class FundamentalSnapshot(BaseModel):
     """Point-in-time fundamentals for a symbol, each figure traceable to a specific SEC filing
     (ADR-017). Reports what the filer stated — never a claim of correctness (rule 6)."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     symbol: str
     cik: int

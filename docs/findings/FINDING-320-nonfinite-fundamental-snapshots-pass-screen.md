@@ -1,6 +1,6 @@
 # FINDING-320: Nonfinite fundamental evidence passes screening and serializes as absence
 
-- **Status:** Open — enabled-screen corrected by ADR-378; numeric persistence remains open
+- **Status:** Prospectively corrected (ADR-378/379); historical numeric loss is unrecoverable
 - **Date:** 2026-10-26, Codex autonomous session 3 (ISO2026-W44)
 - **Severity:** Medium for malformed fundamental evidence
 - **Affected:** parse_company_facts, FundamentalSnapshot and screen_fundamentals
@@ -8,13 +8,16 @@
 
 ## Evidence
 
-The actual parser can produce infinite growth from finite synthetic CompanyFacts:
-prior revenue 1e-308, current revenue 1e308 and current net income 1e308 yield
-positive infinite growth and net margin 1.0. Default fundamental screening passes;
-model_dump_json serializes growth as null. Changing current revenue and net income
-to -1e308 yields negative infinite growth, margin 1.0 and a failed default screen,
-but also serializes growth as null. All raw numeric inputs in both cases are
-finite. Externally supplied NaN growth or margin also passes its enabled check.
+Before ADR-378, the actual parser could produce infinite growth from finite synthetic CompanyFacts:
+prior revenue 1e-308, current revenue 1e308 and current net income 1e308 yielded
+positive infinite growth and net margin 1.0. Default fundamental screening passed;
+model_dump_json serialized growth as null. Changing current revenue and net income
+to -1e308 yielded negative infinite growth, margin 1.0 and a failed default screen,
+but also serialized growth as null. All raw numeric inputs in both cases were
+finite. Externally supplied NaN growth or margin also passed its enabled check.
+
+ADR-378 closed that enabled-screen admission. Snapshot construction still accepted
+nonfinite values and serialization loss persisted until ADR-379's correction.
 
 Parent pure-parser receipts and independent research/data probes confirmed the
 cases. No provider, network, search, calibration or generated-data write occurred.
@@ -42,14 +45,23 @@ convert to missingness. Negative infinity remains vetoed; positive infinity and
 NaN become vetoed. Finite comparisons and missing-value reasons remain unchanged.
 A disabled criterion continues to ignore its metric, including nonfinite values.
 
-This is a partial correction. FundamentalSnapshot construction, parsing and JSON
-serialization are unchanged: nonfinite evidence can still lose its numeric value
-on persistence. Other snapshot fields and invalid-versus-unavailable provider
-semantics remain open and require separate reviewed decisions. ADR-377 protects
-validated criteria, not source metrics; unchecked copies are separate concerns.
-No threshold, search, gate, accounting identity or historical record changes.
+ADR-378 was a partial correction: snapshot construction and persistence stayed
+unchanged. ADR-379 now specifies finite values for all six canonical numeric
+fields together with ValidationError propagation in all three hunt wrappers.
+Existing nested Experiment/store revalidation acquires that refusal too, so an
+invalid copied claim cannot reach those writers. All ValidationErrors propagate,
+including malformed nonnumeric fields already rejected by the old model. Plain
+ValueError/OSError fallbacks, raw parser error classification, history models and
+custom-provider behavior retain their separate semantics.
 
-## Verification
+Historical values already lost to null remain irrecoverable. Ordinary validated
+snapshots and existing experiment writers are covered; standalone unchecked copies
+can still serialize invalid evidence without revalidation. No universal source
+validity or invalid/unavailable classification is claimed. ADR-377 protects
+criteria and ADR-378 retains its enabled-screen defenses. No threshold, search,
+gate, accounting identity or historical record changes.
+
+## ADR-378 verification
 
 Before implementation, 19 tests failed for the nonfinite admission/reason gaps
 and 17 controls passed. After adding the two guards, all 36 new tests passed,
@@ -69,3 +81,30 @@ frontend tests (97.88%) and all lint/format/type gates. Logs:
 /tmp/qf-w44-s3-screen-search-green.log and /tmp/qf-w44-s3-check378.log.
 Parent source receipt: /tmp/qf-w44-s3-snapshot-audit.json; latest stored-screen
 replay: /tmp/qf-w44-s3-fundamental-replay.json. No generated file was authored.
+
+## ADR-379 verification
+
+Before source edits, 113 meaningful failures and 55 passing controls established
+the missing constructor/provider/nested-writer refusal. The raw log reported 119
+failures; six nested-JSON tests instead failed on a UUID serialization mistake and
+are excluded from preimplementation evidence. Those six harness cases were fixed
+and passed as postimplementation JSON regression coverage.
+
+The final parent focused suite passed 264 tests, including all six numeric fields,
+all three actual CLI provider closures, both parser-overflow directions, unchanged
+availability fallbacks, per-symbol errors before search and three stores refusing
+invalid nested copies before mutation. Hypothesis verifies exact finite snapshot
+JSON round trips. The retained ADR-378 tests use explicit unchecked numeric copies;
+its parser-overflow cases now require constructor refusal before screening.
+
+Independent research/data runs passed 264/207 tests. Both reproduced exact replay
+of all four source-module ASTs (excluding only the agreed keyword/import/catches),
+2,688 canonical snapshot JSON values, 3,301 rows and 607 file hashes. Research review
+corrected the finding timeline before publication. Historical lost nulls remain
+unidentifiable; this inventory does not validate original vendor truth.
+
+Foreground make check-all passed 15,224 backend tests (97.43% coverage), 746
+frontend tests (97.88%) and all lint/format/type gates. Logs:
+/tmp/qf-w44-s3-snapshot-red-final.log, /tmp/qf-w44-s3-snapshot-green-final.log and
+/tmp/qf-w44-s3-check379.log; replay helper /tmp/qf-w44-s3-snapshot-baseline.py.
+No generated records, thresholds or calibration cohorts were authored.

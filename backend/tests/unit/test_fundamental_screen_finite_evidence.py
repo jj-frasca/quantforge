@@ -1,10 +1,9 @@
 """ADR-378: enabled fundamental checks veto nonfinite numeric evidence."""
 
-import math
-
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from pydantic import ValidationError
 
 from app.data.fundamentals import (
     FundamentalCriteria,
@@ -21,7 +20,8 @@ NONFINITE = (float("nan"), float("inf"), -float("inf"))
 
 
 def _snapshot(field: str, metric: float | None) -> FundamentalSnapshot:
-    return FundamentalSnapshot.model_validate(
+    """Supply explicitly unchecked numeric evidence to retain the consumer defense tests."""
+    snapshot = FundamentalSnapshot.model_validate(
         {
             "symbol": "SYNTH",
             "cik": 1,
@@ -33,9 +33,9 @@ def _snapshot(field: str, metric: float | None) -> FundamentalSnapshot:
             "revenue": 100.0,
             "revenue_growth_yoy": 0.1,
             "net_margin": 0.1,
-            field: metric,
         }
     )
+    return snapshot.model_copy(update={field: metric})
 
 
 @pytest.mark.parametrize(("field", "criterion", "label"), FIELDS)
@@ -88,7 +88,7 @@ def test_no_finite_enabled_minimum_admits_nonfinite_metric(
 @pytest.mark.parametrize("current", [1e308, -1e308])
 def test_finite_company_facts_overflow_cannot_satisfy_enabled_growth_check(current: float) -> None:
     def fact(value: float, year: int) -> dict[str, object]:
-        assert math.isfinite(value)
+        assert value in (1e-308, 1e308, -1e308)
         return {
             "val": value,
             "fy": year,
@@ -102,15 +102,10 @@ def test_finite_company_facts_overflow_cannot_satisfy_enabled_growth_check(curre
         "Revenues": {"units": {"USD": [fact(1e-308, 2023), fact(current, 2024)]}},
         "NetIncomeLoss": {"units": {"USD": [fact(current, 2024)]}},
     }
-    snapshot = parse_company_facts(
-        {"cik": 1, "entityName": "Synthetic", "facts": {"us-gaap": gaap}}, "SYNTH"
-    )
-    assert snapshot.revenue_growth_yoy is not None
-    assert math.isinf(snapshot.revenue_growth_yoy)
-    assert snapshot.net_margin == 1.0
-    screen = screen_fundamentals(snapshot, FundamentalCriteria())
-    assert screen.passed is False
-    assert screen.reasons == ["revenue growth is not finite (cannot verify)"]
+    with pytest.raises(ValidationError, match="revenue_growth_yoy"):
+        parse_company_facts(
+            {"cik": 1, "entityName": "Synthetic", "facts": {"us-gaap": gaap}}, "SYNTH"
+        )
 
 
 @pytest.mark.parametrize("growth", NONFINITE)
