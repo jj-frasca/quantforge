@@ -898,17 +898,28 @@ overflows. Paths, all observations, percentiles and loss comparisons remain unch
 
 ## 7. ExperimentManifest (lineage)
 
-FINDING-317 remains open: optional single-name value/quality admission configs and
-hashes are not persisted on Experiment records. Stored GateConfig and manifest
-validation_config_hash identify the technical graduation rubric only. Valuation
-score attachment does not identify whether/how it was screened; quality admission
-input and filtered/error outcomes are not durable experiment lineage. CLI minimum
-logging is partial external context, and retained logs plus code/defaults can
-help reconstruct CLI policies; no actual affected enabled cohort is established.
-Historical missing policy evidence means unknown, not off. A future persistence
-ADR must specify compatibility/retention and distinguish rubric snapshots from
-full universe replay, which also needs roster, source/cutoff and outcome evidence.
-This reporting correction changes no schema, screen, threshold or v14 identity.
+ADR-375 adds nullable Experiment.admission_policy for effective optional screen
+rubrics on surviving universe-hunt rows. Outer None means historical/direct-search
+unknown; a present object REQUIRES nullable value_config and quality_config keys,
+with both null meaning known inactive screens. Each effective leg mirrors existing
+provider is not None AND config is not None guards, including falsey providers.
+Full configs retain existing version_hash computation; technical GateConfig and
+manifest validation_config_hash stay separate. Nested configs reconstruct and
+must preserve canonical finite JSON before normalization; missing/extra/coercive
+raw evidence refuses. Ordinary config-constructor coercions already normalize and
+remain supported. This preserves JSON-equivalent values, not arbitrary Python types.
+
+Snapshots join Experiment's defensive reconstruction and existing stores. Active
+unchecked noncanonical snapshots may refuse after search as per-symbol errors;
+inactive bad configs remain ignored, and pre-screen filtering can still happen
+before evidence attachment. No None fallback or missing trial recovery is added.
+Existing historical records retain unknown without migration; old writers can drop
+unknown additive fields on rewrite, so downgrade writes do not preserve evidence.
+F317 is addressed only for surviving-row rubric lineage: no quality input, roster,
+source cutoff, filtered/error archive or zero-survivor run evidence is added.
+Retention removes policy with its row. CLI logs remain partial external context;
+full universe replay is unmeasured. No actual affected enabled cohort is established,
+and thresholds, defaults, hashes, screen arithmetic and v14 stay unchanged.
 
 `app/research/backtesting/manifest.py`. Frozen, JSON round-trips with ALL fields preserved
 (§8 #10): `experiment_id` (UUID), `created_at` (UTC), `git_commit_hash`, `strategy_name`,

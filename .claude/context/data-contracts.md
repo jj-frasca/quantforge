@@ -173,6 +173,15 @@ parameters, selected graduate and gate verdict, fundamental screens, valuation f
 quality issues, and nested context. Reload binds all evidence to one selected trial and symbol;
 production valuation enrichment must re-enter validation rather than inject an unchecked model
 copy. Legacy selected-index absence and the existing JSON schema remain unchanged.
+ADR-375 adds admission_policy to that single-name claim graph. Outer null/absence
+means unknown historical/direct-search rubric, never inferred off. A present frozen
+object requires both nullable config keys; null legs mean inactive optional screens.
+Complete active configs must reconstruct without changing canonical finite JSON,
+including raw evidence types/default keys. Ordinary preconstructed configs retain
+constructor coercions. Store revalidation preserves snapshots; old writers can drop
+them when rewriting, and retention removes them with the row. No data migration or
+new run-level archive is adopted. This records surviving-row rubrics only; source
+availability/cutoff, requested roster and filtered/error outcomes remain unmeasured.
 ADR-148 applies that complete durable boundary to single-name paper positions. Parameters, exit
 reasons, score curves, and embedded evidence are defensive immutable copies; lifecycle state,
 evidence symbol, counts, finite statistics, and non-empty curve geometry are validated on

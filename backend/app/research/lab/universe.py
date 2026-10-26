@@ -114,7 +114,8 @@ def run_universe_hunt(
     Optional quality pre-screen (ADR-029 4b, OFF by default): a `quality_provider` alone is not
     called or recorded; adding a `quality_config` skips names below the business-quality bar before
     downstream frame acquisition/search. Earlier value-provider acquisition may already occur.
-    Neither optional screen's config/hash is persisted on Experiment records (FINDING-317).
+    Effective optional configs persist in admission_policy (ADR-375), with hashes derivable from
+    those complete snapshots; roster/source/outcome replay remains unmeasured (FINDING-317).
     This is the HONEST way to reduce the ADR-018
     universe-deflation N — testing fewer, better-motivated hypotheses rather than re-describing the
     same ones as non-independent (ADR-033).
@@ -181,6 +182,10 @@ def run_universe_hunt(
                     **exp.model_dump(),
                     "manifest": manifest,
                     "data_quality_report": dataset.quality_report,
+                    "admission_policy": {
+                        "value_config": value_config if value_provider is not None else None,
+                        "quality_config": quality_config if quality_provider is not None else None,
+                    },
                 }
             )
             if value_score is not None:

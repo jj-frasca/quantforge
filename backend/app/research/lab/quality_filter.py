@@ -7,9 +7,10 @@ quality criterion is the legitimate alternative, because it genuinely reduces th
 hypotheses tested rather than re-describing the same number of them.
 
 That only holds if the rubric is fixed **in advance**; tuning the screen until graduates appear
-would be the very thing charter §4 forbids. `QualityGateConfig` computes a version hash, but universe
-hunts do not persist its config/hash or quality admission input on Experiment records. CLI minimum
-logging supplies partial external context, not complete admission lineage (FINDING-317).
+would be the very thing charter §4 forbids. Universe hunts persist effective QualityGateConfig
+snapshots in Experiment.admission_policy (ADR-375); version hashes derive from those full rubrics.
+Quality admission input, roster and outcomes remain unrecorded; snapshots and partial CLI logs do
+not establish full admission replay (FINDING-317).
 
 Scores come from the ADR-029 fundamentals pool (one EDGAR sweep per week), not from a per-symbol
 fetch at hunt time. A name the sweep never scored — an ETF, an unmapped ticker — passes through on

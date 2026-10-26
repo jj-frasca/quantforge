@@ -27,9 +27,9 @@ PriceSeriesProvider = Callable[[str], Sequence[tuple[date, float]]]
 class ValueGateConfig(BaseModel):
     """Versioned, tunable value pre-screen thresholds (ADR-023), mirroring `GateConfig`.
 
-    The version hash identifies this rubric, but universe hunts do not persist the config or hash
-    on Experiment records. CLI minimum logging is partial external context, not complete admission
-    lineage; a stored valuation score alone cannot identify the screening policy (FINDING-317).
+    Universe hunts persist effective configs in Experiment.admission_policy (ADR-375), with the
+    version hash derived from the complete snapshot. Historical/direct-search absence stays unknown.
+    Rubric evidence and CLI logs do not reconstruct source/roster/outcome admission (FINDING-317).
     """
 
     model_config = ConfigDict(frozen=True, allow_inf_nan=False)

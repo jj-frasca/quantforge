@@ -15,6 +15,7 @@ from app.data.models import DataQualityReport
 from app.research.backtesting.manifest import ExperimentManifest, compute_parameter_hash
 from app.research.claim_graph import FrozenClaimDict, FrozenClaimList, freeze_claim_model
 from app.research.fundamentals.distress import DistressScreen
+from app.research.lab.admission_policy import AdmissionPolicy
 from app.research.lab.gate import GateConfig, GateResult
 from app.research.trial_counts import require_trial_count
 from app.research.valuation import UndervaluationScore
@@ -176,6 +177,8 @@ class Experiment(BaseModel):
     # StrategyLab rows persist both the evidence and its manifest link as one pool record.
     manifest: ExperimentManifest | None = None
     data_quality_report: DataQualityReport | None = None
+    # ADR-375: unknown for historical/direct searches; present null legs mean inactive screens.
+    admission_policy: AdmissionPolicy | None = None
 
     @field_validator("lifetime_trials", mode="before")
     @classmethod
@@ -188,6 +191,8 @@ class Experiment(BaseModel):
         # Reconstruct nested models first so caller-owned references cannot alter this durable claim.
         object.__setattr__(self, "strategy_names", FrozenClaimList(self.strategy_names))
         object.__setattr__(self, "gate_config", freeze_claim_model(self.gate_config))
+        if self.admission_policy is not None:
+            object.__setattr__(self, "admission_policy", freeze_claim_model(self.admission_policy))
         object.__setattr__(
             self,
             "trials",
