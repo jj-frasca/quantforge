@@ -111,9 +111,11 @@ def run_universe_hunt(
     when a `value_config` is ALSO given, names that fail the value pre-screen are skipped (recorded
     in `filtered`) and never hunted. Both are injectable so unit tests use fakes (no network).
 
-    Optional quality pre-screen (ADR-029 4b, OFF by default, record-first like the value screen):
-    a `quality_provider` alone changes nothing; adding a `quality_config` skips names below the
-    business-quality bar before they are ever fetched. This is the HONEST way to reduce the ADR-018
+    Optional quality pre-screen (ADR-029 4b, OFF by default): a `quality_provider` alone is not
+    called or recorded; adding a `quality_config` skips names below the business-quality bar before
+    downstream frame acquisition/search. Earlier value-provider acquisition may already occur.
+    Neither optional screen's config/hash is persisted on Experiment records (FINDING-317).
+    This is the HONEST way to reduce the ADR-018
     universe-deflation N — testing fewer, better-motivated hypotheses rather than re-describing the
     same ones as non-independent (ADR-033).
 

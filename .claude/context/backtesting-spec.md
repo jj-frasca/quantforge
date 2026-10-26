@@ -889,6 +889,18 @@ overflows. Paths, all observations, percentiles and loss comparisons remain unch
 
 ## 7. ExperimentManifest (lineage)
 
+FINDING-317 remains open: optional single-name value/quality admission configs and
+hashes are not persisted on Experiment records. Stored GateConfig and manifest
+validation_config_hash identify the technical graduation rubric only. Valuation
+score attachment does not identify whether/how it was screened; quality admission
+input and filtered/error outcomes are not durable experiment lineage. CLI minimum
+logging is partial external context, and retained logs plus code/defaults can
+help reconstruct CLI policies; no actual affected enabled cohort is established.
+Historical missing policy evidence means unknown, not off. A future persistence
+ADR must specify compatibility/retention and distinguish rubric snapshots from
+full universe replay, which also needs roster, source/cutoff and outcome evidence.
+This reporting correction changes no schema, screen, threshold or v14 identity.
+
 `app/research/backtesting/manifest.py`. Frozen, JSON round-trips with ALL fields preserved
 (§8 #10): `experiment_id` (UUID), `created_at` (UTC), `git_commit_hash`, `strategy_name`,
 `parameter_hash` (SHA256 of sorted params), `data_source`, `symbol`, `start_date`, `end_date`,

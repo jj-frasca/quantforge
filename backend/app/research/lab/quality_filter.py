@@ -6,10 +6,10 @@ correlated names "not independent"; screening the universe on an ex-ante, econom
 quality criterion is the legitimate alternative, because it genuinely reduces the number of
 hypotheses tested rather than re-describing the same number of them.
 
-That only holds if the rubric is fixed **in advance**. `QualityGateConfig` is versioned and recorded
-with the run for exactly that reason: a filtered universe must be reproducible against the rubric
-that judged it, and tuning the screen until graduates appear would be the very thing charter §4
-forbids.
+That only holds if the rubric is fixed **in advance**; tuning the screen until graduates appear
+would be the very thing charter §4 forbids. `QualityGateConfig` computes a version hash, but universe
+hunts do not persist its config/hash or quality admission input on Experiment records. CLI minimum
+logging supplies partial external context, not complete admission lineage (FINDING-317).
 
 Scores come from the ADR-029 fundamentals pool (one EDGAR sweep per week), not from a per-symbol
 fetch at hunt time. A name the sweep never scored — an ETF, an unmapped ticker — passes through on
