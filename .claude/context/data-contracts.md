@@ -430,3 +430,12 @@ Prior beginning assets need a third attributable balance observation. The
 reporting-only clarification preserves runtime scores and generated records;
 missingness, asset-domain, income-definition and F322 period policy need a
 separate ADR/TDD before a correction. No real affected vendor row is established.
+
+## Ordinary DCF configuration validity (ADR-382 / FINDING-325)
+
+The DcfAssumptions model's four floating fields are finite on ordinary validated
+construction and dictionary/JSON reload, including raw nested result inputs.
+This preserves the nonnullable float JSON shape rather than serializing invalid
+knobs to null. Existing instances/unchecked copies are separate; no new schema
+field, coercion/range/count policy, default, arithmetic or provider fallback is
+adopted. Complete disclosure and historical lost settings are not reconstructed.

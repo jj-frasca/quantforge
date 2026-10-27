@@ -18,7 +18,7 @@ class DcfAssumptions(BaseModel):
     """Tunable, disclosed DCF knobs. ``discount_rate`` must exceed ``terminal_growth`` or the
     Gordon terminal value diverges."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     discount_rate: float = 0.10
     terminal_growth: float = 0.025

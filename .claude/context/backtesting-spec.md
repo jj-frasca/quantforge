@@ -1324,3 +1324,15 @@ Reporting changes no scores/flags or records. A runtime decision needs separate
 ADR/TDD for three adjacent balance years, missing/zero/nonpositive balances,
 income mapping and source periods; F322 stays open. Other components are not
 certified by the isolated ROA witness, including the paper's turnover ambiguity.
+
+## Finite ordinary DCF assumptions (ADR-382 / FINDING-325)
+
+DcfAssumptions requires finite discount_rate, terminal_growth, min_growth and
+max_growth at ordinary construction/dictionary/JSON and raw nested validation.
+NaN bounds could otherwise disappear behind finite financial outputs and become
+null in assumptions JSON. Preserve all finite/coercible settings, defaults,
+discount>terminal comparison, growth ranges/count behavior and native arithmetic;
+no recovery or new economic/range policy. Existing instances/unchecked copies,
+complete assumption persistence and historical loss remain outside this guard.
+Provider forwarding/catches stay; no actual affected override run is established.
+No screen/graduation threshold, parser, schema field, v14 or generated record change.
