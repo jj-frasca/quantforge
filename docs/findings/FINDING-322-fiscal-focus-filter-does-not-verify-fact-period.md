@@ -25,8 +25,8 @@ Parent and independent data-engineering probes confirm these synthetic behaviors
 No source acquisition or search is needed for the witnesses.
 
 These inputs demonstrate accepted-shape behavior, not that SEC CompanyFacts emits
-the exact constructed rows. No actual affected vendor row, production experiment,
-false graduate or trading effect is established.
+the exact constructed rows. The initial synthetic review established no actual affected vendor row, production experiment,
+false graduate or trading effect.
 
 ## Primary-source context and limits
 
@@ -40,7 +40,7 @@ and numeric fact period-end/duration fields are separate. The
 §3.1.8, printed page 32, defines fiscal period focus for the report.
 
 Those sources support the distinction between reporting focus and fact periods.
-They do not, in this review, establish the exact CompanyFacts JSON fy/fp mapping
+They did not, in the initial review, establish the exact CompanyFacts JSON fy/fp mapping
 or identify a real affected CompanyFacts row. Transferring the FSDS field meanings
 to that JSON without further evidence would be an inference, not verified schema
 identity. The risk to real production remains unmeasured.
@@ -76,3 +76,46 @@ The parent replay passed in session 5.
 Official source text was verified through the web reader. Direct PDF download
 returned HTTP 403; no rendered-table verification or CompanyFacts acquisition is
 claimed.
+
+
+## Session 5 addendum: actual CompanyConcept evidence
+
+The free official [SEC Apple Revenues concept endpoint](https://data.sec.gov/api/xbrl/companyconcept/CIK0000320193/us-gaap/Revenues.json)
+was available through the web reader on 2026-10-27 UTC. Its 11 USD observations
+all carry fy 2018, fp FY, form 10-K, filed 2018-11-05 and accession
+0000320193-18-000145, while their observation periods span different durations
+and years. The final observation is 2018-07-01 through 2018-09-29, value
+62,900,000,000, frame CY2018Q3. A 2017-10-01 through 2018-09-29 observation
+with value 265,595,000,000 is also present.
+
+At revision c917b706, passing that concept alone to the unchanged shared selector
+selects the final 91-day observation for reported fy 2018. Reversing the input
+rows selects the comparative 2015-09-27 through 2016-09-24 observation instead.
+These are actual concept rows, strengthening the initial synthetic evidence
+about reporting labels versus observation periods and the isolated selector's
+order dependence. Parent and independent data/research checks agree. A parent
+projection into a constructed CompanyFacts-shaped envelope produces the same
+62.9-billion revenue in both parsers; that envelope was constructed for the probe.
+
+This is a CompanyConcept response, not an acquired full CompanyFacts payload.
+The primary API documentation describes CompanyFacts as the aggregation of all
+company concepts; applying this isolated result to production is still an
+inference until full-payload tag precedence and downstream use are checked.
+No current production misstatement, affected experiment, screen verdict or false
+graduate is established. Direct CompanyFacts access returned HTTP 403 and its web
+reader URL was inaccessible; no retry or header bypass followed.
+
+The frozen reader text and JSON reconstructed by joining its two numbered lines
+are at /tmp/qf-w44-s5-sec-period/concept-web-reader.txt and
+concept-normalized.json. They are reader artifacts, not raw HTTP response bytes.
+Parent receipt parent-receipt.json records their hashes, executed revision,
+module hash, selected rows and projected parser outputs. Independent data receipt is
+/tmp/qf-w44-s5-sec-period-independent-data-engineer.json. All 11 rows
+and order match between the reader text and reconstructed JSON. Runtime policy
+remains open; neither a longest-duration choice nor fiscal end-year assignment
+is justified by this isolated concept.
+
+Addendum verification: independent data and research reviews approved the bounded
+claims. Foreground make check-all passed again: 15,253 backend tests at 97.43%
+coverage, 746 frontend tests at 97.88% statement coverage, and all lint, formatting
+and type checks. Runtime source is unchanged by this addendum.

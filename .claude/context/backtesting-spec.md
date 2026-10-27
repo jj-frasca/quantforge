@@ -1293,9 +1293,11 @@ The shared selector uses FY/form metadata and latest filed row per reported fy;
 input order resolves equal-filed collisions. It does not verify duration or
 observation-period agreement. Synthetic mixed-period rows can change revenue and
 screen verdict solely by row order, or bind an older end date to a newer fy.
-This is accepted-shape evidence; exact CompanyFacts fy/fp mapping and an affected
-real vendor row remain unverified. SEC source context distinguishes report focus
-from fact periods; see F322 for primary links and the inference limit. Reporting
+Initial evidence used accepted synthetic shapes. F322 session5 adds actual SEC
+CompanyConcept rows: FY2018 metadata spans quarter/comparative periods, and the
+isolated selector chooses a 91-day revenue row. Full CompanyFacts acquisition,
+production tag precedence and downstream incidence remain unverified. The frozen
+reader reconstruction is not raw HTTP evidence; see F322 for provenance and limits. Reporting
 clarification changes no parser behavior. Runtime policy needs attributable frozen
 vendor fixtures and a separate ADR/TDD, including instant balances, non-December
 fiscal years and restatement ambiguity. ADR-116/117 adjacency is not period proof.
