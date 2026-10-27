@@ -99,6 +99,34 @@ def piotroski_f_score(history: FundamentalsHistory) -> FScore:
     # a missing prior year (conservative: never award a point on an unverifiable comparison).
     p_adjacent = p.fiscal_year == t.fiscal_year - 1
 
+    operands = [
+        ("latest.net_income", t.net_income),
+        ("latest.total_assets", t.total_assets),
+        ("latest.operating_cash_flow", t.operating_cash_flow),
+        ("latest.long_term_debt", t.long_term_debt),
+        ("latest.total_current_assets", t.total_current_assets),
+        ("latest.total_current_liabilities", t.total_current_liabilities),
+        ("latest.gross_profit", t.gross_profit),
+        ("latest.revenue", t.revenue),
+    ]
+    if p_adjacent:
+        operands.extend(
+            [
+                ("latest.shares_diluted", t.shares_diluted),
+                ("prior.net_income", p.net_income),
+                ("prior.total_assets", p.total_assets),
+                ("prior.long_term_debt", p.long_term_debt),
+                ("prior.total_current_assets", p.total_current_assets),
+                ("prior.total_current_liabilities", p.total_current_liabilities),
+                ("prior.gross_profit", p.gross_profit),
+                ("prior.revenue", p.revenue),
+                ("prior.shares_diluted", p.shares_diluted),
+            ]
+        )
+    for field, value in operands:
+        if value is not None and not math.isfinite(value):
+            raise ValueError(f"{field} must be finite for Piotroski F-score")
+
     roa_t = _ratio(t.net_income, t.total_assets)
     roa_p = _ratio(p.net_income, p.total_assets) if p_adjacent else None
     cfo_over_assets_t = _ratio(t.operating_cash_flow, t.total_assets)

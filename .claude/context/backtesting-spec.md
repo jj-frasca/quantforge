@@ -1384,3 +1384,18 @@ all finite claims, ADR-386 JSON representation, math/thresholds/hashes/v14 stay.
 Available duration is absent from the result, so finite pass flags are not replayed;
 unchecked direct use, unrelated skipped field constraints and provenance remain
 outside this relationship guard. No generated evidence is repaired.
+
+## Active Piotroski input consumption (ADR-389 / FINDING-330)
+
+After the existing fewer-than-two-row zero return, piotroski_f_score preflights
+present latest net_income,total_assets,operating_cash_flow,long_term_debt,
+total_current_assets,total_current_liabilities,gross_profit,revenue, in that order.
+Only adjacent fiscal labels add latest shares_diluted and prior net_income,
+total_assets,long_term_debt,total_current_assets,total_current_liabilities,
+gross_profit,revenue,shares_diluted. A first invalid value raises named plain
+ValueError before ratios/boolean/missing/zero shortcuts; None itself stays valid.
+Prior OCF/older rows/gap-disabled prior and share inputs stay ignored. Quality calls
+F-score first, so this error may precede safety; sweep scoring may abort before
+output. No new fallback/skip policy, global Annual/history/shared-ratio change,
+finite formula/threshold/F324 ROA correction or historical repair is adopted.
+Finite-derived ratio overflow and period/PIT truth remain separate limitations.
