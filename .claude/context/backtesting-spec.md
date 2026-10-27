@@ -1349,3 +1349,16 @@ A sweep scoring refusal may fail the shard before output; no skip/recovery polic
 is added. Annual/history inputs, retained-earnings NaN-to-bool, nonfinite operands
 producing finite ratios, unchecked instances and historical evidence stay outside
 this numeric boundary. No threshold, accounting-v14 or generated-data change.
+
+## Latest-year financial-safety input consumption (ADR-385 / FINDING-327)
+
+financial_safety requires every present latest-year total_assets, total_equity,
+total_current_assets, total_current_liabilities and retained_earnings value finite,
+in that order, before arithmetic/comparisons and existing missing/zero shortcuts.
+The first invalid field raises plain ValueError; None itself remains valid but
+cannot hide another invalid operand. Consumer errors remain outside the distress
+provider acquisition fallback; sweep scoring can fail before output. ADR-384
+still refuses overflow from finite operands with ValidationError. Empty history,
+finite native formulas/ranges/thresholds and global Annual/history schemas stay.
+Older years, other fields/scorers, PIT/period claims and unchecked provenance are
+outside this consumer guard; no historical evidence is recovered.

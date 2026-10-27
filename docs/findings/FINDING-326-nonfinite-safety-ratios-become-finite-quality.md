@@ -63,3 +63,8 @@ except the single keyword exactly. The original RED log and final review receipt
 are /tmp/qf-w44-s7-safety-red.log and /tmp/qf-w44-s7-adr384-*.md. Foreground make check-all passed: 15,434 backend and 746 frontend tests,
 97.43%/97.88% coverage, lint/format and strict types. Exact post-push CI is
 verified by the local session ledger after publication. No historical record is rewritten.
+
+Subsequent ADR-385/FINDING-327 separately addresses erased invalidity in five
+latest-year safety operands before this numeric output boundary. Its upstream
+plain ValueError precedes ADR-384 ValidationError when those source values are
+nonfinite; finite-source overflow retains the ADR-384 output refusal.

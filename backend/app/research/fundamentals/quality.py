@@ -10,6 +10,8 @@ All pure and network-free. Missing inputs never award a point (conservative); ev
 what it could not compute and cites its source. Nothing here predicts -- it flags potential quality.
 """
 
+import math
+
 from pydantic import BaseModel, ConfigDict
 
 from app.data.fundamentals import AnnualFundamentals, FundamentalsHistory
@@ -167,6 +169,15 @@ def financial_safety(history: FundamentalsHistory) -> SafetyScore:
     if not history.years:
         return SafetyScore(leverage_ratio=None, current_ratio=None, negative_retained_earnings=None)
     latest = history.years[-1]
+    for field, value in (
+        ("total_assets", latest.total_assets),
+        ("total_equity", latest.total_equity),
+        ("total_current_assets", latest.total_current_assets),
+        ("total_current_liabilities", latest.total_current_liabilities),
+        ("retained_earnings", latest.retained_earnings),
+    ):
+        if value is not None and not math.isfinite(value):
+            raise ValueError(f"{field} must be finite for financial safety")
     total_liabilities: float | None = None
     if latest.total_assets is not None and latest.total_equity is not None:
         total_liabilities = latest.total_assets - latest.total_equity

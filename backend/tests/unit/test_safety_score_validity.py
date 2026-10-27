@@ -89,7 +89,7 @@ def test_safety_score_finite_components_round_trip(leverage: float, current: flo
 def test_safety_producer_refuses_before_nonfinite_evidence_becomes_finite_quality(
     fields: dict[str, float], consume: Callable[[FundamentalsHistory], object]
 ) -> None:
-    with pytest.raises(ValidationError, match="finite"):
+    with pytest.raises(ValueError, match="finite"):
         consume(_history(**fields))
 
 
@@ -111,7 +111,7 @@ def test_distress_provider_does_not_turn_invalid_liquidity_into_missingness(
         calls.append(symbol)
         return history
 
-    with pytest.raises(ValidationError, match="current_ratio"):
+    with pytest.raises(ValueError, match="total_current_assets"):
         make_distress_provider(provide_history)("SYN")
     assert calls == ["SYN"]
 
@@ -172,5 +172,5 @@ def test_synthetic_company_facts_nan_safety_refuses_at_consumption() -> None:
         },
         "SYN",
     )
-    with pytest.raises(ValidationError, match="current_ratio"):
+    with pytest.raises(ValueError, match="total_current_assets"):
         compute_fundamental_record(history)
