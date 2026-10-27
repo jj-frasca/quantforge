@@ -149,8 +149,11 @@ def screen_fundamentals(
 def _annual_facts(
     gaap: dict[str, Any], tags: tuple[str, ...], unit: str = "USD"
 ) -> list[dict[str, Any]]:
-    """Annual (10-K, full-year) datapoints for the first matching tag, oldest→newest by fiscal
-    year. Empty if no tag matches. Deduped to one value per fiscal year (latest filing wins)."""
+    """Select FY-labeled 10-K rows for the first matching tag, ordered by reported fy.
+
+    Latest filed wins per fy; input order resolves ties. Duration and observation-period
+    identity are not verified (FINDING-322). Empty if no tag has matching rows.
+    """
     for tag in tags:
         node = gaap.get(tag)
         if not node:
@@ -169,7 +172,10 @@ def _annual_facts(
 
 
 def parse_company_facts(company_facts: dict[str, Any], symbol: str) -> FundamentalSnapshot:
-    """Parse an EDGAR CompanyFacts payload into a FundamentalSnapshot for the latest fiscal year.
+    """Parse CompanyFacts into a snapshot for the latest selected reported fiscal-year label.
+
+    FY/form filtering does not verify annual duration or observation-period agreement
+    (FINDING-322).
 
     Raises ValueError if no annual revenue facts are present (revenue anchors margins + growth).
     """
@@ -232,7 +238,9 @@ def _year_value_map(
 
 
 def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> FundamentalsHistory:
-    """Parse an EDGAR CompanyFacts payload into a multi-year FundamentalsHistory (ADR-022).
+    """Parse CompanyFacts into history ordered by selected reported fiscal-year labels (ADR-022).
+
+    Fact duration and observation-period identity are not reconciled (FINDING-322).
 
     Revenue anchors the set of fiscal years; other line items are joined per year where present.
     Raises ValueError if no annual revenue facts exist.

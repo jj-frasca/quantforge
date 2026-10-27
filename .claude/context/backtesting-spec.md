@@ -1286,3 +1286,16 @@ covering existing huge-integer conversion overflow; other arithmetic exceptions
 retain their old behavior. Earlier pool rows may remain under existing retention.
 No recovery, None/zero fallback, broad Annual/history/scorer policy, FCF change,
 threshold, v14, generated-record or general financial-score correctness claim.
+
+## Annual fact selection limits (FINDING-322)
+
+The shared selector uses FY/form metadata and latest filed row per reported fy;
+input order resolves equal-filed collisions. It does not verify duration or
+observation-period agreement. Synthetic mixed-period rows can change revenue and
+screen verdict solely by row order, or bind an older end date to a newer fy.
+This is accepted-shape evidence; exact CompanyFacts fy/fp mapping and an affected
+real vendor row remain unverified. SEC source context distinguishes report focus
+from fact periods; see F322 for primary links and the inference limit. Reporting
+clarification changes no parser behavior. Runtime policy needs attributable frozen
+vendor fixtures and a separate ADR/TDD, including instant balances, non-December
+fiscal years and restatement ambiguity. ADR-116/117 adjacency is not period proof.
