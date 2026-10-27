@@ -2292,3 +2292,14 @@ on every causal strategy, no-edge result or newly measured power curve.
 F159's supported explicit production correction gap is resolved by ADR-313.
 Historical scores/unknown metadata and all provenance/optimality qualifications
 remain; this opt-in is not a fresh power measurement or artifact migration.
+
+## Intentional infinite MinTRL JSON (ADR-386 / FINDING-328)
+
+GateResult.required_track_record_years remains a nonnegative numeric requirement
+in Python, including positive infinity for nonpositive observed Sharpe. JSON-only
+serialization emits literal string "Infinity" for that value; all finite values
+stay numeric and existing float readers reconstruct the tag. Both nested Pydantic
+JSON and mode="json"/PythonJSON writer paths retain the meaning. Serialization
+schema is number-or-literal-"Infinity"; native Python dumps and scientific verdicts
+remain unchanged. Historical null is not decoded as infinity or repaired. Invalid
+unchecked copies and unrelated nonfinite fields remain outside this policy.

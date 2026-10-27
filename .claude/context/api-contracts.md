@@ -645,3 +645,12 @@ parameter today. Reading them together is the fastest way to understand what the
 **Frontend contract:** every one of these is parsed through a Zod schema in
 `frontend/src/types/lab.ts` at the boundary. Never re-derive or re-validate a backend-computed
 verdict in the frontend — see `[[feedback-frontend-shadow-validators]]`.
+
+## Intentional infinite required-history response leaf (ADR-386)
+
+Nested GateResult.required_track_record_years in null/power calibration responses
+serializes as a number when finite or literal string "Infinity" for the defined
+positive-infinite MinTRL requirement. This is a wire/schema representation change;
+null is not substituted or repaired. Existing Python float readers accept the tag;
+external consumers must handle it. Current frontend calibration schemas omit/strip
+these nested verdict fields. Endpoints, thresholds and displayed controls stay.

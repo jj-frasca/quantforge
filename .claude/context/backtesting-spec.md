@@ -1362,3 +1362,14 @@ still refuses overflow from finite operands with ValidationError. Empty history,
 finite native formulas/ranges/thresholds and global Annual/history schemas stay.
 Older years, other fields/scorers, PIT/period claims and unchecked provenance are
 outside this consumer guard; no historical evidence is recovered.
+
+## Intentional infinite MinTRL JSON (ADR-386 / FINDING-328)
+
+GateResult.required_track_record_years remains a nonnegative numeric requirement
+in Python, including positive infinity for nonpositive observed Sharpe. JSON-only
+serialization emits literal string "Infinity" for that value; all finite values
+stay numeric and existing float readers reconstruct the tag. Both nested Pydantic
+JSON and mode="json"/PythonJSON writer paths retain the meaning. Serialization
+schema is number-or-literal-"Infinity"; native Python dumps and scientific verdicts
+remain unchanged. Historical null is not decoded as infinity or repaired. Invalid
+unchecked copies and unrelated nonfinite fields remain outside this policy.

@@ -1,7 +1,8 @@
 import math
 from numbers import Integral, Real
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from app.research.backtesting.manifest import compute_parameter_hash
 from app.research.claim_graph import FrozenClaimList
@@ -103,6 +104,10 @@ class GateResult(BaseModel):
     # Defaults preserve the historical experiment pool, whose reason strings are not a safe schema.
     holdout_sharpe: float | None = Field(default=None, allow_inf_nan=False)
     holdout_n_bars: int | None = Field(default=None, ge=1)
+
+    @field_serializer("required_track_record_years", when_used="json")
+    def _serialize_required_history(self, value: float) -> float | Literal["Infinity"]:
+        return "Infinity" if value == math.inf else value
 
     @model_validator(mode="after")
     def _validate_and_freeze_claim(self) -> "GateResult":
