@@ -1656,6 +1656,10 @@ is distinguishable in the NEGATIVE direction.** Three qualifications are part of
   maps, diagnostics, verdicts, and sweep cells are immutable without changing their JSON shapes,
   and consolidation plus probability-DSR inference reconstruct inputs before use. An unchecked
   in-process model copy can no longer change the evidence that is published or interpreted.
+  ADR-383 adds explicit file-then-parent-directory synchronization requests only to
+  `save_panel_null_shard`, after validation and complete UTF-8 serialization. Its exclusive
+  byte writer propagates errors and retains any created claim, possibly incomplete; success
+  is neither atomic publication nor proof of physical persistence or permission to retry.
 - **The single-draw verdict is unchanged and reported beside it**, per ADR-068's rule that a
   published verdict is not restated on a new statistic in place. They size different questions.
 - **It was not a blind test.** ADR-075 §"Full disclosure": the point estimate was known before the

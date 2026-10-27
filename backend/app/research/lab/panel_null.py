@@ -19,6 +19,7 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from scipy.stats import beta
 
+from app.research.lab.evidence_io import write_exclusive_bytes
 from app.research.lab.experiment import Experiment, selected_trial
 from app.research.lab.gate import GateConfig
 
@@ -540,11 +541,10 @@ def load_prepared_panel_null_source(path: Path) -> PreparedPanelNullSource:
 
 
 def save_panel_null_shard(shard: PanelNullShard, path: Path) -> None:
-    """Write one validated scratch shard without replacing an existing artifact."""
+    """Exclusively write a validated shard, requesting file and parent sync."""
     validated = PanelNullShard.model_validate(shard.model_dump())
-    with Path(path).open("x", encoding="utf-8") as shard_file:
-        shard_file.write(validated.model_dump_json())
-        shard_file.write("\n")
+    payload = (validated.model_dump_json() + "\n").encode("utf-8")
+    write_exclusive_bytes(path, payload)
 
 
 def save_panel_null_cohort(cohort: PanelNullCohort, path: Path) -> None:

@@ -1,6 +1,8 @@
 """Whole-panel artifact identity, joint-row generation, and consolidation for ADR-081."""
 
 import json
+import os
+import stat
 from dataclasses import replace
 from datetime import date
 from pathlib import Path
@@ -1144,6 +1146,71 @@ def test_panel_null_shard_archive_is_exclusive_and_revalidates_payload(tmp_path:
 
     with pytest.raises(ValidationError, match="at least one complete panel replicate"):
         PanelNullShard(cohort=_cohort(), replicates=())
+
+
+def test_panel_null_shard_requests_file_then_parent_sync(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    shard = PanelNullShard(cohort=_cohort(), replicates=(_replicate(1), _replicate(3)))
+    path = tmp_path / "panel-shard.json"
+    synced: list[str] = []
+
+    def sync(fd: int) -> None:
+        synced.append("directory" if stat.S_ISDIR(os.fstat(fd).st_mode) else "file")
+        assert path.read_bytes() == (shard.model_dump_json() + "\n").encode("utf-8")
+        assert load_panel_null_shard(path) == shard
+
+    monkeypatch.setattr(os, "fsync", sync)
+    save_panel_null_shard(shard, path)
+
+    assert synced == ["file", "directory"]
+
+
+@pytest.mark.parametrize("failed_sync", ["file", "directory"])
+def test_panel_null_shard_sync_failure_preserves_claim_and_propagates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failed_sync: str
+) -> None:
+    shard = PanelNullShard(cohort=_cohort(), replicates=(_replicate(1),))
+    path = tmp_path / "panel-shard.json"
+
+    def sync(fd: int) -> None:
+        kind = "directory" if stat.S_ISDIR(os.fstat(fd).st_mode) else "file"
+        if kind == failed_sync:
+            raise OSError(f"injected {kind} sync failure")
+
+    monkeypatch.setattr(os, "fsync", sync)
+    with pytest.raises(OSError, match=f"injected {failed_sync} sync failure"):
+        save_panel_null_shard(shard, path)
+    assert path.read_bytes() == (shard.model_dump_json() + "\n").encode("utf-8")
+    with pytest.raises(FileExistsError):
+        save_panel_null_shard(shard, path)
+
+
+def test_panel_null_shard_invalid_model_copy_refuses_before_claim(tmp_path: Path) -> None:
+    shard = PanelNullShard(cohort=_cohort(), replicates=(_replicate(1),))
+    invalid = shard.model_copy(update={"replicates": ()})
+    path = tmp_path / "panel-shard.json"
+    with pytest.raises(ValidationError, match="at least one complete panel replicate"):
+        save_panel_null_shard(invalid, path)
+    assert not path.exists()
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_panel_null_shard_serialization_finishes_before_claim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, existing: bool
+) -> None:
+    shard = PanelNullShard(cohort=_cohort(), replicates=(_replicate(1),))
+    path = tmp_path / "panel-shard.json"
+    if existing:
+        path.write_bytes(b"original")
+
+    def fail_json(self: PanelNullShard) -> str:
+        raise ValueError("injected serialization failure")
+
+    monkeypatch.setattr(PanelNullShard, "model_dump_json", fail_json)
+    with pytest.raises(ValueError, match="injected serialization failure"):
+        save_panel_null_shard(shard, path)
+    assert path.read_bytes() == b"original" if existing else not path.exists()
 
 
 def test_make_production_panel_null_search_pins_and_forwards_the_frozen_policy() -> None:
