@@ -2314,3 +2314,17 @@ all finite claims, ADR-386 JSON representation, math/thresholds/hashes/v14 stay.
 Available duration is absent from the result, so finite pass flags are not replayed;
 unchecked direct use, unrelated skipped field constraints and provenance remain
 outside this relationship guard. No generated evidence is repaired.
+
+## Deterministic alternating-skew preparation (ADR-388)
+
+The unused alternating_skew_prices kernel consumes at most7399 categorical codes
+from a supported nontext Sequence, snapshots/validates nonboolean Integral0/1/2,
+and applies fixed odd/even dyadic factors from128 with sequential binary64 rounding.
+Empty input yields[128]; output is a fresh float64 price array. No RNG, calendar,
+source/cohort identity, runner or search is adopted. Ideal uniform independent
+categories give zero conditional simple-return mean, variance1/8192 and alternating
+third moments; native sequential/pct-change mean bias is bounded2u+u², not exact0.
+All allowed prefixes remain normal/finite under the reviewed rounding assumptions.
+Controlled Fraction oracles do not measure a calibration or authorize original draws.
+Expired session7 drafts and every older cohort/timing root remain frozen; any future
+first execution needs a separate prospective protocol and independent tooling audits.
