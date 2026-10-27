@@ -1301,3 +1301,15 @@ reader reconstruction is not raw HTTP evidence; see F322 for provenance and limi
 clarification changes no parser behavior. Runtime policy needs attributable frozen
 vendor fixtures and a separate ADR/TDD, including instant balances, non-December
 fiscal years and restatement ambiguity. ADR-116/117 adjacency is not period proof.
+
+## Valuation growth uses fiscal-label elapsed years (ADR-381 / FINDING-323)
+
+For two or more observed rows, estimate_growth requires strictly increasing
+reported fiscal_year labels before series selection; otherwise ValueError.
+Empty/single-row estimates stay None. CAGR uses last label minus first label,
+retaining exact native arithmetic for consecutive years. The observed-series
+present/positive eligibility and FCF/net-income/revenue precedence remain, with
+no inference about missing intervening values. DCF clamps/fallbacks/projections
+and its early base/shares returns remain. This is conditional label annualization,
+not physical-period/PIT verification or global History validation; F322 stays open.
+No model/parser, threshold, v14, generated record or historical repair changes.

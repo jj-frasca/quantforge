@@ -410,3 +410,13 @@ reader reconstruction is not raw HTTP evidence; see F322 for provenance and limi
 clarification changes no parser behavior. Runtime policy needs attributable frozen
 vendor fixtures and a separate ADR/TDD, including instant balances, non-December
 fiscal years and restatement ambiguity. ADR-116/117 adjacency is not period proof.
+
+## Fiscal labels at valuation growth consumption (ADR-381 / FINDING-323)
+
+The History/parser schema is unchanged. estimate_growth alone requires strictly
+increasing fiscal_year labels for multi-row inputs, raising ValueError before
+series selection. Empty/single-row growth stays None. Its CAGR denominator is
+last label minus first label, not observation count minus one. This is conditional
+label annualization and does not verify physical periods, PIT or missing years;
+F322 stays open. DCF early base/shares returns can precede this consumption guard.
+No generated data or historical inputs are reconstructed.

@@ -46,24 +46,36 @@ class IntrinsicValueResult(BaseModel):
     flags: list[str]
 
 
-def _cagr(values: Sequence[float | None]) -> float | None:
-    """Compound annual growth of a fully-present, all-positive oldest→newest series (len ≥ 2)."""
+def _cagr(values: Sequence[float | None], n_years: int) -> float | None:
+    """CAGR of present positive observations over the estimator's positive fiscal-label span."""
     if len(values) < 2 or any(v is None or v <= 0 for v in values):
         return None
     first, last = values[0], values[-1]
     assert first is not None and last is not None  # narrowed by the guard above
-    growth: float = (last / first) ** (1 / (len(values) - 1)) - 1
+    growth: float = (last / first) ** (1 / n_years) - 1
     return growth
 
 
 def estimate_growth(history: FundamentalsHistory) -> float | None:
-    """History-derived growth: CAGR of FCF, else net income, else revenue. None if none qualify."""
+    """Fiscal-label-span CAGR of FCF, else net income, else revenue (ADR-381).
+
+    None if fewer than two observations or no series qualifies. Multi-row labels
+    must strictly increase; labels do not certify actual fact periods (FINDING-322).
+    """
+    if len(history.years) < 2:
+        return None
+    if any(
+        current.fiscal_year <= prior.fiscal_year
+        for prior, current in zip(history.years, history.years[1:], strict=False)
+    ):
+        raise ValueError("growth requires strictly increasing fiscal-year labels")
+    n_years = history.years[-1].fiscal_year - history.years[0].fiscal_year
     for series in (
         [y.free_cash_flow for y in history.years],
         [y.net_income for y in history.years],
         [y.revenue for y in history.years],
     ):
-        growth = _cagr(series)
+        growth = _cagr(series, n_years)
         if growth is not None:
             return growth
     return None
