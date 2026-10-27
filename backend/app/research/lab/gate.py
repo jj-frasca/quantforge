@@ -121,6 +121,8 @@ class GateResult(BaseModel):
         )
         if self.passed != expected:
             raise ValueError("passed must equal the conjunction of gate component verdicts")
+        if self.required_track_record_years == math.inf and self.mintrl_ok:
+            raise ValueError("infinite required_track_record_years requires mintrl_ok=False")
         if (self.holdout_sharpe is None) != (self.holdout_n_bars is None):
             raise ValueError("holdout_sharpe and holdout_n_bars must be present together")
         object.__setattr__(self, "reasons", FrozenClaimList(list(self.reasons)))

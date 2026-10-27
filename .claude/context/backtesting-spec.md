@@ -1373,3 +1373,14 @@ JSON and mode="json"/PythonJSON writer paths retain the meaning. Serialization
 schema is number-or-literal-"Infinity"; native Python dumps and scientific verdicts
 remain unchanged. Historical null is not decoded as infinity or repaired. Invalid
 unchecked copies and unrelated nonfinite fields remain outside this policy.
+
+## Infinite MinTRL cannot claim passage (ADR-387 / FINDING-329)
+
+GateResult refuses positive-infinite required_track_record_years with mintrl_ok=True,
+regardless of overall passage: ADR-296 finite available history cannot satisfy it.
+The existing after-validator covers direct/nested validation, including supplied
+instances, and existing outer/store reconstruction. Legitimate infinite rejection,
+all finite claims, ADR-386 JSON representation, math/thresholds/hashes/v14 stay.
+Available duration is absent from the result, so finite pass flags are not replayed;
+unchecked direct use, unrelated skipped field constraints and provenance remain
+outside this relationship guard. No generated evidence is repaired.
