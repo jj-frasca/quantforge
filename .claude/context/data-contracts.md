@@ -439,3 +439,16 @@ This preserves the nonnullable float JSON shape rather than serializing invalid
 knobs to null. Existing instances/unchecked copies are separate; no new schema
 field, coercion/range/count policy, default, arithmetic or provider fallback is
 adopted. Complete disclosure and historical lost settings are not reconstructed.
+
+## Finite numeric safety components (ADR-384 / FINDING-326)
+
+SafetyScore requires finite non-null leverage_ratio/current_ratio at ordinary
+construction and JSON validation, including financial_safety producer returns.
+None, finite coercions, signed values and native formulas/clip thresholds stay.
+Producer ValidationError propagates before quality clipping or distress comparison;
+make_distress_provider keeps evaluation outside its acquisition fallback. A valid
+insolvency veto plus invalid liquidity now refuses, never becomes unscored None.
+A sweep scoring refusal may fail the shard before output; no skip/recovery policy
+is added. Annual/history inputs, retained-earnings NaN-to-bool, nonfinite operands
+producing finite ratios, unchecked instances and historical evidence stay outside
+this numeric boundary. No threshold, accounting-v14 or generated-data change.

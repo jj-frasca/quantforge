@@ -49,7 +49,7 @@ class SafetyScore(BaseModel):
     (deferred to a later data extension). Lower leverage + higher current ratio + no accumulated
     deficit = safer."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     leverage_ratio: float | None  # total liabilities / total assets (lower = safer)
     current_ratio: float | None  # current assets / current liabilities (higher = safer)
