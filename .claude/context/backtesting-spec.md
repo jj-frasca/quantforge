@@ -1313,3 +1313,14 @@ no inference about missing intervening values. DCF clamps/fallbacks/projections
 and its early base/shares returns remain. This is conditional label annualization,
 not physical-period/PIT verification or global History validation; F322 stays open.
 No model/parser, threshold, v14, generated record or historical repair changes.
+
+## Piotroski-inspired ROA proxy limit (FINDING-324)
+
+The current F-score computes each ROA from that row's net_income/total_assets;
+its improving-ROA point can disagree with the paper's beginning-assets ROA trend.
+It is an inspired proxy, not exact paper replication. Three-year synthetic exact
+oracles show both an extra and a missed point; no production incidence is measured.
+Reporting changes no scores/flags or records. A runtime decision needs separate
+ADR/TDD for three adjacent balance years, missing/zero/nonpositive balances,
+income mapping and source periods; F322 stays open. Other components are not
+certified by the isolated ROA witness, including the paper's turnover ambiguity.

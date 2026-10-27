@@ -420,3 +420,13 @@ last label minus first label, not observation count minus one. This is condition
 label annualization and does not verify physical periods, PIT or missing years;
 F322 stays open. DCF early base/shares returns can precede this consumption guard.
 No generated data or historical inputs are reconstructed.
+
+## ROA balance-period consumption limit (FINDING-324)
+
+No History schema or parser change: the current quality scorer uses same-row
+assets for ROA, whereas the cited paper uses beginning assets. Its ROA trend is
+therefore a proxy; year-label adjacency does not certify balance-period identity.
+Prior beginning assets need a third attributable balance observation. The
+reporting-only clarification preserves runtime scores and generated records;
+missingness, asset-domain, income-definition and F322 period policy need a
+separate ADR/TDD before a correction. No real affected vendor row is established.

@@ -343,6 +343,13 @@ Momentum Everywhere". *Journal of Finance* 68(3), pp. 929–985.
 Information to Separate Winners from Losers". *Journal of Accounting Research* 38, pp. 1–41.
 **Novy-Marx, Robert (2013)** — "The Other Side of Value: The Gross Profitability Premium".
 *Journal of Financial Economics* 108(1), pp. 1–28.
+- Replication limit (FINDING-324): the implemented F-score is Piotroski-inspired.
+  It scales ROA with same-row assets rather than the paper's beginning assets,
+  which can change its ROA-improvement point. See the finding's original-source
+  link, exact synthetic oracles and unresolved three-year balance/income/period
+  policy. Other components and empirical performance are not certified by that
+  witness; the source's turnover descriptions also differ. No runtime score is
+  changed by this reporting clarification.
 - Cross-sectional quality: rank on each symbol's fundamental quality_score, a static as-of
   snapshot broadcast across every date (ADR-029) — judged by the same DSR/PBO/holdout gate as
   every technical factor, fundamentals earn their place rather than being assumed. Used by

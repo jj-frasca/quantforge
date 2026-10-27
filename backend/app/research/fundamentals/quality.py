@@ -1,6 +1,6 @@
-"""Cited fundamental quality scorers over `FundamentalsHistory` (ADR-029 Layer 2).
+"""Paper-inspired fundamental quality scorers over `FundamentalsHistory` (ADR-029 Layer 2).
 
-- Piotroski F-Score (Piotroski 2000): 9-point profitability / leverage / efficiency scorecard.
+- Piotroski-inspired F-Score: 9-point proxy with same-year-asset ROA (FINDING-324).
 - Gross profitability (Novy-Marx 2013): gross profit / total assets.
 - Financial safety: a leverage + liquidity distress PROXY from available data (a full Altman Z needs
   EBIT + market cap we do not yet pull -- deferred; documented honestly, rule 6).
@@ -23,9 +23,11 @@ def _ratio(numerator: float | None, denominator: float | None) -> float | None:
 
 
 class FScore(BaseModel):
-    """Piotroski (2000) F-Score: the sum of 9 binary financial-health signals (0-9; 8-9 strong,
-    0-2 weak). Each component is exposed for legibility; a signal is False when its inputs are
-    missing (never award a point on absent data)."""
+    """Nine-point financial-health proxy inspired by Piotroski (2000), with components exposed.
+
+    Same-year asset scaling differs from the paper's beginning-assets ROA (FINDING-324).
+    A signal is False when its inputs are missing (never award a point on absent data).
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -70,7 +72,9 @@ class QualityScore(BaseModel):
 
 
 def piotroski_f_score(history: FundamentalsHistory) -> FScore:
-    """Piotroski (2000) F-Score from the two most-recent fiscal years (t = latest, t-1 = prior).
+    """Piotroski-inspired proxy from the two most-recent selected years (t = latest, t-1 = prior).
+
+    ROA uses same-year assets; beginning balances are not reconstructed (FINDING-324).
     With fewer than two years, or when a component's inputs are missing, that component scores 0."""
     years: tuple[AnnualFundamentals, ...] = tuple(history.years)
     if len(years) < 2:
