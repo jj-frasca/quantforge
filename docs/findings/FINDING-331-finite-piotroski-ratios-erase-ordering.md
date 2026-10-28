@@ -1,6 +1,6 @@
 # FINDING-331: Finite Piotroski operands can erase ratio ordering
 
-- **Status:** Open; ADR-390/395 refuse nonfinite and zero-underflow ratios; other finite projection errors remain
+- **Status:** Partially addressed by ADR-390/395/397: nonfinite, zero-underflow and inconsistent accepted-operand pair predicates refuse; broader scalar/source limitations remain
 - **Date:** 2026-10-27
 - **Producing revision:** 97229643
 - **Affected:** piotroski_f_score, quality_score, compute_fundamental_record
@@ -105,3 +105,51 @@ cash5e-324/assets2000. Its generator remains unchanged, with explicit signed
 min-subnormal examples and refusal in the new domain. Both existing properties
 and projection examples remain, with their native assertions elsewhere. Full foreground gates
 and exact post-push CI receipts are recorded separately in the session ledger.
+
+## Exact accepted-operand predicate refusal (ADR-397)
+
+Prospective independent research certifies24 constructed canonical-float histories:
+six pair components, ordinary/nonzero-subnormal collisions, both denominator
+signs. Ordinary7 and nextafter(7,+inf) divided by3 tie at2.3333333333333335;
+1 and nextafter(1,+inf) divided by1.7e308 tie at5.88235294117647e-309.
+Each actual producer accepts a False native strict signal where exact Fraction
+arithmetic on accepted operands proves True. Negating both numerator and
+denominator preserves each witness. These are direct-call constructions, not
+provider incidence or historical affected records. An attempted1/1e308 witness
+did not collide and supplies no positive evidence.
+
+ADR-397 checks the six available ratio-pair predicates after all existing raw,
+nonfinite and zero-underflow guards. A mismatch refuses with a named plain
+ValueError; native booleans and scores are never replaced. Exact conversion
+normalizes Integral values to Pythonint, otherwise uses the scalar's native
+as_integer_ratio protocol, validating two nonboolean Integral members and nonzero
+denominator before Fraction construction. No float projection or floating cross
+products are used. Standard float/NumPy/Fraction/Decimal exactness is supported
+where the existing native arithmetic already succeeds; arbitrary custom protocol
+truthfulness is assumed, not certified. A missing/malformed/unsupported exact
+protocol on an active pair adds a named precision refusal, an explicit additional
+availability restriction. Normal validated schema operands are already floats;
+this cannot recover original decimal/vendor precision discarded upstream.
+
+Missing pairs and gap-disabled prior comparisons remain inactive. Latest accrual
+remains active across gaps. Negative denominators retain their economics; exact
+rational operations account for their sign. Comparison order follows existing
+signal order, after the entire old guard sequence. Refusal propagates through
+quality/record and can abort sweep output, with no fallback or historical repair.
+The five ratio trends and accrual are checked; raw CFO/no-dilution, other scorers,
+arbitrary custom arithmetic, F324's ROA proxy and F322's source/PIT truth remain
+separate. No generated evidence, threshold, fingerprint, cohort or v14 change.
+
+The pre-source baseline captures288 histories/864 complete producer claims and
+whole-module AST. The corrected actual pre-code run has94 failures and151 passing
+controls:92 missing refusals and2 intended error-precedence mismatches. An earlier
+run included18 record-fixture errors; those are excluded from methodology RED.
+The267 new tests include245 exercised before implementation and22 postgreen
+reverse-direction/protocol-exception extensions, without additional RED claims.
+Both retained cash-flow properties keep their generation domains and native
+assertions outside the new precisely identified refusal domain. The inherited
+parent focused suite passes870 tests; fresh independent research passes631 and
+data passes870 synthetic tests, with both final reviews approving. Parent and
+both reviewers reproduce all864 complete baseline claims and whole-module AST
+outside the frozen exact additions unchanged. Full foreground gate and exact
+post-push CI receipts are recorded separately in the session ledger.

@@ -110,11 +110,19 @@ def test_piotroski_gap_does_not_compute_prior_overflow(
 
 
 @pytest.mark.parametrize(
-    "assets,income,cash,score",
-    [(1e308, 1e-308, 2e-308, None), (3.0, 7.0, math.nextafter(7.0, math.inf), 3)],
+    "assets,income,cash,error",
+    [
+        (1e308, 1e-308, 2e-308, "roa_t must not underflow to zero"),
+        (
+            3.0,
+            7.0,
+            math.nextafter(7.0, math.inf),
+            "accruals_quality must preserve exact operand ordering",
+        ),
+    ],
 )
 def test_piotroski_finite_projection_limits_remain_explicit(
-    assets: float, income: float, cash: float, score: int | None
+    assets: float, income: float, cash: float, error: str
 ) -> None:
     history = _history(
         AnnualFundamentals(fiscal_year=2024, revenue=1.0, total_assets=1.0, net_income=0.0),
@@ -128,13 +136,8 @@ def test_piotroski_finite_projection_limits_remain_explicit(
     )
     assert Fraction(cash) / Fraction(assets) > Fraction(income) / Fraction(assets) > 0
     assert cash / assets == income / assets
-    if score is None:
-        with pytest.raises(ValueError, match="roa_t must not underflow to zero"):
-            piotroski_f_score(history)
-        return
-    f = piotroski_f_score(history)
-    assert not f.accruals_quality
-    assert f.score == score
+    with pytest.raises(ValueError, match=error):
+        piotroski_f_score(history)
 
 
 @given(
@@ -157,6 +160,14 @@ def test_piotroski_finite_native_comparisons_remain_unchanged(
     )
     if (income != 0 and income / assets == 0) or (cash != 0 and cash / assets == 0):
         with pytest.raises(ValueError, match="must not underflow to zero"):
+            piotroski_f_score(history)
+        return
+    if (cash / assets > income / assets) != (
+        Fraction(cash) / Fraction(assets) > Fraction(income) / Fraction(assets)
+    ):
+        with pytest.raises(
+            ValueError, match="accruals_quality must preserve exact operand ordering"
+        ):
             piotroski_f_score(history)
         return
     f = piotroski_f_score(history)

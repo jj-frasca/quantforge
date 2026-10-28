@@ -505,3 +505,18 @@ stay; latest ratios are checked across gaps. Quality/record errors can abort
 sweep output, with no fallback or skip. Shared division, native comparisons and
 thresholds are unchanged. Nonzero subnormal projection and ordinary rounding
 ties remain open; no exact score recovery, period/PIT or historical repair claim.
+
+## Exact Piotroski pair predicates (ADR-397 / FINDING-331)
+
+After all raw/nonfinite/zero-underflow guards, six available ratio-pair native
+strict predicates must agree with exact accepted-operand Fraction predicates.
+Integral scalars normalize viaint; other scalars use their native exact
+as_integer_ratio protocol without float projection. A valid pair contains two
+nonboolean Integral values and a nonzero denominator. Standard protocol exactness
+is assumed; arbitrary custom method truthfulness is not certified. Unsupported
+active precision refuses explicitly, adding an availability restriction.
+Named plain ValueError propagates; no boolean/score replacement or skip occurs.
+Existing signal order, missing/gap/short semantics and signed denominators remain;
+latest accrual stays active across gaps. Accepted float truth does not recover
+upstream decimal/source/PIT truth or correct F324's same-year ROA proxy. No shared
+_ratio, raw signal, schema, threshold, v14 or generated-record change.

@@ -11,6 +11,9 @@ what it could not compute and cites its source. Nothing here predicts -- it flag
 """
 
 import math
+from fractions import Fraction
+from numbers import Integral
+from typing import Protocol, cast
 
 from pydantic import BaseModel, ConfigDict
 
@@ -71,6 +74,33 @@ class QualityScore(BaseModel):
     gross_profitability: float | None
     safety: SafetyScore
     flags: list[str] = []
+
+
+class _ExactRatioScalar(Protocol):
+    def as_integer_ratio(self) -> object: ...
+
+
+def _piotroski_exact_operand(value: object, signal: str) -> Fraction:
+    """Use accepted scalar precision; trust the standard exact-ratio protocol."""
+    if isinstance(value, Integral):
+        return Fraction(int(value), 1)
+    message = f"{signal} requires exact operand ratios for Piotroski F-score"
+    try:
+        pair = cast(_ExactRatioScalar, value).as_integer_ratio()
+    except (AttributeError, TypeError, ValueError, OverflowError):
+        raise ValueError(message) from None
+    if not isinstance(pair, tuple) or len(pair) != 2:
+        raise ValueError(message)
+    numerator, denominator = pair
+    if (
+        isinstance(numerator, bool)
+        or isinstance(denominator, bool)
+        or not isinstance(numerator, Integral)
+        or not isinstance(denominator, Integral)
+        or denominator == 0
+    ):
+        raise ValueError(message)
+    return Fraction(int(numerator), int(denominator))
 
 
 def piotroski_f_score(history: FundamentalsHistory) -> FScore:
@@ -177,6 +207,77 @@ def piotroski_f_score(history: FundamentalsHistory) -> FScore:
             and denominator != 0.0
         ):
             raise ValueError(f"{ratio_name} must not underflow to zero for Piotroski F-score")
+
+    for signal, left, right, a, b, c, d, decreasing in (
+        (
+            "delta_roa_positive",
+            roa_t,
+            roa_p,
+            t.net_income,
+            t.total_assets,
+            p.net_income,
+            p.total_assets,
+            False,
+        ),
+        (
+            "accruals_quality",
+            cfo_over_assets_t,
+            roa_t,
+            t.operating_cash_flow,
+            t.total_assets,
+            t.net_income,
+            t.total_assets,
+            False,
+        ),
+        (
+            "delta_leverage_negative",
+            lev_t,
+            lev_p,
+            t.long_term_debt,
+            t.total_assets,
+            p.long_term_debt,
+            p.total_assets,
+            True,
+        ),
+        (
+            "delta_current_ratio_positive",
+            cr_t,
+            cr_p,
+            t.total_current_assets,
+            t.total_current_liabilities,
+            p.total_current_assets,
+            p.total_current_liabilities,
+            False,
+        ),
+        (
+            "delta_gross_margin_positive",
+            gm_t,
+            gm_p,
+            t.gross_profit,
+            t.revenue,
+            p.gross_profit,
+            p.revenue,
+            False,
+        ),
+        (
+            "delta_asset_turnover_positive",
+            at_t,
+            at_p,
+            t.revenue,
+            t.total_assets,
+            p.revenue,
+            p.total_assets,
+            False,
+        ),
+    ):
+        if left is None or right is None:
+            continue
+        exact_left = _piotroski_exact_operand(a, signal) / _piotroski_exact_operand(b, signal)
+        exact_right = _piotroski_exact_operand(c, signal) / _piotroski_exact_operand(d, signal)
+        native = left < right if decreasing else left > right
+        exact = exact_left < exact_right if decreasing else exact_left > exact_right
+        if native != exact:
+            raise ValueError(f"{signal} must preserve exact operand ordering for Piotroski F-score")
 
     roa_positive = roa_t is not None and roa_t > 0
     cfo_positive = t.operating_cash_flow is not None and t.operating_cash_flow > 0

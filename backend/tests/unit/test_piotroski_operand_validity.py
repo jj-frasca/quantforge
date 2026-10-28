@@ -4,6 +4,7 @@ import importlib
 import math
 from collections.abc import Callable
 from datetime import datetime
+from fractions import Fraction
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -134,6 +135,14 @@ def test_piotroski_finite_cash_flow_retains_native_points(cash: float) -> None:
     history = _history(_year(2024), _year(2025, operating_cash_flow=cash))
     if cash != 0.0 and cash / 2000.0 == 0.0:
         with pytest.raises(ValueError, match="cfo_over_assets_t must not underflow to zero"):
+            piotroski_f_score(history)
+        return
+    if (cash / 2000.0 > 100.0 / 2000.0) != (
+        Fraction(cash) / Fraction(2000.0) > Fraction(100.0) / Fraction(2000.0)
+    ):
+        with pytest.raises(
+            ValueError, match="accruals_quality must preserve exact operand ordering"
+        ):
             piotroski_f_score(history)
         return
     f = piotroski_f_score(history)
