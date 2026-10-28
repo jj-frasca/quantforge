@@ -2378,3 +2378,19 @@ not a new lifetime/DSR count. Failures abort without partial evidence. Later
 test rows cannot select candidates; post-test rows are ignored conditional on
 an identical materialized prefix including dtype/schema/calendar. Caller train,
 search/holdout and source correctness remain uncertified. F332 remains open.
+
+## Expanding SMA research windows (ADR-394)
+
+`sma_walk_forward.evaluate_sma_expanding_windows` composes existing generated
+expanding split geometry with ADR-393, using an explicit budget per window.
+Frozen tuple windows retain their own train-only adaptation, costs and paired
+native scores. Equal means use `math.fsum(score/K for score in scores)` and
+refuse nonfinite results; no production WF arithmetic parity is asserted.
+Local hypotheses and calls sum across windows, including repeats; calls=H+K,
+and total hypotheses can exceed one window's budget. These are not lifetime/DSR N.
+All splits are generated before engine work, but price validation occurs per
+used prefix. A later failure aborts the aggregate after any earlier compute;
+no windows are dropped or partial result returned. Method
+`nested-sma-native-metrics-expanding-v1` is research-only: no production caller,
+fixed-grid comparison, calibrated improvement, provenance/holdout certification,
+account switching or stitched-policy claim. F332 stays open for production.
