@@ -2359,3 +2359,6 @@ without a partial trace. Frozen scalar/tuple output has no durable artifact or
 provenance claim; caller train-boundary correctness remains the caller's duty.
 F332 stays open for outer nested evaluation. Existing search, gate, diagnostics,
 thresholds, accounting-v14 and frozen/generated evidence retain their meaning.
+Exact primitive-score controls compare against the independent engine on the same
+materialized frame and runtime; generated trigonometric fixtures do not establish
+cross-platform bitwise score identity.

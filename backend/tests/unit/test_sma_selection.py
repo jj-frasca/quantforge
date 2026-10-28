@@ -16,6 +16,7 @@ from app.research.lab.candidate_budget import (
     select_space_filling_candidates,
 )
 from app.research.strategies.grid_generator import find_catalog_entry, refine_grid
+from app.research.strategies.sma import SMAStrategy
 
 
 def _selector():
@@ -46,7 +47,13 @@ def _select(frame, **overrides):
 
 
 def test_sma_train58_matches_original_primitive_receipt():
-    result = _select(_frame(58))
+    frame = _frame(58)
+    result = _select(frame)
+    expected_sharpe = (
+        BacktestEngine(cost_rate=0.001)
+        .run_strategy(frame, SMAStrategy(fast=1, slow=2))
+        .metrics.sharpe
+    )
     assert result.method == "sma-train-observed-v1"
     assert result.n_train == 58
     assert [(c.fast, c.slow) for c in result.candidates] == [
@@ -64,7 +71,7 @@ def test_sma_train58_matches_original_primitive_receipt():
     assert result.evaluated_refinement_count == 0
     assert result.coarse_selected_index == result.selected_index == 0
     assert (result.selected.fast, result.selected.slow) == (1, 2)
-    assert result.selected.sharpe == 20.251609905954144
+    assert result.selected.sharpe == expected_sharpe
     assert [c.sharpe for c in result.candidates[1:]] == [0.0] * 6
     assert result.n_hypotheses == result.n_engine_calls == 7
 
@@ -244,9 +251,10 @@ def test_sma_trace_is_immutable_and_detached():
     frame = _frame(58)
     before = frame.copy(deep=True)
     result = _select(frame, budget=np.int64(200), n_per_param=np.int64(3))
+    selected_sharpe = result.selected.sharpe
     pd.testing.assert_frame_equal(frame, before)
     frame.iloc[:, 0] = 1.0
-    assert result.n_train == 58 and result.selected.sharpe == 20.251609905954144
+    assert result.n_train == 58 and result.selected.sharpe == selected_sharpe
     assert type(result.budget) is type(result.n_per_param) is int
     with pytest.raises(FrozenInstanceError):
         result.selected_index = 2
