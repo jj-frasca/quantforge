@@ -87,8 +87,10 @@ def _select_index(trials: Sequence[Trial], select_by: SelectBy) -> int:
     Notes:
         `observed` ranks by the existing in-sample maximum. Nondefault `walk_forward` ranks by
         ADR-038's mean train-selected fixed-config continuation-window Sharpe, computed on the
-        in-sample handle only without touching the sealed holdout. That window diagnostic includes
-        supplied per-config internal costs, not cross-config rebalancing for an executable account
+        in-sample handle only without touching the sealed holdout. Selection is train-only
+        conditional on the realized grid; refinement can choose that grid
+        using later search rows, so it is not nested adaptive validation (ADR-391).
+        It includes supplied per-config internal costs, not cross-config rebalancing for an account
         (ADR-293). A family with no walk-forward number falls back to observed Sharpe rather than
         ranking as a measured zero (ADR-067). Selection rules and their fingerprints are unchanged.
     """
@@ -130,6 +132,9 @@ def run_search(
     ``n_evaluated_configs`` and ``lifetime_trials`` count the concrete hypotheses that produced
     those compact summaries (ADR-046), and their shared PBO measures the complete current candidate
     matrix rather than resetting inside the selected family (ADR-104).
+    Refinement uses the whole search handle to choose its grid before diagnostic resampling.
+    WF/PCV and whole-search PBO condition on that realized candidate set; they do not reconstruct
+    adaptive candidate generation within each split (ADR-391). The sealed holdout stays separate.
     """
     prior_trials = require_trial_count(prior_trials, minimum=0, parameter="prior_trials")
     gate_config = config or GateConfig()

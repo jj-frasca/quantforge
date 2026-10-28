@@ -67,11 +67,13 @@ class WalkForwardSplitResult(BaseModel):
 
 
 class WalkForwardResult(BaseModel):
-    """Causal train-selected fixed-config continuation-window diagnostic (ADR-293).
+    """Train-selected fixed-config continuation-window diagnostic (ADR-293/391).
 
     Notes:
         The locked holdout (ADR-016) scores one config chosen on the whole search set.
         Here each train-selected config contributes its continued return path on the next block.
+        Train-only selection is causal conditional on the supplied candidate set. A grid refined
+        using the whole search handle is not reconstructed inside each window (FINDING-332).
         Engine-supplied net returns include that config's internal turnover; these slices do not
         reconcile the entry or switching trades of one capital account adopting those configs.
         ``mean_oos_sharpe`` is the equal mean of window Sharpes, not Sharpe on stitched returns.
@@ -154,6 +156,8 @@ def walk_forward_evaluate(
             its returns. Past-only signals permit causal fixed-config continuation; they do not
             make these slices independent flat-start backtests or reconcile the entry/switching
             trades of one account adopting successive configs.
+            Selection is train-only conditional on these supplied columns. This evaluator does
+            not rebuild a grid adapted using later search rows inside each split (ADR-391).
         splits: expanding-window splits from ``walk_forward_splits``.
         benchmark: optional per-bar buy-and-hold returns for the same window, scored across the
             same test blocks (ADR-068). Pairing it here rather than at the call site is the point:

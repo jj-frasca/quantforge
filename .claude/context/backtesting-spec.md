@@ -1412,3 +1412,16 @@ stay. Consumer refusal can precede safety and abort sweep output; no fallback.
 F331 remains open for finite underflow and rounding ties: this is no exact-real
 comparison, paper/PIT certification or historical repair. No thresholds, v14,
 generated records or frozen cohorts change.
+
+## Realized adaptive-grid diagnostic scope (ADR-391 / FINDING-332)
+
+Longitudinal run_search chooses a coarse family and concrete refinement center
+using whole-search-handle statistics before WF/PCV resampling. WF train selection
+is causal conditional on its supplied columns; refined-grid diagnostics do not
+reconstruct adaptive candidate generation at each train boundary. Whole-search
+PBO still includes every evaluated refined column, resampling the realized matrix
+rather than rebuilding refinement in each CSCV IS block. The sealed holdout stays
+separate. Matched full-procedure calibration retains its meaning; no universal
+optimism, affected graduate or rate invalidity is inferred. Continuation/switching
+cost and source-isolation qualifications remain. Nested evaluation needs a separate
+ADR/TDD/procedure identity; no arithmetic, threshold, grid or v14 change is adopted.

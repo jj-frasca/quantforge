@@ -308,6 +308,11 @@ persists that same procedure-level value on each compact family-finalist summary
 family-local value omitted the final cross-family argmax and could pass a globally overfit selector.
 Parameter stability remains family-local because unrelated families do not define a neighborhood.
 ADR-104 advances calibration identity; pre-ADR-104 artifacts do not measure this PBO procedure.
+ADR-391 / FINDING-332 qualifies this as resampling the realized candidate matrix.
+Refinement selected its grid using the whole search handle; CSCV does not rebuild
+that adaptive candidate-generation process within each IS combination. Keeping
+all evaluated columns remains required. Matched full-procedure null/power can
+still measure the actual adaptive procedure; no bias direction is established.
 
 **Tie handling (ADR-105).** Exact Sharpe ties use average one-based OOS ranks, and every tied IS
 maximum contributes its equal-weight `logit <= 0` indicator to that split. Positional `argmax` plus
@@ -383,7 +388,11 @@ step forward. `walk_forward_splits` returns `list[(train_idx, test_idx)]`;
 scores it on the following test block**, returning `mean_oos_sharpe`, `consistency` (share of
 windows with a positive OOS Sharpe) and Pardo `efficiency`.
 
-Train-only selection gives a causal forward-window diagnostic alongside the locked holdout.
+Train-only selection gives a causal forward-window diagnostic conditional on the supplied grid.
+The longitudinal refined grid is chosen using the whole search handle before evaluation;
+it is not rebuilt using only each window's train rows (ADR-391 / FINDING-332).
+These fixed-realized-grid scores do not measure nested adaptive search selection.
+The locked holdout is split before this adaptation and remains separate.
 Each window scores the chosen config's continued full-history return path. Engine-supplied net
 returns include that config's internal turnover; slices do not reconcile entry or switching
 trades for one account adopting successive configs (ADR-293 / FINDING-246). Causal signals
@@ -394,8 +403,9 @@ nondefault `select_by="walk_forward"` may rank families by this statistic (ADR-0
 default remains observed selection. Arithmetic, averaging, selection, thresholds and v14
 accounting remain unchanged; historical measurements retain this diagnostic meaning.
 
-- **Invariant**: `max(train_idx) < min(test_idx)` for every split — never uses future data.
-- **Invariant**: a split's selection depends only on its own train rows. Stated PER SPLIT: the
+- **Row-geometry invariant**: `max(train_idx) < min(test_idx)` for every split.
+- **Invariant**: conditional on the supplied candidate set, a split's selection depends only on
+  its own train rows. Stated PER SPLIT: the
   train window EXPANDS, so a later split legitimately absorbs an earlier split's test rows.
 - `efficiency` is `None` when mean in-sample Sharpe ≤ 0 — a ratio of two negative Sharpes is
   positive and would read as "efficient" while both halves lost money.
@@ -469,6 +479,11 @@ training indices within the declared `embargo` on both sides of the test block. 
 geometry, not a label-interval overlap analyzer. `purged_cv_evaluate` selects on the retained train rows and
 scores that choice on the fold, reporting the mean, the **dispersion across folds**, consistency
 and the embargo used.
+
+Longitudinal refined-grid PCV conditions on the grid already adapted using the
+whole search handle; it does not reconstruct that grid from each retained train
+set (ADR-391 / FINDING-332). The row gap does not remove outer grid-selection
+dependence. No new PCV statistic or numerical source-independence claim follows.
 
 `lookback_embargo(configs, floor)` sizes the embargo from the grid's largest integer parameter (a
 documented proxy for the longest window) rather than a constant — the old fixed `embargo=2` purged

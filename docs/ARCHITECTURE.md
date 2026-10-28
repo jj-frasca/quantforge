@@ -172,6 +172,9 @@ splits. Now `walk_forward_evaluate` (ADR-038) selects on each expanding train bl
 the chosen config's continued return path on the forward block. These causal fixed-config
 window scores include supplied internal turnover costs, but do not reconcile the entry or
 switching trades of a self-financing account adopting successive configs (ADR-293 / FINDING-246).
+Train-only selection is causal conditional on the supplied grid. Longitudinal
+refinement chooses that grid using the whole search handle before resampling;
+these scores do not evaluate nested adaptive candidate construction (ADR-391 / FINDING-332).
 Their headline is an equal mean of window Sharpes, not Sharpe on stitched policy returns.
 `purged_cv_evaluate` (ADR-039) scores purged folds with an embargo sized from the grid's longest
 lookback instead of a fixed 2 bars; its selection deliberately sees later training observations.
@@ -932,6 +935,8 @@ show that the cross-family argmax retains its rank out of sample. Longitudinal a
 searches now compute one CSCV PBO over every concrete candidate evaluated in the current run and
 persist it on every compact finalist summary; parameter stability remains family-local because
 unrelated strategy families have no common parameter neighborhood. The threshold is unchanged.
+CSCV resamples the realized candidate matrix, including refined columns, without
+rebuilding adaptive candidate generation inside each IS combination (ADR-391).
 Calibration identity advances, so earlier null/power artifacts remain evidence for the former
 family-local PBO procedure and require ordinary sole-writer refresh before component rates are
 quoted for ADR-104. No refresh was dispatched as part of the code change.
