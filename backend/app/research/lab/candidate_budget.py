@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.grid_generator import find_catalog_entry, grid_from_catalog
+from app.research.trial_counts import require_trial_count
 
 ParameterMap = Mapping[str, float | int]
 
@@ -48,8 +49,7 @@ def select_space_filling_candidates[CandidateT](
     from the selected set, so a quota covers the resolved parameter region rather than inheriting
     arbitrary Cartesian-product ordering. Serialized parameters break every tie deterministically.
     """
-    if limit < 0:
-        raise ValueError("candidate limit must be >= 0")
+    limit = require_trial_count(limit, minimum=0, parameter="limit")
     if limit >= len(candidates):
         return tuple(candidates)
     if limit == 0:
@@ -113,6 +113,10 @@ def allocate_candidate_budget[CandidateT](
     coarse family, plus refinement when its possible capacity is at least two, receives two slots
     before remaining capacity is water-filled. An impossible minimum fails before any backtest.
     """
+    budget = require_trial_count(budget, minimum=0, parameter="budget")
+    refinement_capacity = require_trial_count(
+        refinement_capacity, minimum=0, parameter="refinement_capacity"
+    )
     eligible = {
         name: tuple(candidates)
         for name, candidates in sorted(families.items())

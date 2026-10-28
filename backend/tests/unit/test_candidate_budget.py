@@ -97,7 +97,7 @@ def test_budget_is_a_cap_when_the_resolved_search_space_is_smaller() -> None:
 
 
 def test_select_space_filling_candidates_given_negative_limit_raises_value_error() -> None:
-    with pytest.raises(ValueError, match="limit must be >= 0"):
+    with pytest.raises(ValueError, match="limit must be a nonnegative nonboolean integer"):
         select_space_filling_candidates(
             [_Point(0), _Point(1)], -1, parameters=lambda point: point.parameters
         )

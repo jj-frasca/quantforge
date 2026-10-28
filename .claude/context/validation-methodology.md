@@ -2394,3 +2394,16 @@ no windows are dropped or partial result returned. Method
 `nested-sma-native-metrics-expanding-v1` is research-only: no production caller,
 fixed-grid comparison, calibrated improvement, provenance/holdout certification,
 account switching or stitched-policy claim. F332 stays open for production.
+
+## Original candidate-capacity counts (ADR-396 / FINDING-333)
+
+The generic maximin selector requires original nonnegative nonboolean Integral
+limit before candidate inspection. The generic allocator requires budget then
+refinement_capacity in that domain before family inspection, empty/eligibility
+shortcuts and arithmetic. Counts normalize to Python int; zero, minimum-two
+rules, empty/refinement-only capacity and valid allocation geometry stay.
+No rounding/coercion or new large-count cap is introduced. The catalog wrapper
+may build grids before delegation; this does not validate n_per_param or
+parameter-vector geometry. Valid fingerprints, thresholds and v14 remain.
+Malformed direct-call overruns do not establish an ordinary production overrun
+or affected historical research result. Generated and frozen records stay intact.
