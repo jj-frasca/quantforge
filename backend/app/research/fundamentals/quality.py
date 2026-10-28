@@ -155,6 +155,29 @@ def piotroski_f_score(history: FundamentalsHistory) -> FScore:
         if ratio is not None and not math.isfinite(ratio):
             raise ValueError(f"{ratio_name} must be finite for Piotroski F-score")
 
+    for ratio_name, ratio, numerator, denominator in (
+        ("roa_t", roa_t, t.net_income, t.total_assets),
+        ("roa_p", roa_p, p.net_income, p.total_assets),
+        ("cfo_over_assets_t", cfo_over_assets_t, t.operating_cash_flow, t.total_assets),
+        ("lev_t", lev_t, t.long_term_debt, t.total_assets),
+        ("lev_p", lev_p, p.long_term_debt, p.total_assets),
+        ("cr_t", cr_t, t.total_current_assets, t.total_current_liabilities),
+        ("cr_p", cr_p, p.total_current_assets, p.total_current_liabilities),
+        ("gm_t", gm_t, t.gross_profit, t.revenue),
+        ("gm_p", gm_p, p.gross_profit, p.revenue),
+        ("at_t", at_t, t.revenue, t.total_assets),
+        ("at_p", at_p, p.revenue, p.total_assets),
+    ):
+        if (
+            ratio is not None
+            and ratio == 0.0
+            and numerator is not None
+            and denominator is not None
+            and numerator != 0.0
+            and denominator != 0.0
+        ):
+            raise ValueError(f"{ratio_name} must not underflow to zero for Piotroski F-score")
+
     roa_positive = roa_t is not None and roa_t > 0
     cfo_positive = t.operating_cash_flow is not None and t.operating_cash_flow > 0
     delta_roa_positive = roa_t is not None and roa_p is not None and roa_t > roa_p

@@ -1,6 +1,6 @@
 # FINDING-331: Finite Piotroski operands can erase ratio ordering
 
-- **Status:** Open; ADR-390 adopts refusal for nonfinite derived ratios only
+- **Status:** Open; ADR-390/395 refuse nonfinite and zero-underflow ratios; other finite projection errors remain
 - **Date:** 2026-10-27
 - **Producing revision:** 97229643
 - **Affected:** piotroski_f_score, quality_score, compute_fundamental_record
@@ -44,8 +44,8 @@ None when adjacency disables them. Existing raw guards still precede division.
 A named plain ValueError propagates through quality/record and can abort sweep
 scoring before shard output; no fallback or skip policy is introduced.
 
-Finite underflow, ordinary rounding ties and other finite comparison projection
-errors remain OPEN. This guard does not certify exact-real inequalities or paper
+ADR-390 alone leaves finite underflow, ordinary rounding ties and other finite
+comparison projection errors OPEN. This guard does not certify exact-real inequalities or paper
 replication. Finite native arithmetic, None/zero-denominator behavior, score
 thresholds, history selection, shared _ratio, schemas, generated records and
 accounting-v14 remain unchanged. No historical inputs or scores are repaired.
@@ -67,3 +67,41 @@ unchanged. Tests cover all11 signed-overflow ratios through3 consumers, exact
 Fraction witnesses, gap/missing/zero/error precedence and Hypothesis native
 finite comparisons. Full foreground gate and exact post-push CI receipts are
 recorded in the session ledger. No generated record is authored.
+
+## Zero-underflow refusal (ADR-395)
+
+At the pre-395 c93aecab producer, independent research and data reproductions
+again accept the finite-underflow history above through FScore, QualityScore and
+FundamentalRecord:1,1/9,1/9. Fraction arithmetic on the actual accepted floats
+proves CFO/assets > NI/assets > 0. All four numerator/denominator sign pairs
+also produce a signed native zero from a nonzero exact quotient. This is
+constructed direct-call evidence, not observed vendor data or historical incidence.
+
+ADR-395 adds an ordered local check after the entire existing eleven-ratio
+finiteness loop. A present zero ratio with two present nonzero original operands
+refuses with a named plain ValueError before score booleans. True signed-zero
+numerators remain valid; None/zero denominators, short histories and disabled
+prior ratios retain their availability rules. Latest ratios remain checked
+across fiscal gaps. Completing the old finite loop first preserves its precedence
+when an early zero-underflow ratio coexists with a later overflow.
+
+This refuses lost evidence rather than recovering exact comparisons or assigning
+a missing/zero score. Existing quality/record propagation can abort sweep output;
+no skip or fallback is added. Nonzero subnormal projection errors, ordinary
+rounding ties and other finite comparison limits remain OPEN. F324's same-year
+ROA proxy, F322's period/PIT limits and all thresholds remain separate. No source,
+search/cohort measurement or generated-record repair is performed.
+
+The actual pre-code run has149 failures and90 passing controls:147 missing
+refusals and2 intended earlier-safety error-precedence mismatches. No collection,
+import or fixture errors count. The23-line guard passes239 new tests and565
+parent focused tests. Independent research and data each pass603 synthetic tests
+including record regressions and approve the correction. Both replay all
+288 histories/864 complete valid producer claims and the whole module AST outside
+the exact guard unchanged. Coverage includes eleven ratios, four operand-sign
+pairs, all three consumers, exact Fraction/property witnesses and a fully mocked
+real sweep. The first full gate exposes a second existing cash-flow property at
+cash5e-324/assets2000. Its generator remains unchanged, with explicit signed
+min-subnormal examples and refusal in the new domain. Both existing properties
+and projection examples remain, with their native assertions elsewhere. Full foreground gates
+and exact post-push CI receipts are recorded separately in the session ledger.

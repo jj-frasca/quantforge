@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from hypothesis import given
+from hypothesis import example, given
 from hypothesis import strategies as st
 from tests.unit.test_fundamentals_history import _facts
 from tests.unit.test_fundamentals_quality import _history, _year
@@ -128,8 +128,14 @@ def test_piotroski_older_rows_and_prior_cash_flow_are_ignored(
 
 
 @given(cash=st.floats(min_value=-1e6, max_value=1e6, allow_nan=False, allow_infinity=False))
+@example(cash=math.ulp(0.0))
+@example(cash=-math.ulp(0.0))
 def test_piotroski_finite_cash_flow_retains_native_points(cash: float) -> None:
     history = _history(_year(2024), _year(2025, operating_cash_flow=cash))
+    if cash != 0.0 and cash / 2000.0 == 0.0:
+        with pytest.raises(ValueError, match="cfo_over_assets_t must not underflow to zero"):
+            piotroski_f_score(history)
+        return
     f = piotroski_f_score(history)
     assert f.cfo_positive is (cash > 0.0)
     assert f.accruals_quality is (cash / 2000.0 > 100.0 / 2000.0)

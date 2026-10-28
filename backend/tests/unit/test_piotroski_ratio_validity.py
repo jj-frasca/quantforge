@@ -111,10 +111,10 @@ def test_piotroski_gap_does_not_compute_prior_overflow(
 
 @pytest.mark.parametrize(
     "assets,income,cash,score",
-    [(1e308, 1e-308, 2e-308, 1), (3.0, 7.0, math.nextafter(7.0, math.inf), 3)],
+    [(1e308, 1e-308, 2e-308, None), (3.0, 7.0, math.nextafter(7.0, math.inf), 3)],
 )
 def test_piotroski_finite_projection_limits_remain_explicit(
-    assets: float, income: float, cash: float, score: int
+    assets: float, income: float, cash: float, score: int | None
 ) -> None:
     history = _history(
         AnnualFundamentals(fiscal_year=2024, revenue=1.0, total_assets=1.0, net_income=0.0),
@@ -128,6 +128,10 @@ def test_piotroski_finite_projection_limits_remain_explicit(
     )
     assert Fraction(cash) / Fraction(assets) > Fraction(income) / Fraction(assets) > 0
     assert cash / assets == income / assets
+    if score is None:
+        with pytest.raises(ValueError, match="roa_t must not underflow to zero"):
+            piotroski_f_score(history)
+        return
     f = piotroski_f_score(history)
     assert not f.accruals_quality
     assert f.score == score
@@ -151,6 +155,10 @@ def test_piotroski_finite_native_comparisons_remain_unchanged(
             operating_cash_flow=cash,
         ),
     )
+    if (income != 0 and income / assets == 0) or (cash != 0 and cash / assets == 0):
+        with pytest.raises(ValueError, match="must not underflow to zero"):
+            piotroski_f_score(history)
+        return
     f = piotroski_f_score(history)
     assert f.roa_positive is (income / assets > 0)
     assert f.delta_roa_positive is (income / assets > 0)

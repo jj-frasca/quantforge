@@ -1425,3 +1425,15 @@ separate. Matched full-procedure calibration retains its meaning; no universal
 optimism, affected graduate or rate invalidity is inferred. Continuation/switching
 cost and source-isolation qualifications remain. Nested evaluation needs a separate
 ADR/TDD/procedure identity; no arithmetic, threshold, grid or v14 change is adopted.
+
+## Nonzero Piotroski quotients rounded to zero (ADR-395 / FINDING-331)
+
+After the complete ADR-390 finiteness loop, an additional ordered local guard
+refuses a present zero ratio with two present nonzero original operands. Both
+signed quotient zeros refuse; true signed-zero numerators remain valid. Plain
+ValueError names the ratio and Piotroski F-score. Existing raw/nonfinite error
+precedence, short history, None/zero denominators and gap-disabled prior ratios
+stay; latest ratios are checked across gaps. Quality/record errors can abort
+sweep output, with no fallback or skip. Shared division, native comparisons and
+thresholds are unchanged. Nonzero subnormal projection and ordinary rounding
+ties remain open; no exact score recovery, period/PIT or historical repair claim.
