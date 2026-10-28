@@ -2362,3 +2362,19 @@ thresholds, accounting-v14 and frozen/generated evidence retain their meaning.
 Exact primitive-score controls compare against the independent engine on the same
 materialized frame and runtime; generated trigonometric fixtures do not establish
 cross-platform bitwise score identity.
+
+## One train-selected SMA window (ADR-393)
+
+`evaluate_sma_train_window` is an unused research primitive with exclusive
+positional train_end/test_end. It validates only the entire used native-Float64
+prefix, selects/refines on its training slice, then runs the selected SMA once
+through test_end. Net returns retain internal turnover history; gross holding
+returns are computed before test slicing to retain the boundary close. Frozen
+tuple evidence and native metric scores use the distinct method
+`nested-sma-native-metrics-continuation-v1`; they do not claim production WF
+Sharpe parity, a switched account, full nested aggregation or calibration.
+Engine calls are selection calls plus one; hypotheses remain selection-only,
+not a new lifetime/DSR count. Failures abort without partial evidence. Later
+test rows cannot select candidates; post-test rows are ignored conditional on
+an identical materialized prefix including dtype/schema/calendar. Caller train,
+search/holdout and source correctness remain uncertified. F332 remains open.

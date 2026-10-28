@@ -1,4 +1,4 @@
-"""Unused train-only SMA selection preparation; no outer WF/gate (ADR-392)."""
+"""Unused train-only SMA selection and one-window continuation (ADR-392/393)."""
 
 from dataclasses import dataclass
 from math import isfinite
@@ -9,12 +9,14 @@ import numpy as np
 import pandas as pd
 
 from app.research.backtesting.engine import BacktestEngine
+from app.research.backtesting.metrics import sharpe_ratio
 from app.research.lab.candidate_budget import (
     allocate_catalog_candidate_budget,
     select_space_filling_candidates,
 )
 from app.research.strategies.base import BaseStrategy
 from app.research.strategies.grid_generator import find_catalog_entry, refine_grid
+from app.research.strategies.sma import SMAStrategy
 from app.research.trial_counts import require_trial_count
 
 
@@ -75,6 +77,23 @@ def _parameters(strategy: BaseStrategy) -> dict[str, float | int]:
     return {k: v for k, v in strategy.parameters.items() if isinstance(v, int | float)}
 
 
+def _validated_close_frame(train: pd.DataFrame) -> pd.DataFrame:
+    if train.empty or "close" not in train:
+        raise ValueError("train must contain nonempty close prices")
+    if not train.index.is_unique or not train.index.is_monotonic_increasing:
+        raise ValueError("train calendar must be unique and ascending")
+    if not train.columns.is_unique:
+        raise ValueError("train must have unique columns")
+    close = train["close"]
+    if close.dtype != np.dtype("float64"):
+        raise ValueError("train close must have native Float64 dtype")
+    values = close.to_numpy()
+    if not np.isfinite(values).all() or (values <= 0).any():
+        raise ValueError("train close must be positive and finite")
+    # Known SMA needs close only; no mutable frame/strategy escapes in the trace.
+    return train[["close"]].copy(deep=True)
+
+
 def select_sma_on_train(
     train: pd.DataFrame,
     *,
@@ -98,20 +117,7 @@ def select_sma_on_train(
         raise ValueError("refine must be boolean")
     refine_span = _nonnegative_real(refine_span, "refine_span")
     cost_rate = _nonnegative_real(cost_rate, "cost_rate")
-    if train.empty or "close" not in train:
-        raise ValueError("train must contain nonempty close prices")
-    if not train.index.is_unique or not train.index.is_monotonic_increasing:
-        raise ValueError("train calendar must be unique and ascending")
-    if not train.columns.is_unique:
-        raise ValueError("train must have unique columns")
-    close = train["close"]
-    if close.dtype != np.dtype("float64"):
-        raise ValueError("train close must have native Float64 dtype")
-    values = close.to_numpy()
-    if not np.isfinite(values).all() or (values <= 0).any():
-        raise ValueError("train close must be positive and finite")
-    # Known SMA needs close only; no mutable frame/strategy escapes in the trace.
-    frame = train[["close"]].copy(deep=True)
+    frame = _validated_close_frame(train)
     allocation = allocate_catalog_candidate_budget(
         ["sma"], n_per_param=n_per_param, budget=budget, refine=refine
     )
@@ -166,4 +172,88 @@ def select_sma_on_train(
         budgeted_refinement_count=budgeted_count,
         candidates=tuple(candidates),
         selected_index=selected_index,
+    )
+
+
+@dataclass(frozen=True)
+class SMATrainWindowContinuation:
+    """One native-metric continuation, not a switched account (ADR-293/393)."""
+
+    train_end: int
+    test_end: int
+    selection: SMATrainSelection
+    test_net_returns: tuple[float, ...]
+    test_gross_hold_returns: tuple[float, ...]
+    oos_sharpe: float
+    oos_hold_sharpe: float
+    method: Literal["nested-sma-native-metrics-continuation-v1"] = (
+        "nested-sma-native-metrics-continuation-v1"
+    )
+
+    @property
+    def n_train(self) -> int:
+        return self.train_end
+
+    @property
+    def n_test(self) -> int:
+        return self.test_end - self.train_end
+
+    @property
+    def n_hypotheses(self) -> int:
+        return self.selection.n_hypotheses
+
+    @property
+    def n_engine_calls(self) -> int:
+        return self.selection.n_engine_calls + 1
+
+
+def evaluate_sma_train_window(
+    frame: pd.DataFrame,
+    *,
+    train_end: int,
+    test_end: int,
+    budget: int,
+    n_per_param: int,
+    refine: bool,
+    refine_span: float,
+    cost_rate: float,
+) -> SMATrainWindowContinuation:
+    """Select on [0, train_end), realize [train_end, test_end) (ADR-392/393).
+
+    Only the used prefix is validated. Post-test independence requires identical
+    prefix dtype/schema/calendar as well as values. Caller search/holdout and
+    source boundaries are not certified. Scores use native backtesting metrics,
+    not production WF's distinct Sharpe, and retain fixed-config internal costs.
+    No aggregate nested estimator, flat start or account switching is claimed.
+    """
+    train_end = require_trial_count(train_end, minimum=1, parameter="train_end")
+    test_end = require_trial_count(test_end, minimum=1, parameter="test_end")
+    if not train_end < test_end <= len(frame):
+        raise ValueError("need 1 <= train_end < test_end <= frame length")
+    prefix = _validated_close_frame(frame.iloc[:test_end])
+    selection = select_sma_on_train(
+        prefix.iloc[:train_end],
+        budget=budget,
+        n_per_param=n_per_param,
+        refine=refine,
+        refine_span=refine_span,
+        cost_rate=cost_rate,
+    )
+    winner = selection.selected
+    continuation = BacktestEngine(cost_rate=selection.cost_rate).run_strategy(
+        prefix, SMAStrategy(fast=winner.fast, slow=winner.slow)
+    )
+    net = continuation.returns.iloc[train_end:]
+    hold = prefix["close"].pct_change().fillna(0.0).iloc[train_end:]
+    if len(net) != test_end - train_end or len(hold) != test_end - train_end:
+        raise ValueError("window return sequences must cover every test observation")
+    net_score, hold_score = sharpe_ratio(net), sharpe_ratio(hold)
+    return SMATrainWindowContinuation(
+        train_end=train_end,
+        test_end=test_end,
+        selection=selection,
+        test_net_returns=tuple(float(v) for v in net),
+        test_gross_hold_returns=tuple(float(v) for v in hold),
+        oos_sharpe=net_score,
+        oos_hold_sharpe=hold_score,
     )
