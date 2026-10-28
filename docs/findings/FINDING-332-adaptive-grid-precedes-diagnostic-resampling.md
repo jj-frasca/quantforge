@@ -147,3 +147,83 @@ from this finding and runs it successfully, then approves all seven paths.
 Required foreground full gates and exact post-push CI receipts are recorded in
 CODEX_RUNNING_STATE. No failing-test claim applies to this numerical-behavior-
 preserving wording unit.
+
+## Session 10 addendum: unchanged single-family allocation
+
+A second bounded control uses the unchanged allocator, default n_per_param=3,
+default GateConfig and actual ValidationEngine coarse validation for a requested
+single SMA family. It does not claim the full default catalog or production
+prevalence. Both paths use the same seven actual coarse configs:
+(1,2), (1,251), (1,500), (100,251), (100,500), (200,251), (200,500).
+
+Keep the 600-row base above, but change only search prices 200..347 to b[199]
+for the flat arm, or b[199]*exp(0.3*(k%2)), k=0..147, for the alternating arm.
+The early 200 prices and 252 sealed prices match exactly. The complete actual
+coarse first-window WF dictionaries match, with OOS 22.933345297737414.
+
+The flat arm's coarse winner is (1,2), giving only one raw refined config; the
+existing minimum-two rule skips refined validation. The alternating arm chooses
+(100,251), producing nine refined configs and entering the second validation call.
+A wrapper calls the actual validator on the coarse grid, then captures/stops
+BEFORE evaluating the alternating refined grid. The flat arm completes the
+ordinary search. No gate-passage or outcome comparison is made. This demonstrates
+future-search dependence of refinement-branch existence with the unchanged
+allocator for this request; it supplies no new refined WF/PBO value comparison.
+The earlier controlled-allocator score-change table retains its stated scope.
+
+Parent and independent research reproduce matching JSON receipts; research also
+checks the actual allocator, scoring and raw refinement counts separately. No
+runtime, threshold, schema or identity change follows. Existing ADR-391 governs
+this additional evidence; no new decision or TDD implementation claim is made.
+
+Self-contained scratch reproduction (run with PYTHONPATH=. from backend):
+
+```python
+import json
+from unittest.mock import patch
+import numpy as np
+import pandas as pd
+import app.research.lab.search as search
+from app.validation.engine import ValidationEngine
+
+class Captured(Exception):
+ pass
+original=ValidationEngine.validate
+receipts=[]
+frames=[]
+x=np.arange(600)
+base=100*np.exp(.0001*x+.02*np.sin(x/9))
+for kind in ('flat','alternate'):
+ prices=base.copy()
+ prices[200:348]=prices[199]*(1.0 if kind=='flat' else np.exp(.3*(np.arange(148)%2)))
+ frame=pd.DataFrame({'close':prices},index=pd.date_range('2020-01-01',periods=600))
+ frames.append(frame)
+ calls=[]
+ def capture(self,name,configs,data):
+  calls.append({'configs':[c.parameters for c in configs]})
+  if len(calls)==2:raise Captured()
+  result=original(self,name,configs,data)
+  calls[-1]['observed']=result.observed_sharpe
+  calls[-1]['wf_first']=result.walk_forward.splits[0].model_dump()
+  return result
+ with patch.object(ValidationEngine,'validate',capture):
+  try:
+   result=search.run_search(frame,'SYN',['sma'],refine=True)
+   status='completed-no-refined-grid'
+  except Captured:
+   status='captured-refined-grid-before-evaluation'
+ receipts.append({'kind':kind,'status':status,'calls':calls})
+pd.testing.assert_frame_equal(frames[0].iloc[:200],frames[1].iloc[:200])
+pd.testing.assert_frame_equal(frames[0].iloc[348:],frames[1].iloc[348:])
+assert receipts[0]['calls'][0]['configs']==receipts[1]['calls'][0]['configs']
+assert receipts[0]['calls'][0]['wf_first']==receipts[1]['calls'][0]['wf_first']
+assert len(receipts[0]['calls'])==1 and len(receipts[1]['calls'])==2
+assert len(receipts[1]['calls'][1]['configs'])==9
+print(json.dumps(receipts,indent=2))
+```
+
+Independent research extracts this second code block from the finding and runs it
+successfully: all prefix, sealed-tail, coarse-grid, early-WF and branch assertions
+pass, with output exactly matching the original JSON receipt. Final review
+approves this one-path evidence extension. Required full-gate and post-push CI
+receipts are recorded in the session ledger.
