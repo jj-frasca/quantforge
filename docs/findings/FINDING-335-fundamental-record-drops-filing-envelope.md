@@ -1,6 +1,6 @@
 # FINDING-335: Fundamental records do not retain their filing envelope
 
-- **Status:** Open; reporting qualified, runtime provenance retention deferred
+- **Status:** Supplied history citations retained prospectively (ADR-399); legacy unknown and as-of/per-fact limits remain
 - **Date:** 2026-10-28, Codex autonomous session14 (ISO2026-W44)
 - **Producing revision:** 2fff8226
 - **Affected:** FundamentalRecord, compute_fundamental_record, merge_fundamental_records
@@ -33,6 +33,9 @@ established by the synthetic collision.
 
 Run from backend with its existing environment; no services are called:
 
+This reproduces the gap at producing revision2fff8226 and reporting revision
+9e51e3a8. ADR-399's later retention changes the producer contract prospectively.
+
 ```python
 from app.data.fundamentals import AnnualFundamentals, FundamentalsHistory
 from app.research.fundamentals.record import compute_fundamental_record
@@ -53,14 +56,14 @@ assert score_valuation(a, 55).source_url != score_valuation(b, 55).source_url
 
 ## Bounded response and limits
 
-Qualify present docstrings and cold contracts to describe company score snapshots
+The initial reporting correction qualifies docstrings and cold contracts to describe company score snapshots
 labelled by the latest selected fiscal year, without retained filing citations
 or an established as-of time. Describe the actual higher-year/incoming-tie merge.
 This is a reporting correction, with no scoring, schema field, merge, threshold,
 provider or persistence behavior change. No new runtime decision is adopted.
 
-Future nullable envelope retention needs a separate ADR, TDD, legacy-absence and
-consumer-binding policy. A retained supplied-history envelope would still not
+The subsequent ADR-399 below adopts nullable envelope retention with separate TDD,
+legacy-absence and consumer-binding policy. A retained supplied-history envelope does not
 establish every input fact's accession, accounting period, availability date,
 economic consistency or point-in-time validity. F322 remains separate; retaining
 source metadata cannot repair its physical-period selection problem. Historical
@@ -79,3 +82,40 @@ approve. An initial parent command names a nonexistent additional test file and
 runs zero tests; it is excluded from verification. Foreground full gate and exact
 publication CI receipts are recorded separately in the session ledger. No runtime
 TDD claim is made for this documentation-only correction.
+
+## Supplied-history retention (ADR-399)
+
+After the reporting correction's exact CI succeeds, ADR-399 adopts a separate
+runtime decision: retain the seven supplied company/envelope scalars in nullable
+frozen history_citation, with strict nested validation and outer symbol/CIK binding.
+None means unknown/unretained and is omitted from serialization, preserving legacy
+absence. Empty histories retain their supplied metadata without inventing facts or
+an as-of date. Existing score computation and whole-winner merge remain; an incoming
+legacy tie can replace attribution with unknown. No citation is inferred for old
+rows. Older writers may discard the field.
+
+This addresses future supplied-envelope loss only. It does not establish filing
+freshness, per-fact provenance, source authenticity, periods, availability/PIT,
+price provenance or producing code; valuation's separate source default remains.
+Actual pre-code execution has67 failures and3 passing controls across70 new tests,
+without collection errors. Parent and both independent reviewers pass108 focused
+synthetic tests and approve. Both replay108 producer claims outside the citation,
+108 legacy JSON claims,4 merge payloads, all4258 generated rows and their raw file
+hash unchanged. The whole record-module AST outside four frozen additions and
+four docstrings matches exactly; existing record-test AST changes only its leading
+documentation. Generated evidence is read-only. The deliberate forged nested scalar
+test emits a serializer warning before merge reconstruction rejects it.
+
+For the same supplied histories a and b above, the ADR-399 producer instead satisfies:
+
+```python
+for price in (None, 55.0):
+    left = compute_fundamental_record(a, price).model_dump(round_trip=True)
+    right = compute_fundamental_record(b, price).model_dump(round_trip=True)
+    assert left.pop("history_citation")["source_url"] == a.source_url
+    assert right.pop("history_citation")["source"] == b.source
+    assert left == right  # all previous numeric, identity and flag claims persist
+```
+
+Full foreground gate and exact publication CI receipts are recorded separately
+in the session ledger; this adds no historical reconstruction or source-truth claim.

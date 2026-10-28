@@ -7,8 +7,9 @@ free), computes a `FundamentalRecord`, and appends it to a sharded output; a con
 and keeping the higher fiscal-year label (incoming wins ties), bounding the pool to one row per
 company. `rank_fundamentals`
 is the leaderboard: the genuinely good, reasonably priced companies. All network-free (the network
-lives in the sweep script). Records do not retain the input history's filing citation or an
-established as-of timestamp (FINDING-335); scores flag potential, never guarantee."""
+lives in the sweep script). New records retain supplied history citations (ADR-399); legacy
+attribution can be unknown. No established as-of timestamp or per-fact provenance is certified
+(FINDING-335); scores flag potential, never guarantee."""
 
 import json
 import math
@@ -34,9 +35,26 @@ _RANK_FIELDS = {
 }
 
 
+class FundamentalHistoryCitation(BaseModel):
+    """Supplied history metadata only; no fact ownership, source authenticity or PIT certification."""
+
+    model_config = ConfigDict(
+        frozen=True, revalidate_instances="always", extra="forbid", strict=True
+    )
+
+    symbol: str
+    cik: int
+    entity_name: str
+    form: str
+    accession_number: str
+    source_url: str
+    source: str
+
+
 class FundamentalRecord(BaseModel):
     """One company's score snapshot labelled by its latest selected fiscal year (ADR-029).
-    No filing citation or established as-of timestamp is retained (FINDING-335). `quality_score` is the
+    Supplied history citations may be retained; no as-of time or per-fact provenance is established
+    (FINDING-335/ADR-399). `quality_score` is the
     ADR-029 composite; `value_score` is the ADR-022 UndervaluationScore (only when a price was
     available); `combined_score` = quality * value when BOTH exist (good AND cheap), else None.
     Raw legs (`f_score`, `gross_profitability`) and `flags` travel with the row for legibility."""
@@ -60,6 +78,9 @@ class FundamentalRecord(BaseModel):
     # it (a string, e.g. "3571") rather than parsed to int — every consumer so far wants prefix
     # matching against the SIC major-group/division scheme, not arithmetic.
     sic_code: str | None = None
+    history_citation: FundamentalHistoryCitation | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def validate_combined_score(self) -> "FundamentalRecord":
@@ -72,6 +93,14 @@ class FundamentalRecord(BaseModel):
             self.combined_score, expected, rel_tol=1e-12, abs_tol=1e-12
         ):
             raise ValueError("combined_score must equal quality_score * value_score")
+        return self
+
+    @model_validator(mode="after")
+    def validate_history_citation(self) -> "FundamentalRecord":
+        if self.history_citation is not None and (
+            self.history_citation.symbol != self.symbol or self.history_citation.cik != self.cik
+        ):
+            raise ValueError("history citation must match record symbol and CIK")
         return self
 
     @field_serializer("flags")
@@ -87,8 +116,9 @@ def compute_fundamental_record(
 ) -> FundamentalRecord:
     """Compute a FundamentalRecord from a company's history (and optionally its latest price and SIC
     classification). Quality is always computed from EDGAR alone; value is added only when `price` is
-    supplied, and `combined` only when both quality and value are present. The input history's filing
-    envelope is discarded, including the value scorer's citation (FINDING-335). Empty history yields an
+    supplied, and `combined` only when both quality and value are present. After scoring, retain the
+    supplied history envelope, including for empty histories (ADR-399), without certifying facts or
+    an as-of time. Empty history yields an
     all-None record that still records the company's identity (and flags why nothing was computable).
     `sic_description`/`sic_code` are passed through as-is (ADR-095/146) — this function stays
     network-free."""
@@ -118,6 +148,15 @@ def compute_fundamental_record(
         flags=tuple(flags),
         sic_description=sic_description,
         sic_code=sic_code,
+        history_citation=FundamentalHistoryCitation(
+            symbol=history.symbol,
+            cik=history.cik,
+            entity_name=history.entity_name,
+            form=history.form,
+            accession_number=history.accession_number,
+            source_url=history.source_url,
+            source=history.source,
+        ),
     )
 
 
@@ -127,6 +166,7 @@ def merge_fundamental_records(
     """Fold `incoming` into `existing`, deduping by CIK: keep the higher fiscal-year label,
     and on a tie let `incoming` win (so a re-run of a shard refreshes in place — idempotent).
     Without filing/availability metadata this does not establish the newer filing (FINDING-335).
+    The complete winner carries its own citation or unknown attribution, without borrowing metadata.
     Deduping by CIK bounds the pool to one row per company (ADR-029 / ADR-026 bounding)."""
     validated_existing = [
         FundamentalRecord.model_validate(record.model_dump(round_trip=True)) for record in existing

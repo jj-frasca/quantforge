@@ -1,6 +1,6 @@
 """ADR-029 Layer 3: the FundamentalRecord contract + pure compute/merge/leaderboard for the
-fundamental discovery sweep. A record is the per-company as-of snapshot the sweep writes; merge
-dedups by CIK keeping the newest filing (bounding the pool to one row per company); the leaderboard
+fundamental discovery sweep. A record is a per-company score snapshot; merge dedups by CIK using
+the higher fiscal-year label and incoming ties (bounding the pool to one row per company); the leaderboard
 ranks the "genuinely good, reasonably priced" companies. All pure — the network lives in the script."""
 
 import json

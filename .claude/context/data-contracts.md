@@ -549,3 +549,18 @@ runtime scores, schema fields and merge behavior stay. Future nullable envelope
 retention requires separate ADR/TDD/legacy-absence policy and would not certify
 each fact's period, accession or PIT availability. F322 remains separate; no
 historical/generated citation recovery, source fetch or threshold change occurs.
+
+## Supplied fundamental-history citation retention (ADR-399 / FINDING-335)
+
+New compute_fundamental_record results retain history_citation, including empty
+histories. Seven required strict scalars copy symbol/cik/entity_name/form/
+accession_number/source_url/source faithfully. The frozen, extra-forbidden nested
+model always revalidates; its symbol/CIK must match the outer record. Unknown
+legacy None is omitted in Python/JSON dumps; present metadata round-trips.
+Scoring precedes attachment and keeps its error precedence. Merge keeps the
+complete higher-year/incoming-tie winner, even when a legacy tie loses known
+attribution; no cross-record citation borrowing. Older writers may discard new
+metadata. This supersedes the prior new-producer omission qualification only;
+per-fact/period/PIT, source authenticity, price/code provenance, as-of time and
+filing freshness remain unestablished. No inferred historical citation, numeric
+score/flag, schema-field removal, threshold, fingerprint or v14 change occurs.
