@@ -137,7 +137,7 @@ def test_piotroski_finite_cash_flow_retains_native_points(cash: float) -> None:
 
 
 @pytest.mark.parametrize("consumer", CONSUMERS)
-def test_piotroski_raw_operand_guard_does_not_change_finite_derived_overflow(
+def test_piotroski_finite_operand_overflow_reaches_derived_ratio_guard(
     consumer: Consumer,
 ) -> None:
     prior = AnnualFundamentals(fiscal_year=2024, revenue=1.0, net_income=0.0, total_assets=1.0)
@@ -148,17 +148,26 @@ def test_piotroski_raw_operand_guard_does_not_change_finite_derived_overflow(
         total_assets=1e-308,
         operating_cash_flow=1e308,
     )
-    result = consumer(_history(prior, latest))
-    f = result if consumer is piotroski_f_score else result.f_score
-    assert (f if isinstance(f, int) else f.score) == 3
+    with pytest.raises(ValueError, match="cfo_over_assets_t must be finite for Piotroski F-score"):
+        consumer(_history(prior, latest))
 
 
+@pytest.mark.parametrize("derived_overflow", [False, True])
 def test_piotroski_actual_sweep_refuses_before_output_or_next_company(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, derived_overflow: bool
 ) -> None:
     sweep = importlib.import_module("scripts.fundamental_sweep")
     events: list[str] = []
     bad = _history(_year(2024), _year(2025, operating_cash_flow=math.inf))
+    error = r"latest\.operating_cash_flow must be finite"
+    if derived_overflow:
+        bad = _history(
+            AnnualFundamentals(fiscal_year=2024, revenue=1.0, total_assets=1.0),
+            AnnualFundamentals(
+                fiscal_year=2025, revenue=1.0, total_assets=1e-308, operating_cash_flow=1e308
+            ),
+        )
+        error = "cfo_over_assets_t must be finite"
 
     def fetch_history(symbol: str) -> FundamentalsHistory:
         events.append(f"fetch:{symbol}")
@@ -182,7 +191,7 @@ def test_piotroski_actual_sweep_refuses_before_output_or_next_company(
     monkeypatch.setattr(sweep.time, "sleep", lambda seconds: None)
     output = tmp_path / "output"
     monkeypatch.setattr(sweep.sys, "argv", ["fundamental_sweep", "0", "1", str(output)])
-    with pytest.raises(ValueError, match=r"latest\.operating_cash_flow must be finite"):
+    with pytest.raises(ValueError, match=error):
         sweep.main()
     assert events == ["fetch:BAD", "prices:BAD", "sic:BAD"]
     assert not output.exists()

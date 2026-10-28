@@ -139,6 +139,22 @@ def piotroski_f_score(history: FundamentalsHistory) -> FScore:
     at_t = _ratio(t.revenue, t.total_assets)
     at_p = _ratio(p.revenue, p.total_assets) if p_adjacent else None
 
+    for ratio_name, ratio in (
+        ("roa_t", roa_t),
+        ("roa_p", roa_p),
+        ("cfo_over_assets_t", cfo_over_assets_t),
+        ("lev_t", lev_t),
+        ("lev_p", lev_p),
+        ("cr_t", cr_t),
+        ("cr_p", cr_p),
+        ("gm_t", gm_t),
+        ("gm_p", gm_p),
+        ("at_t", at_t),
+        ("at_p", at_p),
+    ):
+        if ratio is not None and not math.isfinite(ratio):
+            raise ValueError(f"{ratio_name} must be finite for Piotroski F-score")
+
     roa_positive = roa_t is not None and roa_t > 0
     cfo_positive = t.operating_cash_flow is not None and t.operating_cash_flow > 0
     delta_roa_positive = roa_t is not None and roa_p is not None and roa_t > roa_p

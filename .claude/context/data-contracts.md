@@ -480,3 +480,16 @@ F-score first, so this error may precede safety; sweep scoring may abort before
 output. No new fallback/skip policy, global Annual/history/shared-ratio change,
 finite formula/threshold/F324 ROA correction or historical repair is adopted.
 Finite-derived ratio overflow and period/PIT truth remain separate limitations.
+
+## Computed Piotroski ratio validity (ADR-390 / FINDING-331)
+
+After its existing eleven native ratio assignments, piotroski_f_score requires
+every present result finite before score booleans. First failure in assignment
+order raises plain ValueError naming roa_t/roa_p/cfo_over_assets_t/lev_t/lev_p/
+cr_t/cr_p/gm_t/gm_p/at_t/at_p. ADR-389 raw guards still precede division. Latest
+ratios remain checked across fiscal gaps; prior ratios stay None when disabled.
+Short histories, None/zero denominators, shared _ratio and native finite scores
+stay. Consumer refusal can precede safety and abort sweep output; no fallback.
+F331 remains open for finite underflow and rounding ties: this is no exact-real
+comparison, paper/PIT certification or historical repair. No thresholds, v14,
+generated records or frozen cohorts change.
