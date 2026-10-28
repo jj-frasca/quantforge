@@ -520,3 +520,18 @@ Existing signal order, missing/gap/short semantics and signed denominators remai
 latest accrual stays active across gaps. Accepted float truth does not recover
 upstream decimal/source/PIT truth or correct F324's same-year ROA proxy. No shared
 _ratio, raw signal, schema, threshold, v14 or generated-record change.
+
+## Computed valuation multiples before ranking (ADR-398 / FINDING-334)
+
+_ranked requires each present current multiple and every selected historical
+multiple finite before missing-current/thin-history shortcuts. Named plain
+ValueError identifies current P/E, historical P/E[ordinal], current P/S or
+historical P/S[ordinal], in that order; ordinal counts selected entries from0.
+The P/E stage still precedes P/S arithmetic. Invalid computed history refuses
+even when current is absent or history is thin, an explicit availability cost.
+No filtering/recovery/None substitution occurs. Eligibility, native formulas,
+strict ranks, counts, flags and thresholds remain. Refusal precedes DCF/output
+validation; record quality still runs first and sweep output may abort. Provider
+acquisition fallback stays separate. Generic percentile_rank/direct constructors,
+raw invalid operands yielding finite results, finite rounding/underflow and
+source-period/PIT truth remain outside; no historical/generated repair or v14 change.

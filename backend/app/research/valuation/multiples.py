@@ -6,6 +6,7 @@ with that year's figure. A low percentile flags "cheap versus its own past". Pee
 multiples and EV/EBITDA are deferred (ADR-022). Honest per rule 6 — it flags a potential signal.
 """
 
+import math
 from collections.abc import Sequence
 
 from pydantic import BaseModel, ConfigDict
@@ -37,6 +38,13 @@ def _ranked(
     current: float | None, series: Sequence[float], label: str, flags: list[str]
 ) -> float | None:
     """Percentile of ``current`` within ``series``; None (with a flag) when history is too thin."""
+    if current is not None and not math.isfinite(current):
+        raise ValueError(f"current {label} must be finite for valuation multiples")
+    for ordinal, value in enumerate(series):
+        if not math.isfinite(value):
+            raise ValueError(
+                f"historical {label}[{ordinal}] must be finite for valuation multiples"
+            )
     if current is None:
         return None
     if len(series) < 2:
