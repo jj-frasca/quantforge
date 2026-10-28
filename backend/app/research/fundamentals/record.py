@@ -1,12 +1,14 @@
-"""FundamentalRecord: the per-company as-of snapshot the fundamental discovery sweep writes
+"""FundamentalRecord: the per-company score snapshot the fundamental discovery sweep writes
 (ADR-029 Layer 3), plus the pure compute / merge / leaderboard logic around it.
 
 The sweep enumerates the SEC CIK universe, fetches each company's `FundamentalsHistory` (EDGAR,
 free), computes a `FundamentalRecord`, and appends it to a sharded output; a consolidation job
 `merge_fundamental_records` folds every shard into `data/fundamentals_pool.json`, deduping by CIK
-and keeping the newest filing — which bounds the pool to one row per company. `rank_fundamentals`
+and keeping the higher fiscal-year label (incoming wins ties), bounding the pool to one row per
+company. `rank_fundamentals`
 is the leaderboard: the genuinely good, reasonably priced companies. All network-free (the network
-lives in the sweep script); every score cites its filing and flags potential, never guarantees."""
+lives in the sweep script). Records do not retain the input history's filing citation or an
+established as-of timestamp (FINDING-335); scores flag potential, never guarantee."""
 
 import json
 import math
@@ -33,7 +35,8 @@ _RANK_FIELDS = {
 
 
 class FundamentalRecord(BaseModel):
-    """One company's fundamental snapshot as of its latest filing (ADR-029). `quality_score` is the
+    """One company's score snapshot labelled by its latest selected fiscal year (ADR-029).
+    No filing citation or established as-of timestamp is retained (FINDING-335). `quality_score` is the
     ADR-029 composite; `value_score` is the ADR-022 UndervaluationScore (only when a price was
     available); `combined_score` = quality * value when BOTH exist (good AND cheap), else None.
     Raw legs (`f_score`, `gross_profitability`) and `flags` travel with the row for legibility."""
@@ -42,7 +45,7 @@ class FundamentalRecord(BaseModel):
 
     symbol: str
     cik: int
-    fiscal_year: int  # the as-of year of the latest filing this record summarizes
+    fiscal_year: int  # latest selected row's fiscal label; not an established as-of timestamp
     quality_score: float | None = Field(ge=0.0, le=1.0)
     value_score: float | None = Field(ge=0.0, le=1.0)
     combined_score: float | None = Field(ge=0.0, le=1.0)
@@ -84,7 +87,8 @@ def compute_fundamental_record(
 ) -> FundamentalRecord:
     """Compute a FundamentalRecord from a company's history (and optionally its latest price and SIC
     classification). Quality is always computed from EDGAR alone; value is added only when `price` is
-    supplied, and `combined` only when both quality and value are present. Empty history yields an
+    supplied, and `combined` only when both quality and value are present. The input history's filing
+    envelope is discarded, including the value scorer's citation (FINDING-335). Empty history yields an
     all-None record that still records the company's identity (and flags why nothing was computable).
     `sic_description`/`sic_code` are passed through as-is (ADR-095/146) — this function stays
     network-free."""
@@ -120,8 +124,9 @@ def compute_fundamental_record(
 def merge_fundamental_records(
     existing: list[FundamentalRecord], incoming: list[FundamentalRecord]
 ) -> list[FundamentalRecord]:
-    """Fold `incoming` into `existing`, deduping by CIK: keep whichever record has the newer filing
-    year, and on a tie let `incoming` win (so a re-run of a shard refreshes in place — idempotent).
+    """Fold `incoming` into `existing`, deduping by CIK: keep the higher fiscal-year label,
+    and on a tie let `incoming` win (so a re-run of a shard refreshes in place — idempotent).
+    Without filing/availability metadata this does not establish the newer filing (FINDING-335).
     Deduping by CIK bounds the pool to one row per company (ADR-029 / ADR-026 bounding)."""
     validated_existing = [
         FundamentalRecord.model_validate(record.model_dump(round_trip=True)) for record in existing

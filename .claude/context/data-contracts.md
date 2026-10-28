@@ -535,3 +535,17 @@ validation; record quality still runs first and sweep output may abort. Provider
 acquisition fallback stays separate. Generic percentile_rank/direct constructors,
 raw invalid operands yielding finite results, finite rounding/underflow and
 source-period/PIT truth remain outside; no historical/generated repair or v14 change.
+
+## Fundamental-pool filing attribution limit (FINDING-335)
+
+FundamentalRecord keeps company identifiers, the latest selected fiscal-year
+label, scores, flags and optional SIC metadata. compute_fundamental_record drops
+the input history's entity/form/accession/URL/source envelope and any valuation
+citation; records have no retained filing citation or established as-of timestamp.
+Merge chooses the higher fiscal-year label, with incoming winning ties, rather
+than establishing filing freshness. score_valuation retains four envelope fields
+but separately defaults source to SEC EDGAR. These are reporting qualifications;
+runtime scores, schema fields and merge behavior stay. Future nullable envelope
+retention requires separate ADR/TDD/legacy-absence policy and would not certify
+each fact's period, accession or PIT availability. F322 remains separate; no
+historical/generated citation recovery, source fetch or threshold change occurs.
