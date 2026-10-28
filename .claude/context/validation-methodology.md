@@ -2343,3 +2343,19 @@ All allowed prefixes remain normal/finite under the reviewed rounding assumption
 Controlled Fraction oracles do not measure a calibration or authorize original draws.
 Expired session7 drafts and every older cohort/timing root remain frozen; any future
 first execution needs a separate prospective protocol and independent tooling audits.
+
+## Train-only SMA selection preparation (ADR-392)
+
+`research/lab/sma_selection.py::select_sma_on_train` is an unused research helper,
+not a nested WF estimator or production run_search replay. Supply only a training
+prefix, explicit budget/n_per_param/refine/span/cost and native Float64 close
+prices. It records ordered coarse then executed refined candidates, engine-metric
+train Sharpes, first-maximum center/winner and raw/budgeted/evaluated refinement
+counts. A budgeted refinement smaller than two is skipped. Warmup-zero candidates
+remain valid; repeated cross-pass parameters remain distinct hypotheses. One
+engine call per scored hypothesis here does not account for future controls or
+OOS evaluation, and supplies no new lifetime/DSR denominator. Any failure aborts
+without a partial trace. Frozen scalar/tuple output has no durable artifact or
+provenance claim; caller train-boundary correctness remains the caller's duty.
+F332 stays open for outer nested evaluation. Existing search, gate, diagnostics,
+thresholds, accounting-v14 and frozen/generated evidence retain their meaning.
