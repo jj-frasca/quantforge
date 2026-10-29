@@ -564,3 +564,15 @@ metadata. This supersedes the prior new-producer omission qualification only;
 per-fact/period/PIT, source authenticity, price/code provenance, as-of time and
 filing freshness remain unestablished. No inferred historical citation, numeric
 score/flag, schema-field removal, threshold, fingerprint or v14 change occurs.
+
+## Supplied valuation source labels (ADR-400 / FINDING-336)
+
+score_valuation now passes history.source to its final model, retaining supplied
+validated strings exactly, including empty strings. The public model's SEC EDGAR
+default and historical labels stay. Earlier computation/refusals still precede
+construction; malformed unchecked source can newly fail final string validation
+alongside other output errors, with no fallback or promised final error ordering.
+Provider scoring stays outside acquisition recovery. This supersedes the prior
+new-producer source-default caveat only; labels do not authenticate sources or
+certify fact/period/PIT, price or code provenance. No numeric, schema/default,
+threshold, fingerprint, v14, generated-history or cohort change occurs.

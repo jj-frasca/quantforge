@@ -81,6 +81,7 @@ def score_valuation(
         form=history.form,
         accession_number=history.accession_number,
         source_url=history.source_url,
+        source=history.source,
         current_price=price,
         pe_ratio=multiples.pe_ratio,
         pe_percentile=multiples.pe_percentile,

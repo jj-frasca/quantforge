@@ -119,3 +119,7 @@ for price in (None, 55.0):
 
 Full foreground gate and exact publication CI receipts are recorded separately
 in the session ledger; this adds no historical reconstruction or source-truth claim.
+
+F336/ADR-400 separately addresses the valuation source-default caveat for new
+producer output. It copies the supplied history label without changing direct
+model defaults or historical records, and establishes no source authentication.
