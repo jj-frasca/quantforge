@@ -90,7 +90,12 @@ def test_valuation_uses_elapsed_growth_without_changing_composition() -> None:
     fixed = DcfAssumptions(min_growth=growth, max_growth=growth)
     oracle = score_valuation(history, 100.0, assumptions=fixed)
     assert oracle.score == pytest.approx(0.4435425857728322)
-    assert score_valuation(history, 100.0).model_dump() == oracle.model_dump()
+    actual = score_valuation(history, 100.0)
+    assert actual.dcf_assumptions == DcfAssumptions()
+    assert oracle.dcf_assumptions == fixed
+    assert actual.model_dump(exclude={"dcf_assumptions"}) == oracle.model_dump(
+        exclude={"dcf_assumptions"}
+    )
 
 
 @pytest.mark.parametrize("leg", ["free_cash_flow", "net_income", "revenue"])

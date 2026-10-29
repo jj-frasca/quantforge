@@ -1522,3 +1522,19 @@ stay valid. Existing computed-result guards, finite expressions/flags/counts/
 ranks, provider/hunt error handling and quality-before-valuation stay. No shared
 schema/type policy, recovery, source/PIT truth, precision, historical/generated
 repair, threshold, fingerprint, v14 or cohort change is adopted.
+
+## Resolved backend DCF settings retention (ADR-402 / FINDING-325)
+
+New score_valuation output retains actual intrinsic.assumptions, including
+default and unsuccessful DCF outcomes. Optional dcf_assumptions=None remains
+unknown/omitted for legacy/direct absence. Local before-field reconstruction
+through unchanged DcfAssumptions requires exact finite canonical round-trip
+JSON, returning a detached frozen model and refusing default injection, ignored
+extras or unchecked coercions. Finite existing bounds/horizons stay. Attachment
+follows old computations; malformed unchecked metadata can newly refuse even
+when old DCF shortcuts skipped knobs, without fallback or final-error-order
+promise. Existing Experiment/store dumps preserve it. This is backend settings
+attribution, not score binding/full replay/source/PIT/code certification.
+FundamentalRecord, projected API/UI disclosure and old-writer retention remain
+separate; never infer historical defaults or rewrite generated data. No numeric
+formula, threshold, fingerprint, v14 or cohort change is adopted.

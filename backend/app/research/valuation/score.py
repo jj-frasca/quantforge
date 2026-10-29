@@ -7,7 +7,9 @@ A low own-history percentile and a positive margin of safety push the score up. 
 Honest per rule 6: it flags a company as *potentially* undervalued, never asserts it is.
 """
 
-from pydantic import BaseModel, ConfigDict
+import json
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.data.fundamentals import FundamentalsHistory
 from app.research.valuation.intrinsic_value import DcfAssumptions, dcf_intrinsic_value
@@ -42,6 +44,27 @@ class UndervaluationScore(BaseModel):
 
     score: float | None
     flags: list[str]
+    dcf_assumptions: DcfAssumptions | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+    @field_validator("dcf_assumptions", mode="before")
+    @classmethod
+    def _snapshot_dcf_assumptions(cls, value: object) -> DcfAssumptions | None:
+        if value is None:
+            return None
+        raw = value.model_dump(round_trip=True) if isinstance(value, BaseModel) else value
+        rebuilt = DcfAssumptions.model_validate(raw)
+        original = json.dumps(raw, sort_keys=True, allow_nan=False, separators=(",", ":"))
+        snapshot = json.dumps(
+            rebuilt.model_dump(round_trip=True),
+            sort_keys=True,
+            allow_nan=False,
+            separators=(",", ":"),
+        )
+        if original != snapshot:
+            raise ValueError("DCF assumptions must preserve complete canonical JSON evidence")
+        return rebuilt
 
 
 def score_valuation(
@@ -93,4 +116,5 @@ def score_valuation(
         fcf_is_net_income_proxy=intrinsic.fcf_is_net_income_proxy,
         score=score,
         flags=flags,
+        dcf_assumptions=intrinsic.assumptions,
     )
