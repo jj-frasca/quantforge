@@ -17,24 +17,26 @@ there, since this note itself could go stale the same way the original one did.
 
 ---
 
-## 1. Deflated Sharpe Ratio (DSR) — value form
+## 1. Selection-adjusted Sharpe margin and probability-form DSR
 
 `app/validation/deflated_sharpe.py`. Adapted from Bailey & López de Prado (2014).
 
-We report DSR as a **deflated Sharpe value** (not a probability), so the §8 invariant
-**DSR ≤ observed Sharpe** holds by construction: `DSR = observed_SR - haircut`, where the
-haircut is the expected maximum Sharpe under the null of N independent trials:
+The stored `deflated_sharpe` field is a selection-adjusted Sharpe **margin**.
+The margin invariant **margin ≤ observed Sharpe** holds by construction:
+`margin = observed_SR - haircut`, where the haircut is the expected maximum
+Sharpe under the null of N independent trials. Probability-form DSR is recorded
+beside the margin where measurable (ADR-054; details below).
 
 ```
 # Expected max of N iid ~N(0, sr_std^2) Sharpe estimates (Bailey et al.):
 E_max = sr_std * ((1 - γ) * Φ⁻¹(1 - 1/N) + γ * Φ⁻¹(1 - 1/(N·e)))      # γ = Euler-Mascheroni 0.5772
 haircut = max(E_max, 0)        # N == 1 -> haircut 0 (no multiple-testing penalty)
-DSR = observed_sr - haircut
+margin = observed_sr - haircut
 ```
 
 - `sr_std`: dispersion of Sharpe across trials (input; default a small positive value).
-- **Invariant**: `DSR ≤ observed_sr` always (haircut ≥ 0); more trials ⇒ larger haircut ⇒
-  lower (or equal) DSR; N == 1 ⇒ DSR == observed_sr.
+- **Invariant**: `margin ≤ observed_sr` always (haircut ≥ 0); more trials ⇒ larger haircut ⇒
+  lower (or equal) margin; N == 1 ⇒ margin == observed_sr.
 
 **Important source distinction (FINDING-007, resolved by ADR-054).** The paper's DSR is a
 probability-form PSR against the expected-max threshold and includes sample length, skewness, and

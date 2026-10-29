@@ -72,3 +72,27 @@ on real trials rather than assumed. The remaining open question is therefore no 
 — it is whether the gate should switch, which needs a fresh Type-I error and power curve for the new
 statistic (all three calibration workflows re-dispatched together, per `validation-methodology.md`
 §7.2).
+
+## Cold-memory followup (2026-10-29, Codex session19)
+
+At revision `26287caf`, two active cold-memory passages still contradict this
+resolution: validation-methodology §1 calls the margin "DSR — value form" and
+says DSR is reported as a value rather than a probability; research-papers'
+Bailey & López de Prado (2014) summary says QuantForge stores the margin
+"instead" of probability DSR. The former document's later ADR-054 paragraph
+already states the distinction correctly.
+
+Current `Trial.deflated_sharpe_probability` is nullable, finite and bounded in
+[0,1]. `whole_search_deflated_sharpe_probabilities` uses the finalist's return
+moments and deannualizes both observed Sharpe and candidate dispersion. Both
+search producers retain its result beside the margin. Missing moments or refused
+PSR arithmetic yield `None`, so a trial need not carry a measured probability.
+The gate still compares `report.deflated_sharpe > config.dsr_min`.
+
+Correct the two cold-memory descriptions and label the local subtraction formula
+as a margin. This is a reporting followup to the resolved finding, with no new
+runtime or architecture decision. Preserve source code, tests, formulas,
+thresholds, historical ADRs, generated records and frozen calibration evidence.
+Existing synthetic PSR/accounting regressions and the foreground full gate verify
+the unchanged implementation; execution and publication receipts are retained
+in the session ledger. No new calibration or threshold authorization follows.

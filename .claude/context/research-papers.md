@@ -417,8 +417,10 @@ SSRN: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2326253
 SSRN: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551
 - The paper's DSR is a **probability**: PSR evaluated against the expected maximum Sharpe across
   trials. It incorporates the number and variance of trials plus the selected strategy's sample
-  length, skewness, and kurtosis. QuantForge currently stores a value-form selection-adjusted
-  Sharpe margin instead; FINDING-007 records that source mismatch. The local invariant
+  length, skewness, and kurtosis. Under ADR-054, QuantForge records this probability beside
+  the selection-adjusted Sharpe margin where return moments and PSR arithmetic permit;
+  absent or refused evidence remains unmeasured (`None`). FINDING-007 records the historical
+  source mismatch and its resolution. The local invariant
   `margin <= observed Sharpe` is not an invariant of the paper's probability statistic.
 
 **Efron (1979)** — "Bootstrap Methods: Another Look at the Jackknife".
