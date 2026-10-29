@@ -53,6 +53,12 @@ def _ranked(
     return percentile_rank(current, series)
 
 
+def _finite_operand(value: float, label: str) -> float:
+    if not math.isfinite(value):
+        raise ValueError(f"{label} operand must be finite for valuation multiples")
+    return value
+
+
 def compute_multiples(history: FundamentalsHistory, price: float) -> MultiplesResult:
     """Current P/E and P/S for ``price`` vs the latest filing, each ranked against own history."""
     latest = history.years[-1]
@@ -62,14 +68,17 @@ def compute_multiples(history: FundamentalsHistory, price: float) -> MultiplesRe
     pe_ratio: float | None = None
     if latest.eps is None:
         flags.append("EPS unavailable — P/E not computed")
-    elif latest.eps <= 0:
+    elif _finite_operand(latest.eps, "current P/E EPS") <= 0:
         flags.append("non-positive EPS — P/E not meaningful")
     else:
-        pe_ratio = price / latest.eps
+        pe_ratio = _finite_operand(price, "current P/E price") / latest.eps
     pe_hist = [
         y.price / y.eps
         for y in history.years
-        if y.price is not None and y.price > 0 and y.eps is not None and y.eps > 0
+        if y.price is not None
+        and _finite_operand(y.price, "historical P/E price") > 0
+        and y.eps is not None
+        and _finite_operand(y.eps, "historical P/E EPS") > 0
     ]
     pe_percentile = _ranked(pe_ratio, pe_hist, "P/E", flags)
 
@@ -77,18 +86,22 @@ def compute_multiples(history: FundamentalsHistory, price: float) -> MultiplesRe
     ps_ratio: float | None = None
     if latest.shares_diluted is None:
         flags.append("shares outstanding unavailable — P/S not computed")
-    elif latest.revenue <= 0:
+    elif _finite_operand(latest.revenue, "current P/S revenue") <= 0:
         flags.append("non-positive revenue — P/S not meaningful")
     else:
-        ps_ratio = price * latest.shares_diluted / latest.revenue
+        ps_ratio = (
+            _finite_operand(price, "current P/S price")
+            * _finite_operand(latest.shares_diluted, "current P/S shares")
+            / latest.revenue
+        )
     ps_hist = [
         y.price * y.shares_diluted / y.revenue
         for y in history.years
         if y.price is not None
-        and y.price > 0
+        and _finite_operand(y.price, "historical P/S price") > 0
         and y.shares_diluted is not None
-        and y.shares_diluted > 0
-        and y.revenue > 0
+        and _finite_operand(y.shares_diluted, "historical P/S shares") > 0
+        and _finite_operand(y.revenue, "historical P/S revenue") > 0
     ]
     ps_percentile = _ranked(ps_ratio, ps_hist, "P/S", flags)
 

@@ -75,7 +75,7 @@ def test_earlier_multiple_refusal_precedes_invalid_source() -> None:
     h = _three_year()
     latest = h.years[-1].model_copy(update={"eps": float("nan")})
     h = h.model_copy(update={"years": (*h.years[:-1], latest), "source": None})
-    with pytest.raises(ValueError, match="current P/E must be finite"):
+    with pytest.raises(ValueError, match="current P/E EPS operand must be finite"):
         score_valuation(h, 55.0)
 
 

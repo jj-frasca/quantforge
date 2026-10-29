@@ -1508,3 +1508,17 @@ Provider scoring stays outside acquisition recovery. This supersedes the prior
 new-producer source-default caveat only; labels do not authenticate sources or
 certify fact/period/PIT, price or code provenance. No numeric, schema/default,
 threshold, fingerprint, v14, generated-history or cohort change occurs.
+
+## Consumed valuation multiple operand validity (ADR-401 / FINDING-337)
+
+compute_multiples checks nonfinite operands at their existing first numeric use,
+returning finite originals without projection. P/E EPS/price and historical
+price/EPS, then P/S revenue/price/shares and historical price/shares/revenue
+retain branch/traversal order. None checks alone do not consume numbers; dormant
+fields remain untouched. NaN/infinity in reached eligibility comparisons now
+refuse by named plain ValueError rather than changing the ranking population.
+Current P/S revenue precedes price then shares; finite nonpositive current shares
+stay valid. Existing computed-result guards, finite expressions/flags/counts/
+ranks, provider/hunt error handling and quality-before-valuation stay. No shared
+schema/type policy, recovery, source/PIT truth, precision, historical/generated
+repair, threshold, fingerprint, v14 or cohort change is adopted.

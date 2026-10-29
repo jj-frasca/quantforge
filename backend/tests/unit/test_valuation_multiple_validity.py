@@ -148,12 +148,13 @@ def test_finite_missing_thin_ties_and_flags_retain_native_behavior(
 
 
 @pytest.mark.parametrize("metric", ["P/E", "P/S"])
-def test_ineligible_rows_remain_excluded_without_arithmetic(metric: str) -> None:
+def test_nonfinite_eligibility_operands_refuse_before_exclusion(metric: str) -> None:
     h = _bad_history(metric)
     field = "eps" if metric == "P/E" else "shares_diluted"
     h = _history([y.model_copy(update={field: -math.inf}) for y in h.years[:2]] + [h.years[-1]])
-    result = compute_multiples(h, 10.0)
-    assert getattr(result, "pe_history_n" if metric == "P/E" else "ps_history_n") == 0
+    label = "historical P/E EPS" if metric == "P/E" else "historical P/S shares"
+    with pytest.raises(ValueError, match=re.escape(label + " operand must be finite")):
+        compute_multiples(h, 10.0)
 
 
 @given(
