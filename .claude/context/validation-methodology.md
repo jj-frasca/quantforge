@@ -43,7 +43,9 @@ that probability, and its `> 0` gate asks whether observed Sharpe clears the mul
 **Never call the margin the Deflated Sharpe Ratio.** Both statistics now exist:
 
 - `probabilistic_sharpe_ratio(observed_sr, benchmark_sr, n_returns, skew, kurtosis)` — Eq. 1, with
-  **RAW** kurtosis (a Normal series is 3.0, which reduces the denominator to `1/sqrt(n-1)`). pandas
+  **RAW** kurtosis. Normal returns have skew 0 and raw kurtosis 3, giving standard error
+  `sqrt((1+observed_sr**2/2)/(n_returns-1))`; only observed_sr=0 reduces it to
+  `1/sqrt(n_returns-1)` (FINDING-338). pandas
   reports EXCESS kurtosis; `return_moments()` in `backtesting/metrics.py` does the conversion and is
   the only thing that should be feeding this function.
 - `deflated_sharpe_probability(...)` — the paper's Eq. 2: PSR against `expected_max_sharpe`.

@@ -115,8 +115,9 @@ def probabilistic_sharpe_ratio(
 ) -> float:
     """P(true Sharpe > benchmark) for an estimate from `n_returns` non-Normal returns.
 
-    Bailey & Lopez de Prado (2014) Eq. 1. `kurtosis` is RAW, not excess: a Normal series is 3.0 and
-    reduces the denominator to the familiar `1/sqrt(n-1)` standardization. All three arguments are
+    Bailey & Lopez de Prado (2014) Eq. 1. `kurtosis` is RAW, not excess. Normal returns have skew 0
+    and raw kurtosis 3, giving SE `sqrt((1 + observed_sr**2/2)/(n_returns-1))`; only observed_sr=0
+    reduces it to `1/sqrt(n_returns-1)` (FINDING-338). All three arguments are
     per-period on the same scale as `observed_sr` — annualizing one and not the others silently
     rescales the answer.
 
