@@ -52,6 +52,15 @@ export type ForwardScore = z.infer<typeof forwardScoreSchema>
 // Graduates view (backend/app/api/v1/graduates.py): the research-pool experiments that cleared the
 // gate, best-first. A projection of the leaderboard restricted to graduates (no `graduated` field —
 // every row is, by construction). We validate only what the panel reads.
+// ADR-403: recorded evidence only; financial constraints belong to the producer.
+const recordedDcfSettingsSchema = z.strictObject({
+  discount_rate: z.number().finite(),
+  terminal_growth: z.number().finite(),
+  min_growth: z.number().finite(),
+  max_growth: z.number().finite(),
+  projection_years: z.string().regex(/^(?:0|-?[1-9][0-9]*)$/),
+})
+
 export const graduateRowSchema = z.object({
   symbol: z.string(),
   strategy_name: z.string(),
@@ -60,6 +69,7 @@ export const graduateRowSchema = z.object({
   survives_universe_deflation: z.boolean().nullable().optional(),
   // ADR-023: null when value was off or the name is unscorable (e.g. an ETF with no 10-K).
   undervaluation_score: z.number().nullable().optional(),
+  dcf_assumptions: recordedDcfSettingsSchema.nullable().optional(),
 })
 
 export type GraduateRow = z.infer<typeof graduateRowSchema>

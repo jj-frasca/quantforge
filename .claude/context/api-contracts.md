@@ -654,3 +654,23 @@ positive-infinite MinTRL requirement. This is a wire/schema representation chang
 null is not substituted or repaired. Existing Python float readers accept the tag;
 external consumers must handle it. Current frontend calibration schemas omit/strip
 these nested verdict fields. Endpoints, thresholds and displayed controls stay.
+
+## Recorded graduate DCF settings (ADR-403 / FINDING-325)
+
+GET /graduates adds optional None-omitted dcf_assumptions, sourced from the same
+experiment that supplied the ranked valuation. A present frozen strict finite
+view has discount_rate, terminal_growth, min_growth, max_growth as floats and
+projection_years as canonical signed decimal TEXT (0 or optionally negative
+nonzero digits). Preserve admitted integer precision without float/JS Number.
+Legacy missing/null means unknown, never default settings. The internal
+LeaderboardRow carrier is excluded from serialization/public serialization
+schema; /leaderboard wire shape and all winner/tie/order policies stay.
+The graduate panel retains scalar and native collapsed Recorded DCF settings
+disclosure, even for scalar null, or explicitly says DCF settings not recorded.
+Zod rejects malformed present metadata; no fallback/inference/recompute or
+financial shadow validators. Rate formatting consumes original finite values
+without multiplication overflow; horizon text is rendered without conversion.
+Recorded bounds are not actual growth used; settings alone do not reproduce or
+validate the score or determine graduation. Other views/records, source/PIT,
+price/code and old-writer preservation remain separate. No generated data,
+threshold, fingerprint, v14 or cohort changes.

@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.research.lab.experiment import PartitionedExperimentStore
 from app.research.lab.universe import rank_experiments
@@ -15,6 +15,18 @@ _DATA = Path(__file__).resolve().parents[3].parent / "data"
 def get_pool_path() -> Path:
     """Path to the research pool directory — one JSON per symbol, ADR-032 (overridable in tests)."""
     return _DATA / "research_pool"
+
+
+class DcfSettingsView(BaseModel):
+    """Recorded settings; decimal horizon text preserves the admitted integer value."""
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid", allow_inf_nan=False)
+
+    discount_rate: float
+    terminal_growth: float
+    min_growth: float
+    max_growth: float
+    projection_years: str = Field(pattern=r"^(?:0|-?[1-9][0-9]*)$")
 
 
 class GraduateRow(BaseModel):
@@ -30,6 +42,9 @@ class GraduateRow(BaseModel):
     holdout_sharpe: float | None = None
     survives_universe_deflation: bool | None = None
     undervaluation_score: float | None = None
+    dcf_assumptions: DcfSettingsView | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
 
 # Sync + read-only: reranks the committed pool and keeps only its graduates (no hunt, no DB).
@@ -46,6 +61,17 @@ def graduates(pool_path: Annotated[Path, Depends(get_pool_path)]) -> list[Gradua
             holdout_sharpe=row.holdout_sharpe,
             survives_universe_deflation=row.survives_universe_deflation,
             undervaluation_score=row.undervaluation_score,
+            dcf_assumptions=(
+                DcfSettingsView(
+                    discount_rate=row.dcf_assumptions.discount_rate,
+                    terminal_growth=row.dcf_assumptions.terminal_growth,
+                    min_growth=row.dcf_assumptions.min_growth,
+                    max_growth=row.dcf_assumptions.max_growth,
+                    projection_years=str(row.dcf_assumptions.projection_years),
+                )
+                if row.dcf_assumptions is not None
+                else None
+            ),
         )
         for row in rows
         if row.graduated

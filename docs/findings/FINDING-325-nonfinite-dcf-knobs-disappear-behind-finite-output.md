@@ -123,3 +123,27 @@ distinguished by the new metadata. The assertion retains its complete exact
 old-field comparison and numerical oracle, while explicitly binding each result
 to its own settings. No production change, tolerance or skipped test followed;
 a fresh full gate is required after that assertion update.
+
+## Graduate disclosure follow-up (ADR-403, 2026-10-29)
+
+After ADR-402 exact CI, the read-only graduate API/UI still drops retained
+settings. ADR-403 adopts a same-winning-row projection and explicit unknown
+legacy state, with decimal-text horizons preserving the admitted integer
+serialization domain. This is a follow-up to the known disclosure gap, not a
+new numerical bug or incidence measurement. The graduate panel exposes recorded
+knobs without claiming full replay, source/PIT/code truth or graduation causality.
+Other records/views and historical absent settings remain separate. Contracts
+and both-stack TDD precede implementation.
+
+The inherited backend precode receipt records47 expected failures and1 legacy
+control before production edits; all48 new tests now pass. Frontend precode
+receipts record30 failures, then separate tiny-rate1 and extra-field2 failures
+before their respective implementations. Final independent research review
+approved158 synthetic tests, data approved101 plus7 missing/extra/frozen controls
+and explicit-null omission, and frontend approved246 (217 focused plus29 adjacent)
+with types/lint green. Both backend reviewers independently replayed the frozen
+baseline:3303 generated rows and raw hashes,607 leaderboard claims,41 graduate
+payloads outside the addition, public schemas and scoped whole-module AST remain
+exact. No generated evidence was authored. Full-gate/publication receipts remain
+in the session ledger; these controls establish no historical settings or score
+reconstruction beyond the stated disclosure contract.

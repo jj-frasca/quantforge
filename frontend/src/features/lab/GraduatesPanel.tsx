@@ -7,6 +7,30 @@ const fmtSharpe = (value: number | null | undefined): string =>
 const fmtScore = (value: number | null | undefined): string =>
   value === null || value === undefined ? '—' : `${(value * 100).toFixed(0)}%`
 
+const formatRecordedRate = new Intl.NumberFormat('en-US', {
+  style: 'percent', maximumSignificantDigits: 6,
+})
+
+function RecordedDcfSettings({ settings }: { settings: GraduateRow['dcf_assumptions'] }) {
+  if (settings === null || settings === undefined) {
+    return <p className="dcf-settings-unknown">DCF settings not recorded</p>
+  }
+  return (
+    <details className="recorded-dcf-settings">
+      <summary>Recorded DCF settings</summary>
+      <dl>
+        <dt>Discount rate</dt><dd>{formatRecordedRate.format(settings.discount_rate)}</dd>
+        <dt>Terminal growth</dt><dd>{formatRecordedRate.format(settings.terminal_growth)}</dd>
+        <dt>Minimum growth bound</dt><dd>{formatRecordedRate.format(settings.min_growth)}</dd>
+        <dt>Maximum growth bound</dt><dd>{formatRecordedRate.format(settings.max_growth)}</dd>
+        <dt>Projection years</dt><dd>{settings.projection_years}</dd>
+      </dl>
+      <p>Recorded settings alone do not reproduce or validate the score. Settings may not have
+        affected an unsuccessful DCF.</p>
+    </details>
+  )
+}
+
 // Universe-deflation verdict (ADR-018) is the honest caveat on a graduate: does its holdout Sharpe
 // clear the best-of-N-under-the-null bar, or is it plausibly just cross-symbol selection luck?
 function deflationLabel(row: GraduateRow): string {
@@ -80,7 +104,12 @@ function GraduatesTable({ rows }: { rows: GraduateRow[] }) {
                     {deflationLabel(row)}
                   </span>
                 </td>
-                <td>{fmtScore(row.undervaluation_score)}</td>
+                <td>
+                  <div className="graduate-valuation">
+                    <span>{fmtScore(row.undervaluation_score)}</span>
+                    <RecordedDcfSettings settings={row.dcf_assumptions} />
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

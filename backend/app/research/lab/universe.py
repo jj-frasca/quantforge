@@ -2,7 +2,7 @@ import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.data.fundamentals import FundamentalCriteria, FundamentalSnapshot
 from app.research.backtesting.manifest import ExperimentManifest, compute_parameter_hash
@@ -13,6 +13,7 @@ from app.research.lab.gate import GateConfig
 from app.research.lab.quality_filter import QualityGateConfig, QualityProvider, screen_quality
 from app.research.lab.search import run_search
 from app.research.lab.value_filter import ValueGateConfig, ValueProvider, screen_value
+from app.research.valuation.intrinsic_value import DcfAssumptions
 
 _TRADING_DAYS = 252
 
@@ -51,6 +52,7 @@ class LeaderboardRow(BaseModel):
     # ADR-023: the cited composite undervaluation score (0-1, cheap = high) recorded at hunt time.
     # None when value was off or the name is unscorable (e.g. an ETF with no 10-K).
     undervaluation_score: float | None = None
+    dcf_assumptions: DcfAssumptions | None = Field(default=None, exclude=True)
 
 
 def expected_max_sharpe_under_null(n_symbols: int, holdout_years: float) -> float:
@@ -235,6 +237,11 @@ def rank_experiments(experiments: list[Experiment]) -> list[LeaderboardRow]:
             survives_universe_deflation=survives,
             undervaluation_score=(
                 exp.undervaluation_score.score if exp.undervaluation_score else None
+            ),
+            dcf_assumptions=(
+                exp.undervaluation_score.dcf_assumptions
+                if exp.undervaluation_score is not None
+                else None
             ),
         )
         current = best_by_symbol.get(exp.symbol)

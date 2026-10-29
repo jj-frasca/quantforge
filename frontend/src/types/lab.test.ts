@@ -612,3 +612,67 @@ test('PCV count integrity concerns parsed JavaScript values, not original JSON n
   // Zod boundary cannot recover or certify the token's original spelling/integrality.
   expect(crossSectionalResponseSchema.parse(JSON.parse(raw))).toEqual(pcvView())
 })
+
+const recordedDcfSettings = {
+  discount_rate: 0.1,
+  terminal_growth: 0.025,
+  min_growth: 0,
+  max_growth: 0.12,
+  projection_years: '5',
+}
+const graduateWithSettings = {
+  symbol: 'DCF', strategy_name: 'sma', deflated_sharpe: 0.3,
+  dcf_assumptions: recordedDcfSettings,
+}
+
+test('graduatesSchema retains complete recorded DCF settings without financial restrictions', () => {
+  const settings = {
+    discount_rate: -Number.MAX_VALUE,
+    terminal_growth: Number.MAX_VALUE,
+    min_growth: 0.7,
+    max_growth: -0.4,
+    projection_years: '-90071992547409931234567890',
+  }
+  expect(graduatesSchema.parse([{ ...graduateWithSettings, dcf_assumptions: settings }])[0])
+    .toHaveProperty('dcf_assumptions', settings)
+})
+
+test.each(['0', '-1', '90071992547409931234567890'])('graduatesSchema retains exact canonical horizon %s', (projection_years) => {
+  expect(graduatesSchema.parse([{
+    ...graduateWithSettings,
+    dcf_assumptions: { ...recordedDcfSettings, projection_years },
+  }])[0]).toHaveProperty('dcf_assumptions.projection_years', projection_years)
+})
+
+test.each([undefined, null])('graduatesSchema accepts unknown DCF settings %s', (dcf_assumptions) => {
+  expect(graduatesSchema.parse([{ ...graduateWithSettings, dcf_assumptions }])[0].symbol).toBe('DCF')
+})
+
+test.each([
+  '+5', '-0', '05', '-05', '5.0', '5e0', ' 5', '5 ', '',
+  '5\n', '5\r', '5\u2028', '5\u2029', 5,
+])('graduatesSchema refuses noncanonical horizon %s', (projection_years) => {
+  expect(graduatesSchema.safeParse([{
+    ...graduateWithSettings,
+    dcf_assumptions: { ...recordedDcfSettings, projection_years },
+  }]).success).toBe(false)
+})
+
+test.each(['discount_rate', 'terminal_growth', 'min_growth', 'max_growth'])('graduatesSchema refuses malformed recorded %s', (field) => {
+  for (const invalid of [Infinity, -Infinity, NaN, null, undefined, '0.1']) {
+    expect(graduatesSchema.safeParse([{
+      ...graduateWithSettings,
+      dcf_assumptions: { ...recordedDcfSettings, [field]: invalid },
+    }]).success).toBe(false)
+  }
+})
+
+test('graduatesSchema refuses undeclared recorded settings while retaining additive graduate compatibility', () => {
+  expect(graduatesSchema.safeParse([{
+    ...graduateWithSettings,
+    dcf_assumptions: { ...recordedDcfSettings, guessed_growth: 0.1 },
+  }]).success).toBe(false)
+  expect(graduatesSchema.safeParse([{
+    ...graduateWithSettings, future_graduate_field: 'compatible',
+  }]).success).toBe(true)
+})

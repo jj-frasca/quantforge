@@ -1538,3 +1538,13 @@ attribution, not score binding/full replay/source/PIT/code certification.
 FundamentalRecord, projected API/UI disclosure and old-writer retention remain
 separate; never infer historical defaults or rewrite generated data. No numeric
 formula, threshold, fingerprint, v14 or cohort change is adopted.
+
+## Graduate settings disclosure identity (ADR-403 / FINDING-325)
+
+rank_experiments carries the same winning experiment's recorded DCF settings
+inside an excluded transient LeaderboardRow field; public leaderboard JSON and
+serialization schema stay. The graduate projection discloses exact stored
+floats and decimal-text horizons admitted by ADR-402, including settings on
+uncomputable scalar results, without inference for legacy absence. Winner/tie/
+ordering, source graphs, scores and gates stay. No whole-graph rank validation,
+setting-to-score proof, full replay, source/PIT/code claim or record migration.
