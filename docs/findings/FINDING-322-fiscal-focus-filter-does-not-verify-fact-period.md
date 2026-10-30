@@ -1,8 +1,8 @@
 # FINDING-322: FY/form filtering does not verify annual fact periods
 
-- **Status:** Open — reporting clarified; production period policy unmeasured
+- **Status:** Open — full-payload historical exposure confirmed; runtime period policy unmeasured
 - **Date:** 2026-10-26, Codex autonomous session 3 (ISO2026-W44)
-- **Severity:** Potential methodology risk; production incidence unestablished
+- **Severity:** Confirmed historical-period selection defect on one frozen payload; population/run incidence unmeasured
 - **Affected:** _annual_facts, parse_company_facts and parse_company_facts_history
 - **Related:** ADR-017/022/029; distinct from ADR-116/117's year-adjacency guards
 
@@ -119,3 +119,52 @@ Addendum verification: independent data and research reviews approved the bounde
 claims. Foreground make check-all passed again: 15,253 backend tests at 97.43%
 coverage, 746 frontend tests at 97.88% statement coverage, and all lint, formatting
 and type checks. Runtime source is unchanged by this addendum.
+
+
+## Session 21 addendum: full CompanyFacts payload and downstream exposure
+
+On 2026-10-30 UTC, one ordinary, keyless official SEC request using the unchanged
+production User-Agent returned HTTP 200 and 3,789,099 raw bytes. The complete body
+is durably frozen in [the attributed gzip fixture](../evidence/FINDING-322/README.md),
+with raw SHA-256
+`73a86c6aedc31f77cac2ea4df5f80f0b3bd7e6eb58bb4e01444fbedf3afb9c43`.
+Unlike session5's reader artifact, this is the full acquired CompanyFacts response,
+including all 503 us-gaap concepts and original array order. Retrieval metadata is
+parent-recorded; both reviewers independently verified bytes, identity and parser
+results without another request. No freshness or issuer-truth certification follows.
+
+At revision `3018dfd0`, unchanged production tag precedence selects
+RevenueFromContractWithCustomerExcludingAssessedTax before Revenues. The history
+parser returns seven FY2019–2025 rows. FY2019 revenue is 64.040 billion USD for
+2019-06-30 through 2019-09-28; FY2020 is 64.698 billion for 2020-06-28 through
+2020-09-26: 91 days inclusive each. Selected net income and diluted EPS also use
+those quarters (13.686/12.673 billion and 3.03/0.73). This establishes actual
+full-payload historical parser exposure without projection or input reordering.
+
+The same respective filed/accession/end groups include 364-day annual revenue
+260.174/274.515 billion, net income 55.256/57.411 billion and EPS 11.89/3.28.
+The annual rows lack frame; FY2019's selected quarter lacks it too. Neither frame
+presence nor reported-fy adjacency supplies a valid general repair. Latest FY2025
+snapshot revenue is annual (416.161 billion), with annual FY2024/2025 growth
+0.0642551178283274. **This payload does not demonstrate a wrong latest snapshot.**
+
+Parent and independent research also supplied explicit synthetic constant prices
+of 10 to the actual parsed history and current valuation. Under those controlled
+prices, substituting only the six literal same-filing annual scalars above changes
+both own-history percentiles from 0 to 1/7 and the composite score from
+0.9717424903153106 to 0.8765043950772154. Both results have seven observations
+and no flags. All other valuation fields and the actual FCF-first DCF are exact
+unchanged: growth 0.08998622735214545 and intrinsic value 117.96274231268941.
+This is a constructed sensitivity intervention on real financial facts with
+synthetic prices, not an actual-market score, production experiment, historical
+backtest, split-adjustment claim, false admission, graduate or trading effect.
+Do not infer corruption of the actual FCF-first growth path from this witness.
+
+The former full-payload acquisition/tag-precedence/history-exposure evidence gap
+is therefore resolved for this capture. Runtime policy, population/run incidence,
+other concept periods, comparative/instant balances, fiscal transitions,
+restatements, source authenticity and PIT remain open. Preserve the frozen bytes;
+never refresh them or reconstruct historical generated results. This addendum
+changes documentation/evidence only, with no parser, threshold, v14, generated
+record or frozen cohort change. Independent data and research reviews approve the
+bounded claims; full-gate and publication/CI receipts live in the session ledger.

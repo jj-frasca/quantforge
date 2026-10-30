@@ -402,12 +402,16 @@ The shared selector uses FY/form metadata and latest filed row per reported fy;
 input order resolves equal-filed collisions. It does not verify duration or
 observation-period agreement. Synthetic mixed-period rows can change revenue and
 screen verdict solely by row order, or bind an older end date to a newer fy.
-Initial evidence used accepted synthetic shapes. F322 session5 adds actual SEC
-CompanyConcept rows: FY2018 metadata spans quarter/comparative periods, and the
-isolated selector chooses a 91-day revenue row. Full CompanyFacts acquisition,
-production tag precedence and downstream incidence remain unverified. The frozen
-reader reconstruction is not raw HTTP evidence; see F322 for provenance and limits. Reporting
-clarification changes no parser behavior. Runtime policy needs attributable frozen
+Initial evidence used accepted synthetic shapes. Session5 added actual SEC
+CompanyConcept rows through a reader artifact. Session21 freezes a complete raw
+Apple CompanyFacts response: production first-tag precedence selects 91-day
+FY2019/2020 revenue/EPS/net-income into history; latest FY2025 snapshot revenue
+is annual. This resolves full-payload/tag/history exposure for one capture, not
+population/run incidence. Under explicit synthetic prices of 10, six literal same-filing
+annual substitutions change both own-history percentiles from 0 to 1/7 and the
+composite score, while actual FCF-first growth/DCF stay exact. This is no actual-market,
+admission or split-adjustment claim. Full bytes/attribution live in
+`docs/evidence/FINDING-322/`; preserve them. Reporting changes no parser behavior. Runtime policy needs attributable frozen
 vendor fixtures and a separate ADR/TDD, including instant balances, non-December
 fiscal years and restatement ambiguity. ADR-116/117 adjacency is not period proof.
 
