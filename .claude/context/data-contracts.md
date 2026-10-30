@@ -680,3 +680,15 @@ cannot select a proxy, and valid FCF leaves inactive net income alone. Historica
 growth policy, native finite arithmetic, schemas, assumptions and exception
 boundaries stay. No source/PIT, derived-precision, incidence or admission claim,
 threshold, v14, generated-data or frozen-cohort change is made.
+
+## Final DCF share-division zero loss (ADR-409 / FINDING-344)
+
+After unchanged native equity accumulation, compute per-share division once and
+refuse plain ValueError when nonzero equity produces either signed zero quotient.
+Genuine zero equity and every nonzero native quotient, including subnormals,
+retain prior behavior. Early base/share returns, raw guards, chronology/growth,
+settings, schemas and earlier arithmetic/errors stay. No None fallback/recovery;
+existing record/provider propagation and per-symbol hunt error policy remain,
+while sweep scoring can fail before output. Earlier arithmetic zero loss,
+nonzero rounding and source/PIT truth are separate. No threshold, fingerprint,
+v14, generated record, frozen cohort or historical reconstruction change.

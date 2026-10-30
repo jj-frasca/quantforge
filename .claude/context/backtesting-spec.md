@@ -1622,3 +1622,16 @@ cannot select a proxy, and valid FCF leaves inactive net income alone. Historica
 growth policy, native finite arithmetic, schemas, assumptions and exception
 boundaries stay. No source/PIT, derived-precision, incidence or admission claim,
 threshold, v14, generated-data or frozen-cohort change is made.
+
+## Final DCF share-division zero loss (ADR-409 / FINDING-344)
+
+The final native quotient is evaluated once. Nonzero accumulated equity yielding
+signed zero per share raises ValueError before result/composite construction;
+it cannot become missing margin of safety and a favorable available-only blend.
+True zero equity and nonzero/subnormal quotients preserve native results. This
+adds no recovery, shared arithmetic or model policy, and leaves earlier raw guards,
+early returns, growth/settings and native failures intact. Earlier accumulator
+zero loss and nonzero rounding remain outside; no exact-real or source/PIT claim.
+Refusal propagates through records/providers, becomes a hunt error before search,
+and can fail a sweep shard before output. No threshold, fingerprint, v14,
+generated record, frozen cohort or historical repair changes.

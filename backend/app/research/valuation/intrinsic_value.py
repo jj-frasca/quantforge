@@ -147,8 +147,12 @@ def dcf_intrinsic_value(
     terminal_value = fcf_t * (1 + gt) / (r - gt)
     equity_value += terminal_value / (1 + r) ** n
 
+    value_per_share = equity_value / shares
+    if equity_value != 0.0 and value_per_share == 0.0:
+        raise ValueError("intrinsic_value_per_share must not underflow to zero for DCF")
+
     return IntrinsicValueResult(
-        intrinsic_value_per_share=equity_value / shares,
+        intrinsic_value_per_share=value_per_share,
         growth_rate_used=growth,
         fcf_base=base,
         fcf_is_net_income_proxy=is_proxy,
