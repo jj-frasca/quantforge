@@ -1670,3 +1670,21 @@ No precision recovery, setting bounds or consumer fallback is introduced; custom
 provider errors become hunt failures before downstream acquisition/search, screen
 off or on. No default-record/vendor incidence, source/PIT truth, threshold,
 fingerprint, v14, generated record or frozen-cohort change is established.
+
+
+## Final terminal DCF discount zero loss (ADR-412 / FINDING-347)
+
+The final native terminal discount factor and quotient are evaluated once.
+Nonzero terminal value yielding signed zero discounted value with a finite
+factor refuses before accumulation, including loss with nonzero period PV.
+True zeros, nonzero/subnormal terminal quotients, infinite unchecked factors and
+ordinary no-loop horizons stay native. ADR-410's two original signed period-
+subnormal inputs now explicitly refuse lost terminal terms; separate genuine-
+zero-terminal controls preserve those signed period subnormals. Earlier guards
+and native power/division errors retain priority; new reached refusal may preempt
+later share/metadata errors. Earlier multiplication/projection/subtraction loss,
+cancellation, nonzero rounding and source/PIT truth remain separate. No recovery,
+setting bounds, thresholds or consumer fallback changes. Custom-provider errors
+become per-symbol hunt failures before downstream acquisition/search, screen on
+or off. No default-record/vendor incidence, fingerprint, v14, generated record
+or frozen-cohort change is established.

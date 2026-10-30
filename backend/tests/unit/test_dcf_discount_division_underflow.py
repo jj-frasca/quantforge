@@ -1,7 +1,6 @@
 """ADR-410: finite native period discounting cannot erase nonzero flow."""
 
 import math
-import sys
 from collections.abc import Callable
 from datetime import date
 from fractions import Fraction
@@ -137,13 +136,12 @@ def test_genuine_zero_projected_flow_preserves_native_zero(count: int, proxy: bo
 
 
 @pytest.mark.parametrize("negative", [False, True])
-def test_nonzero_subnormal_discounted_flow_retains_native_value(negative: bool) -> None:
-    value = dcf_intrinsic_value(
-        _history(), _settings(discount=1e23, negative=negative)
-    ).intrinsic_value_per_share
-    assert value is not None and 0 < abs(value) < sys.float_info.min
-    sign = -1.0 if negative else 1.0
-    assert value == sign * float.fromhex("0x0.0000000000002p-1022")
+def test_nonzero_subnormal_period_flow_refuses_lost_terminal_discount(negative: bool) -> None:
+    # ADR-412 retains these original inputs and refuses their lost terminal term.
+    with pytest.raises(
+        ValueError, match=r"^discounted_terminal_value must not underflow to zero for DCF$"
+    ):
+        dcf_intrinsic_value(_history(), _settings(discount=1e23, negative=negative))
 
 
 @pytest.mark.parametrize("horizon", [0, -1])
