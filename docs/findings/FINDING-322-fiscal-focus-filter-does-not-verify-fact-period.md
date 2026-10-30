@@ -2,7 +2,7 @@
 
 - **Status:** Open — full-payload historical exposure confirmed; runtime period policy unmeasured
 - **Date:** 2026-10-26, Codex autonomous session 3 (ISO2026-W44)
-- **Severity:** Confirmed historical-period selection defect on one frozen payload; population/run incidence unmeasured
+- **Severity:** Confirmed historical-period selection defect on two chosen frozen payloads; population/run incidence unmeasured
 - **Affected:** _annual_facts, parse_company_facts and parse_company_facts_history
 - **Related:** ADR-017/022/029; distinct from ADR-116/117's year-adjacency guards
 
@@ -168,3 +168,47 @@ never refresh them or reconstruct historical generated results. This addendum
 changes documentation/evidence only, with no parser, threshold, v14, generated
 record or frozen cohort change. Independent data and research reviews approve the
 bounded claims; full-gate and publication/CI receipts live in the session ledger.
+
+## Session 22 addendum: second filer, June fiscal year and leap-year duration
+
+One prospectively bounded ordinary keyless SEC CompanyFacts request on
+2026-10-30 returned HTTP 200 and 4,936,836 complete bytes for MICROSOFT CORPORATION,
+CIK 789019. Verified TLS, the unchanged production User-Agent, no automatic
+redirects and no retry were used. Raw SHA-256:
+`464cc12cc4796c90a6a0c709eb4920788aa7d4d5eee8b44f2d11d7d44804ae37`.
+The [second immutable full-response fixture](../evidence/FINDING-322/README-MSFT-20261030.md)
+retains all 562 us-gaap concepts and original array order. Transport metadata is
+parent-recorded; independent reviewers verify local bytes and parser/source claims
+without another request. The original Apple capture remains unchanged.
+
+At producing revision 078bfd4a, the unchanged first-priority modern revenue tag
+supplies nine FY2018–2026 history rows. Selected FY2018/2019/2020 revenue is
+30.085/33.717/38.033 billion USD; net income 8.873/13.187/11.202 billion and diluted
+EPS 1.14/1.71/1.46. All nine observations run April 1 through June 30 of the reported
+year, 91 inclusive days. Literal same-fy/fp/form/filed/accession/end annual
+alternatives exist in each respective concept array:
+
+| FY | Accession / filed | Annual start / end | Days inclusive | Revenue USD | Net income USD | Diluted EPS |
+|---|---|---|---:|---:|---:|---:|
+|2018|0001564590-18-019062 /2018-08-03|2017-07-01 /2018-06-30|365|110360000000|16571000000|2.13|
+|2019|0001564590-19-027952 /2019-08-01|2018-07-01 /2019-06-30|365|125843000000|39240000000|5.06|
+|2020|0001564590-20-034944 /2020-07-30|2019-07-01 /2020-06-30|366|143015000000|44281000000|5.76|
+
+Every annual alternative lacks frame; selected 2018/19 quarters also lack it,
+while 2020 selected quarters have CY2020Q2. Frame presence is not a repair.
+Latest FY2026 revenue 331.839 billion spans 2025-07-01 through 2026-06-30, 365 days;
+FY2025 revenue 281.724 billion is also annual. Native latest growth is exactly
+0.1778868679984666. Latest NI/EPS likewise span the annual period. This capture
+establishes no wrong latest snapshot.
+
+This strengthens source-grounded historical exposure across two chosen filers,
+including June fiscal years and 365/366-day alternatives alongside Apple's
+364-day alternatives. It does not estimate population/run incidence, calibrate
+any duration rule or justify a universal selector. No prices, new scores,
+financial-input substitutions, screen effects, historical experiments, PIT,
+split correctness, issuer/source truth, graduates or trading effects are asserted.
+Runtime duration/instant policy, comparative/restatement/transition handling and
+ambiguous ties still require separate ADR/TDD. No parser, generated record,
+threshold, v14, frozen cohort or historical output changes. Offline reproduction,
+raw/compressed hashes and acquisition attribution accompany the fixture; final
+review/full-gate/publication/CI receipts live in the session ledger.

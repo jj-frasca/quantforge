@@ -411,7 +411,12 @@ population/run incidence. Under explicit synthetic prices of 10, six literal sam
 annual substitutions change both own-history percentiles from 0 to 1/7 and the
 composite score, while actual FCF-first growth/DCF stay exact. This is no actual-market,
 admission or split-adjustment claim. Full bytes/attribution live in
-`docs/evidence/FINDING-322/`; preserve them. Reporting changes no parser behavior. Runtime policy needs attributable frozen
+`docs/evidence/FINDING-322/`; preserve them. Session22 adds a second frozen
+Microsoft payload: unchanged first-tag precedence selects FY2018–2020 revenue,
+net income and EPS quarters, with literal same-filing 365/366-day annual alternatives.
+Latest FY2026 values are annual. Two chosen captures give no population/run/PIT
+or current-error claim; no new prices, scores or financial substitutions are made.
+Reporting changes no parser behavior. Runtime policy needs attributable frozen
 vendor fixtures and a separate ADR/TDD, including instant balances, non-December
 fiscal years and restatement ambiguity. ADR-116/117 adjacency is not period proof.
 

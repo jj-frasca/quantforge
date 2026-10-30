@@ -86,3 +86,7 @@ is changed. FINDING-322 remains open for a separate ADR/TDD covering duration
 versus instant concepts, non-December/fiscal-transition calendars, comparative
 periods, restatements, ambiguous ties and source/PIT identity. One issuer is not
 population calibration. See the finding for the full limits and verification.
+
+A separately frozen [Microsoft full-response capture](README-MSFT-20261030.md)
+adds June fiscal years and 365/366-day annual alternatives. It does not refresh
+or replace this Apple capture or establish population incidence.
