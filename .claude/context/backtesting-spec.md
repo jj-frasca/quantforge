@@ -1587,3 +1587,15 @@ floats and decimal-text horizons admitted by ADR-402, including settings on
 uncomputable scalar results, without inference for legacy absence. Winner/tie/
 ordering, source graphs, scores and gates stay. No whole-graph rank validation,
 setting-to-score proof, full replay, source/PIT/code claim or record migration.
+
+## Consumed DCF share validity (ADR-407 / FINDING-342)
+
+dcf_intrinsic_value checks each present latest shares_diluted operand finite
+after existing missing/nonpositive base returns and before share eligibility.
+Nonfinite shares raise plain field/year-named ValueError for DCF; None and finite
+nonpositive shares retain their flagged returns. Historical shares and inactive
+fields remain untouched. Native finite arithmetic, growth, assumptions, schemas
+and consumer exceptions stay. This prevents infinity becoming zero or missingness;
+it does not certify raw base validity, derived precision, periods/PIT or source
+truth. No production incidence, admission effect, threshold, v14, generated-data
+or frozen-cohort change is established.

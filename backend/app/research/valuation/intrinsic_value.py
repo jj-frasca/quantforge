@@ -120,6 +120,10 @@ def dcf_intrinsic_value(
     if base <= 0:
         return _fail("non-positive base cash flow — DCF not meaningful", fcf_base=base)
     shares = latest.shares_diluted
+    if shares is not None and not math.isfinite(shares):
+        raise ValueError(
+            f"shares_diluted for fiscal year {latest.fiscal_year} must be finite for DCF"
+        )
     if shares is None or shares <= 0:
         return _fail("shares outstanding unavailable — cannot value per share", fcf_base=base)
 
