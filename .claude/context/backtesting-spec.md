@@ -1635,3 +1635,16 @@ zero loss and nonzero rounding remain outside; no exact-real or source/PIT claim
 Refusal propagates through records/providers, becomes a hunt error before search,
 and can fail a sweep shard before output. No threshold, fingerprint, v14,
 generated record, frozen cohort or historical repair changes.
+
+## Period DCF discount zero loss (ADR-410 / FINDING-345)
+
+The native period factor and quotient are evaluated once. Nonzero projected FCF
+dividing to either signed zero with a finite factor refuses before accumulation,
+so this loss cannot silently remove the DCF component. Genuine projected zeros,
+nonzero/subnormal quotients, infinite unchecked factors and no-loop horizons stay.
+Earlier power/division errors propagate, but a reached new loss refusal may preempt
+later native/metadata failures. Projection/terminal loss, cancellation, nonzero
+rounding and source/PIT truth remain separate; no precision recovery or setting
+bounds are introduced. Custom provider refusal becomes the existing hunt error
+before downstream acquisition/search; no default-record occurrence is claimed.
+No thresholds, fingerprints, v14, generated records or frozen cohorts change.

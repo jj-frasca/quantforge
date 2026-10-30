@@ -692,3 +692,16 @@ existing record/provider propagation and per-symbol hunt error policy remain,
 while sweep scoring can fail before output. Earlier arithmetic zero loss,
 nonzero rounding and source/PIT truth are separate. No threshold, fingerprint,
 v14, generated record, frozen cohort or historical reconstruction change.
+
+## Period DCF discount zero loss (ADR-410 / FINDING-345)
+
+Within each projection period, compute the native factor and discounted flow once.
+Nonzero projected flow yielding zero quotient with a finite factor raises a named
+period ValueError before accumulation. Genuine projected zeros and nonzero/
+subnormal quotients, unchecked infinite factors and no-loop horizons retain prior
+behavior. Native power/division errors before the guard remain; reached earlier
+loss refusal can preempt later errors. No recovery or new setting/schema bounds. Earlier projection
+zeros, terminal loss, cancellation and nonzero rounding remain separate. Custom
+provider errors propagate into per-symbol hunt failures before downstream acquisition;
+no default-record incidence is established. No threshold, fingerprint, v14,
+generated record, frozen cohort or historical repair changes.
