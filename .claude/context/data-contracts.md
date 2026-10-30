@@ -479,6 +479,19 @@ Finite comparisons/reasons/order, missingness, older rows, global schemas and hu
 error handling stay. No thresholds, accounting-v14, generated records or frozen
 evidence change; finite ratio precision and source-period/PIT truth remain separate.
 
+## Latest-year gross-profitability operands (ADR-405 / FINDING-340)
+
+gross_profitability keeps empty-history None, then requires present latest
+gross_profit followed by total_assets finite before shared division/None/zero
+shortcuts. Plain ValueError names the first invalid field and gross profitability;
+None cannot hide an invalid present peer. Finite native division, signed/zero/
+negative operands, older rows, global schemas and callers stay. Composite order
+remains Piotroski, GP, safety: single-year GP refusal can now precede safety errors;
+two-year Piotroski refusal still occurs first. No catch/fallback or recovery is added.
+Finite-derived ratio overflow/underflow/rounding and existing record output refusal
+remain separate from raw-input validity. No thresholds, search/gate/v14 identity,
+generated records or frozen evidence change; source-period/PIT truth stays separate.
+
 ## Active Piotroski input consumption (ADR-389 / FINDING-330)
 
 After the existing fewer-than-two-row zero return, piotroski_f_score preflights

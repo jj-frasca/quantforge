@@ -327,6 +327,12 @@ def gross_profitability(history: FundamentalsHistory) -> float | None:
     if not history.years:
         return None
     latest = history.years[-1]
+    for field, value in (
+        ("gross_profit", latest.gross_profit),
+        ("total_assets", latest.total_assets),
+    ):
+        if value is not None and not math.isfinite(value):
+            raise ValueError(f"{field} must be finite for gross profitability")
     return _ratio(latest.gross_profit, latest.total_assets)
 
 
