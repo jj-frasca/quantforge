@@ -657,3 +657,16 @@ and consumer exceptions stay. This prevents infinity becoming zero or missingnes
 it does not certify raw base validity, derived precision, periods/PIT or source
 truth. No production incidence, admission effect, threshold, v14, generated-data
 or frozen-cohort change is established.
+
+## Selected DCF base validity (ADR-408 / FINDING-343)
+
+After base/proxy selection and the no-base return, DCF requires the selected
+latest base finite before its nonpositive test. Plain field/year-named ValueError
+identifies free_cash_flow or net_income and DCF base. This intentionally replaces
+nonfinite-base early returns preserved by ADR-406/407; refusal now precedes
+shares, chronology and growth. Earlier caller quality/multiple refusals remain.
+None and finite nonpositive bases retain their returns; present invalid FCF
+cannot select a proxy, and valid FCF leaves inactive net income alone. Historical
+growth policy, native finite arithmetic, schemas, assumptions and exception
+boundaries stay. No source/PIT, derived-precision, incidence or admission claim,
+threshold, v14, generated-data or frozen-cohort change is made.

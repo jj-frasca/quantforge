@@ -53,11 +53,14 @@ def test_growth_refuses_attempted_nonfinite_observations(
 ) -> None:
     values = [100.0, 110.0, 120.0]
     values[position] = invalid
-    # DCF may return before estimation when its latest base is non-positive.
-    if field in ("free_cash_flow", "net_income") and position == 2 and invalid == -math.inf:
-        early = dcf_intrinsic_value(_history(field, values))
-        assert early.intrinsic_value_per_share is None
-        assert "non-positive base cash flow — DCF not meaningful" in early.flags
+    # ADR-408: selected latest base refuses before DCF reaches growth estimation.
+    # Still exercise the direct estimator's own raw-series contract separately.
+    if field in ("free_cash_flow", "net_income") and position == 2:
+        with pytest.raises(
+            ValueError,
+            match=rf"^{field} for fiscal year 2025 must be finite for DCF base$",
+        ):
+            dcf_intrinsic_value(_history(field, values))
         consume = estimate_growth
     with pytest.raises(
         ValueError,
@@ -76,14 +79,11 @@ def test_growth_refusal_reaches_finite_valuation_record_consumers(
 ) -> None:
     values = [100.0, 110.0, 120.0]
     values[position] = invalid
-    if position == 2 and invalid == -math.inf:
-        # Latest non-positive base is an intentional earlier DCF return.
-        values[2] = 120.0
-        position = 0
-        values[0] = invalid
+    # ADR-408 intentionally gives the selected latest base earlier precedence.
+    context = "DCF base" if position == 2 else "valuation growth"
     with pytest.raises(
         ValueError,
-        match=rf"^free_cash_flow for fiscal year {2023 + position} must be finite for valuation growth$",
+        match=rf"^free_cash_flow for fiscal year {2023 + position} must be finite for {context}$",
     ):
         consume(_history("free_cash_flow", values), 100.0)
 

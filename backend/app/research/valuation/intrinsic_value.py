@@ -117,6 +117,11 @@ def dcf_intrinsic_value(
 
     if base is None:
         return _fail("no free cash flow or net income to value", fcf_base=None)
+    if not math.isfinite(base):
+        field = "net_income" if is_proxy else "free_cash_flow"
+        raise ValueError(
+            f"{field} for fiscal year {latest.fiscal_year} must be finite for DCF base"
+        )
     if base <= 0:
         return _fail("non-positive base cash flow — DCF not meaningful", fcf_base=base)
     shares = latest.shares_diluted

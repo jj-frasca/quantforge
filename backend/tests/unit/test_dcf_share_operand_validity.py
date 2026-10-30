@@ -84,6 +84,13 @@ def test_dcf_missing_or_finite_nonpositive_shares_keep_flagged_return(
 @pytest.mark.parametrize("base", [None, -1.0, -0.0, 0.0, -math.inf])
 @pytest.mark.parametrize("shares", [math.nan, math.inf, -math.inf])
 def test_dcf_earlier_base_returns_do_not_consume_shares(base: float | None, shares: float) -> None:
+    # ADR-408 replaces the malformed-base return with an earlier base refusal.
+    if base == -math.inf:
+        with pytest.raises(
+            ValueError, match=r"^free_cash_flow for fiscal year 2024 must be finite for DCF base$"
+        ):
+            dcf_intrinsic_value(_history(shares, base=base))
+        return
     result = dcf_intrinsic_value(_history(shares, base=base))
     assert result.intrinsic_value_per_share is None
     assert result.fcf_base == base
