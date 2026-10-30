@@ -1363,6 +1363,19 @@ finite native formulas/ranges/thresholds and global Annual/history schemas stay.
 Older years, other fields/scorers, PIT/period claims and unchecked provenance are
 outside this consumer guard; no historical evidence is recovered.
 
+## Latest-year distress profitability inputs (ADR-404 / FINDING-339)
+
+financial_distress preserves its empty-history return and existing financial_safety
+evaluation first. After safety succeeds, present latest net_income and then
+operating_cash_flow must be finite before sign comparisons. The first invalid
+field raises plain ValueError naming financial distress; None cannot hide a
+different invalid present operand, even when a veto would otherwise be impossible.
+Safety source/finite-derived errors retain precedence. Provider consumer evaluation
+stays outside acquisition recovery, so refusal propagates without None fallback.
+Finite comparisons/reasons/order, missingness, older rows, global schemas and hunt
+error handling stay. No thresholds, accounting-v14, generated records or frozen
+evidence change; finite ratio precision and source-period/PIT truth remain separate.
+
 ## Intentional infinite MinTRL JSON (ADR-386 / FINDING-328)
 
 GateResult.required_track_record_years remains a nonnegative numeric requirement

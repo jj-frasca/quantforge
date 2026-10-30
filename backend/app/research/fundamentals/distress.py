@@ -10,6 +10,7 @@ OR illiquid). Negative equity ALONE is not distress — buyback-heavy blue chips
 negative book equity while thriving. Missing inputs never veto (an unscorable name graduates on
 technicals, exactly like the ADR-017 fundamentals fallback). Flags potential distress (rule 6)."""
 
+import math
 from collections.abc import Callable
 
 from pydantic import BaseModel, ConfigDict
@@ -39,6 +40,13 @@ def financial_distress(history: FundamentalsHistory) -> DistressScreen:
         return DistressScreen(distressed=False, reasons=[])
     latest = history.years[-1]
     safety = financial_safety(history)
+
+    for field, value in (
+        ("net_income", latest.net_income),
+        ("operating_cash_flow", latest.operating_cash_flow),
+    ):
+        if value is not None and not math.isfinite(value):
+            raise ValueError(f"{field} must be finite for financial distress")
 
     unprofitable = latest.net_income is not None and latest.net_income < 0
     burning_cash = latest.operating_cash_flow is not None and latest.operating_cash_flow < 0
