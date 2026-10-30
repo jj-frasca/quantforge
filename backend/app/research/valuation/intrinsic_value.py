@@ -148,7 +148,11 @@ def dcf_intrinsic_value(
         if fcf_t != 0.0 and discounted_fcf == 0.0 and math.isfinite(discount_factor):
             raise ValueError(f"discounted_cash_flow must not underflow to zero for DCF year {t}")
         equity_value += discounted_fcf
-    terminal_value = fcf_t * (1 + gt) / (r - gt)
+    terminal_cash_flow = fcf_t * (1 + gt)
+    terminal_denominator = r - gt
+    terminal_value = terminal_cash_flow / terminal_denominator
+    if terminal_cash_flow != 0.0 and terminal_value == 0.0 and math.isfinite(terminal_denominator):
+        raise ValueError("terminal_value must not underflow to zero for DCF")
     equity_value += terminal_value / (1 + r) ** n
 
     value_per_share = equity_value / shares

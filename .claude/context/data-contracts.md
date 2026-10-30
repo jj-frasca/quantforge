@@ -710,3 +710,20 @@ zeros, terminal loss, cancellation and nonzero rounding remain separate. Custom
 provider errors propagate into per-symbol hunt failures before downstream acquisition;
 no default-record incidence is established. No threshold, fingerprint, v14,
 generated record, frozen cohort or historical repair changes.
+
+
+## Terminal DCF quotient zero loss (ADR-411 / FINDING-346)
+
+The native terminal numerator and denominator are computed once before their
+unchanged division. A nonzero numerator yielding signed zero terminal value with
+a finite denominator refuses by named ValueError before final terminal discounting.
+This includes loss when period PV remains nonzero. True numerator zeros, nonzero/
+subnormal quotients, infinite native denominators and ordinary no-loop horizons
+retain native behavior. ADR-410's two terminal-only loss controls intentionally
+now refuse without removing their cases. Earlier errors propagate; reached new
+refusal may preempt later power/metadata errors. Earlier multiplication/projection
+loss, later terminal discount loss, cancellation and nonzero rounding stay separate.
+No precision recovery, setting bounds or consumer fallback is introduced; custom
+provider errors become hunt failures before downstream acquisition/search, screen
+off or on. No default-record/vendor incidence, source/PIT truth, threshold,
+fingerprint, v14, generated record or frozen-cohort change is established.

@@ -147,10 +147,10 @@ def test_nonzero_subnormal_discounted_flow_retains_native_value(negative: bool) 
 
 
 @pytest.mark.parametrize("horizon", [0, -1])
-def test_terminal_only_zero_loss_remains_outside_period_guard(horizon: int) -> None:
-    result = dcf_intrinsic_value(_history(), _settings(horizon=horizon))
-    assert result.intrinsic_value_per_share == 0.0
-    assert result.assumptions.projection_years == horizon
+def test_terminal_only_zero_loss_now_refuses_at_terminal_guard(horizon: int) -> None:
+    # ADR-411 supersedes terminal-only loss acceptance; retain both original horizons.
+    with pytest.raises(ValueError, match=r"^terminal_value must not underflow to zero for DCF$"):
+        dcf_intrinsic_value(_history(), _settings(horizon=horizon))
 
 
 def test_unchecked_infinite_factor_keeps_existing_direct_and_metadata_policy() -> None:
