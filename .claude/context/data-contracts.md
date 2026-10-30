@@ -431,6 +431,19 @@ reporting-only clarification preserves runtime scores and generated records;
 missingness, asset-domain, income-definition and F322 period policy need a
 separate ADR/TDD before a correction. No real affected vendor row is established.
 
+## Attempted valuation growth-series validity (ADR-406 / FINDING-341)
+
+estimate_growth keeps its short-history return, chronology-first validation and
+fiscal-label span. In FCF/net-income/revenue order, each attempted series requires
+all present observations finite before private CAGR eligibility; first invalid
+value raises plain field/year-named ValueError for valuation growth. None/zero/
+negative peers cannot hide another invalid present value. A qualifying earlier
+series leaves lower-priority inputs unvalidated. Private native arithmetic,
+finite eligibility, DCF early base/shares returns and schemas remain unchanged.
+No catch/fallback/recovery or output-finiteness policy is added. Finite-derived
+overflow/underflow/rounding, single-year DCF base validity, physical periods/PIT
+and historical repair remain separate. No thresholds, v14 or generated-data change.
+
 ## Ordinary DCF configuration validity (ADR-382 / FINDING-325)
 
 The DcfAssumptions model's four floating fields are finite on ordinary validated

@@ -7,6 +7,7 @@ shares. It discounts *equity* free cash flow directly, so it ignores a separate 
 on the result. Honest per rule 6 — it flags a *potential* value, never asserts fair value.
 """
 
+import math
 from collections.abc import Sequence
 
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -70,11 +71,16 @@ def estimate_growth(history: FundamentalsHistory) -> float | None:
     ):
         raise ValueError("growth requires strictly increasing fiscal-year labels")
     n_years = history.years[-1].fiscal_year - history.years[0].fiscal_year
-    for series in (
-        [y.free_cash_flow for y in history.years],
-        [y.net_income for y in history.years],
-        [y.revenue for y in history.years],
+    for field, series in (
+        ("free_cash_flow", [y.free_cash_flow for y in history.years]),
+        ("net_income", [y.net_income for y in history.years]),
+        ("revenue", [y.revenue for y in history.years]),
     ):
+        for year, value in zip(history.years, series, strict=True):
+            if value is not None and not math.isfinite(value):
+                raise ValueError(
+                    f"{field} for fiscal year {year.fiscal_year} must be finite for valuation growth"
+                )
         growth = _cagr(series, n_years)
         if growth is not None:
             return growth
