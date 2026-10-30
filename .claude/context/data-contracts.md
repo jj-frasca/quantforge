@@ -433,7 +433,13 @@ therefore a proxy; year-label adjacency does not certify balance-period identity
 Prior beginning assets need a third attributable balance observation. The
 reporting-only clarification preserves runtime scores and generated records;
 missingness, asset-domain, income-definition and F322 period policy need a
-separate ADR/TDD before a correction. No real affected vendor row is established.
+separate ADR/TDD before a correction. F324 session22 traces literal FY2020–22
+Assets and annual FY2021/22 NetIncomeLoss in the frozen F322 payload: contiguous
+dates and same-filing comparatives support a conditional beginning-assets trend
+reversal. The unchanged offline prefix yields F-score 8 and quality 0.6675842309900554
+but retains the 2025 citation envelope; it is not a PIT/historical production
+record. Parsed numerator equivalence, population/run incidence and full paper
+replication remain open. Exact source/ratio replay: `docs/evidence/FINDING-324/`.
 
 ## Attempted valuation growth-series validity (ADR-406 / FINDING-341)
 

@@ -1323,7 +1323,13 @@ No model/parser, threshold, v14, generated record or historical repair changes.
 The current F-score computes each ROA from that row's net_income/total_assets;
 its improving-ROA point can disagree with the paper's beginning-assets ROA trend.
 It is an inspired proxy, not exact paper replication. Three-year synthetic exact
-oracles show both an extra and a missed point; no production incidence is measured.
+oracles show both an extra and a missed point. F324 session22 adds a literal
+frozen-source FY2022 reversal with explicit contiguous balance dates and matching
+comparatives, conditional on retaining parsed NetIncomeLoss. The constructed
+prefix yields F-score 8 and quality 0.6675842309900554 but retains a 2025 accession;
+it is not a PIT/historical production record. Population/run incidence and exact
+paper-numerator mapping remain unmeasured. Offline replay lives in
+`docs/evidence/FINDING-324/`.
 Reporting changes no scores/flags or records. A runtime decision needs separate
 ADR/TDD for three adjacent balance years, missing/zero/nonpositive balances,
 income mapping and source periods; F322 stays open. Other components are not
