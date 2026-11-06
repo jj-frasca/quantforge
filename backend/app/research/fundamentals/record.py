@@ -24,6 +24,7 @@ from pydantic import (
     model_validator,
 )
 
+from app.data.flow_facts import AnnualFlowFacts
 from app.data.fundamentals import FundamentalsHistory
 from app.research.fundamentals.quality import quality_score
 from app.research.valuation.score import score_valuation
@@ -78,6 +79,9 @@ class FundamentalRecord(BaseModel):
     # it (a string, e.g. "3571") rather than parsed to int — every consumer so far wants prefix
     # matching against the SIC major-group/division scheme, not arithmetic.
     sic_code: str | None = None
+    flow_fact_history: tuple[AnnualFlowFacts, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     history_citation: FundamentalHistoryCitation | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
@@ -156,6 +160,14 @@ def compute_fundamental_record(
             accession_number=history.accession_number,
             source_url=history.source_url,
             source=history.source,
+        ),
+        flow_fact_history=(
+            tuple(
+                AnnualFlowFacts(fiscal_year=y.fiscal_year, facts=y.flow_facts)
+                for y in history.years
+            )
+            if any(y.flow_facts is not None for y in history.years)
+            else None
         ),
     )
 

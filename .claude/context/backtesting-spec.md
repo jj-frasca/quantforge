@@ -1716,3 +1716,13 @@ and first failure means UNEVALUABLE, no partial account result or retry.
 Adjusted prices are normalized total-return proxies. The policy is chosen after
 this historical period, so it remains exploratory; PBO/DSR/WF/holdout gates are
 NOT MEASURED, and no static historical conditional score becomes PIT proof.
+
+## Selected revenue/earnings input periods (ADR-419)
+
+New fundamental records can retain the history's optional selected-flow graph
+for revenue, net income and EPS across revenue-anchored fiscal labels. Same-row
+selected tag/unit and original-present period/filed/accession/value fields survive
+serialization/whole-winner merge; wholly unknown legacy evidence stays omitted.
+This is the input capability for FINDING-322's next coherent period/availability
+policy, not fixed annual/PIT data or improved alpha. Scalars, scores and both
+frozen portfolio protocols remain unchanged. Other concepts remain unretained.

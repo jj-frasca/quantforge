@@ -212,3 +212,40 @@ ambiguous ties still require separate ADR/TDD. No parser, generated record,
 threshold, v14, frozen cohort or historical output changes. Offline reproduction,
 raw/compressed hashes and acquisition attribution accompany the fixture; final
 review/full-gate/publication/CI receipts live in the session ledger.
+
+## W45 session3: selected-flow input evidence contract (ADR-419)
+
+The historical portfolio attempt ADR-417 is terminal UNEVALUABLE; ADR-418 has
+sealed future inputs before entry. Neither permits repairing/replacing old
+cohorts or treating current-score historical broadcasts as untouched evidence.
+The next bounded capability retains selected revenue/NI/EPS source rows through
+new fundamental records. This will expose actual observation periods and filed
+labels needed for a coherent annual/instant/availability policy. It does not
+change the selector, scalars, scores or validation thresholds and cannot certify
+PIT or repair the documented quarters. ADR-419 fixes the comparison and exact
+acceptance before implementation; no new market experiment is authorized.
+
+Recovery verification (W45 session5): the inherited pre-code test log records
+11 collected failures; the completed implementation passes all 11 tests, including
+same-filed row-order binding, JSON round-trip, legacy omission, detached immutable
+metadata, unchecked nested-copy refusal and whole-winner merge. Independent
+baseline replay on both frozen full-source captures preserves complete history
+and snapshot outputs outside the optional additions, plus record scores/flags at
+prices absent, 10, 100 and 1,000. All 4,260 legacy records retain their canonical
+payloads; source fixtures, ADR-417 receipts and ADR-418 cohort bytes stay exact.
+
+The actual added pretty-JSON record footprint is 8,900 bytes for the chosen Apple
+history (7 years/21 flow facts) and 11,350 bytes for Microsoft (9 years/27 facts).
+Mechanical extrapolation to 4,260 filers gives 37.914–48.351 MB **additional**
+bytes, not a population estimate or a bound on total pool size. Storage expansion
+must be monitored as new cloud-written evidence accumulates; no generated file is
+rewritten here. The alpha case is unchanged. The next useful input experiment is
+one coherent annual-flow/instant-balance/availability policy, checked against
+frozen source rows before any separately adopted portfolio evaluation. Do not
+extend this work as a chain of per-concept metadata additions.
+
+Review chronology is explicit: the preserved independent data review approved the
+contract before implementation; the fresh independent data and research reviews
+approve recovery after implementation. No missing pre-code research approval is
+inferred from the interrupted ledger. This production-only lineage change adopts
+no new experimental policy and produces no new return evidence.

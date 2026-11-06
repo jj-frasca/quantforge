@@ -2,7 +2,9 @@ import math
 from datetime import date
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.data.flow_facts import SelectedFlowFact, SelectedFlowFacts
 
 # Ordered GAAP tag fallbacks per concept — filer tag usage varies (ADR-017). First hit wins.
 _REVENUE_TAGS = (
@@ -82,6 +84,7 @@ class AnnualFundamentals(BaseModel):
     retained_earnings: float | None = None
     total_equity: float | None = None
     price: float | None = None
+    flow_facts: SelectedFlowFacts | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class FundamentalsHistory(BaseModel):
@@ -237,6 +240,23 @@ def _year_value_map(
     return {int(row["fy"]): float(row["val"]) for row in _annual_facts(gaap, tags, unit)}
 
 
+def _selected_flow_rows(
+    gaap: dict[str, Any], tags: tuple[str, ...], unit: str = "USD"
+) -> tuple[list[dict[str, Any]], dict[int, SelectedFlowFact]]:
+    """Keep unchanged selector rows and their actual first-matching tag together."""
+    for tag in tags:
+        rows = _annual_facts(gaap, (tag,), unit)
+        if rows:
+            keys = ("fy", "fp", "form", "filed", "accn", "start", "end", "frame", "val")
+            return rows, {
+                int(row["fy"]): SelectedFlowFact(
+                    tag=tag, unit=unit, row={key: row[key] for key in keys if key in row}
+                )
+                for row in rows
+            }
+    return [], {}
+
+
 def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> FundamentalsHistory:
     """Parse CompanyFacts into history ordered by selected reported fiscal-year labels (ADR-022).
 
@@ -250,7 +270,7 @@ def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> F
     entity_name = str(company_facts.get("entityName", symbol))
     gaap = company_facts.get("facts", {}).get("us-gaap", {})
 
-    revenue_rows = _annual_facts(gaap, _REVENUE_TAGS)
+    revenue_rows, revenue_facts = _selected_flow_rows(gaap, _REVENUE_TAGS)
     if not revenue_rows:
         raise ValueError(f"no annual revenue facts found for {symbol!r}")
 
@@ -258,8 +278,10 @@ def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> F
     period_end_by_year = {
         int(row["fy"]): date.fromisoformat(row["end"]) for row in revenue_rows if row.get("end")
     }
-    net_income = _year_value_map(gaap, _NET_INCOME_TAGS)
-    eps = _year_value_map(gaap, _EPS_TAGS, unit="USD/shares")
+    ni_rows, ni_facts = _selected_flow_rows(gaap, _NET_INCOME_TAGS)
+    net_income = {int(row["fy"]): float(row["val"]) for row in ni_rows}
+    eps_rows, eps_facts = _selected_flow_rows(gaap, _EPS_TAGS, unit="USD/shares")
+    eps = {int(row["fy"]): float(row["val"]) for row in eps_rows}
     shares = _year_value_map(gaap, _SHARES_TAGS, unit="shares")
     ocf = _year_value_map(gaap, _OCF_TAGS)
     capex = _year_value_map(gaap, _CAPEX_TAGS)
@@ -303,6 +325,9 @@ def parse_company_facts_history(company_facts: dict[str, Any], symbol: str) -> F
                 operating_cash_flow=cash_from_ops,
                 retained_earnings=retained_earnings.get(fy),
                 total_equity=equity.get(fy),
+                flow_facts=SelectedFlowFacts(
+                    revenue=revenue_facts[fy], net_income=ni_facts.get(fy), eps=eps_facts.get(fy)
+                ),
             )
         )
 

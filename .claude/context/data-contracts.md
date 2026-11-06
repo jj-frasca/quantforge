@@ -745,3 +745,15 @@ setting bounds, thresholds or consumer fallback changes. Custom-provider errors
 become per-symbol hunt failures before downstream acquisition/search, screen on
 or off. No default-record/vendor incidence, fingerprint, v14, generated record
 or frozen-cohort change is established.
+
+## Selected revenue/earnings period attribution (ADR-419)
+
+Optional AnnualFundamentals.flow_facts retains selected revenue/net_income/EPS
+(tag,unit,original-present fy/fp/form/filed/accn/start/end/frame/val JSON keys).
+Finite JSON is detached/immutable; absent/null/original types remain distinct.
+Optional FundamentalRecord.flow_fact_history carries normalized fiscal labels
+and the exact supplied graph in year order whenever any is known; unknown years
+stay explicit and wholly unknown legacy/direct/empty histories omit the field.
+No numeric/selector, annual-duration, period alignment or PIT correction follows.
+New metadata may refuse malformed JSON formerly ignored. Existing whole-winner
+merge never borrows evidence; frozen/generated historical records remain unchanged.
