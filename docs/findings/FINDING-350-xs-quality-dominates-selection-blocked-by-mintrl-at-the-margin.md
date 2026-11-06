@@ -100,3 +100,57 @@ the panel never actually got longer, so that run did not test it. ADR-415 adds t
 `HISTORY_START` override; the correctly-configured dispatch (`history_start=1990-01-01`) is queued
 immediately after it, and its result will be added here as a dated addendum, whichever way it
 comes out.
+
+## Addendum (2026-11-06, same session): the corrected run is real but the comparison is confounded
+
+The `history_start=1990-01-01` dispatch (run `42172920179`) landed and is mechanically confirmed
+correct: `panel_manifest.components[*].start_date == "1990-01-01"` for every symbol — the panel
+genuinely spans 36.85 years (29.48 in-sample at the standard 80/20 split), not the 17.4 years every
+prior measurement in this finding used. **This is reported in full, including the parts that do
+not support the history-extension hypothesis, because a result curated to only show the favorable
+half would be worse than no result.**
+
+**The selection win streak broke.** For the first time across 13 experiments where quality scores
+were available, `xs_quality` did NOT win the cross-family selection. `xs_decay_reversal` won
+instead, at observed Sharpe 0.903 (vs. `xs_quality`'s 0.682 in the same run) — **but the gate
+itself flags it `stability_ok: False` (parameter stability score 0.110)**, an extreme
+sensitivity-to-parameter-choice reading consistent with this being an overfit artifact of the
+longer window's handful of extreme historical episodes (1990s/dot-com/2008), not a genuinely
+better signal. `xs_reversal` (Sharpe 0.693, stability 0.094) and `xs_short_term_reversal_1m`
+(Sharpe 0.701, stability 0.740) show the same pattern of a sudden, large Sharpe jump specific to
+this longer window. The gate's stability check is doing exactly its job here — treating a parameter
+knife-edge as a red flag rather than a win — which is itself worth recording as the mechanism
+working as designed, independent of whatever it implies about quality.
+
+**`xs_quality` itself did not clear MinTRL, and the absolute gap is now LARGER than the best prior
+measurement, not smaller.** Required MinTRL at this run's `lifetime_trials` (3,672) and observed
+Sharpe (0.682) is **35.3 years**. Available in-sample history is **29.48 years** — a gap of
+**~5.8 years**, versus the best 2005-start measurement's gap of roughly a tenth of a year. History
+genuinely tripled (17.4y → 29.5y available) and the gap still grew, because two other things also
+changed in the same comparison, discussed next.
+
+**This result is confounded on three variables at once and must not be read as a clean test of the
+history-extension hypothesis:**
+1. **Universe breadth changed** (51 → 235 symbols). `xs_quality`'s own realized Sharpe in the
+   235-symbol run (0.682) differs from its best 51-symbol measurement (0.96) — a broader,
+   more heterogeneous cross-sectional ranking is a different, not strictly easier or harder,
+   problem than the narrower mega-cap-only universe every earlier measurement in this finding used.
+2. **`lifetime_trials` grew** from the low-3,000s to 3,672 between the original 11-run
+   measurement and this one — partly from ordinary background search activity across the ~6-week
+   gap this session also root-caused and fixed, and partly from this session's OWN two dispatches
+   (the broken first attempt and this corrected one). Because `minbtl_years` scales with `ln(N)`,
+   every dispatch — including the ones run specifically to test this hypothesis — makes the next
+   one's bar slightly harder to clear. This is a real cost of testing, not a measurement artifact,
+   and it compounds: a third dispatch would face an even higher bar than this one did.
+3. **The two changes land in the same single experiment**, with no isolated "same universe, longer
+   history only" run to separate their effects.
+
+**Honest verdict: inconclusive, not negative.** This result does not refute the history-extension
+hypothesis — it tests a different, compound question (breadth + history + a higher N bar, all at
+once) and that compound question came back unfavorable. The clean test — same universe (the
+original 51 OR a fixed subset), history start moved from 2005 to 1990, nothing else changed — has
+still never been run. That is the correct next experiment, and it should be pre-registered in its
+own ADR before dispatch, per this project's own single-look discipline (ADR-063/070/094/161's
+consistent lesson: state the comparison before you can see its answer) and because each dispatch
+now measurably raises the bar for the next one. **No further dispatch should happen casually; the
+next one needs its own ADR stating the isolated design up front.**
