@@ -1702,3 +1702,17 @@ setting bounds, thresholds or consumer fallback changes. Custom-provider errors
 become per-symbol hunt failures before downstream acquisition/search, screen on
 or off. No default-record/vendor incidence, fingerprint, v14, generated record
 or frozen-cohort change is established.
+
+## Published quality/value funded portfolio (ADR-417)
+
+`cross_sectional.published_portfolio` is a separate fixed-unit long-only
+exploratory evaluator, not a search/gate or broker target. Rank archived combined
+scores once, ceil top quintile with CIK/symbol ties, fund entry units with
+1/(1+c) capital and charge liquidation c on actual terminal notional. Weights
+drift without daily rebalancing. Drawdown includes initial cash, every marked
+value and final cash. The fixed one-attempt script pins Aug18 Git inputs and
+Aug19-Nov5's exact56 session labels; source/quality/lineage/code digests survive
+and first failure means UNEVALUABLE, no partial account result or retry.
+Adjusted prices are normalized total-return proxies. The policy is chosen after
+this historical period, so it remains exploratory; PBO/DSR/WF/holdout gates are
+NOT MEASURED, and no static historical conditional score becomes PIT proof.
