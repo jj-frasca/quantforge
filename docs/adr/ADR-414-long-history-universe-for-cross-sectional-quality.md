@@ -1,6 +1,7 @@
 # ADR-414: A long-history universe for cross-sectional quality/value search
 
-- **Status:** Accepted
+- **Status:** Accepted, mechanism corrected by ADR-415 (same session) — the universe file alone
+  does NOT extend fetched history; see ADR-415 before dispatching anything based on this ADR.
 - **Date:** 2026-11-06
 - **Deciders:** Interactive session (Joe present: "find credible alpha... you own this, make it
   happen")

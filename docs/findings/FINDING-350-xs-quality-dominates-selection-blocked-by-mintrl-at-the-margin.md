@@ -90,5 +90,13 @@ specifically for long-history cross-sectional ranking is a separate, additive le
 ## Next step
 
 ADR-414 proposes a long-history cross-sectional universe (symbols independently verified to have
-1990+ price data) specifically for the quality/value family, and the mechanism to let a scheduled
-hunt use it without touching `RECENT_HISTORY_START` or any other shared constant.
+1990+ price data) specifically for the quality/value family. ADR-415 (same session) corrects
+ADR-414's mechanism — the universe file alone does not extend fetched history; `scripts/
+cross_sectional_hunt.py` fetches every symbol from the hardcoded `RECENT_HISTORY_START` regardless
+of universe. A first dispatch using only the new universe (run `42170667294`) proved this directly:
+`xs_quality` won again (12/12) but the panel's start date was still `2005-01-01`, and its weaker
+result (Sharpe 0.56 vs. the 0.96 peak) is not evidence against the history-extension hypothesis —
+the panel never actually got longer, so that run did not test it. ADR-415 adds the missing
+`HISTORY_START` override; the correctly-configured dispatch (`history_start=1990-01-01`) is queued
+immediately after it, and its result will be added here as a dated addendum, whichever way it
+comes out.

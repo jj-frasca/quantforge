@@ -17,6 +17,10 @@ on:
         description: "Universe file (relative to repo root) to hunt"
         required: false
         default: "data/universes/large_cap.txt"
+      history_start:
+        description: "Fetch start date YYYY-MM-DD (ADR-414). Blank = RECENT_HISTORY_START default. A universe file alone does NOT extend history -- this does."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -43,6 +47,7 @@ jobs:
         working-directory: backend
         env:
           UNIVERSE: ${{ github.event.inputs.universe || 'data/universes/large_cap.txt' }}
+          HISTORY_START: ${{ github.event.inputs.history_start }}
         run: |
           set +e
           for attempt in 1 2 3; do

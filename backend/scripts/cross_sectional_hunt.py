@@ -2,6 +2,10 @@
 
 Usage: PYTHONPATH=. uv run python scripts/cross_sectional_hunt.py [SYMBOLS_OR_UNIVERSE.txt]
        (default universe: data/universes/sp500.txt)
+       HISTORY_START=YYYY-MM-DD env var overrides the fetch start date (default:
+       RECENT_HISTORY_START). ADR-414: a universe file alone only changes WHICH symbols are
+       hunted, not how far back their price history is fetched -- the two are independent and a
+       long-history universe needs this override to actually get a longer panel.
 
 Ranks the whole universe each period and goes long the top / short the bottom (cross-sectional
 momentum + short-term reversal), realizes ONE dollar-neutral portfolio return series per config,
@@ -14,7 +18,9 @@ history (lookbacks up to ~252 bars + a MinTRL-worthy holdout), and Alpaca's free
 reaches back a few years (ADR-015). Same rationale as scripts/hunt.py.
 """
 
+import os
 import sys
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -43,8 +49,19 @@ def _resolve_symbols(args: list[str]) -> list[str]:
     return [s.strip().upper() for s in path.read_text().splitlines() if s.strip()]
 
 
+def _resolve_history_start(env: Mapping[str, str]) -> datetime:
+    """HISTORY_START env var, parsed -> RECENT_HISTORY_START default (ADR-414). An unset or
+    empty-string value falls back to the default; any other unparseable value raises rather than
+    silently using the default, so a typo in a workflow_dispatch input fails loudly, not quietly."""
+    raw = env.get("HISTORY_START", "")
+    if not raw:
+        return RECENT_HISTORY_START
+    return datetime.fromisoformat(raw).replace(tzinfo=UTC)
+
+
 def main() -> None:
     symbols = _resolve_symbols(sys.argv[1:])
+    history_start = _resolve_history_start(os.environ)
     # forced: cross-sectional momentum needs a long common history.
     adapter = YFinanceAdapter(retry=CLOUD)
     store = JsonFileCrossSectionalStore(POOL)
@@ -55,7 +72,7 @@ def main() -> None:
         return fetch_research_dataset(
             adapter,
             symbol,
-            RECENT_HISTORY_START,
+            history_start,
             now,
             git_commit_hash=git_revision,
         )
