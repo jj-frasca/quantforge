@@ -78,8 +78,16 @@ which independently moves the result in an unknown direction and magnitude.
 Delete `data/universes/large_cap_fixed36.txt`. Nothing depends on its existence until Arm A is
 actually dispatched.
 
-## Measured
+## Measured (2026-11-06, single look, read as pre-registered)
 
-Not yet. This ADR is design-only, committed so the next session (autonomous or interactive) can
-dispatch both arms with a fixed, agreed-upon protocol rather than inventing one in the moment the
-data is first seen.
+Universe `large_cap_fixed36.txt` (36 symbols) in both arms; `xs_quality` only; available years = 0.8 x panel span from `panel_manifest`; required = `minbtl_years` (2 ln N / SR^2) at each arm's own `lifetime_trials`.
+
+| Arm | Run / commit | Panel start | N | xs_quality Sharpe | Required (y) | Available (y) | Margin (y) |
+|---|---|---|---|---|---|---|---|
+| A (2005) | 42174863467 / 0c8deaf9 | 2005-01-01 | 3,807 | 0.438 | 85.8 | 17.5 | -68.3 |
+| B (1990) | 42175645397 / 5c255140 | 1990-01-01 | 4,077 | 0.521 | 61.2 | 29.5 | -31.7 |
+
+- **N-adjustment (§6):** recomputing Arm A at Arm B's N gives required 86.7y, margin -69.2y. The N effect on required years is ~1% (ln 4077 / ln 3807), far under the 10% confounding threshold, fixed before reading margins.
+- **Pre-stated reading: history length helps** -- Arm B's margin is ~37 years less negative than Arm A's after N-adjustment. **But the margin is still deeply negative (-31.7y); `xs_quality` does not clear MinTRL in either arm.** Part of the gain is a higher Sharpe in Arm B (0.438 -> 0.521), which is itself a history-window effect; the test does not separate "more years" from "different years' Sharpe".
+- **Deviations, disclosed:** (1) Arm B's first dispatch (42174912568) computed but failed to push (pool-JSON rebase conflict with Arm A's commit), so nothing landed; it was re-dispatched once (42175645397) as a mechanical retry, and the landed result is the one reported. (2) An extra, unplanned default-start run on the same universe landed in between (42175215554 / 68484cf1, N=3,942, Sharpe 0.438, required 86.2y) -- it reproduces Arm A (same Sharpe) and does not change the reading. Total added trials were therefore higher than the ~32 estimated in §8.
+- **Context:** the 36-symbol subset Sharpe (0.44-0.52) is well below the 51-symbol 2005 best (0.96) and the 235-symbol 1990 run (0.68): `xs_quality`'s Sharpe is sensitive to universe composition, which this test held fixed but did not explain. No gate was changed. SINGLE LOOK IS USED; no re-dispatch.

@@ -154,3 +154,7 @@ own ADR before dispatch, per this project's own single-look discipline (ADR-063/
 consistent lesson: state the comparison before you can see its answer) and because each dispatch
 now measurably raises the bar for the next one. **No further dispatch should happen casually; the
 next one needs its own ADR stating the isolated design up front.**
+
+## Addendum (2026-11-06): the isolated test (ADR-416) -- history helps, not nearly enough
+
+With universe held at 36 symbols, moving the panel start from 2005 to 1990 improved `xs_quality`'s MinTRL margin from -68.3y to -31.7y (N effect ~1%, not confounding), so history length does help. It does not close the gap: required track record is still ~61y against 29.5y available at Sharpe 0.52. The earlier "short by a tenth of a year" framing (Sharpe 0.96, 51 symbols, N~3,000) does not survive the fixed-universe comparison; the margin is dominated by realised Sharpe, which varies 0.44-0.96 across universes. Details and disclosed deviations: ADR-416 "Measured". Honest status: `xs_quality` is not a near-miss on MinTRL.
