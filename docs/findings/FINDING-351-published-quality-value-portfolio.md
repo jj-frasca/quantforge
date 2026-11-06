@@ -103,3 +103,16 @@ coverage), 781 frontend tests (97.89% statements), lint/format and strict types.
 Both independent final reviews approved the frozen evidence. Validation success
 means the implementation passes its tests; it does not change UNEVALUABLE into
 an economic pass.
+
+## Separately registered next experiment (ADR-418)
+
+After the historical unit's green publication, ADR-418 seals a new published
+current-score cohort before future entry:412 eligible/83 selected, Nov9 close–
+Feb10 close,64 scheduled closes/63 return intervals,10bp each side and matched
+EW/SPY/cash controls. Its future outcomes remain untouched at registration;
+no study prices are acquired now. Exact pre-open publication and a fixed final
+execution window are required, with no date sliding or cohort replacement.
+Source completion remains unresolved (413 required series), and even a future
+strict economic-screen success would be a lead, never full-gate alpha. ADR-417
+remains terminal UNEVALUABLE with no retry or source reuse. Evidence capability
+improved; the alpha case has no new economic observation yet.
