@@ -91,3 +91,14 @@ Universe `large_cap_fixed36.txt` (36 symbols) in both arms; `xs_quality` only; a
 - **Pre-stated reading: history length helps** -- Arm B's margin is ~37 years less negative than Arm A's after N-adjustment. **But the margin is still deeply negative (-31.7y); `xs_quality` does not clear MinTRL in either arm.** Part of the gain is a higher Sharpe in Arm B (0.438 -> 0.521), which is itself a history-window effect; the test does not separate "more years" from "different years' Sharpe".
 - **Deviations, disclosed:** (1) Arm B's first dispatch (42174912568) computed but failed to push (pool-JSON rebase conflict with Arm A's commit), so nothing landed; it was re-dispatched once (42175645397) as a mechanical retry, and the landed result is the one reported. (2) An extra, unplanned default-start run on the same universe landed in between (42175215554 / 68484cf1, N=3,942, Sharpe 0.438, required 86.2y) -- it reproduces Arm A (same Sharpe) and does not change the reading. Total added trials were therefore higher than the ~32 estimated in §8.
 - **Context:** the 36-symbol subset Sharpe (0.44-0.52) is well below the 51-symbol 2005 best (0.96) and the 235-symbol 1990 run (0.68): `xs_quality`'s Sharpe is sensitive to universe composition, which this test held fixed but did not explain. No gate was changed. SINGLE LOOK IS USED; no re-dispatch.
+- **Deviation (3), disclosed (added by a second, uncoordinated interactive session executing this
+  same pre-registered design in parallel):** a third dispatch (`42175825153`, `history_start=
+  1990-01-01`, the same universe) computed a result but failed to push — a JSON merge conflict
+  against this ADR's own Arm B commit (`5c255140`), which the workflow's retry logic cannot
+  auto-resolve for two concurrent appends to the same array. That result never landed in
+  `data/cross_sectional_pool.json` (confirmed: no experiment created after 06:40 UTC exists in the
+  pool) and no number from it is reported anywhere. It is not treated as a third measurement and
+  does not reopen this single look — the reading above, from the two arms that did land, stands as
+  written. Recorded here only so the operational collision (two sessions independently dispatching
+  the same freshly-committed ADR within minutes of each other) is part of the honest record, the
+  same disclosure standard this ADR already applies to deviations (1) and (2).
