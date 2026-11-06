@@ -61,7 +61,7 @@ def test_calendar_refusal_precedes_price_access_and_rng(monkeypatch: pytest.Monk
         pd.Index(["a", "b", "c", "d"]),
         pd.date_range("2020-01-01", periods=4),
         pd.date_range("2020-01-01", periods=4, tz="UTC"),
-        pd.date_range("2020-01-01", periods=4, tz="US/Eastern"),
+        pd.date_range("2020-01-01", periods=4, tz="America/New_York"),
         pd.to_datetime(["2020-01-01", "2020-01-03", "2020-02-01", "2020-03-01"]),
     ],
 )

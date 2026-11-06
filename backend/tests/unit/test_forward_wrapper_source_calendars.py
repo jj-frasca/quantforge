@@ -127,9 +127,10 @@ def test_forward_wrapper_given_ordered_object_timestamps_preserves_no_forward_ou
     wrapper: Wrapper, singleton: bool
 ) -> None:
     index = pd.Index(
-        [pd.Timestamp("2026-01-02", tz="US/Pacific"), pd.Timestamp("2026-01-03", tz="US/Pacific")][
-            : 1 if singleton else 2
-        ],
+        [
+            pd.Timestamp("2026-01-02", tz="America/Los_Angeles"),
+            pd.Timestamp("2026-01-03", tz="America/Los_Angeles"),
+        ][: 1 if singleton else 2],
         dtype=object,
     )
     output = _run(wrapper, index).model_dump(mode="json")
