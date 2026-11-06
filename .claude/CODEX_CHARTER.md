@@ -57,6 +57,21 @@ infinity, zero variance, tiny samples, single-bar panels, missing/delisted symbo
 timestamps, degenerate parameter grids, and boundary geometry. Financial-math invariants use
 Hypothesis.
 
+**Satiation rule, added 2026-11-06 after a dated incident.** Between roughly 2026-10-02 and
+2026-11-05, this section drove a chain of **260+ ADRs and 420+ commits** ("refuse zero-underflow
+in <division #N>", ADR-350 through ADR-412) walking file by file through near-identical guards in
+DCF/valuation arithmetic. Each was individually defensible under this section's own wording; in
+aggregate it was weeks of real session budget producing zero research value, and the later ADRs'
+prose had visibly degraded ("Finite admitted synthetic custom settings yield DCF0/composite1") —
+a sign the vein was exhausted long before it stopped being mined. **If the third consecutive piece
+of work in a session is the same guard pattern in a different file, stop.** Write ONE consolidating
+finding/ADR covering the whole class (a shared validator, not N near-duplicate call-site guards),
+then move to `.claude/AUTONOMY_CHARTER.md` §2's standing priority #4 — the cross-sectional
+quality/value pivot (ADR-029/095/146's unfinished portfolio-construction and SIC-composition work)
+— which this project's own measured history (ADR-060/063/068-078/094) now ranks above further
+single-name technical search or further defensive-arithmetic mining. This section remains valid
+guidance; it is not a license to run it to exhaustion.
+
 ### 2.4 Reproduce claims
 
 Independently verify arithmetic in `data/equity_curve.json`, the paper book, dashboards, reports,

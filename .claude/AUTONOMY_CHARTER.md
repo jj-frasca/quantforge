@@ -57,15 +57,51 @@ therefore empty until a new decision is recorded below.
 1. **Anything red.** Failing CI, a failing scheduled workflow, a broken cron job. Fix it first.
 2. **Anything in `RUNNING_STATE.md` marked IN FLIGHT** — finish or explicitly abandon it (say why).
 3. **The open decisions in §1** — each is worth more than another indicator.
-4. **Real methodological depth.** This project's value is rigor: PBO, purged CV, walk-forward,
-   Deflated Sharpe. Depth beats breadth.
-5. **Workflow/infrastructure improvements** that make the *next* autonomous session more effective.
-6. New strategies/indicators — the lowest-value work available. Do this only when 1–5 are empty.
-   Six-touch-point pattern, existing categories only (see `RUNNING_STATE.md`).
+4. **The standing research pivot (added 2026-11-06, Joe's direct instruction — read this before
+   anything else in this section):** single-name technical-indicator search has now been tested
+   past the point of reasonable doubt. Dozens of ADRs across this project's history (ADR-060, -063,
+   -068 through -078, -094, the 6,075/7,400/9,247-bar calibration sweep) measured it directly and
+   found the selection step barely distinguishable from noise (+0.079 Sharpe lead vs. SE 0.22),
+   walk-forward excess negative and non-monotonic in history length, and purged-CV excess flat at
+   zero on every cohort tested. That is a real, repeated, well-measured result — not a guess — and
+   continuing to search the same space is now the LOW-value branch of this list, not the default.
+   **Prioritize cross-sectional quality/value instead.** ADR-029 built the fundamentals division
+   (Piotroski F-Score, Novy-Marx gross profitability, `xs_quality`/`xs_quality_value` factors,
+   `FundamentalRecord.combined_score`); ADR-095/146 added SIC industry classification. Academic
+   priors for quality/value (Fama-French, Asness et al.) are dramatically stronger than daily-bar
+   technical signals on individual liquid large caps — the single most arbitraged slice of markets
+   that exists. The unfinished, concrete next steps: (a) actually construct and backtest a
+   quality+value-ranked PORTFOLIO (long top-quintile `combined_score`, not just a per-company
+   score) through the SAME PBO/DSR/walk-forward gate every other strategy answers to — this has
+   never been done, only the scoring infrastructure exists; (b) the SIC-division composition test
+   ADR-146 set up and deliberately did NOT run (pre-register the division mapping before looking at
+   either cohort's distribution under it — see ADR-146's own "What this ADR does NOT do"). Do not
+   add another single-name technical indicator or search strategy until one of these has an honest,
+   gate-measured result.
+5. **Real methodological depth** in validation/PBO/purged-CV/walk-forward machinery, where it
+   serves #4 or an open #1-3 item. Depth beats breadth.
+6. **Workflow/infrastructure improvements** that make the *next* autonomous session more effective.
+7. New single-name strategies/indicators — the lowest-value work available, and now explicitly
+   DEPRIORITIZED per #4's measured result, not merely last in a tie. Do this only when 1–6 are
+   empty AND #4 is itself blocked on something outside your control.
 
-**Never manufacture work.** If the backlog is genuinely empty, deepen test coverage, harden error
-paths, improve docs an agent would read, or research (web search) a real edge and write it up as an
-ADR proposal. Say "backlog empty" in `RUNNING_STATE.md` so Joe knows.
+**Never manufacture work — and "harden error paths" is not a free pass.** A dated incident:
+between roughly 2026-10-02 and 2026-11-05, with the Claude-side session blocked by a dead OAuth
+credential (see `~/claude-work/.claude` cron logs) and a stuck interactive session holding
+`backend/uv.lock` dirty, the Codex peer generated **over 260 ADRs and 420+ commits** almost
+entirely in one vein: a chain of near-identical "refuse zero-underflow in <division #N>" guards
+walking file by file through DCF/valuation arithmetic (ADR-350 through ADR-412, e.g.
+`ADR-409/410/411/412-refuse-zero-underflow-*`). Each one was individually defensible under §2.3 of
+`CODEX_CHARTER.md` ("harden tests... NaN, infinity, zero variance"); in aggregate it was weeks of
+real compute and session budget producing zero research value, and several of the later ADRs'
+own prose had visibly degraded ("Finite admitted synthetic custom settings yield DCF0/composite1")
+— a sign the vein was long since exhausted and should have been abandoned, not mined further.
+**The rule going forward: if the third consecutive piece of work is the same guard pattern in a
+different file, stop.** Write ONE consolidating finding covering the whole class (a shared
+validator, one ADR, one commit) instead of N near-duplicate ADRs, then move to the NEXT priority
+in this list — which, as of this rewrite, is #4, not another file in the same vein. If the backlog
+above is genuinely empty even with #4 open, say so explicitly in `RUNNING_STATE.md` — "backlog
+empty, #4 blocked on X" — rather than filling the gap with defensive-arithmetic busywork.
 
 ## 3. Shipping rules
 
