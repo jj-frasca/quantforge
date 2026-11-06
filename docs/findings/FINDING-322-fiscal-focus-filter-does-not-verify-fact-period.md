@@ -249,3 +249,84 @@ contract before implementation; the fresh independent data and research reviews
 approve recovery after implementation. No missing pre-code research approval is
 inferred from the interrupted ledger. This production-only lineage change adopts
 no new experimental policy and produces no new return evidence.
+
+## W45 session5: missing annual anchors, before source acquisition
+
+The current research scorecard remains 0/41 universe-deflated survivors over
+6,627,085 recorded lifetime trials. Existing quality/value long/short experiments
+use conditional static scores; the funded historical ADR-417 attempt is terminal
+UNEVALUABLE, and ADR-418's future cohort is sealed. None is rerun here.
+
+Independent source triage establishes a narrower input blocker: the two frozen
+CompanyFacts payloads contain no DEI DocumentPeriodEndDate, DocumentFiscalYearFocus
+or DocumentFiscalPeriodFocus and no acceptance timestamp. Their fiscal labels
+alone cannot authenticate an annual reporting anchor or historical availability.
+ADR-419 retains selected-row evidence but does not supply those missing anchors.
+
+Before acquiring another source, ADR-420 will fix one original filing capture:
+Apple accession 0000320193-19-000119, already identified in this finding's frozen
+same-filing comparison. Hypothesis: that filing's own fiscal/report metadata and
+XBRL contexts can bind the known 2019 annual revenue 260,174,000,000 and quarter
+64,040,000,000 to distinct actual intervals. This is one deliberately chosen
+known-defect witness, not a random sample or a market experiment. Zero new price
+requests, searches, parameter variants, portfolio returns or gate measurements.
+Independent review must approve the final protocol before the sole acquisition.
+The source attempt can fail or be unsupported; neither permits another request,
+an alternate URL/header, an inferred annual band or a repaired frozen cohort.
+
+Acquisition harness chronology: initial pytest collection failed on a protected
+unrelated `/tmp` directory. A draft was already written before that error was
+noticed, so the later missing-target control run is **not** called pre-code RED.
+The draft is preserved separately. Subsequent genuine behavioral failures caught
+late-chunk data loss and absence of an immediate HTTP-request timestamp; narrow
+fixes followed those failures, and all 17 offline acquisition checks pass.
+The parent independently reran those 17 checks. These are source-protocol controls,
+not a new strategy experiment or financial threshold adjustment.
+
+### ADR-420 terminal source result: filing-local linkage PASS
+
+The sole request returned HTTP 200 on 2026-11-06 at 23:31:18–19 UTC, retaining
+12,861,616 decoded bytes (SHA256
+`c77a7ab405b61398dcbd7b0ecb98191b24c9519d9b18689c280c2ac7e4ebf4ab`).
+The attempt root is permanently frozen; no retry or further request is permitted.
+The unmodified, pre-acquisition audit passes the fixed linkage criteria. Both
+independent reviewers reproduce the full result and the complete financial graph
+using the portable repository components alone, with distinct exact-arithmetic
+and source-context checks. No acceptance rule changed after exposure.
+
+The 96-document submission supplies an inline primary 10-K, 301 contexts, 9 units,
+62 revenue candidates and the 4 required DEI facts. All four DEI facts bind
+`FD2019Q4YTD`: FY2019, FY, 10-K and report end 2019-09-28, over the explicit
+2018-09-30 through 2019-09-28 annual context. Three agreeing annual revenue
+presentations scale `260,174` by 10^6 to exactly USD 260,174,000,000. One quarter
+presentation in `FD2019Q4QTD`, 2019-06-30 through 2019-09-28, scales `64,040` by
+10^6 to USD 64,040,000,000. The admitted contexts have issuer 320193 and no
+scenario/dimensions; unit `usd` resolves to ISO4217 USD. No conflicting admitted
+value appears. This supplies a direct filing-local annual anchor for this known
+error without inventing a permissible duration band or an end.year fiscal rule.
+
+Raw header acceptance is `20191030181236`, filed-as-of date `20191031`, and
+change date `20191030`. They are retained as different source labels, with no
+UTC or earliest-public-availability inference. A 2026 archive capture remains
+subject to post-acceptance corrections and does not certify a 2019 data vintage.
+No score correction, fiscal-transition handling or PIT portfolio follows.
+
+The [evidence and no-network reproduction](../../docs/evidence/FINDING-322/AAPL-2019-original-filing/README.md)
+preserve exact header/footer and the complete primary 10-K block (179,177-byte
+gzip), all 96 inventory hashes, transport/start receipts, pre-acquisition method
+identity and actual audit. The full raw response and unrelated exhibits remain
+at the frozen root; repository components are explicitly not advertised as the
+entire submission. No component exceeds the fixed 450 KiB compressed limit.
+The reproduction normalizes in-memory tuples to their persisted JSON list shape;
+its first unnormalized comparison failed on that envelope mismatch, not a fact
+or criterion. Final reproduction passes without code or source changes.
+
+**Alpha verdict:** unchanged; zero new market prices, return comparisons, search
+trials or gate measurements. One demonstrated input blocker is partly resolved:
+this filing can supply its own annual anchor and distinguish the known quarter.
+The next concrete input experiment is one integrated opt-in selection policy that
+uses explicit filing anchors for flows, end-matched instant balances and declared
+conservative availability labels. It must preserve unsupported/ambiguous cases
+and compare source-bound outputs before any separately adopted economic test.
+Do not mine another accession or refresh either frozen portfolio cohort. ADR-417,
+ADR-418, the older CompanyFacts captures and all generated records stay unchanged.

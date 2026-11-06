@@ -1726,3 +1726,15 @@ serialization/whole-winner merge; wholly unknown legacy evidence stays omitted.
 This is the input capability for FINDING-322's next coherent period/availability
 policy, not fixed annual/PIT data or improved alpha. Scalars, scores and both
 frozen portfolio protocols remain unchanged. Other concepts remain unretained.
+
+## Original annual anchor, no new return evidence (ADR-420)
+
+The fixed original Apple FY2019 filing independently supports an annual revenue
+context of 2018-09-30 through 2019-09-28 and a distinct quarterly context of 2019-06-30
+through 2019-09-28, with DEI FY2019/FY/10-K/report-end anchors and exact USD facts.
+FINDING-322 retains the complete financial component and offline linkage proof.
+This one selected source witness improves input evidence, not alpha, a historical
+PIT panel or the current parser. No prices, scores, portfolios or gates changed.
+Future input work should integrate explicit annual anchors, matching instant
+balance dates and conservative availability labels in one opt-in policy before
+new economic evaluation. Frozen ADR-417 and prospective ADR-418 remain untouched.

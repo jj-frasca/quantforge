@@ -757,3 +757,15 @@ stay explicit and wholly unknown legacy/direct/empty histories omit the field.
 No numeric/selector, annual-duration, period alignment or PIT correction follows.
 New metadata may refuse malformed JSON formerly ignored. Existing whole-winner
 merge never borrows evidence; frozen/generated historical records remain unchanged.
+
+## Original filing anchor witness (ADR-420 / FINDING-322)
+
+One frozen Apple FY2019 original-filing capture now supplies DEI annual/fiscal
+anchors and same-document revenue contexts absent from the CompanyFacts captures.
+The known annual USD 260.174 billion and quarter USD 64.040 billion are separately bound to
+issuer 320193, USD units and explicit dimensionless intervals. Raw acceptance,
+filed and change labels remain distinct, unzoned source claims. Evidence and
+portable offline reproduction live in docs/evidence/FINDING-322/AAPL-2019-original-filing/.
+This fixes no production selector, score, availability/PIT panel or old cohort.
+A future coherent opt-in annual-flow/instant-balance/availability policy requires
+separate ADR/TDD/review; no guessed duration band or per-accession mining chain.
