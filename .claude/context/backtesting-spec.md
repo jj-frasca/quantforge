@@ -1136,6 +1136,20 @@ Do not restore another automated commit/push path for the research pool.
 
 ---
 
+## Retained paper-evidence reporting (ADR-413)
+
+Retained paper-evidence evaluation is separately available through
+`scripts/paper_evidence_report.py` (ADR-413 / FINDING-348). It reads one snapshot,
+reports its SHA256 and all/open/closed paired same-name scores, maturity, curve,
+lineage and turnover denominators. These retrospective unequal-horizon,
+lifecycle-stopped configuration summaries are not account alpha. Current producer
+internal-turnover costs do not attest unstored historical rates or reconcile
+entry/exit/switching/borrow costs; holding controls are gross. Unknown deflation
+verdicts and absent/zero-bar scores remain explicit. ADR-033's maturity/sample
+trigger is unchanged. The fixed 2026-11-05 snapshot's retained median return
+difference is negative despite a positive open-only median; no policy is selected
+or changed on that observation.
+
 ## 8. Oracle tests (must pass before any Phase 4 validation)
 
 A sophisticated statistic on a buggy engine is worthless. All in `tests/`:

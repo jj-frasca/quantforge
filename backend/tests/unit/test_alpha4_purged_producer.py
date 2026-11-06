@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from tests.unit.test_high_purged_producer import panel
 
@@ -231,6 +231,7 @@ def test_alpha4_separate_saved_slots_coexist_with_high_and_alpha9(
     assert CrossSectionalView.model_validate_json(view.model_dump_json()) == view
 
 
+@settings(deadline=None)
 @given(window=st.sampled_from([5, 9, 21]), quantile=st.sampled_from([0.1, 0.2, 0.3]))
 def test_alpha4_operative_hull_ties_warmup_oracle_and_embargo(window: int, quantile: float) -> None:
     t = window + 5

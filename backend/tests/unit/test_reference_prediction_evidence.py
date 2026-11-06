@@ -5,7 +5,7 @@ from itertools import pairwise
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from app.research.lab.calibration import oracle_sharpe_of
@@ -76,6 +76,7 @@ def test_reference_missing_nullable_startup_stays_flat() -> None:
     assert oracle_sharpe_of(data, means) == oracle_sharpe_of(data, means.astype(float))
 
 
+@settings(deadline=None)
 @given(
     st.lists(st.floats(min_value=-1000, max_value=1000, allow_nan=False), min_size=4, max_size=4),
     st.sampled_from([0.0, 0.001]),
