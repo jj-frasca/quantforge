@@ -3,7 +3,7 @@
 import numpy as np
 import numpy.typing as npt
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from app.validation.pbo import probability_of_backtest_overfitting
@@ -13,6 +13,43 @@ def test_pbo_is_in_unit_interval() -> None:
     rng = np.random.default_rng(0)
     perf = rng.normal(0, 1, (240, 8))
     pbo = probability_of_backtest_overfitting(perf, n_splits=8)
+    assert 0.0 <= pbo <= 1.0
+
+
+@st.composite
+def _pbo_shaped_performance(draw: st.DrawFn) -> tuple[npt.NDArray[np.float64], int]:
+    n_splits = draw(st.sampled_from([2, 4, 6]))
+    n_obs = draw(st.integers(min_value=max(n_splits, 4), max_value=48))
+    n_configs = draw(st.integers(min_value=2, max_value=6))
+    values = draw(
+        st.lists(
+            st.floats(min_value=-5.0, max_value=5.0, allow_nan=False, allow_infinity=False),
+            min_size=n_obs * n_configs,
+            max_size=n_obs * n_configs,
+        )
+    )
+    performance = np.array(values, dtype=np.float64).reshape(n_obs, n_configs)
+    return performance, n_splits
+
+
+@settings(deadline=None, max_examples=50)
+@given(data=_pbo_shaped_performance())
+def test_pbo_is_in_unit_interval_for_arbitrary_shapes_and_values(
+    data: tuple[npt.NDArray[np.float64], int],
+) -> None:
+    # §8 invariant #4: PBO is in [0.0, 1.0] for ANY valid shape/values -- OR the call fails
+    # closed with the documented degenerate-Sharpe guard (ADR-289's "nonconstant returns must
+    # have measurable finite Sharpe moments", app/validation/pbo.py's own _sharpe_per_config).
+    # Hypothesis found this is reachable: values near float64's subnormal range (e.g. ~1e-182)
+    # make `std`/`mean` unmeasurable under exact-translation scoring. Never silently wrong is
+    # the actual invariant; a silent [0,1] result for every finite input is a stronger claim
+    # than the code makes, and asserting it here would just mask the real contract.
+    performance, n_splits = data
+    try:
+        pbo = probability_of_backtest_overfitting(performance, n_splits=n_splits)
+    except ValueError as exc:
+        assert "measurable finite Sharpe moments" in str(exc)
+        return
     assert 0.0 <= pbo <= 1.0
 
 
