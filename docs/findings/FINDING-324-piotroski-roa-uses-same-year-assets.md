@@ -1,6 +1,6 @@
 # FINDING-324: Piotroski-inspired ROA trend uses same-year assets
 
-- **Status:** Open — conditional frozen-source reversal confirmed; runtime source-alignment policy pending
+- **Status:** Partially addressed — ADR423 opt-in beginning-assets consumption; default proxy and broader input/paper alignment remain open
 - **Date:** 2026-10-27, Codex autonomous session5 (ISO2026-W44)
 - **Severity:** Methodology mismatch confirmed on one frozen payload; population/run incidence unmeasured
 - **Affected:** fundamentals/quality.py:piotroski_f_score and its quality/record consumers
@@ -138,3 +138,47 @@ source authenticity, PIT, population/run incidence, all other score components
 and empirical/trading effects remain unestablished. Runtime source-alignment,
 missing-balance and income policy still require a separate ADR/TDD. No scorer,
 parser, threshold, generated record, frozen cohort or historical result changes.
+
+## W45 session9: opt-in production evaluation adopted before TDD
+
+After ADR422's permanent expiry closure passed exact publication CI, the mission
+was reread and the clean branch synchronized. Independent research and data
+reviews approved ADR423 before implementation. The bounded deliverable is an
+integrated, network-free beginning-assets ROA proxy over the existing known
+FY2021/22 witness. Default scorers and historical records remain unchanged.
+
+An explicit source graph must link two NetIncomeLoss groups, three original
+closing Assets groups and two matching same-accession comparative groups. The
+actual scorer must consume the beginning denominators and propagate its actual
+F-score through the unchanged quality blend to an attributed no-price record.
+A post-hoc point subtraction or ratio-only helper is not acceptance. The known
+8-to-7 result is fixed before implementation; it is not untouched OOS evidence.
+
+Pre-adoption review corrected a draft source-contract error: Annual.period_end
+comes from selected revenue, so it cannot bind Assets dates. FY2020's known
+quarter revenue coexists with a genuine closing Assets instant. ADR423 uses
+independent income/Assets source groups for ROA geometry, retaining the original
+history, revenue-derived period_end and 2025 citation unchanged. It does not
+certify unrelated fields, original DEI, numerator equivalence or historical PIT.
+No source cohort, return experiment, price, gate or effective-N reset is adopted.
+
+ADR423's actual integrated offline result now matches the fixed known comparison:
+F-score8 to7, only delta_roa_positive changes; quality0.6675842309900554 to
+0.6305471939530184 through its unchanged blend. GP/safety and all other witness
+verdicts are exact. Original source bytes, supplied history and its2025 envelope
+remain unchanged. Seven source groups, full inputs, actual default/opt-in claims
+and reproduction are retained in docs/evidence/ADR-423/. This partially addresses
+runtime beginning-assets consumption through an attributed no-price opt-in;
+default scoring and complete paper/numerator/PIT qualifications remain open.
+
+Prepublication tests/review also corrected exact duplicate comparison before
+projection, canonical decimal-spelling order, unrepresentable projected values,
+and actual JSON pool/shard reader compatibility, with targeted RED before each
+fix. Original raw capture bytes replace an initial reserialized test input for
+actual provenance verification. These are consolidated implementation checks for
+this method, not observed all-filer defects or new source looks. Actual FY2020
+revenue-derived period_end equals its Assets closing date; the earlier draft
+inference that date equality would reject this witness was incorrect. Separate
+source groups remain necessary because equality alone proves neither annual
+income nor balance identity. Alpha evidence NOT improved; no financial gate or
+new economic observation was measured. ADR418 remains the next registered screen.

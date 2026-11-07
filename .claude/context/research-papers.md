@@ -437,3 +437,10 @@ SSRN: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551
 - Resampling time blocks is appropriate when inference should retain weak serial dependence. It is
   deliberately not ADR-081's no-edge generator: retaining blocks can retain the momentum/reversion
   structure the catalog searches. ADR-081 samples complete vector rows iid instead.
+
+ADR423 adds a separate attributed beginning-assets NetIncomeLoss proxy opt-in,
+without rewriting the above legacy scores. Its retained known Apple2021/22
+comparison flows through actual FScore/quality/no-price record:8->7 and quality
+0.6675842309900554->0.6305471939530184. Numerator equivalence, other components,
+source PIT and empirical alpha remain unproved; default same-year scaling stays.
+Evidence and complete offline reproduction: docs/evidence/ADR-423/.

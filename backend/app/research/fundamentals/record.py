@@ -26,6 +26,7 @@ from pydantic import (
 
 from app.data.flow_facts import AnnualFlowFacts
 from app.data.fundamentals import FundamentalsHistory
+from app.data.roa_evidence import BeginningAssetsROAEvidence
 from app.research.fundamentals.quality import quality_score
 from app.research.valuation.score import score_valuation
 
@@ -85,6 +86,22 @@ class FundamentalRecord(BaseModel):
     history_citation: FundamentalHistoryCitation | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
+    roa_evidence: BeginningAssetsROAEvidence | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+    @model_validator(mode="after")
+    def validate_roa_evidence(self) -> "FundamentalRecord":
+        if self.roa_evidence is not None:
+            if self.value_score is not None or self.combined_score is not None:
+                raise ValueError("ROA evidence is reviewed only for no-price records")
+            if (self.symbol, self.cik, self.fiscal_year) != (
+                self.roa_evidence.symbol,
+                self.roa_evidence.cik,
+                self.roa_evidence.intervals[-1].fiscal_year,
+            ):
+                raise ValueError("ROA evidence must match record issuer and fiscal year")
+        return self
 
     @model_validator(mode="after")
     def validate_combined_score(self) -> "FundamentalRecord":
@@ -117,6 +134,8 @@ def compute_fundamental_record(
     price: float | None = None,
     sic_description: str | None = None,
     sic_code: str | None = None,
+    *,
+    roa_evidence: BeginningAssetsROAEvidence | None = None,
 ) -> FundamentalRecord:
     """Compute a FundamentalRecord from a company's history (and optionally its latest price and SIC
     classification). Quality is always computed from EDGAR alone; value is added only when `price` is
@@ -126,7 +145,13 @@ def compute_fundamental_record(
     all-None record that still records the company's identity (and flags why nothing was computable).
     `sic_description`/`sic_code` are passed through as-is (ADR-095/146) — this function stays
     network-free."""
-    q = quality_score(history)
+    if roa_evidence is not None and price is not None:
+        raise ValueError("ROA evidence is reviewed only without a price")
+    q = (
+        quality_score(history, roa_evidence=roa_evidence)
+        if roa_evidence is not None
+        else quality_score(history)
+    )
     flags = list(q.flags)
 
     value_score: float | None = None
@@ -152,6 +177,7 @@ def compute_fundamental_record(
         flags=tuple(flags),
         sic_description=sic_description,
         sic_code=sic_code,
+        roa_evidence=q.roa_evidence,
         history_citation=FundamentalHistoryCitation(
             symbol=history.symbol,
             cik=history.cik,

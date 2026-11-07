@@ -1,6 +1,7 @@
 """Paper-inspired fundamental quality scorers over `FundamentalsHistory` (ADR-029 Layer 2).
 
-- Piotroski-inspired F-Score: 9-point proxy with same-year-asset ROA (FINDING-324).
+- Piotroski-inspired F-Score: defaults to same-year-asset ROA (FINDING-324);
+  optional attributed beginning-assets NetIncomeLoss proxy (ADR-423).
 - Gross profitability (Novy-Marx 2013): gross profit / total assets.
 - Financial safety: a leverage + liquidity distress PROXY from available data (a full Altman Z needs
   EBIT + market cap we do not yet pull -- deferred; documented honestly, rule 6).
@@ -15,9 +16,10 @@ from fractions import Fraction
 from numbers import Integral
 from typing import Protocol, cast
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.data.fundamentals import AnnualFundamentals, FundamentalsHistory
+from app.data.roa_evidence import BeginningAssetsROAEvidence, bind_roa_evidence
 
 
 def _ratio(numerator: float | None, denominator: float | None) -> float | None:
@@ -30,7 +32,8 @@ def _ratio(numerator: float | None, denominator: float | None) -> float | None:
 class FScore(BaseModel):
     """Nine-point financial-health proxy inspired by Piotroski (2000), with components exposed.
 
-    Same-year asset scaling differs from the paper's beginning-assets ROA (FINDING-324).
+    Default same-year asset scaling differs from the paper's beginning-assets ROA (FINDING-324).
+    An explicit source-attributed beginning-assets mode retains a conditional income proxy.
     A signal is False when its inputs are missing (never award a point on absent data).
     """
 
@@ -74,6 +77,9 @@ class QualityScore(BaseModel):
     gross_profitability: float | None
     safety: SafetyScore
     flags: list[str] = []
+    roa_evidence: BeginningAssetsROAEvidence | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
 
 class _ExactRatioScalar(Protocol):
@@ -103,11 +109,15 @@ def _piotroski_exact_operand(value: object, signal: str) -> Fraction:
     return Fraction(int(numerator), int(denominator))
 
 
-def piotroski_f_score(history: FundamentalsHistory) -> FScore:
+def piotroski_f_score(
+    history: FundamentalsHistory, *, roa_evidence: BeginningAssetsROAEvidence | None = None
+) -> FScore:
     """Piotroski-inspired proxy from the two most-recent selected years (t = latest, t-1 = prior).
 
-    ROA uses same-year assets; beginning balances are not reconstructed (FINDING-324).
+    Default ROA uses same-year assets (FINDING-324). Explicit ADR-423 evidence supplies
+    beginning balances without claiming original-filing audit or paper-numerator equivalence.
     With fewer than two years, or when a component's inputs are missing, that component scores 0."""
+    evidence = bind_roa_evidence(history, roa_evidence) if roa_evidence is not None else None
     years: tuple[AnnualFundamentals, ...] = tuple(history.years)
     if len(years) < 2:
         return FScore(
@@ -157,9 +167,11 @@ def piotroski_f_score(history: FundamentalsHistory) -> FScore:
         if value is not None and not math.isfinite(value):
             raise ValueError(f"{field} must be finite for Piotroski F-score")
 
-    roa_t = _ratio(t.net_income, t.total_assets)
-    roa_p = _ratio(p.net_income, p.total_assets) if p_adjacent else None
-    cfo_over_assets_t = _ratio(t.operating_cash_flow, t.total_assets)
+    roa_assets_t = evidence.groups[5].value if evidence is not None else t.total_assets
+    roa_assets_p = evidence.groups[3].value if evidence is not None else p.total_assets
+    roa_t = _ratio(t.net_income, roa_assets_t)
+    roa_p = _ratio(p.net_income, roa_assets_p) if p_adjacent else None
+    cfo_over_assets_t = _ratio(t.operating_cash_flow, roa_assets_t)
     lev_t = _ratio(t.long_term_debt, t.total_assets)
     lev_p = _ratio(p.long_term_debt, p.total_assets) if p_adjacent else None
     cr_t = _ratio(t.total_current_assets, t.total_current_liabilities)
@@ -186,9 +198,9 @@ def piotroski_f_score(history: FundamentalsHistory) -> FScore:
             raise ValueError(f"{ratio_name} must be finite for Piotroski F-score")
 
     for ratio_name, ratio, numerator, denominator in (
-        ("roa_t", roa_t, t.net_income, t.total_assets),
-        ("roa_p", roa_p, p.net_income, p.total_assets),
-        ("cfo_over_assets_t", cfo_over_assets_t, t.operating_cash_flow, t.total_assets),
+        ("roa_t", roa_t, t.net_income, roa_assets_t),
+        ("roa_p", roa_p, p.net_income, roa_assets_p),
+        ("cfo_over_assets_t", cfo_over_assets_t, t.operating_cash_flow, roa_assets_t),
         ("lev_t", lev_t, t.long_term_debt, t.total_assets),
         ("lev_p", lev_p, p.long_term_debt, p.total_assets),
         ("cr_t", cr_t, t.total_current_assets, t.total_current_liabilities),
@@ -214,9 +226,9 @@ def piotroski_f_score(history: FundamentalsHistory) -> FScore:
             roa_t,
             roa_p,
             t.net_income,
-            t.total_assets,
+            roa_assets_t,
             p.net_income,
-            p.total_assets,
+            roa_assets_p,
             False,
         ),
         (
@@ -224,9 +236,9 @@ def piotroski_f_score(history: FundamentalsHistory) -> FScore:
             cfo_over_assets_t,
             roa_t,
             t.operating_cash_flow,
-            t.total_assets,
+            roa_assets_t,
             t.net_income,
-            t.total_assets,
+            roa_assets_t,
             False,
         ),
         (
@@ -371,11 +383,18 @@ def _clip(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
-def quality_score(history: FundamentalsHistory) -> QualityScore:
+def quality_score(
+    history: FundamentalsHistory, *, roa_evidence: BeginningAssetsROAEvidence | None = None
+) -> QualityScore:
     """Composite fundamental quality (ADR-029): carry the raw F-Score / gross profitability / safety,
     plus a standalone [0,1] `score` = mean of the AVAILABLE normalized legs. A leg with no inputs is
     dropped; the F-Score leg is always available, so `score` is only None if the history is empty."""
-    f = piotroski_f_score(history)
+    evidence = bind_roa_evidence(history, roa_evidence) if roa_evidence is not None else None
+    f = (
+        piotroski_f_score(history, roa_evidence=evidence)
+        if evidence is not None
+        else piotroski_f_score(history)
+    )
     gp = gross_profitability(history)
     safety = financial_safety(history)
     flags: list[str] = []
@@ -405,4 +424,11 @@ def quality_score(history: FundamentalsHistory) -> QualityScore:
         flags.append("financial safety unavailable")
 
     score = sum(legs) / len(legs) if legs else None
-    return QualityScore(score=score, f_score=f, gross_profitability=gp, safety=safety, flags=flags)
+    return QualityScore(
+        score=score,
+        f_score=f,
+        gross_profitability=gp,
+        safety=safety,
+        flags=flags,
+        roa_evidence=evidence,
+    )

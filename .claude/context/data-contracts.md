@@ -802,3 +802,17 @@ root and PRE manifest absent at recovery. Original protocol/roster and unfinishe
 offline methods are preserved in docs/evidence/ADR-422/, not adopted production
 capability. Coverage and alpha remain NOT MEASURED. Never renew, retry, reroot or
 replace the expired study; do not treat offline tests as target observations.
+
+## Attributed beginning-assets ROA opt-in (ADR-423)
+
+A separate network-free evaluator binds actual CompanyFacts bytes/CIK and an
+aware observed-source cutoff to two supplied annual intervals, two literal USD
+NetIncomeLoss groups and five Assets groups at three dates. Original closings
+and same-filing comparatives must agree exactly before projection. Positive
+Assets, exact period/accession/metadata agreement and complete supplied-history
+hash/scalar bindings precede explicit scoring. Full original row keys and
+history envelope remain. These are aggregate source claims, not audited DEI,
+paper-numerator equivalence, unrelated-period or historical PIT proof.
+Annual.period_end is revenue-derived and cannot establish these ROA dates.
+Default parsers/schemas stay unchanged; optional ROA evidence travels with new
+quality and no-price records, omitted when unknown; priced opt-in refuses.

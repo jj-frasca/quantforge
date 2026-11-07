@@ -1747,3 +1747,16 @@ report-end instants never borrow another accession. One-year F-score zero is the
 existing insufficient-history behavior; value/combined are unknown without price.
 This is no historical PIT panel, full portfolio gate or new alpha evidence.
 Frozen417/418, generated records, defaults and all selection accounting stay.
+
+## Conditional beginning-assets ROA evaluation (ADR-423)
+
+Optional attributed roa_evidence flows through the actual F-score, quality blend
+and no-price record. Explicit evidence binds complete supplied history and
+independently matched income/Assets source dates; it must validate before short
+history shortcuts. Actual ROA/CFO beginning denominators also feed existing
+numeric guards. Other component formulas and default None behavior stay exact.
+Quality/Record retain evidence omitted whenNone; producer price and direct
+priced-value record claims refuse when evidence is present. This corrects one
+conditional denominator basis, not paper numerator mapping, other legacy periods,
+turnover/share basis or PIT. Known F324 comparison is already exposed; financial
+gates and alpha remain unmeasured. Full retained outer evaluation is required.
