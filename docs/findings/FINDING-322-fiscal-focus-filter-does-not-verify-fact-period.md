@@ -330,3 +330,52 @@ conservative availability labels. It must preserve unsupported/ambiguous cases
 and compare source-bound outputs before any separately adopted economic test.
 Do not mine another accession or refresh either frozen portfolio cohort. ADR-417,
 ADR-418, the older CompanyFacts captures and all generated records stay unchanged.
+
+## W45 session7: integrated anchored input policy, before implementation
+
+The demonstrated obstacle to the quality/value portfolio is truthful period and
+availability evidence, rather than a missing ranker. ADR419 preserves selected
+rows; ADR420 supplies one independently audited original annual anchor. Neither
+makes the current CompanyFacts selector annual or its later capture historical PIT.
+After checking completed receipts, independent research and data reviews approve
+ADR421's ONE opt-in annual-flow/instant-balance/observed-availability policy.
+
+Before tests or actual new selection, fix the comparison: use only frozen AAPL
+CompanyFacts raw SHA73a86c6aedc31f77cac2ea4df5f80f0b3bd7e6eb58bb4e01444fbedf3afb9c43
+and ADR420 FY2019 anchor/accession0000320193-19-000119, annual2018-09-30 through
+2019-09-28. Compare one policy result to the unchanged legacy FY2019 row; never
+construct another fiscal-year anchor or fetch a source to improve coverage.
+Revenue must match the previously known annual260174000000 rather than legacy
+quarter64040000000. Every other field must meet the same predeclared period/unit/
+accession policy or stay missing/refuse on contradiction. Other fields remain
+later CompanyFacts claims; ADR420 independently audited revenue only.
+
+Zero prices, searches, parameter/economic trials, cost accounts or new return
+geometry. No untouched return test exists in this known-witness comparison. All
+PBO/DSR/WF/holdout/graduation checks remain NOT MEASURED. Capture/resource cost$0.
+All prior selection remains disclosed, including ADR414–416, terminal417 and sealed
+418. No effective-N reset, old-root modification, generated write or new cohort.
+Acceptance is attributable aligned inputs plus honest observed-source cutoff,
+source/row-order invariance, explicit missingness/conflict refusal and existing
+scorer integration retaining its evidence wrapper. Value/combined remain unknown
+without a price; the unchanged one-year F-score zero is insufficient history,
+not measured poor economics. Independent implementation/result review and full
+foreground gates are required. Alpha case is unchanged until economic evidence.
+
+### ADR421 offline known-witness result
+
+The opt-in evaluator admits14 same-accession source fields, no missing optionals,
+for the single explicit2018-09-30..2019-09-28 annual interval and matching report-end
+instants. Revenue260.174bn/NI55.256bn/EPS11.89/GP98.392bn replace the legacy
+quarter64.040bn/13.686bn/3.03/24.313bn. Other scalar fields match. No default
+selector or historical/generated record is changed. Actual-source observation
+eligibility is2026-11-06T23:31:19.474972Z;2019as-of requests refuse.
+
+The retained wrapper reaches the existing no-price FundamentalRecord producer.
+Value/combined stayNone; F-score0 is its insufficient one-year history behavior,
+not a poor-business finding. Only original revenue has ADR-420's independent XBRL
+linkage audit; other fields are later aggregate claims matching the supplied
+anchor, not certified original/split/PIT facts. Full inputs/rows/comparison and
+read-only reproduction live in docs/evidence/ADR-421/. Alpha case NOT improved;
+one input capability improved. Full truthful history/coverage and untouched
+portfolio economics remain unmeasured. No cohort, threshold, price or trial reset.

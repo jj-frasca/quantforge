@@ -1738,3 +1738,12 @@ PIT panel or the current parser. No prices, scores, portfolios or gates changed.
 Future input work should integrate explicit annual anchors, matching instant
 balance dates and conservative availability labels in one opt-in policy before
 new economic evaluation. Frozen ADR-417 and prospective ADR-418 remain untouched.
+
+## Opt-in anchored no-price evaluation (ADR-421)
+
+One explicitly anchored annual CompanyFacts result can reach the existing scorer
+while retaining an observed-source availability wrapper. Exact annual flows and
+report-end instants never borrow another accession. One-year F-score zero is the
+existing insufficient-history behavior; value/combined are unknown without price.
+This is no historical PIT panel, full portfolio gate or new alpha evidence.
+Frozen417/418, generated records, defaults and all selection accounting stay.

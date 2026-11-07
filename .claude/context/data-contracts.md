@@ -769,3 +769,17 @@ portable offline reproduction live in docs/evidence/FINDING-322/AAPL-2019-origin
 This fixes no production selector, score, availability/PIT panel or old cohort.
 A future coherent opt-in annual-flow/instant-balance/availability policy requires
 separate ADR/TDD/review; no guessed duration band or per-accession mining chain.
+
+## Explicit annual anchor evaluation (ADR-421)
+
+The opt-in anchored evaluator requires one externally audited original10-K/FY
+nontransition annual interval/accession/issuer plus original-source and CompanyFacts
+SHA256/URL/aware observed-time provenance. It checks actual CompanyFacts bytes and
+issuer, then refuses as-of before either observation. Raw header labels do not
+become historical public availability. All flows (including weighted shares) use
+exact accession/start/end; balances require same accession/end and absent start.
+First eligible ordered tag wins only if all eligible exact numeric values agree;
+canonical source-row order preserves duplicates/absence. Missing optionals remain
+None, required revenue refuses. Wrapper retains aligned history, no-price record,
+source rows/missingness and provenance. These are supplied/aggregate source claims;
+only revenue has ADR420's independent original-XBRL witness. Defaults stay.
