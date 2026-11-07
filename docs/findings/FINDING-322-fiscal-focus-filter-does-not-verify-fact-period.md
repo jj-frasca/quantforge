@@ -379,3 +379,68 @@ anchor, not certified original/split/PIT facts. Full inputs/rows/comparison and
 read-only reproduction live in docs/evidence/ADR-421/. Alpha case NOT improved;
 one input capability improved. Full truthful history/coverage and untouched
 portfolio economics remain unmeasured. No cohort, threshold, price or trial reset.
+
+## W45 session7: finite two-year quality coverage, before implementation
+
+After ADR421's exact publication CI passed and the mission was reread, independent
+research/data review approved ONE prospective-observation input-coverage study
+under ADR422. Five fixed purposive issuers (IBM/KO/NFLX/COST/WMT), two original
+annual filings each, no prices/returns/ranks/economic trials. This advances the
+one-year capability to test whether two physically contiguous annual inputs can
+reach the existing quality scorer. It is not a full value pipeline, a historical
+PIT panel or alpha. All prior cohorts and trial accounting stay frozen.
+
+Hypothesis, source policy, comparison, complete-denominator accounting and strict
+acceptance are fixed in ADR422 BEFORE tests/code/new target content. Required
+inputs may be unsupported or missing; that is useful method-domain coverage
+information, not negative economics. Implementation defects instead make the
+study UNEVALUABLE/INVALID_METHOD. Neither outcome authorizes altered-method
+replay, replacement issuers or more source requests. No helper-only publication
+or repeated accession-witness chain. New actual source root remains absent.
+
+Pre-adoption reviews clarified that unrelated submission forms may have empty
+report dates, malformed eligible 10-Ks must refuse rather than be skipped, and
+13 required financial outputs differ from 14 raw concepts. SEC access documentation
+also explicitly allows a filing agent's CIK in the accession prefix; issuer identity
+must bind via the URL/submissions/header/context, never prefix equality. These
+are design constraints fixed before source exposure, not observed incidence claims.
+
+Before ADR422 target acquisition, research review additionally confirms a generic
+interpretation limit: EPS and weighted-average shares from distinct original
+annual accessions may use different stock-split bases. Exact period attribution
+and a complete two-year wrapper do not establish corporate-action comparability.
+The existing no_dilution component and resulting quality score remain conditional;
+this study measures neither comparable split bases nor investable quality. No
+issuer-specific split facts were inspected for this qualification. No source,
+scorer, acceptance criterion or trial geometry changes; do not adjust target
+values after exposure to make a score look comparable.
+
+Offline harness review before source exposure found coordinator/parser defects
+that would have distorted this coverage measurement: the twentieth successful
+request could be treated as incomplete; English dates depended on ambient locale;
+malformed context structure could pass; and unrelated binary exhibits could reject
+a supported primary. Targeted RED controls preceded corrections. Further controls
+separate legacy diagnostic refusal from anchored coverage, reject spoofed DEI URI
+suffixes, preserve review receipts before HTTP, and classify unexpected method/disk
+errors distinctly. These are pre-acquisition synthetic/retained-control findings,
+not observed five-issuer incidence. All are consolidated within this one study;
+no new source look or acceptance threshold change was used to obtain a fix.
+
+## W45 session9: ADR422 permanently NOTRUN/EXPIRED
+
+Recovery of the four owned dirty paths found the fixed November7,2026 11:00UTC
+start deadline already passed (actual clock18:01UTC), registered root absent,
+and no final PREACQUISITION manifest. The inherited work stopped during offline
+harness preparation. Under the unchanged protocol this is terminal NOTRUN/EXPIRED;
+no live invocation, renewed window, retry, reroot or replacement is permitted.
+All667 protected source/cohort/generated-file baseline hashes remain exact.
+
+The original protocol, roster, unfinished method/tests and actual offline TDD
+receipts are retained in docs/evidence/ADR-422/. Synthetic67PASS does not supply
+five-issuer coverage evidence or final frozen-harness approval. No production
+capability is adopted in this closure. Zero recorded issuer attempts is not a
+coverage fraction; the source/history/quality hypotheses remain unmeasured,
+not rejected. Alpha case NOT improved; all financial gates and economics NOT
+MEASURED, existing trial accounting unchanged. ADR417 remains terminal and
+ADR418's sealed future final evaluation remains the next economic observation.
+Do not manufacture another equivalent cohort to recover the expired attempt.

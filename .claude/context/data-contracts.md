@@ -783,3 +783,22 @@ canonical source-row order preserves duplicates/absence. Missing optionals remai
 None, required revenue refuses. Wrapper retains aligned history, no-price record,
 source rows/missingness and provenance. These are supplied/aggregate source claims;
 only revenue has ADR420's independent original-XBRL witness. Defaults stay.
+
+## Finite current two-year coverage protocol (ADR-422)
+
+One source-only study tests a frozen five-issuer roster with two original annual
+anchors each. Its nonproduction harness must preserve full request/selection/
+anchor/field evidence and actual observed-source availability; six supported DEI
+claims, issuer/accession/report bindings and physical continuity precede quality
+scoring. Accession prefix is submitter identity, not necessarily issuer identity.
+Absent optional facts stay absent; strict coverage needs all 13 financial model
+outputs, not every raw alternative concept. No current-price/value or historical
+PIT claim follows. One reviewed frozen method and source attempt only; unsupported
+source coverage and invalid-method outcomes remain separate, never retried.
+
+ADR422 terminal closure (W45session9): NOTRUN/EXPIRED. Its fixed Nov7,2026
+11:00UTC start window elapsed before final harness approval/START; registered
+root and PRE manifest absent at recovery. Original protocol/roster and unfinished
+offline methods are preserved in docs/evidence/ADR-422/, not adopted production
+capability. Coverage and alpha remain NOT MEASURED. Never renew, retry, reroot or
+replace the expired study; do not treat offline tests as target observations.
