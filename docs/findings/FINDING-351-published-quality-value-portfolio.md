@@ -116,3 +116,67 @@ Source completion remains unresolved (413 required series), and even a future
 strict economic-screen success would be a lead, never full-gate alpha. ADR-417
 remains terminal UNEVALUABLE with no retry or source reuse. Evidence capability
 improved; the alpha case has no new economic observation yet.
+
+## W45 session10: prospective execution gap
+
+ADR418's own seal was published as941dee7c and passed exact CI42227612894 and
+hooks42227612864 on November6, before its November9 pre-open deadline. The
+immutable cohort remains412 eligible/83 selected/64 closes. The current research
+scorecard is3310 experiments/6627085 lifetime trials/zero of41 universe survivors;
+44 retained paper positions have zero mature records, with median same-name
+return difference-1.82729 percentage points. These are no new positive-alpha facts.
+
+The prospective README explicitly records that its acquisition driver is absent.
+ADR417's evaluator hardcodes its historical56-session calendar and cannot execute
+the sealed future policy. This is a concrete production-evaluation obstacle:
+source completeness is still unresolved, and no callable reviewed final-window
+account currently exists. ADR424 addresses that gap as one integrated offline
+implementation, after independent research/data pre-adoption reviews. Synthetic
+PASS/FAIL/source-failure exercises must not be mistaken for market observations.
+No new cohort, source call, interim economic look or registration change follows.
+The next economic observation stays ADR418's original February11 final screen.
+
+### Prepublication exact-tie screen finding
+
+Independent review of the initial ADR424 implementation found a false economic
+screen on constructed identical positive paths. With every name and SPY moving
+100 to101, the unchanged funded_hold83/412/1-name reports return respectively
+0.007982017982018697,0.00798201798201248,0.00798201798201803. Native subtraction
+gives selected-minus-EW6.217248937900877e-15 and selected-minus-SPY
+6.661338147750939e-16; cash excess is positive. A native strict-all-positive
+screen therefore falsely passes an exact tie. The independent account oracle
+reproduces this arithmetic before any fix; a full64-close integrated TDD witness
+is required next. No actual market incidence or outcome has been observed.
+
+All three exact accounts instead equal(101/100)*(999/1001)-1. No tolerance or
+weaker threshold is justified. ADR425 will specify strict comparison from exact
+canonical Decimal endpoint ratios and the original ten-basis-point cost, while
+retaining unchanged native funded_hold companion reports. The initial35 passing
+tests missed this case; they do not justify release. Three parent synthetic
+conformance examples completed before discovery are historical pre-fix method
+checks only, not final implementation approval or market evidence.
+
+### Session12 completed evaluator and exact-screen correction
+
+The planning language above records discovery chronology. ADR424/425 is now
+implemented and independently approved: original canonical Decimal endpoints
+become Fractions before division, the unchanged999/1001 funded cost factor is
+applied, and strict positivity of all three exact contrasts decides the screen.
+Native funded_hold companion reports remain unchanged. The actual full-panel
+positive-tie regression failed before correction; final44 focused tests pass.
+
+Four retained complete synthetic cases verify flatFAIL, selected-dominantPASS,
+identical-positive-tieFAIL and late-sourceUNEVALUABLE without subset economics.
+Both fresh independent reviewers reproduce protected694-path equality; research
+also reconstructs source endpoint accounts and1000 explicit funded-cash oracles.
+Complete portable receipts, TDD chronology and independent reports are in
+`docs/evidence/ADR-424/`. They provide no market observation or alpha improvement.
+Current scorecard remains3310 experiments/6627085 lifetime trials/zero41 universe
+survivors; paper44/max86bars/zero mature/all median paired return-1.82729pp.
+
+The implementation obstacle is addressed. Actual all413-source coverage remains
+unresolved. The next concrete experiment is the already sealed ADR418 sole final
+evaluation in[2027-02-11T00Z,2027-02-12T00Z), preserving its83/412 selection,
+64 closes,10bp per side and strict EW/SPY/cash comparison. No interim look,
+replacement or renewed attempt is authorized; PBO/DSR/WF/holdout/graduation remain
+NOT MEASURED at this geometry.

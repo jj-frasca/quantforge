@@ -1,0 +1,55 @@
+import hashlib,json,random
+from decimal import Decimal
+from fractions import Fraction
+from pathlib import Path
+from app.research.cross_sectional.prospective_portfolio import exact_funded_screen,ROOT
+repo=Path.cwd().parent
+rng=random.Random(20261108)
+for iteration in range(1000):
+    pairs={s:(Decimal(rng.randint(1,1000000))/Decimal(1000),Decimal(rng.randint(1,1000000))/Decimal(1000)) for s in ['A','B','C','SPY']}
+    result=exact_funded_screen(pairs,['A','C'],['A','B','C'])
+    returns={}
+    for name,names in [('top_quintile',['A','C']),('eligible_equalweight',['A','B','C']),('SPY',['SPY'])]:
+        cash=Fraction(0)
+        for s in names:
+            entry,exit=map(Fraction,pairs[s])
+            units=Fraction(1,len(names))/(Fraction(1001,1000)*entry)
+            cash+=units*exit*Fraction(999,1000)
+        returns[name]=cash-1
+    returns['cash']=Fraction(0)
+    assert {k:Fraction(v) for k,v in result['exact_net_returns'].items()}==returns
+    contrasts={k:returns['top_quintile']-returns[k] for k in ['eligible_equalweight','SPY','cash']}
+    assert {k:Fraction(v) for k,v in result['exact_net_excess'].items()}==contrasts
+    assert result['screen_passed']==all(v>0 for v in contrasts.values())
+protected=json.loads(Path('/tmp/qf-w45-s10-424-protected.json').read_text())
+assert all(hashlib.sha256((repo/p).read_bytes()).hexdigest()==v for p,v in protected.items())
+root=Path('/var/folders/v9/33ly_cl50d90g4r3pr6pl_km0000gn/T/qf-adr424-synthetic-gm1kr8wm')
+summary=json.loads((root/'summary.json').read_text())
+assert summary['synthetic'] is True and summary['alpha_evidence_improved'] is False
+for name,case in summary['cases'].items():
+    folder=root/name
+    manifest=json.loads((folder/'file-manifest.json').read_text())
+    assert hashlib.sha256((folder/'file-manifest.json').read_bytes()).hexdigest()==case['manifest_sha256']
+    assert all(hashlib.sha256((folder/p).read_bytes()).hexdigest()==v for p,v in manifest.items())
+    result=json.loads((folder/'result.json').read_text())
+    if name=='late_source_failure':
+        assert 'accounts' not in result and result['status']=='UNEVALUABLE' and case['source_payloads']==412
+        continue
+    start=json.loads((folder/'START.json').read_text())
+    cohort=start['cohort']
+    order=cohort['selection']['eligible']+['SPY']
+    endpoints={}
+    for n,s in enumerate(order):
+        bars=json.loads((folder/f'source-{n:04d}.json').read_text())
+        endpoints[s]=(Fraction(Decimal(bars[0]['close'])),Fraction(Decimal(bars[-1]['close'])))
+    returns={}
+    for leg,names in [('top_quintile',cohort['selection']['selected']),('eligible_equalweight',cohort['selection']['eligible']),('SPY',['SPY'])]:
+        cash=sum((Fraction(1,len(names))*exit/entry*Fraction(999,1001) for entry,exit in (endpoints[s] for s in names)),Fraction(0))
+        returns[leg]=cash-1
+    returns['cash']=Fraction(0)
+    assert {k:Fraction(v) for k,v in result['exact_net_returns'].items()}==returns
+    contrasts={k:returns['top_quintile']-returns[k] for k in ['eligible_equalweight','SPY','cash']}
+    assert {k:Fraction(v) for k,v in result['exact_net_excess'].items()}==contrasts
+    assert result['screen_passed']==all(v>0 for v in contrasts.values())
+assert not ROOT.exists() and not ROOT.is_symlink()
+print(json.dumps({'random_cash_unit_oracles':1000,'protected_files_exact':len(protected),'retained_synthetic_cases_exact':len(summary['cases']),'actual_root_absent':True}))

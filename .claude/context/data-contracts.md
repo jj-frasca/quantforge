@@ -816,3 +816,22 @@ paper-numerator equivalence, unrelated-period or historical PIT proof.
 Annual.period_end is revenue-derived and cannot establish these ROA dates.
 Default parsers/schemas stay unchanged; optional ROA evidence travels with new
 quality and no-price records, omitted when unknown; priced opt-in refuses.
+
+## Prospective sealed-source evaluation (ADR-424)
+
+Actual418 source attempts require pinned7048 active source-policy hash equality,
+actual dependency/code/Decimal/default configuration identities and a durable
+exclusive START before provider construction. Preserve original canonical bars,
+full DQ report/warnings/UUID/time and passing dataset evidence; exactly64 ordered
+sealed labels on each of413 series, no repair/drop/fill. Expected source failures
+terminate UNEVALUABLE without subset economics. Storage/unexpected method errors
+leave incomplete starts, never fabricated source outcomes. Window crossing stops
+INCOMPLETE without another request or account output. No current source calls or
+registered-root creation; synthetic injection refuses the production root.
+
+ADR425 corrects the prepublication strict screen: exact Fraction means of original
+canonical Decimal endpoint price ratios and fixed cost1/1000 determine net excess
+and all-three strict positivity. Native funded_hold companion reports stay exact
+to their old implementation; rational return/contrast strings retain the new
+authoritative screen evidence. Display net_excess projects exact contrasts and
+may differ from subtracting native report scalars; no epsilon or threshold change.

@@ -1760,3 +1760,21 @@ priced-value record claims refuse when evidence is present. This corrects one
 conditional denominator basis, not paper numerator mapping, other legacy periods,
 turnover/share basis or PIT. Known F324 comparison is already exposed; financial
 gates and alpha remain unmeasured. Full retained outer evaluation is required.
+
+## Sealed prospective funded evaluator (ADR-424)
+
+The ADR418 final-window driver must verify immutable cohort/protocol/pinned-input
+identity and timely own publication before the exclusive one-attempt root. Actual
+execution is restricted to the original February11 UTC window; early invocations
+refuse before adapter/root and late/interrupted starts never renew. Reuse only
+unchanged funded_hold accounting, not417 calendar/evaluate_once. Full413-series
+64-label coverage precedes gross/net selected/EW/SPY/cash results. Strict positive
+excess against all3 controls is an economic screen only; all gates NOT MEASURED.
+Offline fake-source receipts are synthetic and do not improve alpha evidence.
+
+ADR425 corrects the prepublication strict screen: exact Fraction means of original
+canonical Decimal endpoint price ratios and fixed cost1/1000 determine net excess
+and all-three strict positivity. Native funded_hold companion reports stay exact
+to their old implementation; rational return/contrast strings retain the new
+authoritative screen evidence. Display net_excess projects exact contrasts and
+may differ from subtracting native report scalars; no epsilon or threshold change.
