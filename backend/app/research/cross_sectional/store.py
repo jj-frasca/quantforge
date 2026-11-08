@@ -56,7 +56,7 @@ class JsonFileCrossSectionalStore:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         payload = [e.model_dump(mode="json") for e in experiments]
         # Trailing newline so the file satisfies the end-of-file-fixer pre-commit hook.
-        self._path.write_text(json.dumps(payload, indent=2) + "\n")
+        self._path.write_text(json.dumps(payload, separators=(",", ":")) + "\n")
 
     def all(self) -> list[CrossSectionalExperiment]:
         return self._load()

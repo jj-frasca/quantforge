@@ -73,3 +73,14 @@ def test_json_store_revalidates_incoming_claim_before_write(tmp_path: Path) -> N
         store.add(unchecked)
 
     assert path.read_bytes() == before
+
+
+def test_json_file_store_writes_compact_json(tmp_path: Path) -> None:
+    path = tmp_path / "pool.json"
+    store = JsonFileCrossSectionalStore(path)
+    store.add(_exp(10))
+    text = path.read_text()
+    assert "\n  " not in text
+    assert ": " not in text
+    assert text.endswith("\n")
+    assert JsonFileCrossSectionalStore(path).prior_trials() == 10
