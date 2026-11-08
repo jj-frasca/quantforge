@@ -1,4 +1,4 @@
-# ADR-422: Serialize the cross-sectional pool compactly
+# ADR-426: Serialize the cross-sectional pool compactly
 
 - **Status:** Accepted
 - **Date:** 2026-11-08
