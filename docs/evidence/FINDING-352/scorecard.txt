@@ -1,0 +1,93 @@
+==================================================================================
+QUANTFORGE — state of the research programme
+==================================================================================
+searched : 3314 experiments over 607 symbols (7103306 lifetime trials — sum of per-symbol DSR/MinTRL denominators)
+graduates: 279 graduate experiments -> 41 distinct symbols
+DEFLATION: 0 of 41 clear the ADR-018 best-of-607 bar — the rest are not distinguishable from selection luck
+RESOLUTION: an edge must be a TRUE annualized Sharpe of 2.13 to clear that bar 80% of the time (4.3y holdout, SE 0.48)
+            halving the universe -> 2.04; doubling the holdout -> 1.51. History is the stronger lever.
+
+closest to the bar (holdout Sharpe vs its own threshold):
+  symbol  strategy                          holdout    bar  ratio   yrs
+  CASY    rsi_mean_reversion                   1.64   1.73   0.95   4.3
+  PWR     ultimate_oscillator                  1.24   1.73   0.72   4.3
+  FDX     trend_filtered_mean_reversion        1.05   1.72   0.61   4.3
+  ECL     bollinger_bands                      1.03   1.73   0.60   4.3
+  QQQ     coppock_curve                        1.01   1.72   0.59   4.3
+  SW      ultimate_oscillator                  1.07   1.88   0.57   3.6
+  PANW    ultimate_oscillator                  1.21   2.14   0.56   2.8
+  ANET    trend_filtered_mean_reversion        1.29   2.30   0.56   2.4
+  DVA     rsi_mean_reversion                   0.94   1.73   0.54   4.3
+  VRT     triple_ma_alignment                  1.43   2.85   0.50   1.6
+
+search families in the pool (fingerprint, experiments): edb65cb596b9… (3006) | legacy-unspecified (227) | 3f36fda20f9d… (54) | 4140981ffc8e… (21) | 969dd54dd031… (5) | 71cc60b8ec82… (1)
+median searched history: 7952 bars -- descriptive only; ADR-064 matches each null against its own subset below, so a pool spanning two history cohorts is read against both rather than refused
+
+which KIND of strategy the search selects (ADR-060):
+  Trend            median best-in-category Sharpe +0.578   wins 58%
+  Breakout         median best-in-category Sharpe +0.513   wins 8%
+  Mean Reversion   median best-in-category Sharpe +0.461   wins 31%
+  Combination      median best-in-category Sharpe +0.307   wins 3%
+  median lead over the runner-up: +0.076 against a Sharpe standard error of 0.178 -> INSIDE one standard error -- the family the search picks is not distinguishable from the runner-up
+
+out-of-sample Sharpe (compare with data/null_calibration/ — same statistic, no edge):
+  walk-forward  finalists  : median +0.52 | p95 +0.91 | max +1.72 (n=3089)
+  walk-forward  gate passers: median -0.37 | p95 -0.35 | max -0.34 (n=59)
+  purged-CV     finalists  : median +0.59 | p95 +0.94 | max +1.88 (n=3084)
+  purged-CV     gate passers: median -0.35 | p95 -0.34 | max -0.33 (n=59)
+
+margin vs the paper's DSR (reference P > 0.95, n=3087 finalists, median P 0.000):
+  agree: 90 both pass, 2956 both fail | disagree: 41 margin only, 0 probability only (1.3%)
+
+NOTE: the pool predates ADR-052, so it cannot state the search family it used and no comparison below is formally valid.
+      It resolves itself after the next discovery run writes rows that carry the fingerprint.
+
+null artifact coverage (ADR-093 — is the calibration length still the pool's?):
+  bootstrap:SPY  @ 5400 bars -- matches 65 symbols within 10%
+  bootstrap:SPY  @ 6075 bars -- matches 69 symbols within 10%
+  bootstrap:SPY  @ 7400 bars -- matches 93 symbols within 10%
+  bootstrap:SPY  @ 9247 bars -- matches 278 symbols within 10%
+  iid_normal     @ 5400 bars -- matches 65 symbols within 10%
+  iid_normal     @ 6075 bars -- matches 69 symbols within 10%
+  iid_normal     @ 7400 bars -- matches 93 symbols within 10%
+  iid_normal     @ 9247 bars -- matches 278 symbols within 10%
+  126 symbols match NO artifact; the largest shared length among them is 1403 bars -- dispatch null-calibration.yml with n_bars=1403 to use them (additive, ADR-065 names artifacts by length)
+
+vs the null (finalist window on both sides):
+  walk-forward     vs bootstrap:SPY  real +0.508 (n=328, 328 matched @ 5323 bars) | null median +0.652 p5 +0.220 p95 +0.983 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  walk-forward     vs bootstrap:SPY  real +0.553 (n=345, 345 matched @ 6253 bars) | null median +0.619 p5 +0.228 p95 +1.000 (n=200) -- NOT COMPARABLE -- search family edb65cb596b9... vs 3f36fda20f9d...
+  walk-forward     vs bootstrap:SPY  real +0.460 (n=462, 462 matched @ 7318 bars) | null median +0.631 p5 +0.264 p95 +1.072 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., edb65cb596b9... vs edb65cb596b9...
+  walk-forward     vs bootstrap:SPY  real +0.513 (n=1443, 1443 matched @ 9282 bars) | null median +0.640 p5 +0.288 p95 +0.947 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 71cc60b8ec82..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  walk-forward     vs iid_normal     real +0.508 (n=328, 328 matched @ 5323 bars) | null median +0.414 p5 +0.042 p95 +0.796 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  walk-forward     vs iid_normal     real +0.553 (n=345, 345 matched @ 6253 bars) | null median +0.425 p5 +0.090 p95 +0.761 (n=200) -- NOT COMPARABLE -- search family edb65cb596b9... vs 3f36fda20f9d...
+  walk-forward     vs iid_normal     real +0.460 (n=462, 462 matched @ 7318 bars) | null median +0.416 p5 +0.088 p95 +0.753 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., edb65cb596b9... vs edb65cb596b9...
+  walk-forward     vs iid_normal     real +0.513 (n=1443, 1443 matched @ 9282 bars) | null median +0.383 p5 +0.023 p95 +0.703 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 71cc60b8ec82..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  purged-CV        vs bootstrap:SPY  real +0.523 (n=328, 328 matched @ 5323 bars) | null median +0.661 p5 +0.269 p95 +1.003 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  purged-CV        vs bootstrap:SPY  real +0.595 (n=345, 345 matched @ 6253 bars) | null median +0.649 p5 +0.295 p95 +1.040 (n=200) -- NOT COMPARABLE -- search family edb65cb596b9... vs 3f36fda20f9d...
+  purged-CV        vs bootstrap:SPY  real +0.579 (n=462, 462 matched @ 7318 bars) | null median +0.651 p5 +0.359 p95 +0.993 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., edb65cb596b9... vs edb65cb596b9...
+  purged-CV        vs bootstrap:SPY  real +0.578 (n=1443, 1443 matched @ 9282 bars) | null median +0.662 p5 +0.324 p95 +0.922 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 71cc60b8ec82..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  purged-CV        vs iid_normal     real +0.523 (n=328, 328 matched @ 5323 bars) | null median +0.475 p5 +0.135 p95 +0.803 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  purged-CV        vs iid_normal     real +0.595 (n=345, 345 matched @ 6253 bars) | null median +0.470 p5 +0.205 p95 +0.803 (n=200) -- NOT COMPARABLE -- search family edb65cb596b9... vs 3f36fda20f9d...
+  purged-CV        vs iid_normal     real +0.579 (n=462, 462 matched @ 7318 bars) | null median +0.442 p5 +0.121 p95 +0.743 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., edb65cb596b9... vs edb65cb596b9...
+  purged-CV        vs iid_normal     real +0.578 (n=1443, 1443 matched @ 9282 bars) | null median +0.408 p5 +0.199 p95 +0.705 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 71cc60b8ec82..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  walk-forward excess vs bootstrap:SPY  real -0.012 (n=345, 345 matched @ 6253 bars) | null median -0.004 p5 -0.249 p95 +0.149 (n=200) -- NOT COMPARABLE -- search family edb65cb596b9... vs 3f36fda20f9d...
+  walk-forward excess vs bootstrap:SPY  real -0.130 (n=462, 462 matched @ 7318 bars) | null median -0.009 p5 -0.298 p95 +0.103 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., edb65cb596b9... vs edb65cb596b9...
+  walk-forward excess vs bootstrap:SPY  real -0.054 (n=1443, 1443 matched @ 9282 bars) | null median -0.003 p5 -0.164 p95 +0.040 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 71cc60b8ec82..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  walk-forward excess vs iid_normal     real -0.012 (n=345, 345 matched @ 6253 bars) | null median +0.000 p5 -0.292 p95 +0.363 (n=200) -- NOT COMPARABLE -- search family edb65cb596b9... vs 3f36fda20f9d...
+  walk-forward excess vs iid_normal     real -0.130 (n=462, 462 matched @ 7318 bars) | null median +0.000 p5 -0.251 p95 +0.325 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., edb65cb596b9... vs edb65cb596b9...
+  walk-forward excess vs iid_normal     real -0.054 (n=1443, 1443 matched @ 9282 bars) | null median -0.001 p5 -0.242 p95 +0.277 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 71cc60b8ec82..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  purged-CV excess vs bootstrap:SPY  real -0.000 (n=345, 345 matched @ 6253 bars) | null median -0.000 p5 -0.175 p95 +0.153 (n=200) -- NOT COMPARABLE -- search family edb65cb596b9... vs 3f36fda20f9d...
+  purged-CV excess vs bootstrap:SPY  real -0.000 (n=462, 462 matched @ 7318 bars) | null median -0.000 p5 -0.098 p95 +0.115 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., edb65cb596b9... vs edb65cb596b9...
+  purged-CV excess vs bootstrap:SPY  real -0.000 (n=1441, 1443 matched @ 9282 bars) | null median -0.000 p5 -0.067 p95 +0.035 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 71cc60b8ec82..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+  purged-CV excess vs iid_normal     real -0.000 (n=345, 345 matched @ 6253 bars) | null median +0.004 p5 -0.109 p95 +0.383 (n=200) -- NOT COMPARABLE -- search family edb65cb596b9... vs 3f36fda20f9d...
+  purged-CV excess vs iid_normal     real -0.000 (n=462, 462 matched @ 7318 bars) | null median -0.000 p5 -0.140 p95 +0.353 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., edb65cb596b9... vs edb65cb596b9...
+  purged-CV excess vs iid_normal     real -0.000 (n=1441, 1443 matched @ 9282 bars) | null median -0.000 p5 -0.090 p95 +0.289 (n=200) -- NOT COMPARABLE -- search family 3f36fda20f9d..., 4140981ffc8e..., 71cc60b8ec82..., 969dd54dd031..., edb65cb596b9... vs 3f36fda20f9d...
+
+the ADR-063 window change, paired within symbol (1 symbols searched at both, 5445 -> 9239 bars):
+  finalist walk-forward OOS  -1.082 [-1.082, -1.082] -- SURROGATE: each side is denominated in its own window's drift (ADR-068)
+  finalist in-sample observed +0.810 [+0.810, +0.810]
+  drift-controlled excess: NOT MEASURED -- the pre-ADR-063 rows predate ADR-068's benchmark;
+     re-search a sample at SEARCH_HISTORY_START=2005-01-01 to read it (ADR-074 decision 3)
+  the longer window changes which strategy the search picks on 1 of 1 symbols
+
+forward book: 7 open — 0 clear the bar (mean fwd Sharpe n/a), 1 do not (2.62), 6 unknown (frozen before ADR-033)
