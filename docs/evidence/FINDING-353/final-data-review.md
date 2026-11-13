@@ -1,0 +1,9 @@
+# Independent final data review — Finding353
+
+Decision: APPROVE. Reviewed exact finding SHA256 `e21c8f41aa37725d40a9a9a2a3821d1cebf2c5e9607a442212e6d1bbbaf7c417`. No code/imports, datasets, filings, prices, outcomes or new source requests used for this final review.
+
+The current SEC specification linked by the landing page is https://www.sec.gov/files/financial-statement-data-sets.pdf (ten pages), distinct from legacy https://www.sec.gov/dera/data/fsds.pdf (nine). Previously verified textual definitions support all draft schema statements: SUB.fye/period month-end rounding and accepted/prevrpt at PDF page6 (zero-based5); NUM month-end ddate, rounded qtrs, zero instant, segments/coreg key at PDF page8 (zero-based7); four-decimal value limit at PDF page9 (zero-based8). Complete NUM field list has no exact start-date column. Current landing page documents2009–2026Q3 availability and December2024 reprocessing. No rendered screenshot inspection is claimed: web screenshot calls returned citation strings without image blocks.
+
+The exact-period/date loss is a documented source-contract mismatch against ADR421/423, not empirical coverage failure or observed production leak. Future-amendment exclusion risk and incomplete availability reconstruction are explicitly qualified inferences. ADR423 priced-mode refusal is correctly stated. FSDS indexing plus original contexts/security/price-share supplementation remains possible in principle and unadopted; source impossibility is not generalized. Current Git archive insufficiency and this different candidate-source assessment are distinguished.
+
+Economic results, new trials and alpha improvement are correctly absent. Existing fixed418 account/window and all frozen studies remain untouched. The report supplies no permission to repeat422 or create another source cohort. No blocking issue.
